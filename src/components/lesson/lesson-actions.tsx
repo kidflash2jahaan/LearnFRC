@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Check, Circle, Bookmark, BookmarkCheck, Loader2 } from "lucide-react";
+import { Check, Circle, Bookmark, BookmarkCheck, Loader2, ListChecks } from "lucide-react";
 import { toast } from "sonner";
 import { setLessonComplete, toggleBookmark } from "@/app/actions/progress";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,7 @@ export function LessonActions({
   authed,
   initialCompleted,
   initialBookmarked,
+  quizRequired = false,
 }: {
   lessonId: string;
   deptSlug: string;
@@ -23,6 +24,7 @@ export function LessonActions({
   authed: boolean;
   initialCompleted: boolean;
   initialBookmarked: boolean;
+  quizRequired?: boolean;
 }) {
   const router = useRouter();
   const [completed, setCompleted] = React.useState(initialCompleted);
@@ -44,6 +46,13 @@ export function LessonActions({
 
   const onComplete = () => {
     if (!authed) return requireAuth("track your progress");
+    // A required quiz can't be bypassed — send them to it.
+    if (quizRequired && !completed) {
+      document
+        .getElementById("lesson-quiz")
+        ?.scrollIntoView({ behavior: "smooth" });
+      return;
+    }
     const next = !completed;
     setCompleted(next);
     if (next) setBurst((b) => b + 1);
@@ -81,17 +90,19 @@ export function LessonActions({
       <Button
         onClick={onComplete}
         disabled={pending}
-        variant={completed ? "secondary" : "brand"}
+        variant={completed ? "secondary" : quizRequired ? "outline" : "brand"}
         size="lg"
       >
         {pending ? (
           <Loader2 className="h-4 w-4 animate-spin" />
         ) : completed ? (
           <Check className="h-4 w-4" />
+        ) : quizRequired ? (
+          <ListChecks className="h-4 w-4" />
         ) : (
           <Circle className="h-4 w-4" />
         )}
-        {completed ? "Completed" : "Mark complete"}
+        {completed ? "Completed" : quizRequired ? "Take the quiz" : "Mark complete"}
       </Button>
       <button
         onClick={onBookmark}
