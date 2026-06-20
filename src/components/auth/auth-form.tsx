@@ -112,16 +112,18 @@ export function AuthForm({ mode, next }: { mode: Mode; next?: string }) {
       )}
 
       <motion.div variants={item}>
-        <Label htmlFor="email">Email</Label>
-        <Field icon={Mail}>
+        <Label htmlFor={isSignup ? "email" : "identifier"}>
+          {isSignup ? "Email" : "Email or username"}
+        </Label>
+        <Field icon={isSignup ? Mail : AtSign}>
           <Input
-            id="email"
-            name="email"
-            type="email"
-            inputMode="email"
-            autoComplete="email"
+            id={isSignup ? "email" : "identifier"}
+            name={isSignup ? "email" : "identifier"}
+            type={isSignup ? "email" : "text"}
+            inputMode={isSignup ? "email" : undefined}
+            autoComplete={isSignup ? "email" : "username"}
             required
-            placeholder="you@team.org"
+            placeholder={isSignup ? "you@team.org" : "you@team.org or janebuilds"}
             className="pl-10"
             disabled={isPending}
           />
@@ -131,18 +133,16 @@ export function AuthForm({ mode, next }: { mode: Mode; next?: string }) {
       {isSignup && (
         <motion.div variants={item} className="grid grid-cols-2 gap-3">
           <div>
-            <Label htmlFor="username">
-              Username{" "}
-              <span className="font-normal text-muted-foreground">
-                (optional)
-              </span>
-            </Label>
+            <Label htmlFor="username">Username</Label>
             <Field icon={AtSign}>
               <Input
                 id="username"
                 name="username"
                 type="text"
                 autoComplete="username"
+                required
+                minLength={3}
+                pattern="[A-Za-z0-9_]+"
                 placeholder="janebuilds"
                 className="pl-10"
                 disabled={isPending}

@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export type AuthState = { error?: string } | undefined;
 
@@ -17,14 +18,33 @@ export async function signIn(
   _prev: AuthState,
   formData: FormData
 ): Promise<AuthState> {
-  const email = String(formData.get("email") || "").trim();
+  const identifier = String(
+    formData.get("identifier") || formData.get("email") || ""
+  ).trim();
   const password = String(formData.get("password") || "");
   const next = String(formData.get("next") || "/dashboard");
 
-  if (!email || !password)
-    return { error: "Please enter your email and password." };
+  if (!identifier || !password)
+    return { error: "Please enter your email or username and password." };
 
   const supabase = await createClient();
+
+  // Allow logging in with a username instead of an email.
+  let email = identifier;
+  if (!identifier.includes("@")) {
+    const uname = identifier.toLowerCase().replace(/[^a-z0-9_]/g, "");
+    const { data: prof } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("username", uname)
+      .maybeSingle();
+    if (!prof) return { error: "No account found with that username." };
+    const admin = createAdminClient();
+    const { data: u } = await admin.auth.admin.getUserById(prof.id as string);
+    email = u?.user?.email ?? "";
+    if (!email) return { error: "Couldn't sign you in — try your email." };
+  }
+
   const { error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) return { error: error.message };
 
@@ -48,11 +68,11 @@ export async function signUp(
   if (password.length < 8)
     return { error: "Password must be at least 8 characters." };
 
-  const username = usernameRaw
-    ? usernameRaw.toLowerCase().replace(/[^a-z0-9_]/g, "")
-    : "";
-  if (usernameRaw && username.length < 3)
-    return { error: "Username must be at least 3 characters (letters, numbers, _)." };
+  const username = usernameRaw.toLowerCase().replace(/[^a-z0-9_]/g, "");
+  if (!username || username.length < 3)
+    return {
+      error: "Choose a username — at least 3 characters (letters, numbers, _).",
+    };
 
   let teamNum: number | null = null;
   if (teamNumber) {
