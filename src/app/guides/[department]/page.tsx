@@ -21,7 +21,10 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Reveal } from "@/components/motion/reveal";
 import { DepartmentModules } from "@/components/guides/department-modules";
+import { JsonLd } from "@/components/json-ld";
 import type { Resource } from "@/lib/types";
+
+const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.systemerr.com";
 
 export async function generateMetadata({
   params,
@@ -70,6 +73,20 @@ export default async function DepartmentPage({
 
   return (
     <div className="relative">
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "Course",
+          name: dept.name,
+          description: dept.tagline ?? dept.description ?? undefined,
+          url: `${SITE}/guides/${dept.slug}`,
+          provider: {
+            "@type": "Organization",
+            name: "LearnFRC",
+            url: SITE,
+          },
+        }}
+      />
       {/* hero */}
       <section className="relative overflow-hidden border-b border-border">
         <div

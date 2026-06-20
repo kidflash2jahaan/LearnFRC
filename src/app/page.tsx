@@ -23,6 +23,9 @@ import { HeroVisual } from "@/components/landing/hero-visual";
 import { Faq } from "@/components/landing/faq";
 import { getDepartments, getOverviewStats } from "@/lib/queries";
 import { DEPT_CATALOG } from "@/lib/dept-catalog";
+import { JsonLd } from "@/components/json-ld";
+
+const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.systemerr.com";
 
 const SOURCES = [
   "WPILib",
@@ -132,6 +135,30 @@ export default async function HomePage() {
 
   return (
     <>
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@graph": [
+            {
+              "@type": "Organization",
+              name: "LearnFRC",
+              url: SITE,
+              description:
+                "Structured guides to mastering every department of the FIRST Robotics Competition.",
+            },
+            {
+              "@type": "WebSite",
+              name: "LearnFRC",
+              url: SITE,
+              potentialAction: {
+                "@type": "SearchAction",
+                target: `${SITE}/guides?q={search_term_string}`,
+                "query-input": "required name=search_term_string",
+              },
+            },
+          ],
+        }}
+      />
       {/* ============================ HERO ============================ */}
       <section className="relative overflow-hidden">
         <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">

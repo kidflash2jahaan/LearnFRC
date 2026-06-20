@@ -24,8 +24,11 @@ import { Markdown } from "@/components/markdown";
 import { LessonActions } from "@/components/lesson/lesson-actions";
 import { LessonComplete } from "@/components/lesson/lesson-complete";
 import { Reveal } from "@/components/motion/reveal";
+import { JsonLd } from "@/components/json-ld";
 import { cn } from "@/lib/utils";
 import type { Resource, QuizQuestion } from "@/lib/types";
+
+const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.systemerr.com";
 
 export async function generateMetadata({
   params,
@@ -75,6 +78,18 @@ export default async function LessonPage({
 
   return (
     <div className="mx-auto max-w-7xl px-4 pt-24 pb-20 sm:px-6 lg:px-8">
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "LearningResource",
+          name: les.title,
+          description: les.summary ?? undefined,
+          learningResourceType: "lesson",
+          url: `${SITE}${lessonPath}`,
+          isPartOf: { "@type": "Course", name: dept.name },
+          provider: { "@type": "Organization", name: "LearnFRC", url: SITE },
+        }}
+      />
       {/* breadcrumb */}
       <Reveal>
         <nav className="flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">

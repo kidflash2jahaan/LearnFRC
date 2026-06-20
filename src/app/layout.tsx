@@ -6,6 +6,8 @@ import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
 import { ScrollProgress } from "@/components/scroll-progress";
 import { getSession } from "@/lib/auth";
+import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 const grotesk = Space_Grotesk({
   subsets: ["latin"],
@@ -86,6 +88,12 @@ export default async function RootLayout({
       className={`${grotesk.variable} ${inter.variable} ${jbmono.variable} h-full`}
     >
       <body className="flex min-h-full flex-col antialiased">
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-primary focus:px-4 focus:py-2 focus:text-primary-foreground focus:shadow-[var(--shadow-lg)]"
+        >
+          Skip to content
+        </a>
         <Providers>
           <ScrollProgress />
           <Navbar
@@ -94,9 +102,13 @@ export default async function RootLayout({
             email={user?.email}
             isAdmin={isAdmin}
           />
-          <main className="flex-1">{children}</main>
+          <main id="main-content" className="flex-1">
+            {children}
+          </main>
           <Footer />
         </Providers>
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );
