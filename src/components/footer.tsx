@@ -101,10 +101,24 @@ export function Footer() {
             · Software Lead, Sage Hill Robotics{" "}
             <span className="font-mono text-foreground">5835</span>
           </p>
-          <p className="text-xs">
-            © {new Date().getFullYear()} LearnFRC · Not affiliated with or
-            endorsed by FIRST®
-          </p>
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5">
+            <Link
+              href="/privacy"
+              className="text-xs transition-colors hover:text-foreground"
+            >
+              Privacy
+            </Link>
+            <Link
+              href="/terms"
+              className="text-xs transition-colors hover:text-foreground"
+            >
+              Terms
+            </Link>
+            <p className="text-xs">
+              © {new Date().getFullYear()} LearnFRC · Not affiliated with or
+              endorsed by FIRST®
+            </p>
+          </div>
         </div>
       </div>
     </footer>
