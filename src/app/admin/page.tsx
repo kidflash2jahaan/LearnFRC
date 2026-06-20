@@ -180,6 +180,69 @@ export default async function AdminPage() {
           )}
         </div>
       </Reveal>
+
+      <Reveal className="mt-6">
+        <div className="rounded-2xl border border-border bg-card p-6">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="font-semibold">Users</h2>
+            <Badge variant="outline">{stats.users.length} total</Badge>
+          </div>
+          {stats.users.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No users yet.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
+                    <th className="pb-2 font-medium">Member</th>
+                    <th className="pb-2 font-medium">Team</th>
+                    <th className="pb-2 text-right font-medium">XP</th>
+                    <th className="pb-2 font-medium">Status</th>
+                    <th className="pb-2 text-right font-medium">Joined</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {stats.users.map((u) => (
+                    <tr key={u.id} className="border-b border-border/60 last:border-0">
+                      <td className="py-3">
+                        <div className="flex items-center gap-2.5">
+                          <Avatar
+                            name={u.full_name || u.username || u.email}
+                            seed={u.id}
+                            className="h-8 w-8"
+                          />
+                          <div className="min-w-0">
+                            <div className="truncate font-medium">
+                              {u.full_name || u.username || "Learner"}
+                            </div>
+                            <div className="truncate text-xs text-muted-foreground">
+                              {u.email}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-3 text-muted-foreground">
+                        {u.team_number ? `#${u.team_number}` : "—"}
+                      </td>
+                      <td className="py-3 text-right font-mono">{u.xp}</td>
+                      <td className="py-3">
+                        {u.confirmed ? (
+                          <Badge variant="success">Verified</Badge>
+                        ) : (
+                          <Badge variant="warning">Unverified</Badge>
+                        )}
+                      </td>
+                      <td className="py-3 text-right text-muted-foreground">
+                        {new Date(u.created_at).toLocaleDateString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </Reveal>
     </div>
   );
 }

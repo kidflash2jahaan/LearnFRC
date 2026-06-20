@@ -22,6 +22,17 @@ export type RecentSignup = {
   created_at: string;
 };
 
+export type AdminUser = {
+  id: string;
+  email: string;
+  full_name: string | null;
+  username: string | null;
+  team_number: number | null;
+  xp: number;
+  confirmed: boolean;
+  created_at: string;
+};
+
 /** One calendar day of activity for the chart. */
 export type DailyPoint = {
   day: string; // YYYY-MM-DD
@@ -45,6 +56,7 @@ export type AdminStats = {
   completions7d: number;
   topDepartments: DepartmentStat[];
   recentSignups: RecentSignup[];
+  users: AdminUser[];
   daily: DailyPoint[];
 };
 
@@ -164,6 +176,34 @@ export async function getAdminStats(): Promise<AdminStats> {
     });
   }
 
+  const authList = await supabase.auth.admin.listUsers({ perPage: 1000 });
+  const profsRes = await supabase
+    .from("profiles")
+    .select("id, full_name, username, team_number, xp");
+  const pmap = new Map(
+    ((profsRes.data as Record<string, unknown>[]) ?? []).map((p) => [
+      p.id as string,
+      p,
+    ])
+  );
+  const users: AdminUser[] = (authList.data?.users ?? [])
+    .map((u) => {
+      const p = (pmap.get(u.id) ?? {}) as Record<string, unknown>;
+      return {
+        id: u.id,
+        email: u.email ?? "",
+        full_name:
+          (p.full_name as string) ??
+          ((u.user_metadata?.full_name as string) || null),
+        username: (p.username as string) ?? null,
+        team_number: (p.team_number as number) ?? null,
+        xp: (p.xp as number) ?? 0,
+        confirmed: !!u.email_confirmed_at,
+        created_at: u.created_at,
+      };
+    })
+    .sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at));
+
   return {
     totals: {
       users: countOf(usersRes),
@@ -180,6 +220,7 @@ export async function getAdminStats(): Promise<AdminStats> {
     completions7d: countOf(completions7dRes),
     topDepartments,
     recentSignups,
+    users,
     daily,
   };
 }
