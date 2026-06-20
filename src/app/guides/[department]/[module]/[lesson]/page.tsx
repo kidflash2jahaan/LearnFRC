@@ -123,7 +123,6 @@ export default async function LessonPage({
                 authed={!!user}
                 initialCompleted={isCompleted}
                 initialBookmarked={bookmarks.has(les.id)}
-                quizRequired={quiz.length > 0}
               />
               {!user && (
                 <p className="mt-3 flex items-center gap-1.5 text-sm text-muted-foreground">

@@ -39,3 +39,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+content/enrichment.json
+content/lessons-manifest.json
+content/structure.json
+content/quizzes.json

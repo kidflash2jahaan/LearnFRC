@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Check, Circle, Bookmark, BookmarkCheck, Loader2, ListChecks } from "lucide-react";
+import { Check, Circle, Bookmark, BookmarkCheck, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { setLessonComplete, toggleBookmark } from "@/app/actions/progress";
 import { Button } from "@/components/ui/button";
@@ -16,7 +16,6 @@ export function LessonActions({
   authed,
   initialCompleted,
   initialBookmarked,
-  quizRequired = false,
 }: {
   lessonId: string;
   deptSlug: string;
@@ -24,7 +23,6 @@ export function LessonActions({
   authed: boolean;
   initialCompleted: boolean;
   initialBookmarked: boolean;
-  quizRequired?: boolean;
 }) {
   const router = useRouter();
   const [completed, setCompleted] = React.useState(initialCompleted);
@@ -44,14 +42,8 @@ export function LessonActions({
     });
   };
 
-  const scrollToQuiz = () => {
-    document.getElementById("lesson-quiz")?.scrollIntoView({ behavior: "smooth" });
-  };
-
   const onComplete = () => {
     if (!authed) return requireAuth("track your progress");
-    // Completing requires the quiz when one exists and isn't passed yet.
-    if (quizRequired && !completed) return scrollToQuiz();
     const next = !completed;
     setCompleted(next);
     if (next) setBurst((b) => b + 1);
@@ -83,27 +75,23 @@ export function LessonActions({
     });
   };
 
-  const showQuizCta = quizRequired && !completed;
-
   return (
     <div className="relative flex flex-wrap items-center gap-3">
       <Confetti trigger={burst} />
       <Button
         onClick={onComplete}
         disabled={pending}
-        variant={completed ? "secondary" : showQuizCta ? "outline" : "brand"}
+        variant={completed ? "secondary" : "brand"}
         size="lg"
       >
         {pending ? (
           <Loader2 className="h-4 w-4 animate-spin" />
         ) : completed ? (
           <Check className="h-4 w-4" />
-        ) : showQuizCta ? (
-          <ListChecks className="h-4 w-4" />
         ) : (
           <Circle className="h-4 w-4" />
         )}
-        {completed ? "Completed" : showQuizCta ? "Take the quiz" : "Mark complete"}
+        {completed ? "Completed" : "Mark complete"}
       </Button>
       <button
         onClick={onBookmark}
