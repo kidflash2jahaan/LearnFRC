@@ -14,6 +14,7 @@ export const metadata = {
 };
 
 function displayName(p: Profile): string {
+  if (p.hide_name) return p.username?.trim() || "Learner";
   return p.full_name?.trim() || p.username?.trim() || "Learner";
 }
 

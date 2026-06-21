@@ -13,9 +13,16 @@ import {
   Hash,
   Link2,
   BadgeCheck,
+  EyeOff,
+  Trash2,
+  AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
-import { updateProfile, type ProfileState } from "@/app/actions/profile";
+import {
+  updateProfile,
+  deleteAccount,
+  type ProfileState,
+} from "@/app/actions/profile";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -50,6 +57,7 @@ export function SettingsForm({
   const [fullName, setFullName] = React.useState(profile?.full_name ?? "");
   const [username, setUsername] = React.useState(profile?.username ?? "");
   const [avatarUrl, setAvatarUrl] = React.useState(profile?.avatar_url ?? "");
+  const [hideName, setHideName] = React.useState(profile?.hide_name ?? false);
 
   // Toast on success (fires once per successful submit)
   const lastSuccess = React.useRef(false);
@@ -75,6 +83,7 @@ export function SettingsForm({
   };
 
   return (
+    <>
     <motion.form
       action={formAction}
       initial="hidden"
@@ -311,6 +320,42 @@ export function SettingsForm({
         </p>
       </motion.div>
 
+      {/* Privacy: hide full name */}
+      <motion.div
+        variants={item}
+        className="flex items-center justify-between gap-4 rounded-2xl border border-border bg-secondary/30 p-4"
+      >
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <EyeOff className="h-4 w-4 text-muted-foreground" /> Hide my full name
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Show your username instead of your real name on the leaderboard and
+            your public profile.
+          </p>
+        </div>
+        <input type="hidden" name="hide_name" value={hideName ? "true" : "false"} />
+        <button
+          type="button"
+          role="switch"
+          aria-checked={hideName}
+          aria-label="Hide my full name"
+          onClick={() => setHideName((v) => !v)}
+          disabled={isPending}
+          className={cn(
+            "relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors disabled:opacity-50",
+            hideName ? "bg-primary" : "bg-muted"
+          )}
+        >
+          <span
+            className={cn(
+              "inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform",
+              hideName ? "translate-x-5" : "translate-x-0.5"
+            )}
+          />
+        </button>
+      </motion.div>
+
       {/* Submit */}
       <motion.div variants={item} className="pt-1">
         <Button
@@ -335,6 +380,85 @@ export function SettingsForm({
         </Button>
       </motion.div>
     </motion.form>
+
+      <DangerZone />
+    </>
+  );
+}
+
+function DangerZone() {
+  const [confirming, setConfirming] = React.useState(false);
+  const [text, setText] = React.useState("");
+  const [pending, startTransition] = React.useTransition();
+
+  const onDelete = () => {
+    startTransition(async () => {
+      const r = await deleteAccount();
+      // On success the server action signs out and redirects; only errors return.
+      if (r?.error) toast.error(r.error);
+    });
+  };
+
+  return (
+    <div className="mt-8 rounded-2xl border border-destructive/30 bg-destructive/5 p-5">
+      <h2 className="flex items-center gap-2 text-sm font-semibold text-destructive">
+        <AlertTriangle className="h-4 w-4" /> Danger zone
+      </h2>
+      <p className="mt-1 text-sm text-muted-foreground">
+        Permanently delete your account along with your profile, progress, XP,
+        and bookmarks. This cannot be undone.
+      </p>
+      {!confirming ? (
+        <Button
+          type="button"
+          variant="outline"
+          className="mt-4 border-destructive/40 text-destructive hover:bg-destructive/10"
+          onClick={() => setConfirming(true)}
+        >
+          <Trash2 className="h-4 w-4" /> Delete my account
+        </Button>
+      ) : (
+        <div className="mt-4 space-y-3">
+          <Label htmlFor="confirm-delete">
+            Type <span className="font-mono font-semibold">DELETE</span> to confirm
+          </Label>
+          <Input
+            id="confirm-delete"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder="DELETE"
+            autoComplete="off"
+            disabled={pending}
+          />
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => {
+                setConfirming(false);
+                setText("");
+              }}
+              disabled={pending}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={onDelete}
+              disabled={pending || text !== "DELETE"}
+              className="bg-destructive text-white hover:bg-destructive/90"
+            >
+              {pending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="h-4 w-4" />
+              )}
+              Permanently delete
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 

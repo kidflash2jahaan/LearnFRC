@@ -45,6 +45,8 @@ export default async function PublicProfilePage({
   if (!profile) notFound();
 
   const p = profile as Profile;
+  const displayName =
+    (p.hide_name ? p.username : p.full_name || p.username) || username;
   const level = Math.floor(p.xp / 100) + 1;
   const lessons = Math.floor(p.xp / 10); // derived (others' progress is private)
 
@@ -74,13 +76,13 @@ export default async function PublicProfilePage({
       <Reveal>
         <div className="flex flex-col items-center text-center">
           <Avatar
-            name={p.full_name || p.username}
+            name={displayName}
             src={p.avatar_url}
             seed={p.id}
             className="h-24 w-24 text-2xl"
           />
           <h1 className="mt-4 text-3xl font-bold tracking-tight">
-            {p.full_name || p.username}
+            {displayName}
           </h1>
           <p className="mt-1 font-mono text-sm text-muted-foreground">
             @{p.username}
@@ -101,7 +103,7 @@ export default async function PublicProfilePage({
             </p>
           )}
           <div className="mt-5">
-            <ShareButton username={username} name={p.full_name || p.username || username} />
+            <ShareButton username={username} name={displayName} />
           </div>
         </div>
       </Reveal>

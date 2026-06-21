@@ -62,6 +62,7 @@ export interface Profile {
   bio: string | null;
   role: string;
   xp: number;
+  hide_name: boolean;
   created_at: string;
 }
 

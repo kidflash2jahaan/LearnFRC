@@ -1,7 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export type ProfileState = { error?: string; success?: boolean } | undefined;
 
@@ -22,6 +24,7 @@ export async function updateProfile(
   const avatar_url = String(formData.get("avatar_url") || "").trim() || null;
   if (avatar_url && !/^https?:\/\//i.test(avatar_url))
     return { error: "Avatar URL must start with http:// or https://" };
+  const hide_name = String(formData.get("hide_name") || "") === "true";
   const usernameRaw = String(formData.get("username") || "").trim();
   const teamStr = String(formData.get("team_number") || "").trim();
   const roleRaw = String(formData.get("role") || "student");
@@ -51,7 +54,7 @@ export async function updateProfile(
 
   const { error } = await supabase
     .from("profiles")
-    .update({ full_name, bio, username, team_number, role, avatar_url })
+    .update({ full_name, bio, username, team_number, role, avatar_url, hide_name })
     .eq("id", user.id);
   if (error) return { error: error.message };
 
@@ -59,4 +62,30 @@ export async function updateProfile(
   revalidatePath("/profile");
   revalidatePath("/", "layout");
   return { success: true };
+}
+
+/**
+ * Permanently delete the signed-in user's own account and all their data.
+ * Deletes child rows explicitly (no cascade FK to auth.users), then the auth user.
+ */
+export async function deleteAccount(): Promise<{ error?: string } | void> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "You must be signed in." };
+
+  const uid = user.id;
+  const admin = createAdminClient();
+  // Remove all of the user's data first so nothing is orphaned.
+  await admin.from("lesson_progress").delete().eq("user_id", uid);
+  await admin.from("bookmarks").delete().eq("user_id", uid);
+  await admin.from("user_achievements").delete().eq("user_id", uid);
+  await admin.from("profiles").delete().eq("id", uid);
+  const { error } = await admin.auth.admin.deleteUser(uid);
+  if (error) return { error: error.message };
+
+  await supabase.auth.signOut();
+  revalidatePath("/", "layout");
+  redirect("/");
 }

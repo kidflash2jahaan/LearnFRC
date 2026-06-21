@@ -20,13 +20,13 @@ export default async function Image({
     const res = await fetch(
       `${url}/rest/v1/profiles?username=eq.${encodeURIComponent(
         username
-      )}&select=full_name,username,team_number,xp`,
+      )}&select=full_name,username,team_number,xp,hide_name`,
       { headers: { apikey: anon, Authorization: `Bearer ${anon}` }, cache: "no-store" }
     );
     const rows = await res.json();
     const p = Array.isArray(rows) ? rows[0] : null;
     if (p) {
-      name = p.full_name || p.username || username;
+      name = (p.hide_name ? p.username : p.full_name || p.username) || username;
       team = p.team_number ?? null;
       xp = p.xp ?? 0;
     }
