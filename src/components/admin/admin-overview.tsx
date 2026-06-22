@@ -151,7 +151,7 @@ export function AdminOverview({
             <p className="text-sm text-muted-foreground">No users yet.</p>
           ) : (
             <div className="max-h-[32rem] overflow-auto">
-              <table className="w-full text-sm">
+              <table className="w-full text-sm [&_th]:px-3 [&_td]:px-3 [&_th:first-child]:pl-0 [&_td:first-child]:pl-0 [&_th:last-child]:pr-0 [&_td:last-child]:pr-0">
                 <thead className="sticky top-0 bg-card">
                   <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
                     <th className="pb-2 font-medium">Member</th>
@@ -204,7 +204,7 @@ export function AdminOverview({
             <p className="text-sm text-muted-foreground">No teams yet.</p>
           ) : (
             <div className="max-h-[32rem] overflow-auto">
-              <table className="w-full text-sm">
+              <table className="w-full text-sm [&_th]:px-3 [&_td]:px-3 [&_th:first-child]:pl-0 [&_td:first-child]:pl-0 [&_th:last-child]:pr-0 [&_td:last-child]:pr-0">
                 <thead className="sticky top-0 bg-card">
                   <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
                     <th className="pb-2 font-medium">Team</th>
@@ -254,7 +254,7 @@ export function AdminOverview({
             <p className="text-sm text-muted-foreground">No completions yet.</p>
           ) : (
             <div className="max-h-[32rem] overflow-auto">
-              <table className="w-full text-sm">
+              <table className="w-full text-sm [&_th]:px-3 [&_td]:px-3 [&_th:first-child]:pl-0 [&_td:first-child]:pl-0 [&_th:last-child]:pr-0 [&_td:last-child]:pr-0">
                 <thead className="sticky top-0 bg-card">
                   <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
                     <th className="pb-2 font-medium">Member</th>
@@ -291,7 +291,7 @@ export function AdminOverview({
             <p className="text-sm text-muted-foreground">No subscribers yet.</p>
           ) : (
             <div className="max-h-[32rem] overflow-auto">
-              <table className="w-full text-sm">
+              <table className="w-full text-sm [&_th]:px-3 [&_td]:px-3 [&_th:first-child]:pl-0 [&_td:first-child]:pl-0 [&_th:last-child]:pr-0 [&_td:last-child]:pr-0">
                 <thead className="sticky top-0 bg-card">
                   <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
                     <th className="pb-2 font-medium">Email</th>
