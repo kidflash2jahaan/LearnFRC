@@ -74,6 +74,9 @@ export default async function AdminPage() {
         }}
         users={stats.users}
         teams={stats.teams}
+        completions={stats.recentCompletions}
+        subscribers={stats.subscriberList}
+        achievements={stats.achievementBreakdown}
       />
 
       <div className="mt-8 grid gap-6 lg:grid-cols-5">

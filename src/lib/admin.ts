@@ -72,6 +72,9 @@ export type AdminStats = {
   teams: AdminTeam[];
   /** Distinct FRC team numbers represented across all user profiles. */
   totalUniqueTeams: number;
+  recentCompletions: { user: string; lesson: string; dept: string; at: string }[];
+  subscriberList: { email: string; created_at: string }[];
+  achievementBreakdown: { name: string; icon: string; earned: number }[];
   daily: DailyPoint[];
 };
 
@@ -277,6 +280,52 @@ export async function getAdminStats(): Promise<AdminStats> {
       .filter((t): t is number => t != null)
   ).size;
 
+  // Recent lesson completions (activity feed under the "Lessons completed" card).
+  const recentCompRes = await supabase
+    .from("lesson_progress")
+    .select("user_id, completed_at, lessons(title, modules(departments(name)))")
+    .order("completed_at", { ascending: false })
+    .limit(50);
+  type CompRow = {
+    user_id: string;
+    completed_at: string;
+    lessons: {
+      title: string | null;
+      modules: { departments: { name: string | null } | null } | null;
+    } | null;
+  };
+  const recentCompletions = ((recentCompRes.data as unknown as CompRow[]) ?? []).map((r) => {
+    const p = pmap.get(r.user_id) as Record<string, unknown> | undefined;
+    return {
+      user: (p?.full_name as string) || (p?.username as string) || "Learner",
+      lesson: r.lessons?.title ?? "—",
+      dept: r.lessons?.modules?.departments?.name ?? "—",
+      at: r.completed_at,
+    };
+  });
+
+  // Subscriber list (under the "Email subscribers" card).
+  const subsListRes = await supabase
+    .from("subscribers")
+    .select("email, created_at")
+    .order("created_at", { ascending: false });
+  const subscriberList =
+    (subsListRes.data as { email: string; created_at: string }[]) ?? [];
+
+  // Achievement distribution (under the "Achievements earned" card).
+  const [achListRes, uaListRes] = await Promise.all([
+    supabase.from("achievements").select("id, name, icon, sort_order").order("sort_order"),
+    supabase.from("user_achievements").select("achievement_id"),
+  ]);
+  const uaCounts: Record<string, number> = {};
+  for (const r of (uaListRes.data as { achievement_id: string }[]) ?? [])
+    uaCounts[r.achievement_id] = (uaCounts[r.achievement_id] ?? 0) + 1;
+  const achievementBreakdown = (
+    (achListRes.data as { id: string; name: string; icon: string }[]) ?? []
+  )
+    .map((a) => ({ name: a.name, icon: a.icon, earned: uaCounts[a.id] ?? 0 }))
+    .sort((a, b) => b.earned - a.earned);
+
   return {
     totals: {
       users: countOf(usersRes),
@@ -296,6 +345,9 @@ export async function getAdminStats(): Promise<AdminStats> {
     users,
     teams,
     totalUniqueTeams,
+    recentCompletions,
+    subscriberList,
+    achievementBreakdown,
     daily,
   };
 }

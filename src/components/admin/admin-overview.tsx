@@ -19,7 +19,13 @@ import { AnimatedCounter } from "@/components/animated-counter";
 import { Stagger, StaggerItem } from "@/components/motion/reveal";
 import type { AdminUser, AdminTeam } from "@/lib/admin";
 
-type Panel = "users" | "teams" | null;
+type Panel =
+  | "users"
+  | "teams"
+  | "completions"
+  | "subscribers"
+  | "achievements"
+  | null;
 
 type OverviewData = {
   users: number;
@@ -40,13 +46,20 @@ export function AdminOverview({
   data,
   users,
   teams,
+  completions,
+  subscribers,
+  achievements,
 }: {
   data: OverviewData;
   users: AdminUser[];
   teams: AdminTeam[];
+  completions: { user: string; lesson: string; dept: string; at: string }[];
+  subscribers: { email: string; created_at: string }[];
+  achievements: { name: string; icon: string; earned: number }[];
 }) {
   const [open, setOpen] = React.useState<Panel>(null);
   const toggle = (p: Panel) => setOpen((cur) => (cur === p ? null : p));
+  const maxAch = Math.max(1, ...achievements.map((a) => a.earned));
 
   const cards = [
     {
@@ -56,12 +69,12 @@ export function AdminOverview({
       sub: `+${data.signups7d} this week`,
       panel: "users" as Panel,
     },
-    { label: "Lessons completed", value: data.completions, icon: CheckCircle2, sub: `+${data.completions7d} this week` },
+    { label: "Lessons completed", value: data.completions, icon: CheckCircle2, sub: `+${data.completions7d} this week`, panel: "completions" as Panel },
     { label: "Total XP awarded", value: data.totalXP, icon: Zap, sub: "across all learners" },
-    { label: "Achievements earned", value: data.achievementsEarned, icon: Award, sub: "badges unlocked" },
+    { label: "Achievements earned", value: data.achievementsEarned, icon: Award, sub: "badges unlocked", panel: "achievements" as Panel },
     { label: "Lessons", value: data.lessons, icon: BookOpen, sub: `${data.departments} departments` },
     { label: "Bookmarks", value: data.bookmarks, icon: Layers, sub: "saved lessons" },
-    { label: "Email subscribers", value: data.subscribers, icon: Mail, sub: "early-access list" },
+    { label: "Email subscribers", value: data.subscribers, icon: Mail, sub: "early-access list", panel: "subscribers" as Panel },
     {
       label: "Registered teams",
       value: data.registeredTeams,
@@ -226,6 +239,107 @@ export function AdminOverview({
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {open === "completions" && (
+        <div className="mt-4 rounded-2xl border border-border bg-card p-6">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="font-semibold">Recent lesson completions</h2>
+            <Badge variant="outline">last {completions.length}</Badge>
+          </div>
+          {completions.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No completions yet.</p>
+          ) : (
+            <div className="max-h-[32rem] overflow-auto">
+              <table className="w-full text-sm">
+                <thead className="sticky top-0 bg-card">
+                  <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
+                    <th className="pb-2 font-medium">Member</th>
+                    <th className="pb-2 font-medium">Lesson</th>
+                    <th className="pb-2 font-medium">Department</th>
+                    <th className="pb-2 text-right font-medium">When</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {completions.map((c, i) => (
+                    <tr key={i} className="border-b border-border/60 last:border-0">
+                      <td className="py-3 font-medium">{c.user}</td>
+                      <td className="py-3">{c.lesson}</td>
+                      <td className="py-3 text-muted-foreground">{c.dept}</td>
+                      <td className="py-3 text-right text-muted-foreground">
+                        {new Date(c.at).toLocaleString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {open === "subscribers" && (
+        <div className="mt-4 rounded-2xl border border-border bg-card p-6">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="font-semibold">Email subscribers</h2>
+            <Badge variant="outline">{subscribers.length} total</Badge>
+          </div>
+          {subscribers.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No subscribers yet.</p>
+          ) : (
+            <div className="max-h-[32rem] overflow-auto">
+              <table className="w-full text-sm">
+                <thead className="sticky top-0 bg-card">
+                  <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
+                    <th className="pb-2 font-medium">Email</th>
+                    <th className="pb-2 text-right font-medium">Subscribed</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {subscribers.map((s, i) => (
+                    <tr key={i} className="border-b border-border/60 last:border-0">
+                      <td className="py-3">{s.email}</td>
+                      <td className="py-3 text-right text-muted-foreground">
+                        {new Date(s.created_at).toLocaleDateString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {open === "achievements" && (
+        <div className="mt-4 rounded-2xl border border-border bg-card p-6">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="font-semibold">Achievements earned</h2>
+            <Badge variant="outline">{achievements.length} badges</Badge>
+          </div>
+          {achievements.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No achievements yet.</p>
+          ) : (
+            <div className="space-y-3">
+              {achievements.map((a) => (
+                <div key={a.name}>
+                  <div className="mb-1 flex items-center justify-between text-sm">
+                    <span className="truncate">{a.name}</span>
+                    <span className="font-mono text-xs text-muted-foreground">
+                      {a.earned}
+                    </span>
+                  </div>
+                  <div className="h-2 overflow-hidden rounded-full bg-muted">
+                    <div
+                      className="h-full rounded-full bg-primary"
+                      style={{ width: `${Math.round((a.earned / maxAch) * 100)}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>
