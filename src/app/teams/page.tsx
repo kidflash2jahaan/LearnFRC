@@ -6,26 +6,22 @@ import {
   CheckCircle2,
   Trophy,
   ArrowRight,
-  Crown,
-  Sparkles,
   Info,
+  Sparkles,
 } from "lucide-react";
 import { getSession } from "@/lib/auth";
-import { getMyTeam, getTeamDashboard } from "@/lib/queries";
-import { createClient } from "@/lib/supabase/server";
+import { getTeamByNumber } from "@/lib/queries";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { Reveal } from "@/components/motion/reveal";
-import { TeamOnboard } from "@/components/teams/team-onboard";
-import { JoinCodeCard, LeaveTeamButton } from "@/components/teams/team-actions";
 import { clampPct, pluralize } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: "My Team · LearnFRC",
   description:
-    "Create or join an FRC team, share a join code, and track every member's progress across departments.",
+    "See your whole FRC team's progress. Everyone who signs up with your team number is grouped automatically.",
 };
 
 function relTime(iso: string | null): string {
@@ -40,16 +36,9 @@ function relTime(iso: string | null): string {
   return `${Math.floor(days / 30)}mo ago`;
 }
 
-export default async function TeamsPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ joined?: string; err?: string }>;
-}) {
-  const { user } = await getSession();
+export default async function TeamsPage() {
+  const { user, profile } = await getSession();
   if (!user) redirect("/login?next=/teams");
-
-  const sp = await searchParams;
-  const mine = await getMyTeam(user.id);
 
   return (
     <div className="relative mx-auto max-w-5xl px-4 pt-28 pb-20 sm:px-6 lg:px-8">
@@ -57,96 +46,33 @@ export default async function TeamsPage({
         <div className="absolute inset-x-0 top-0 h-[420px] bg-grid opacity-40 mask-b-faded" />
       </div>
 
-      {sp.joined && (
-        <div className="mb-6 flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-600 dark:text-emerald-400">
-          <CheckCircle2 className="h-4 w-4" /> You&apos;ve joined the team.
-        </div>
-      )}
-      {sp.err && (
-        <div className="mb-6 flex items-center gap-2 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          <Info className="h-4 w-4" /> {sp.err}
-        </div>
-      )}
-
-      {!mine ? (
-        <>
-          <Reveal>
-            <Badge variant="primary" className="mb-3">
-              <Users className="h-3 w-3" /> Teams
-            </Badge>
-            <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
-              Train your whole team with LearnFRC
-            </h1>
-            <p className="mt-2 max-w-2xl text-muted-foreground">
-              Create a team to onboard new members with a ready-made curriculum and
-              track everyone&apos;s progress — or join your team with a code.{" "}
-              <Link href="/for-teams" className="text-primary underline-offset-4 hover:underline">
-                See how it works →
-              </Link>
-            </p>
-          </Reveal>
-          <Reveal delay={0.05} className="mt-8">
-            <TeamOnboard />
-          </Reveal>
-        </>
+      {!profile?.team_number ? (
+        <Reveal>
+          <Badge variant="primary" className="mb-3">
+            <Users className="h-3 w-3" /> Your team
+          </Badge>
+          <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
+            See your whole team&apos;s progress
+          </h1>
+          <p className="mt-2 max-w-2xl text-muted-foreground">
+            Add your FRC team number and everyone on your team who uses LearnFRC shows
+            up here automatically — no codes, no setup. You&apos;ll all be able to see
+            each other&apos;s progress and push each other to finish.
+          </p>
+          <Button asChild variant="brand" className="mt-6">
+            <Link href="/settings">
+              Add your team number <ArrowRight className="h-4 w-4" />
+            </Link>
+          </Button>
+        </Reveal>
       ) : (
-        await renderTeam(mine.team.id, user.id)
+        await renderTeam(profile.team_number, user.id)
       )}
     </div>
   );
 
-  async function renderTeam(teamId: string, uid: string) {
-    const dash = await getTeamDashboard(teamId, uid);
-    if (!dash) return <p className="text-muted-foreground">Couldn&apos;t load your team.</p>;
-    const { team, isOwner, totalLessons, members } = dash;
-
-    // Member (non-owner) view: lighter, shows your own progress.
-    if (!isOwner) {
-      const supabase = await createClient();
-      const { count } = await supabase
-        .from("lesson_progress")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", uid);
-      const done = count ?? 0;
-      const pct = totalLessons > 0 ? clampPct((done / totalLessons) * 100) : 0;
-      return (
-        <div className="space-y-6">
-          <Reveal>
-            <Badge variant="primary" className="mb-2">
-              <Users className="h-3 w-3" /> Your team
-            </Badge>
-            <h1 className="text-3xl font-bold tracking-tight">
-              {team.name}
-              {team.team_number ? (
-                <span className="ml-2 text-muted-foreground">#{team.team_number}</span>
-              ) : null}
-            </h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Your mentor manages this team. Keep learning — your progress shows up on their dashboard.
-            </p>
-          </Reveal>
-          <Reveal delay={0.05}>
-            <div className="rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-sm)]">
-              <div className="mb-2 flex items-center justify-between text-sm">
-                <span className="font-medium">Your progress</span>
-                <span className="text-muted-foreground">
-                  {done} / {totalLessons} lessons
-                </span>
-              </div>
-              <Progress value={pct} className="h-2.5" />
-              <Button asChild variant="brand" className="mt-5">
-                <Link href="/guides">
-                  Keep learning <ArrowRight className="h-4 w-4" />
-                </Link>
-              </Button>
-            </div>
-          </Reveal>
-          <LeaveTeamButton owner={false} />
-        </div>
-      );
-    }
-
-    // Owner / mentor dashboard.
+  async function renderTeam(teamNumber: number, uid: string) {
+    const { totalLessons, members } = await getTeamByNumber(teamNumber);
     const totalCompleted = members.reduce((s, m) => s + m.completed, 0);
     const avgPct =
       members.length && totalLessons
@@ -162,27 +88,20 @@ export default async function TeamsPage({
     return (
       <div className="space-y-8">
         <Reveal>
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <Badge variant="primary" className="mb-2">
-                <Crown className="h-3 w-3" /> You manage this team
-              </Badge>
-              <h1 className="text-3xl font-bold tracking-tight">
-                {team.name}
-                {team.team_number ? (
-                  <span className="ml-2 text-muted-foreground">#{team.team_number}</span>
-                ) : null}
-              </h1>
-            </div>
-            <LeaveTeamButton owner />
-          </div>
+          <Badge variant="primary" className="mb-2">
+            <Users className="h-3 w-3" /> Your team
+          </Badge>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Team <span className="text-gradient">#{teamNumber}</span>
+          </h1>
+          <p className="mt-1.5 flex items-center gap-1.5 text-sm text-muted-foreground">
+            <Info className="h-3.5 w-3.5 shrink-0" />
+            Everyone who signed up with team #{teamNumber} is here — and you can all see
+            each other&apos;s progress.
+          </p>
         </Reveal>
 
-        <Reveal delay={0.04}>
-          <JoinCodeCard code={team.join_code} teamId={team.id} />
-        </Reveal>
-
-        <Reveal delay={0.06}>
+        <Reveal delay={0.05}>
           <div className="grid grid-cols-3 gap-3 sm:gap-4">
             {stats.map((s) => (
               <div
@@ -210,29 +129,35 @@ export default async function TeamsPage({
                 {pluralize(members.length, "member")}
               </span>
             </div>
-            {members.length <= 1 ? (
+            {members.length === 0 ? (
               <div className="px-5 py-10 text-center">
                 <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-brand-soft text-primary">
                   <Sparkles className="h-6 w-6" />
                 </div>
-                <p className="mt-3 text-sm font-medium">No members yet</p>
+                <p className="mt-3 text-sm font-medium">You&apos;re the first one here</p>
                 <p className="mx-auto mt-1 max-w-sm text-xs text-muted-foreground">
-                  Share your join code above. As members join, their progress shows up
-                  here automatically — even if they already had an account.
+                  Tell your teammates to sign up with team #{teamNumber} and they&apos;ll
+                  appear here automatically.
                 </p>
               </div>
             ) : (
               <ul className="divide-y divide-border">
                 {members.map((m) => {
                   const pct = totalLessons > 0 ? clampPct((m.completed / totalLessons) * 100) : 0;
+                  const isYou = m.userId === uid;
                   return (
-                    <li key={m.userId} className="flex items-center gap-4 px-5 py-3.5">
+                    <li
+                      key={m.userId}
+                      className={`flex items-center gap-4 px-5 py-3.5 ${isYou ? "bg-primary/[0.06]" : ""}`}
+                    >
                       <Avatar name={m.name} src={m.avatarUrl} seed={m.userId} className="h-9 w-9 shrink-0" />
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
                           <span className="truncate text-sm font-medium">{m.name}</span>
-                          {m.role === "owner" && (
-                            <Crown className="h-3.5 w-3.5 shrink-0 text-amber-500" />
+                          {isYou && (
+                            <span className="shrink-0 rounded-full bg-primary/15 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
+                              You
+                            </span>
                           )}
                         </div>
                         <div className="mt-1 flex items-center gap-2">

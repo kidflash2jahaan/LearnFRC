@@ -69,8 +69,7 @@ export default async function AdminPage() {
           subscribers: stats.totals.subscribers,
           signups7d: stats.signups7d,
           completions7d: stats.completions7d,
-          registeredTeams: stats.teams.length,
-          totalUniqueTeams: stats.totalUniqueTeams,
+          totalTeams: stats.totalUniqueTeams,
         }}
         users={stats.users}
         teams={stats.teams}

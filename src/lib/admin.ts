@@ -33,16 +33,11 @@ export type AdminUser = {
   created_at: string;
 };
 
-/** A managed team for the admin Teams table. */
+/** A team (grouped by FRC team number) for the admin Teams table. */
 export type AdminTeam = {
-  id: string;
-  name: string;
-  team_number: number | null;
-  join_code: string;
-  owner: string;
+  teamNumber: number;
   members: number;
   completed: number;
-  created_at: string;
 };
 
 /** One calendar day of activity for the chart. */
@@ -222,57 +217,26 @@ export async function getAdminStats(): Promise<AdminStats> {
     })
     .sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at));
 
-  // ── Teams ──────────────────────────────────────────────────────
-  const [teamsRes, membershipsRes] = await Promise.all([
-    supabase
-      .from("teams")
-      .select("id, name, team_number, join_code, owner_id, created_at")
-      .order("created_at", { ascending: false }),
-    supabase.from("team_memberships").select("team_id, user_id"),
-  ]);
-  const teamRows = (teamsRes.data ?? []) as {
-    id: string;
-    name: string;
-    team_number: number | null;
-    join_code: string;
-    owner_id: string;
-    created_at: string;
-  }[];
-  const memRows = (membershipsRes.data ?? []) as {
-    team_id: string;
-    user_id: string;
-  }[];
-  const membersByTeam = new Map<string, string[]>();
-  for (const m of memRows) {
-    const arr = membersByTeam.get(m.team_id) ?? [];
-    arr.push(m.user_id);
-    membersByTeam.set(m.team_id, arr);
+  // ── Teams (grouped by FRC team number from profiles) ───────────
+  const teamAgg = new Map<number, { members: number; completed: number }>();
+  const userTeam = new Map<string, number>();
+  for (const p of (profsRes.data as { id: string; team_number: number | null }[]) ?? []) {
+    if (p.team_number == null) continue;
+    userTeam.set(p.id, p.team_number);
+    const t = teamAgg.get(p.team_number) ?? { members: 0, completed: 0 };
+    t.members += 1;
+    teamAgg.set(p.team_number, t);
   }
-  const completedByUser = new Map<string, number>();
-  const memberIds = [...new Set(memRows.map((m) => m.user_id))];
-  if (memberIds.length) {
-    const lpRes = await supabase
-      .from("lesson_progress")
-      .select("user_id")
-      .in("user_id", memberIds);
-    for (const r of (lpRes.data as { user_id: string }[]) ?? [])
-      completedByUser.set(r.user_id, (completedByUser.get(r.user_id) ?? 0) + 1);
+  const { data: allLpRows } = await supabase.from("lesson_progress").select("user_id");
+  for (const r of (allLpRows as { user_id: string }[]) ?? []) {
+    const tn = userTeam.get(r.user_id);
+    if (tn == null) continue;
+    const t = teamAgg.get(tn);
+    if (t) t.completed += 1;
   }
-  const teams: AdminTeam[] = teamRows.map((t) => {
-    const ids = membersByTeam.get(t.id) ?? [];
-    const owner = pmap.get(t.owner_id) as Record<string, unknown> | undefined;
-    return {
-      id: t.id,
-      name: t.name,
-      team_number: t.team_number,
-      join_code: t.join_code,
-      owner:
-        (owner?.full_name as string) || (owner?.username as string) || "—",
-      members: ids.length,
-      completed: ids.reduce((s, id) => s + (completedByUser.get(id) ?? 0), 0),
-      created_at: t.created_at,
-    };
-  });
+  const teams: AdminTeam[] = [...teamAgg.entries()]
+    .map(([teamNumber, v]) => ({ teamNumber, members: v.members, completed: v.completed }))
+    .sort((a, b) => b.members - a.members || b.completed - a.completed);
 
   const totalUniqueTeams = new Set(
     ((profsRes.data as { team_number: number | null }[]) ?? [])

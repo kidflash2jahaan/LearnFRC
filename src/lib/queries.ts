@@ -7,8 +7,6 @@ import type {
   Lesson,
   Profile,
   FlatLesson,
-  Team,
-  TeamDashboard,
   TeamMemberProgress,
 } from "@/lib/types";
 
@@ -211,109 +209,50 @@ export async function getTeamLeaderboard(limit = 50): Promise<TeamEntry[]> {
     .slice(0, limit);
 }
 
-/** The team the user owns or belongs to (one per user), or null. */
-export async function getMyTeam(
-  userId: string
-): Promise<{ team: Team; role: string } | null> {
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("team_memberships")
-    .select("role, teams(*)")
-    .eq("user_id", userId)
-    .maybeSingle();
-  const team = (data as { role: string; teams: Team | null } | null)?.teams;
-  if (!data || !team) return null;
-  return { team, role: (data as { role: string }).role };
-}
-
 /**
- * Full mentor dashboard: roster with each member's completed-lesson count, XP,
- * and last activity. Member progress lives behind per-user RLS, so this uses the
- * service-role client — and only returns the roster when the requester actually
- * owns the team.
+ * Auto-team view: everyone who signed up with the same FRC team number, plus
+ * each member's progress. Uses the service-role client because lesson_progress
+ * is per-user RLS-locked. By design, teammates can see each other's progress
+ * (disclosed in the Privacy Policy); display names still honor `hide_name`.
  */
-export async function getTeamDashboard(
-  teamId: string,
-  requesterId: string
-): Promise<TeamDashboard | null> {
+export async function getTeamByNumber(
+  teamNumber: number
+): Promise<{ teamNumber: number; totalLessons: number; members: TeamMemberProgress[] }> {
   const admin = createAdminClient();
-  const { data: team } = await admin
-    .from("teams")
-    .select("*")
-    .eq("id", teamId)
-    .maybeSingle();
-  if (!team) return null;
-  const isOwner = (team as Team).owner_id === requesterId;
-
-  const { count: totalLessons } = await admin
-    .from("lessons")
-    .select("*", { count: "exact", head: true });
-
-  if (!isOwner) {
-    return { team: team as Team, isOwner: false, totalLessons: totalLessons ?? 0, members: [] };
-  }
-
-  const { data: memberRows } = await admin
-    .from("team_memberships")
-    .select("user_id, role, joined_at")
-    .eq("team_id", teamId);
-  const rows = (memberRows ?? []) as {
-    user_id: string;
-    role: string;
-    joined_at: string;
-  }[];
-  const ids = rows.map((r) => r.user_id);
-  if (!ids.length) {
-    return { team: team as Team, isOwner: true, totalLessons: totalLessons ?? 0, members: [] };
-  }
-
-  const [{ data: profs }, { data: lp }] = await Promise.all([
+  const [{ count: totalLessons }, { data: profs }] = await Promise.all([
+    admin.from("lessons").select("*", { count: "exact", head: true }),
     admin
       .from("profiles")
-      .select("id, username, full_name, avatar_url, xp, hide_name")
-      .in("id", ids),
-    admin
-      .from("lesson_progress")
-      .select("user_id, completed_at")
-      .in("user_id", ids),
+      .select("id, username, full_name, avatar_url, xp, hide_name, created_at")
+      .eq("team_number", teamNumber),
   ]);
-
-  const profMap = new Map(
-    ((profs ?? []) as Profile[]).map((p) => [p.id, p])
-  );
+  const rows = (profs as Profile[]) ?? [];
+  const ids = rows.map((p) => p.id);
   const counts: Record<string, number> = {};
   const last: Record<string, string> = {};
-  for (const r of (lp ?? []) as { user_id: string; completed_at: string }[]) {
-    counts[r.user_id] = (counts[r.user_id] ?? 0) + 1;
-    if (!last[r.user_id] || r.completed_at > last[r.user_id])
-      last[r.user_id] = r.completed_at;
+  if (ids.length) {
+    const { data: lp } = await admin
+      .from("lesson_progress")
+      .select("user_id, completed_at")
+      .in("user_id", ids);
+    for (const r of (lp ?? []) as { user_id: string; completed_at: string }[]) {
+      counts[r.user_id] = (counts[r.user_id] ?? 0) + 1;
+      if (!last[r.user_id] || r.completed_at > last[r.user_id])
+        last[r.user_id] = r.completed_at;
+    }
   }
-
   const members: TeamMemberProgress[] = rows
-    .map((r) => {
-      const p = profMap.get(r.user_id);
-      const name =
-        (!p?.hide_name && (p?.full_name || p?.username)) ||
-        p?.username ||
-        "Member";
-      return {
-        userId: r.user_id,
-        name,
-        username: p?.username ?? null,
-        avatarUrl: p?.avatar_url ?? null,
-        role: r.role,
-        xp: p?.xp ?? 0,
-        completed: counts[r.user_id] ?? 0,
-        lastActive: last[r.user_id] ?? null,
-        joinedAt: r.joined_at,
-      };
-    })
-    .sort(
-      (a, b) =>
-        (a.role === "owner" ? -1 : 0) - (b.role === "owner" ? -1 : 0) ||
-        b.completed - a.completed ||
-        b.xp - a.xp
-    );
-
-  return { team: team as Team, isOwner: true, totalLessons: totalLessons ?? 0, members };
+    .map((p) => ({
+      userId: p.id,
+      name: (!p.hide_name && (p.full_name || p.username)) || p.username || "Member",
+      username: p.username,
+      avatarUrl: p.avatar_url,
+      role: "member",
+      xp: p.xp ?? 0,
+      completed: counts[p.id] ?? 0,
+      lastActive: last[p.id] ?? null,
+      joinedAt: p.created_at,
+    }))
+    .sort((a, b) => b.completed - a.completed || b.xp - a.xp);
+  return { teamNumber, totalLessons: totalLessons ?? 0, members };
 }

@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   description: "How LearnFRC collects, uses, and protects your information.",
 };
 
-const UPDATED = "June 20, 2026";
+const UPDATED = "June 22, 2026";
 const CONTACT = "29pardhananij@sagehillschool.org";
 
 function H({ children }: { children: React.ReactNode }) {
@@ -58,6 +58,15 @@ export default function PrivacyPage() {
         Your <strong>public profile</strong> (username, display name, team number, XP, level, and
         badges) is visible to others and may appear on the leaderboard. Your email address is
         never shown publicly. You can change these details in your settings.
+      </P>
+      <P>
+        <strong>Team visibility.</strong> If you provide your FRC team number, you are
+        automatically grouped with other registered users who entered the same team number.
+        Members of the same team can see each other&apos;s <strong>learning progress</strong>{" "}
+        (lessons completed, XP, level, badges, and last activity) along with your display name —
+        unless you turn on &quot;hide my name,&quot; in which case your username is shown instead.
+        Your email is never shared. If you don&apos;t want to appear in a team view, leave your
+        team number blank (or remove it) in your settings.
       </P>
 
       <H>Cookies</H>

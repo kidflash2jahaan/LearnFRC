@@ -84,24 +84,7 @@ export interface UserAchievement {
   achievement?: Achievement;
 }
 
-export interface Team {
-  id: string;
-  name: string;
-  team_number: number | null;
-  join_code: string;
-  owner_id: string;
-  created_at: string;
-}
-
-export interface TeamMembership {
-  id: string;
-  team_id: string;
-  user_id: string;
-  role: "owner" | "mentor" | "member";
-  joined_at: string;
-}
-
-/** One member's roll-up for the mentor dashboard. */
+/** One member's roll-up, shown in the auto team view. */
 export interface TeamMemberProgress {
   userId: string;
   name: string;
@@ -112,13 +95,6 @@ export interface TeamMemberProgress {
   completed: number;
   lastActive: string | null;
   joinedAt: string;
-}
-
-export interface TeamDashboard {
-  team: Team;
-  isOwner: boolean;
-  totalLessons: number;
-  members: TeamMemberProgress[];
 }
 
 /** A lesson flattened with the context needed for navigation / progress. */

@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import {
   Users,
-  KeyRound,
-  LayoutDashboard,
+  Hash,
+  Eye,
   GraduationCap,
   Award,
   ArrowRight,
@@ -16,26 +16,26 @@ import { Badge } from "@/components/ui/badge";
 import { Reveal, Stagger, StaggerItem } from "@/components/motion/reveal";
 
 export const metadata: Metadata = {
-  title: "LearnFRC for Teams — free onboarding curriculum for mentors",
+  title: "LearnFRC for Teams — free onboarding curriculum for FRC teams",
   description:
-    "Onboard your whole FRC team with a ready-made curriculum across every department. Create a team, share one join code, and track every member's progress. Free.",
+    "Onboard your whole FRC team with a ready-made curriculum across every department. Everyone who signs up with your team number is grouped automatically — and you can all see each other's progress. Free.",
 };
 
 const STEPS = [
   {
+    icon: Hash,
+    title: "Everyone adds your team number",
+    body: "When your members sign up, they enter the same FRC team number. That's the only step — no codes, no invites, nothing to set up.",
+  },
+  {
     icon: Users,
-    title: "Create your team",
-    body: "Takes 10 seconds — name it and add your team number. You become the manager.",
+    title: "Your team groups automatically",
+    body: "Anyone with your team number is instantly grouped together, and new members show up the moment they join.",
   },
   {
-    icon: KeyRound,
-    title: "Share one join code",
-    body: "Drop the code or invite link in your team's Slack/Discord. New members sign up and join; members who already have an account just enter the code — their progress carries over.",
-  },
-  {
-    icon: LayoutDashboard,
-    title: "Track everyone's progress",
-    body: "Your dashboard shows each member's completed lessons across every department, their XP, and when they were last active.",
+    icon: Eye,
+    title: "See each other's progress",
+    body: "You and your teammates can all see who's completed which lessons, their XP, and recent activity — so you can push each other and spot who needs help.",
   },
 ];
 
@@ -79,14 +79,14 @@ export default async function ForTeamsPage() {
             rebuilding training every year
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
-            LearnFRC gives your team a structured curriculum for every department, one
-            join code to bring everyone in, and a dashboard to see who&apos;s learned
-            what. Completely free.
+            LearnFRC gives your team a structured curriculum for every department, and
+            automatically groups everyone who signs up with your team number — so you
+            can all see each other&apos;s progress. Completely free.
           </p>
           <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
             <Button asChild variant="brand" size="lg">
               <Link href="/teams">
-                Create your team <ArrowRight className="h-4 w-4" />
+                Go to your team <ArrowRight className="h-4 w-4" />
               </Link>
             </Button>
             <Button asChild variant="outline" size="lg">
@@ -188,12 +188,12 @@ export default async function ForTeamsPage() {
               Ready to onboard your team?
             </h2>
             <p className="mx-auto mt-2 max-w-lg text-muted-foreground">
-              Create your team now and share the code with your members. It&apos;s free,
-              and setup takes under a minute.
+              Add your team number and tell your members to do the same — everyone groups
+              together automatically. It&apos;s free, and there&apos;s nothing to set up.
             </p>
             <Button asChild variant="brand" size="lg" className="mt-6">
               <Link href="/teams">
-                Create your team <ArrowRight className="h-4 w-4" />
+                Go to your team <ArrowRight className="h-4 w-4" />
               </Link>
             </Button>
           </div>

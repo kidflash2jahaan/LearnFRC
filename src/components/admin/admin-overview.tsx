@@ -38,8 +38,7 @@ type OverviewData = {
   subscribers: number;
   signups7d: number;
   completions7d: number;
-  registeredTeams: number;
-  totalUniqueTeams: number;
+  totalTeams: number;
 };
 
 export function AdminOverview({
@@ -76,10 +75,10 @@ export function AdminOverview({
     { label: "Bookmarks", value: data.bookmarks, icon: Layers, sub: "saved lessons" },
     { label: "Email subscribers", value: data.subscribers, icon: Mail, sub: "early-access list", panel: "subscribers" as Panel },
     {
-      label: "Registered teams",
-      value: data.registeredTeams,
+      label: "Teams",
+      value: data.totalTeams,
       icon: UsersRound,
-      sub: `${data.totalUniqueTeams} total teams`,
+      sub: "by team number",
       panel: "teams" as Panel,
     },
   ];
@@ -197,7 +196,7 @@ export function AdminOverview({
       {open === "teams" && (
         <div className="mt-4 rounded-2xl border border-border bg-card p-6">
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="font-semibold">Registered teams</h2>
+            <h2 className="font-semibold">Teams</h2>
             <Badge variant="outline">{teams.length} total</Badge>
           </div>
           {teams.length === 0 ? (
@@ -208,33 +207,16 @@ export function AdminOverview({
                 <thead className="sticky top-0 bg-card">
                   <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
                     <th className="pb-2 font-medium">Team</th>
-                    <th className="pb-2 font-medium">Owner</th>
                     <th className="pb-2 text-right font-medium">Members</th>
                     <th className="pb-2 text-right font-medium">Lessons done</th>
-                    <th className="pb-2 font-medium">Code</th>
-                    <th className="pb-2 text-right font-medium">Created</th>
                   </tr>
                 </thead>
                 <tbody>
                   {teams.map((t) => (
-                    <tr key={t.id} className="border-b border-border/60 last:border-0">
-                      <td className="py-3">
-                        <div className="font-medium">{t.name}</div>
-                        {t.team_number ? (
-                          <div className="text-xs text-muted-foreground">#{t.team_number}</div>
-                        ) : null}
-                      </td>
-                      <td className="py-3 text-muted-foreground">{t.owner}</td>
+                    <tr key={t.teamNumber} className="border-b border-border/60 last:border-0">
+                      <td className="py-3 font-medium">#{t.teamNumber}</td>
                       <td className="py-3 text-right font-mono">{t.members}</td>
                       <td className="py-3 text-right font-mono">{t.completed}</td>
-                      <td className="py-3">
-                        <span className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-xs tracking-widest">
-                          {t.join_code}
-                        </span>
-                      </td>
-                      <td className="py-3 text-right text-muted-foreground">
-                        {new Date(t.created_at).toLocaleDateString()}
-                      </td>
                     </tr>
                   ))}
                 </tbody>
