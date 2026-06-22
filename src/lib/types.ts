@@ -84,6 +84,43 @@ export interface UserAchievement {
   achievement?: Achievement;
 }
 
+export interface Team {
+  id: string;
+  name: string;
+  team_number: number | null;
+  join_code: string;
+  owner_id: string;
+  created_at: string;
+}
+
+export interface TeamMembership {
+  id: string;
+  team_id: string;
+  user_id: string;
+  role: "owner" | "mentor" | "member";
+  joined_at: string;
+}
+
+/** One member's roll-up for the mentor dashboard. */
+export interface TeamMemberProgress {
+  userId: string;
+  name: string;
+  username: string | null;
+  avatarUrl: string | null;
+  role: string;
+  xp: number;
+  completed: number;
+  lastActive: string | null;
+  joinedAt: string;
+}
+
+export interface TeamDashboard {
+  team: Team;
+  isOwner: boolean;
+  totalLessons: number;
+  members: TeamMemberProgress[];
+}
+
 /** A lesson flattened with the context needed for navigation / progress. */
 export interface FlatLesson extends Lesson {
   moduleTitle: string;

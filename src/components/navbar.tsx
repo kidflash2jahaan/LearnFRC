@@ -16,6 +16,7 @@ import {
   LogOut,
   Bot,
   ChevronDown,
+  Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -39,6 +40,7 @@ const NAV = [
   { href: "/glossary", label: "Glossary" },
   { href: "/resources", label: "Resources" },
   { href: "/leaderboard", label: "Leaderboard" },
+  { href: "/for-teams", label: "For teams" },
 ];
 
 type Me = {
@@ -203,6 +205,11 @@ export function Navbar() {
                 <DropdownMenuItem asChild>
                   <Link href="/profile">
                     <User className="h-4 w-4" /> Profile
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/teams">
+                    <Users className="h-4 w-4" /> My team
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
