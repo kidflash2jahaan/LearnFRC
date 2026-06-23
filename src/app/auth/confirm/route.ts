@@ -1,6 +1,7 @@
 import { type EmailOtpType } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail, welcomeEmailHtml } from "@/lib/email";
 
 /**
@@ -34,6 +35,35 @@ export async function GET(request: Request) {
           html: welcomeEmailHtml(name),
         });
       }
+
+      // Pay out the referral reward exactly once, now that this user is
+      // verified (farm-resistant — requires a real, confirmed inbox).
+      if (type === "signup" && data.user) {
+        const admin = createAdminClient();
+        const { data: prof } = await admin
+          .from("profiles")
+          .select("referred_by, referral_rewarded")
+          .eq("id", data.user.id)
+          .maybeSingle();
+        if (prof?.referred_by && !prof.referral_rewarded) {
+          const { data: refUser } = await admin
+            .from("profiles")
+            .select("id, xp")
+            .eq("id", prof.referred_by)
+            .maybeSingle();
+          if (refUser) {
+            await admin
+              .from("profiles")
+              .update({ xp: ((refUser.xp as number) ?? 0) + 25 })
+              .eq("id", refUser.id);
+          }
+          await admin
+            .from("profiles")
+            .update({ referral_rewarded: true })
+            .eq("id", data.user.id);
+        }
+      }
+
       return NextResponse.redirect(new URL(next, origin));
     }
     return NextResponse.redirect(

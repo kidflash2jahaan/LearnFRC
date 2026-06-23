@@ -113,13 +113,14 @@ export async function signUp(
   });
   if (error) return { error: error.message };
 
-  // Credit the referrer and award them XP per recruit. The profile row is
-  // created by a trigger. Self-referrals are blocked.
+  // Record who referred this user. The XP reward is paid out only when they
+  // verify their email (see /auth/confirm) — keeps it farm-resistant.
+  // The profile row is created by a trigger. Self-referrals are blocked.
   if (ref && data.user) {
     const admin = createAdminClient();
     const { data: referrer } = await admin
       .from("profiles")
-      .select("id, xp")
+      .select("id")
       .eq("username", ref)
       .maybeSingle();
     if (referrer && referrer.id !== data.user.id) {
@@ -127,10 +128,6 @@ export async function signUp(
         .from("profiles")
         .update({ referred_by: referrer.id })
         .eq("id", data.user.id);
-      await admin
-        .from("profiles")
-        .update({ xp: ((referrer.xp as number) ?? 0) + 25 })
-        .eq("id", referrer.id);
     }
   }
 
