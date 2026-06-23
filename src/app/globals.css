@@ -262,6 +262,31 @@
   }
 }
 
+/* Performance mode: opt-in toggle that strips the GPU-heavy effects. */
+[data-perf="on"] *, [data-perf="on"] *::before, [data-perf="on"] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
+[data-perf="on"] .aurora-bg,
+[data-perf="on"] .bg-grid,
+[data-perf="on"] .bg-dots {
+  background: none !important;
+}
+[data-perf="on"] .glass {
+  background: var(--card) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+[data-perf="on"] [class*="blur-"] {
+  filter: none !important;
+}
+[data-perf="on"] [class*="backdrop-blur"] {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
 /* ------------------------------------------------------------------ */
 /*  Code highlighting (rehype-highlight / highlight.js tokens)        */
 /* ------------------------------------------------------------------ */

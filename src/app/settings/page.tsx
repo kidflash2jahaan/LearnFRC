@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Reveal } from "@/components/motion/reveal";
 import { SettingsForm } from "@/components/settings/settings-form";
+import { PerfModeCard } from "@/components/perf-mode";
 
 export const metadata = {
   title: "Settings · LearnFRC",
@@ -76,6 +77,11 @@ export default async function SettingsPage() {
               <SettingsForm profile={profile} email={user.email} />
             </CardContent>
           </Card>
+        </Reveal>
+
+        {/* Performance card */}
+        <Reveal delay={0.13} className="mt-6">
+          <PerfModeCard />
         </Reveal>
 
         {/* Sign out card */}

@@ -1,12 +1,8 @@
 "use client";
 
 import * as React from "react";
-import {
-  useInView,
-  useMotionValue,
-  useSpring,
-  useReducedMotion,
-} from "framer-motion";
+import { useInView, useMotionValue, useSpring } from "framer-motion";
+import { useStaticMotion } from "@/components/perf-mode";
 
 export function AnimatedCounter({
   value,
@@ -19,7 +15,7 @@ export function AnimatedCounter({
 }) {
   const ref = React.useRef<HTMLSpanElement>(null);
   const inView = useInView(ref, { once: true, margin: "-40px" });
-  const reduce = useReducedMotion();
+  const reduce = useStaticMotion();
   const mv = useMotionValue(0);
   const spring = useSpring(mv, { stiffness: 60, damping: 18 });
   const [display, setDisplay] = React.useState(0);

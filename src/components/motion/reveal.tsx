@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { motion, useReducedMotion, type Variants } from "framer-motion";
+import { motion, type Variants } from "framer-motion";
+import { useStaticMotion } from "@/components/perf-mode";
 
 const EASE = [0.21, 0.47, 0.32, 0.98] as const;
 
@@ -20,12 +21,16 @@ export function Reveal({
   once?: boolean;
   as?: "div" | "section" | "li" | "span";
 }) {
-  const reduce = useReducedMotion();
+  const stat = useStaticMotion();
+  if (stat) {
+    const Tag = as as React.ElementType;
+    return <Tag className={className}>{children}</Tag>;
+  }
   const M = motion[as] as typeof motion.div;
   return (
     <M
       className={className}
-      initial={reduce ? { opacity: 0 } : { opacity: 0, y }}
+      initial={{ opacity: 0, y }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once, margin: "-80px" }}
       transition={{ duration: 0.6, delay, ease: EASE }}
@@ -58,6 +63,8 @@ export function Stagger({
   stagger?: number;
   once?: boolean;
 }) {
+  const stat = useStaticMotion();
+  if (stat) return <div className={className}>{children}</div>;
   return (
     <motion.div
       className={className}
@@ -79,6 +86,8 @@ export function StaggerItem({
   children: React.ReactNode;
   className?: string;
 }) {
+  const stat = useStaticMotion();
+  if (stat) return <div className={className}>{children}</div>;
   return (
     <motion.div className={className} variants={itemVariants}>
       {children}
