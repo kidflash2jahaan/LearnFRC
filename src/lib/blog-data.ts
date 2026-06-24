@@ -855,8 +855,731 @@ Read the manual, list and rank scoring opportunities, pick a focused and consist
 
 Ready to turn your priority list into a real design? Start with the LearnFRC CAD and Design guide at https://learnfrc.systemerr.com/guides/cad-design.`,
   },
+  {
+    slug: "frc-autonomous-pathplanner",
+    title: "FRC Autonomous with PathPlanner: A Beginner's Guide to Auto Routines",
+    description: "Learn how FRC teams build autonomous routines with PathPlanner (PPLib): paths vs autos, AutoBuilder, named commands, odometry, tuning, and Choreo.",
+    keywords: ["FRC PathPlanner tutorial","FRC autonomous programming","how to make autonomous FRC","PathPlanner FRC","command-based autonomous FRC","FRC auto routines"],
+    date: "2026-06-24",
+    readMins: 8,
+    content: `The first 15 seconds of an FRC match happen with no driver at the controls. Your robot has to drive, aim, and score entirely on its own. For years, writing that autonomous code meant hand-tuning trajectories and hoping the math worked out. Today, most competitive teams reach for one tool first: **PathPlanner**. It lets you draw a path on a picture of the field, attach actions to it, and hand the whole thing to your robot as a single command. This guide walks you through how it works, from the GUI to the code, in plain terms.
+
+## What PathPlanner actually is
+
+PathPlanner is a **motion profile generator** for FRC robots, originally created by [team 3015](https://pathplanner.dev/home.html). It comes in two pieces that work together:
+
+- The **PathPlanner GUI** — a desktop app (available on the Microsoft Store and as a [GitHub release](https://pathplanner.dev/home.html)) where you visually design paths on top of a field image.
+- **PathPlannerLib (PPLib)** — a vendor library you add to your robot project that reads those path files and turns them into commands your robot runs.
+
+The split matters. The GUI is where a student with no coding experience can lay out a route. PPLib is the code side that executes it. You design in one, you run in the other, and a feature called **hot reload** even lets you tweak a path in the GUI and push it to a running robot without redeploying code.
+
+## Paths vs. autos: the core distinction
+
+The single most important concept in PathPlanner is the difference between a path and an auto.
+
+A **path** is one segment of motion — for example, "drive from the starting line to the first game piece." Paths are built from **waypoints**, which use Bézier-style **anchor points** (the exact spots the robot drives through) and **control points** (handles that shape the curve's heading and tightness). Each path carries **constraints**: max velocity, max acceleration, max angular velocity, and max angular acceleration, applied either globally or in **constraint zones** along the path.
+
+An **auto** is a full routine that chains multiple paths together in sequence — "go to the piece, then go to the goal, then go back." Under the hood, [an auto is essentially a sequential command group](https://pathplanner.dev/gui-editing-paths-and-autos.html) made of path-following commands. Because paths are separate files, you can reuse one path across several autos. That modularity is the whole point: build a library of clean segments, then assemble different routines from them.
+
+| Concept | What it is | Lives where |
+|---|---|---|
+| Path | One motion segment with waypoints + constraints | A \`.path\` file |
+| Auto | A sequence of paths plus commands | A \`.auto\` file |
+| Waypoint | Anchor + control points shaping the curve | Inside a path |
+| Event marker | A trigger that fires a command mid-path | Inside a path/auto |
+
+## Holonomic vs. differential
+
+PathPlanner supports both major drivetrain types, and it treats them differently. **Holonomic** drivetrains (swerve) can translate and rotate independently, so paths let you set **rotation targets** — the robot can be spinning to face a target while it drives a curve. PPLib follows these with the [\`PPHolonomicDriveController\`](https://pathplanner.dev/pplib-build-an-auto.html).
+
+**Differential** (tank) drivetrains can only point where they're driving, so rotation targets don't apply — heading is locked to the direction of travel. These use the \`PPLTVController\` instead. If your team runs swerve, you'll live in holonomic mode; if you run a tank or "west coast" drive, you're on the differential side.
+
+## AutoBuilder: wiring PPLib to your robot
+
+Before PPLib can drive anything, you have to tell it how *your* robot moves. That's the job of **AutoBuilder**, configured once (ideally in your drive subsystem's constructor). [\`AutoBuilder.configure()\`](https://pathplanner.dev/pplib-build-an-auto.html) takes, in order:
+
+1. A **pose supplier** (\`this::getPose\`) that returns the robot's current \`Pose2d\`.
+2. A **reset-pose** consumer (\`this::resetPose\`) that snaps odometry to a given pose at auto start.
+3. A **robot-relative speeds supplier** (\`this::getRobotRelativeSpeeds\`) returning current \`ChassisSpeeds\`.
+4. A **drive consumer** that takes \`ChassisSpeeds\` (and feedforwards) and commands the wheels.
+5. A **path-following controller** — \`PPHolonomicDriveController\` for swerve.
+6. A **\`RobotConfig\`** describing your robot's physical properties.
+7. An **alliance-flip supplier** (more on that below).
+8. The drive **subsystem** itself (\`this\`), so commands require it.
+
+The controller uses **PIDConstants** to correct error while following. The docs' starting example uses \`new PIDConstants(5.0, 0.0, 0.0)\` for both translation and rotation — proportional gain of 5.0, no integral or derivative. You'll tune those later.
+
+## RobotConfig: telling the math about your robot
+
+\`RobotConfig\` (loaded with \`RobotConfig.fromGUISettings()\`) pulls the physical numbers you entered in the GUI: [robot **mass** in kg, **moment of inertia (MOI)**, **trackwidth**, wheel radius, drive gearing, wheel **coefficient of friction**, drive motor type, and drive current limit](https://pathplanner.dev/robot-config.html). PathPlanner uses these to generate trajectories that are actually achievable. The docs stress measuring your **true max drive speed** on the real robot — driving it in a straight line as fast as possible on a charged battery — rather than copying a theoretical spec (they suggest about 85% of the module's free speed only as a fallback when you can't measure). It encodes how much motor torque you can really use to accelerate.
+
+## Named commands and event markers
+
+Driving is only half of auto. You also need to intake, shoot, or score *while* moving. That's where **named commands** come in. In your code you register a command under a string name:
+
+\`\`\`java
+NamedCommands.registerCommand("intakeNote", intake.runIntakeCommand());
+\`\`\`
+
+Then in the GUI you drop an **event marker** on a path and type \`intakeNote\`. When the auto reaches that marker, PPLib looks up the registered command and runs it. One critical rule from [the docs](https://pathplanner.dev/pplib-named-commands.html): **named commands must be registered before you create any PathPlannerAuto or path**, so do your registration in \`RobotContainer\` right after subsystems are built. This is the seam where PathPlanner plugs straight into **command-based programming** — your navigation stays in the path files, your behaviors stay as reusable commands.
+
+## How it ties into odometry and pose estimation
+
+PathPlanner can only follow a path if the robot knows where it is. That knowledge comes from **odometry** — WPILib tracks position from wheel encoders and a gyro using classes like [\`SwerveDriveOdometry\` and \`SwerveDriveKinematics\`](https://docs.wpilib.org/en/stable/docs/software/kinematics-and-odometry/swerve-drive-odometry.html), updated every loop in your subsystem's \`periodic()\`. The \`getPose\` and \`resetPose\` methods you handed AutoBuilder are exactly the bridge to this system.
+
+Odometry drifts over time, especially after contact. Many teams upgrade to a **pose estimator** (e.g. \`SwerveDrivePoseEstimator\`), which fuses encoder/gyro odometry with vision measurements from AprilTag cameras to stay accurate. If you want to go deeper on vision, our [programming track](https://learnfrc.systemerr.com/guides/programming-software) covers it.
+
+## Alliance flipping and the field origin
+
+FRC fields are mirrored between red and blue. PathPlanner keeps the [field coordinate origin on the blue side](https://pathplanner.dev/pplib-build-an-auto.html) and mirrors your paths for red. You design once, and the alliance-flip supplier — which returns \`true\` when \`DriverStation.getAlliance()\` reports Red — handles the rest. A common beginner bug is testing on blue, then watching the robot drive into a wall on red because flipping wasn't wired up.
+
+## Selecting and running an auto
+
+To let drivers pick a routine, AutoBuilder can build a dashboard chooser for you:
+
+\`\`\`java
+autoChooser = AutoBuilder.buildAutoChooser();
+SmartDashboard.putData("Auto Chooser", autoChooser);
+\`\`\`
+
+\`buildAutoChooser()\` returns a \`SendableChooser\` pre-populated with every auto in your project (defaulting to \`Commands.none()\`). In \`autonomousInit()\`, you grab the selected command and schedule it.
+
+## Pathfinding: paths you didn't draw
+
+PPLib also generates paths on the fly using the **AD\\*** algorithm. [\`pathfindToPose\` and \`pathfindThenFollowPath\`](https://pathplanner.dev/pplib-pathfinding.html) let the robot navigate around obstacles to a target at runtime — useful for auto-aligning to a scoring location during teleop. The tradeoff: you give up control of heading at the start and end of an on-the-fly path, so it's less ideal for tank drives or precision approaches unless you chain it into a pre-planned path.
+
+## Common pitfalls
+
+- **Asking for the impossible.** PathPlanner will happily generate a path your robot physically can't follow. If the robot overshoots or cuts corners, lower your constraints or fix your \`RobotConfig\`.
+- **Forgetting registration order.** Register named commands before creating autos, or the markers silently do nothing.
+- **Skipping odometry verification.** If \`getPose\` is wrong, every path is wrong. Confirm your odometry tracks reality before blaming the path.
+- **Untuned PID.** The default \`5.0\` P gain is a starting point, not a finish line.
+
+## Choreo: the alternative
+
+The main alternative is [**Choreo**](https://github.com/SleipnirGroup/Choreo), a time-optimal trajectory planner. The philosophy differs: Choreo solves for the fastest trajectory your robot can *actually* follow, cutting down on tweaking, while PathPlanner gives you more manual control at the cost of more tuning. Choreo trajectories are pre-generated and don't regenerate to match the robot's real starting state, and it can't do on-the-fly pathfinding. Helpfully, PathPlanner offers [Choreo interop](https://pathplanner.dev/pplib-choreo-interop.html), so you can use Choreo trajectories inside a PPLib workflow. Many teams use both.
+
+Autonomous is where good programming wins matches. Start simple — one path, one named command — get it reliable, then build up. Ready to write the code? Dive into our [Programming track](https://learnfrc.systemerr.com/guides/programming-software).`,
+  },
+  {
+    slug: "frc-vision-limelight-vs-photonvision",
+    title: "FRC Vision: Limelight vs PhotonVision and AprilTag Tracking",
+    description: "Compare Limelight and PhotonVision for FRC vision: AprilTag tracking, pose estimation with addVisionMeasurement, MegaTag2, latency, calibration, and cost.",
+    keywords: ["Limelight FRC","PhotonVision FRC","FRC AprilTag tracking","FRC vision tutorial","Limelight vs PhotonVision","FRC vision processing"],
+    date: "2026-06-24",
+    readMins: 8,
+    content: `Imagine your robot knowing exactly where it sits on the field — to the centimeter — the instant a match starts, then driving itself to score without a human touching a joystick. That is not science fiction in modern FRC. It is what a camera, a handful of printed **AprilTags**, and a few lines of code can do. Vision is the single biggest force multiplier a software-focused team can add, and the two systems almost everyone uses are **Limelight** and **PhotonVision**. This guide explains what each one is, how they track AprilTags, and how that data becomes a robot pose you can actually drive with.
+
+## Why vision matters in FRC
+
+Wheel encoders and a gyro give you **odometry** — a running guess of where the robot is based on how far the wheels have turned. The problem is drift: every wheel slip, every defender shove, every carpet seam adds error that compounds over a 2.5-minute match. By the time you reach the scoring zone, your "position" can be off by a foot or more.
+
+Vision fixes this by giving the robot an *absolute* reference. There are two big jobs vision does:
+
+- **Pose estimation** — figuring out the robot's exact field position by looking at AprilTags whose locations are published in advance.
+- **Game-piece detection** — finding and aiming at the season's scoring object (a neural-network task, since game pieces have no convenient tag on them).
+
+Get pose estimation working and you unlock auto-alignment, repeatable autonomous routines, and on-the-fly path correction.
+
+## What are AprilTags?
+
+[AprilTags](https://docs.wpilib.org/en/stable/docs/software/vision-processing/apriltag/apriltag-intro.html) are a visual fiducial system developed by researchers at the University of Michigan for low-overhead, high-accuracy localization. They look like simplified QR codes. Since 2024, FIRST has used the **36h11** family — a 6x6 grid of bits surrounded by a black-and-white border. FIRST places these tags at *known* positions around the field, so when your camera spots one, it can work backward to compute where the robot must be.
+
+A single AprilTag detection gives you three things: the **tag ID**, a **3D pose** of the camera relative to the tag (this requires a calibrated camera), and the precise pixel locations of the tag's corners. WPILib bundles the official field positions in an \`AprilTagFieldLayout\`, loaded from a JSON file. For the 2026 *Rebuilt* season there are even two layouts — the **welded** field and the **AndyMark** field — because the two field constructions differ slightly.
+
+One catch worth knowing early: **pose ambiguity**. With a single tag, multiple real-world camera positions can project to nearly the same corner locations in the image, so the math sometimes can't tell which is correct. The fixes are seeing multiple tags at once, fusing with odometry history, or telling the camera your robot's heading. Both Limelight and PhotonVision have features built around solving exactly this.
+
+## Limelight: the hardware smart camera
+
+[Limelight](https://docs.limelightvision.io/docs/docs-limelight/getting-started/summary) is a **smart camera** — a self-contained unit with a lens, image sensor, and an onboard processor that does all the vision math *inside the camera*. You configure zero-code pipelines for color blobs, AprilTags, and neural networks through a built-in web interface, then read results over NetworkTables. Nothing extra to assemble.
+
+The current lineup includes the Limelight 2+, 3, 3A, 3G, and 4. The differences matter:
+
+| Model | Image sensor | Best resolution / FPS | Built-in IMU |
+|---|---|---|---|
+| Limelight 3 | OV5647 color, rolling shutter | 90 fps @ 640x480 | No |
+| Limelight 3G | OV9281 mono, global shutter | 120 fps @ 1280x800 | No |
+| Limelight 4 | OV9281 mono, global shutter | 120 fps @ 1280x800 | Yes |
+
+The jump to a **global shutter** sensor (3G and 4) is significant: global shutters capture the whole frame at once, so AprilTags stay crisp even when the robot is moving fast, while rolling shutters smear them. The [Limelight 4](https://docs.limelightvision.io/docs/docs-limelight/getting-started/limelight-4) also adds a built-in IMU (for the MegaTag2 algorithm described below) and supports a Hailo-8 accelerator for YOLOv8 object detection at up to 80 fps. Note the LL4 accepts a 5V-24V input (35V absolute maximum) but dropped Power-over-Ethernet support, so plan your wiring on the [electrical side](https://learnfrc.systemerr.com/guides/electrical) accordingly.
+
+### MegaTag and MegaTag2
+
+Limelight's localization secret sauce is **MegaTag**. The original [MegaTag (MT1)](https://docs.limelightvision.io/docs/docs-limelight/pipeline-apriltag/apriltag-robot-localization-megatag2) combines the corners of *all* visible tags into one pose, which beats averaging individual single-tag estimates and reduces ambiguity. **MegaTag2 (MT2)** goes further: if you feed it your robot's heading every frame via \`LimelightHelpers.SetRobotOrientation()\`, it produces a stable, ambiguity-free pose even from a *single* tag at long range. You read the result from the NetworkTables key \`botpose_orb_wpiblue\` (blue-origin coordinates) or through the helper \`getBotPoseEstimate_wpiBlue_MegaTag2()\`. The tradeoff: MT2 trusts the heading you give it, so your gyro must be accurate.
+
+## PhotonVision: free software on a coprocessor
+
+[PhotonVision](https://docs.photonvision.org/en/latest/docs/apriltag-pipelines/index.html) is free, open-source vision software you flash onto a small Linux computer — a **coprocessor** — that you supply yourself. Common choices are an **Orange Pi 5**, a **Raspberry Pi**, or a **Rubik Pi 3**, paired with a USB or CSI camera such as an Arducam OV9281. You get the same web-based tuning interface and AprilTag pipelines, but you pick the hardware, which means you control the cost and can run multiple cameras.
+
+PhotonVision's answer to ambiguity is **MultiTag localization**: it solves a single Perspective-n-Point (PnP) problem across every visible tag's corners *on the coprocessor*, producing one robust field-relative pose. This is the recommended approach for all teams because it is the most accurate.
+
+For **game-piece detection**, PhotonVision runs neural-network object detection, but only on coprocessors with a dedicated NPU (neural accelerator) — currently the Orange Pi 5 (using RKNN model format) and the Rubik Pi 3 (using TensorFlow Lite). The software ships with a season-specific model; for 2026 that detects the **FUEL** game piece. Frames are letterboxed to 640x640 before inference, and each detection returns a bounding box, a class, and a unitless confidence score from 0 to 1.
+
+### PhotonPoseEstimator in code
+
+On the robot side you use [\`PhotonPoseEstimator\`](https://docs.photonvision.org/en/latest/docs/programming/photonlib/robot-pose-estimator.html), one per camera. You construct it with the \`AprilTagFieldLayout\` and a \`Transform3d\` describing exactly where the camera sits relative to the robot center. The recommended strategy is **Coprocessor MultiTag** (via \`estimateCoprocMultiTagPose\`), which combines all visible tag corners; you can supply a fallback such as \`estimateLowestAmbiguityPose\` for when only one tag is visible. The estimate methods return an \`Optional<EstimatedRobotPose>\` — empty when no tags are visible — containing an \`estimatedPose\` (\`Pose3d\`) and a \`timestampSeconds\` for latency compensation.
+
+## How vision feeds pose estimation
+
+Both systems ultimately hand WPILib a *pose with a timestamp*, and WPILib fuses it with your odometry using a [pose estimator](https://docs.wpilib.org/en/stable/docs/software/advanced-controls/state-space/state-space-pose-estimators.html). There are three, matched to your drivetrain: \`SwerveDrivePoseEstimator\`, \`DifferentialDrivePoseEstimator\`, and \`MecanumDrivePoseEstimator\`. They are drop-in replacements for the plain odometry classes and run a Kalman filter under the hood.
+
+The pattern is two calls:
+
+- \`update()\` — called **every loop** with your gyro and encoder data to track position continuously.
+- \`addVisionMeasurement(pose, timestamp, stdDevs)\` — called **whenever a vision pose arrives** to snap odometry back toward the truth. It applies latency compensation automatically using the timestamp.
+
+\`\`\`java
+var result = photonEstimator.estimateCoprocMultiTagPose();
+result.ifPresent(est ->
+    swervePoseEstimator.addVisionMeasurement(
+        est.estimatedPose.toPose2d(),
+        est.timestampSeconds));
+\`\`\`
+
+The \`stdDevs\` (standard deviations) are how much you **trust** a measurement: smaller numbers mean "believe this more." A close, multi-tag measurement deserves low standard deviations; a far, single-tag one deserves high values so the filter leans on odometry instead. WPILib's defaults are 0.9 for vision x, y, and heading, versus 0.1 for the model states — so out of the box odometry is trusted more than vision. Tuning these well is what separates a robot that snaps cleanly to its target from one that jitters.
+
+## Latency, mounting, and calibration
+
+Three practical things make or break vision:
+
+- **Latency** — vision data is always a little old. Always pass the real capture timestamp to \`addVisionMeasurement()\` so WPILib rewinds odometry to when the picture was actually taken.
+- **Mounting** — the \`Transform3d\` from robot center to camera must match reality precisely; a few degrees of tilt error becomes large position error at distance. Mount the camera rigidly. Coordinate this with your [mechanical build](https://learnfrc.systemerr.com/guides/mechanical-build).
+- **Calibration** — every camera+resolution combo must be calibrated to remove lens distortion before 3D poses are trustworthy. Both tools have guided calibration in their web UIs.
+
+## Limelight vs PhotonVision: the comparison
+
+| Factor | Limelight | PhotonVision |
+|---|---|---|
+| What it is | Hardware smart camera | Free software on your own coprocessor |
+| Cost | Higher upfront (camera price) | Software free; pay only for Pi + camera |
+| Ease of setup | Easiest — plug in and go | More setup (flash, wire, calibrate) |
+| Flexibility | Fixed hardware | Choose camera, run many cameras |
+| Pose algorithm | MegaTag / MegaTag2 | MultiTag PnP on coprocessor |
+| Object detection | Built-in (Hailo on LL4) | NPU coprocessor only (Orange Pi 5 / Rubik Pi 3) |
+| Best for | Teams wanting reliability fast | Teams wanting control and lower cost |
+
+There is no wrong answer. Limelight gets a rookie team aiming at AprilTags in an afternoon. PhotonVision rewards teams willing to learn Linux with a cheaper, more flexible multi-camera setup. Both produce the same end product: a timestamped pose your \`SwerveDrivePoseEstimator\` can fuse.
+
+Ready to wire vision into your robot code? Start with the [LearnFRC Programming track](https://learnfrc.systemerr.com/guides/programming-software).`,
+  },
+  {
+    slug: "frc-motors-neo-kraken-falcon",
+    title: "FRC Motors Compared: NEO vs Kraken X60 vs Falcon 500 vs NEO Vortex",
+    description: "Compare FRC brushless motors: REV NEO, NEO Vortex, Kraken X60, and Falcon 500. Exact specs, FOC explained, and which motor to pick for drivetrain vs mechanisms.",
+    keywords: ["FRC motor comparison","NEO vs Kraken","Falcon 500 vs Kraken X60","best FRC motor","NEO Vortex","FRC brushless motors"],
+    date: "2026-06-24",
+    readMins: 8,
+    content: `Picking a motor used to be the easy part of designing an FRC robot. Now there are four serious brushless options, two competing ecosystems, and a feature called FOC that sounds like a typo. This guide cuts through it with exact numbers straight from the manufacturers, so you can choose the right motor for your drivetrain and your mechanisms without guessing.
+
+Every motor below is a **brushless DC motor**, meaning it uses electronic commutation (no carbon brushes to wear out) and needs a **motor controller** to spin. They split cleanly into two camps: REV Robotics motors (NEO family) that use a separate controller, and the CTRE/VEX motors (Kraken, Falcon) that have the controller built into the motor housing.
+
+## The spec table
+
+These numbers are pulled directly from the official documentation. Read them carefully: the headline "free speed" and "stall torque" describe opposite ends of a motor's behavior, and the difference between motors is bigger than it looks.
+
+| Spec | REV NEO V1.1 | REV NEO Vortex | Kraken X60 (trap.) | Kraken X60 (FOC) | Falcon 500 |
+|---|---|---|---|---|---|
+| Free speed | 5676 RPM | 6784 RPM | 6000 RPM | 5800 RPM | 6380 RPM |
+| Stall torque | 2.6 Nm | 3.6 Nm | 7.09 Nm | 9.37 Nm | 4.69 Nm |
+| Stall current | 105 A | 211 A | 366 A | 483 A | 257 A |
+| Free current | 1.8 A | 3.6 A | 2 A | 2 A | 1.5 A |
+| Peak power | 406 W | 640 W | 1108 W | 1405 W | ~400 W (at 40 A) |
+| Weight | 0.425 kg | 0.447 kg | ~0.544 kg | ~0.544 kg | 0.49 kg |
+| Controller | SPARK MAX (separate) | SPARK Flex (separate) | Talon FX (integrated) | Talon FX (integrated) | Talon FX (integrated) |
+| Encoder | Hall, 42 CPR | High-res, 7168 CPR | Integrated rotor sensor | Integrated rotor sensor | Integrated, 2048 CPR |
+
+Sources: [REV NEO V1.1](https://docs.revrobotics.com/brushless/neo/v1.1), [REV NEO Vortex](https://docs.revrobotics.com/brushless/neo/vortex), [WCP Kraken X60 performance](https://docs.wcproducts.com/welcome/electronics/kraken-x60/kraken-x60-motor/overview-and-features/motor-performance), and the [CTRE Falcon 500 store page](https://store.ctr-electronics.com/products/falcon-500-powered-by-talon-fx).
+
+The big story here is the Kraken. Its stall torque of **7.09 Nm** (trapezoidal) is nearly **three times** the NEO's 2.6 Nm and over 1.5x the Falcon's 4.69 Nm. That is why the Kraken became the dominant drivetrain motor almost immediately after its October 2023 release.
+
+## How to read these numbers
+
+A motor lives on a straight line between two extremes. At **free speed** it spins fastest but makes zero usable torque. At **stall** it makes maximum torque but isn't turning at all (and draws huge current). Real mechanisms operate somewhere in the middle.
+
+- **Free speed (RPM)** sets your top-end. A faster motor lets you use a more aggressive gear reduction for the same wheel speed, or hit a higher max speed.
+- **Stall torque (Nm)** is the muscle. More stall torque means quicker acceleration, more pushing force in a drivetrain shoving match, and the ability to hold a heavy arm against gravity.
+- **Stall current (A)** is the catch. A Kraken in FOC mode can pull **483 A** at stall. You will never run that unlimited through a robot, your battery and the 40 A breakers won't allow it, so you set a **current limit** in code. That limit is one of the most important parameters you'll configure for the entire robot.
+
+Because all of these motors are gearbox-fed, raw stall torque matters more than you'd think: a single high-torque motor can replace two weaker ones, saving weight, wiring, and a controller.
+
+## What is FOC?
+
+You'll notice the Kraken has two columns. **FOC** stands for **Field-Oriented Control** (also called vector control). Standard **trapezoidal commutation** energizes the motor coils in coarse six-step blocks. FOC instead continuously calculates the optimal current angle and drives the coils with smooth sinusoidal waveforms, keeping the magnetic field perfectly perpendicular to the rotor for maximum torque per amp.
+
+The payoff is real: on the Kraken X60, FOC raises stall torque from 7.09 to **9.37 Nm** and peak power from 1108 to **1405 W**, at the cost of a slightly lower free speed (5800 vs 6000 RPM). CTRE describes FOC as delivering roughly a [15% increase in peak power](https://v6.docs.ctr-electronics.com/en/stable/docs/migration/new-to-phoenix.html) plus better efficiency and smoother, quieter low-speed control.
+
+The important footnote for budgeting and rules: **FOC on CTRE motors requires a Phoenix Pro license**, purchased per-device through CTRE (or unlocked for a whole bus by licensing a CANivore). Without it, your Krakens and Falcons still run great in trapezoidal mode, you just don't get the FOC numbers. REV's NEO Vortex does not gate any performance behind a paid license.
+
+## Controllers and the CAN bus
+
+This is where the two ecosystems differ most.
+
+**REV (separate controllers).** A NEO plugs into a **SPARK MAX** (\`REV-11-2158\`) and a NEO Vortex into a **SPARK Flex** (\`REV-11-2159\`). Both are rated at **60 A continuous and 100 A peak (2-second surge)** per the [SPARK Flex specs](https://docs.revrobotics.com/brushless/spark-flex/specs) and [SPARK MAX specs](https://docs.revrobotics.com/brushless/spark-max/specs). The separate-controller design means you mount and wire the controller somewhere on the robot, which costs space but makes the controller easy to swap if it fails. Crucially, the NEO Vortex pairs with the SPARK Flex to expose a high-resolution **7168 counts-per-revolution** encoder, far finer than the NEO's 42 CPR hall sensor.
+
+**CTRE/VEX (integrated controllers).** The Kraken and Falcon have a **Talon FX** controller built into the back of the motor. One unit, fewer wires, and the controller and encoder are matched at the factory. The downside: if the integrated electronics fail, the whole motor is scrap.
+
+Both ecosystems talk over the robot's **CAN bus**, the daisy-chained network connecting every motor controller to the roboRIO. CTRE additionally sells the **CANivore**, a USB-to-CAN FD adapter that creates a second, faster CAN FD bus. CAN FD carries larger frames at higher bandwidth, which reduces bus utilization and improves swerve odometry when you have a dozen-plus devices. Licensing a CANivore also unlocks Phoenix Pro features, including FOC, for every CTRE device on that bus. REV runs everything on the standard roboRIO CAN bus.
+
+For wiring both ecosystems safely, every motor still needs its own breaker on the PDH/PDP and correctly gauged power leads, see the LearnFRC [Electrical guide](https://learnfrc.systemerr.com/guides/electrical).
+
+## Which motor should you pick?
+
+### Drivetrain
+
+For a competitive swerve or tank drive, the **Kraken X60** is the current default. Its torque advantage means faster acceleration and a drivetrain that wins pushing matches, and the integrated Talon FX keeps the wiring clean. If you want maximum push, the FOC numbers are there (license permitting).
+
+If you're already a REV team or want simpler licensing, the **NEO Vortex** is a strong, fully-open alternative: 640 W of peak power and that excellent 7168 CPR encoder make it very capable, even if it can't match the Kraken's raw stall torque.
+
+### Mechanisms (arms, elevators, shooters, intakes)
+
+This is where the standard **NEO V1.1** still earns its place. It's the lightest (0.425 kg), cheapest, and most plentiful brushless motor in FRC. For an intake roller, a wrist, or a light arm joint, 2.6 Nm of stall torque through a gearbox is plenty, and there's no reason to spend Kraken money on it. Many championship robots run Krakens on the drivetrain and NEOs everywhere else.
+
+For high-torque mechanisms like a heavy elevator or a powerful shooter, a single Kraken or NEO Vortex can do the job of two NEOs, simplifying your CAD and your gearbox. Plan that reduction carefully in the [CAD](https://learnfrc.systemerr.com/guides/cad-design) and [Mechanical](https://learnfrc.systemerr.com/guides/mechanical-build) phases.
+
+### A note on the Falcon 500
+
+The **Falcon 500** was the motor that started the high-power brushless era, but VEX [stopped producing it](https://store.ctr-electronics.com/products/falcon-500-powered-by-talon-fx) and the store page has listed it as out of stock since the 2023 season, effectively replaced by the Kraken X60. Falcons are still competition-legal and use the same Talon FX/Phoenix software, so if your team has a bin of them, keep using them. Just don't plan a new robot around buying more, you can't.
+
+## The bottom line
+
+There's no single "best FRC motor," only the best fit. Krakens for the drivetrain and heavy mechanisms, NEOs for everything light, and the NEO Vortex if you want a license-free high-power option. Match the motor's torque to the job, set sane current limits, and you're most of the way to a reliable robot.
+
+Ready to turn these motors into a working mechanism? Start with the LearnFRC [Mechanical Build guide](https://learnfrc.systemerr.com/guides/mechanical-build).`,
+  },
+  {
+    slug: "frc-build-season-timeline",
+    title: "FRC Build Season Timeline: A Week-by-Week Plan from Kickoff to Competition",
+    description: "A practical week-by-week FRC build season timeline, from Kickoff and game analysis through prototyping, CAD, fabrication, wiring, programming, and driver practice.",
+    keywords: ["FRC build season timeline","FRC build season schedule","FRC kickoff strategy","FRC week 1 checklist","FRC build season plan"],
+    date: "2026-06-24",
+    readMins: 8,
+    content: `Six weeks. That is roughly how long you have between Kickoff and your first competition to design, build, wire, program, and practice with a competitive robot. It sounds impossibly short, and the first time you live through it, it is genuinely chaotic. But the best teams are not the ones with the most CNC machines or the biggest budgets. They are the ones with a **plan**. This is a week-by-week guide to spending those six weeks well, grounded in how the FRC season actually works today.
+
+## How the build season really works now
+
+For the 2026 **REBUILT presented by Haas** season, [Kickoff was Saturday, January 10, 2026 at noon Eastern](https://community.firstinspires.org/2026-just-a-few-days-until-kickoff), when *FIRST* revealed the game animation and unlocked the official game manual. From there, your "build season" runs until your first event, and competition events are spread across roughly seven weekends from late February through mid-April.
+
+Here is the single most important rule change to understand: **Stop Build Day and "bag-and-tag" are gone.** [*FIRST* retired them after the 2019-20 season](https://www.firstinspires.org/robotics/frc/blog/2020-rule-changes-stop-build-day) because teams without the resources to build a second practice robot were at a disadvantage. There is no longer a date where you must seal your robot in a bag and stop working. Your real deadline is the day you load the robot for your first competition. That means you can **iterate continuously** right up to (and between) events — a huge change from the old model that this timeline is built around.
+
+*FIRST* posts **Team Updates** every Tuesday and Friday during the season; these can change rules mid-build, so read every single one.
+
+## Week 1: Kickoff, game analysis, and strategy
+
+This is the most important week, and almost none of it is spent building. Resist the urge to start cutting metal.
+
+**Read the manual together.** Watch the Kickoff broadcast, then read the game manual as a team. The arena section and the scoring rules matter more than anything else right now. Note every way to earn points, every penalty, and the endgame.
+
+**Do the scoring math.** Build a simple spreadsheet: how many points is each action worth, and how many can a realistic robot perform in the 2-minute-30-second match (in 2026's REBUILT, that is a 20-second autonomous period followed by 2:20 of driver-controlled teleop)? A robot that does one thing flawlessly almost always beats one that does five things poorly.
+
+**Pick a strategy, then a robot.** Decide what role you want to play in an alliance before you design a single mechanism. Strategy drives design — not the other way around.
+
+**Week 1 checklist:**
+- Watch Kickoff and read the full game manual as a team
+- Build a points-per-action scoring spreadsheet
+- List the field's key dimensions, heights, and game-piece sizes
+- Define your robot's "job" in one sentence (your **robot priority list**)
+- Confirm the season's robot constraints in the current manual (for 2026, R103 limits the robot to **115 lb** excluding bumpers, R408 caps it at **135 lb** with bumpers, and R104 limits the starting configuration to a **110 in** maximum frame perimeter and a **30 in** starting height — always re-verify these against this year's manual, since they change)
+
+If your strategy is solid, everything downstream gets easier. If you want a deeper structure for this, our [mechanical build guide](https://learnfrc.systemerr.com/guides/mechanical-build) walks through turning a strategy into a mechanism list.
+
+## Week 2: Prototyping
+
+Now you build — but you build *to learn*, not to keep. The goal of prototyping is to answer questions cheaply before you commit them to a real design.
+
+Use **wood, scrap, polycarbonate, zip ties, and the kit motors** to mock up your hardest mechanisms. Can your intake actually grab the game piece? Does your shooter reach the target? Test the riskiest, most uncertain mechanism first, because that is the one most likely to force a redesign.
+
+A common shortcut here is the official quick-start robot. The [REV ION FRC Starter Bot](https://www.revrobotics.com/ion/frc-starter-bot/) (and historically the AndyMark KitBot/Everybot) gives newer teams a proven, buildable drivetrain and basic scoring platform you can have driving in days, freeing time to prototype your custom mechanism.
+
+**Week 2 checklist:**
+- Prototype the highest-risk mechanism first
+- Test with real (or accurate replica) game pieces
+- Record what works with measurements, photos, and video
+- Kill bad ideas fast — a failed prototype is a success, not a waste
+- Start a parallel "drivetrain" track so a chassis is moving early
+
+## Week 3: CAD and design freeze
+
+By now your prototypes should have answered the big questions. This week you convert decisions into a real design.
+
+**CAD the whole robot, not just the cool parts.** Model the drivetrain, mechanisms, electronics board, and battery location together so you catch collisions before they cost you a week of fabrication. Confirm everything fits inside the legal frame perimeter and height with bumpers attached.
+
+The deadline that matters this week is a **design freeze** — a self-imposed date after which the geometry stops changing. Without it, designs drift forever and fabrication never starts. Because bag-and-tag is gone you can still refine details later, but the core architecture needs to lock now.
+
+**Week 3 checklist:**
+- Complete a full-robot CAD assembly with all subsystems
+- Verify legal size, weight estimate, and bumper mounting
+- Generate a Bill of Materials and order long-lead parts immediately
+- Set and announce your design-freeze date
+- Plan the **electronics layout** in CAD so wiring is not an afterthought
+
+If CAD is new to your team, start with our [CAD design guide](https://learnfrc.systemerr.com/guides/cad-design) before this week, not during it.
+
+## Week 4: Fabrication and assembly
+
+Frozen design in hand, this is the loud week. Turn drawings into parts and parts into subsystems.
+
+Split into parallel teams: one fabricates the drivetrain, another the main mechanism, another preps the electronics board. **Assemble subsystems independently** so they can be tested before final integration. Keep your BOM and CAD open as the source of truth — when a part does not fit, fix the model, not just the metal.
+
+**Week 4 checklist:**
+- Fabricate parts in priority order (drivetrain first — you cannot test code without it)
+- Assemble and bench-test each subsystem in isolation
+- Build and wire bumpers to the legal weight allowance
+- Track remaining parts daily; chase down anything backordered
+- Mount electronics on a board you can later move onto the robot
+
+## Week 5: Wiring, programming, and integration
+
+This is where teams that ignored programming and electrical all month get punished. The earlier those teams started on a test board, the smoother this week goes.
+
+**Wire to spec.** Follow the official control-system layout: a roboRIO (or roboRIO 2.0) as the robot's brain, a REV Power Distribution Hub (or the legacy CTRE PDP) feeding the motor controllers, and the radio — the Vivid-Hosting VH-109 in 2026 — for driver-station communication. The [WPILib robot wiring guide](https://docs.wpilib.org/en/stable/docs/zero-to-robot/step-1/intro-to-frc-robot-wiring.html) is the canonical reference — match it exactly during inspection.
+
+**Integrate and program in parallel.** As subsystems land on the frame, get the drivetrain driving, then layer on mechanism control and your 20-second autonomous routine. Tools like [PathPlanner](https://pathplanner.dev) make building and tuning autonomous paths far faster than hand-coding them.
+
+**Week 5 checklist:**
+- Wire the full robot per the official control-system diagram
+- Confirm every motor controller has a CAN ID and responds
+- Get teleop driving, then tune each mechanism
+- Build and test at least one autonomous routine
+- Run the [official inspection checklist](https://www.firstinspires.org/resources/library/frc/season-materials) on your own robot
+
+Programming and electrical move fastest when they start in Week 2, not Week 5 — see our [programming](https://learnfrc.systemerr.com/guides/programming-software) and [electrical](https://learnfrc.systemerr.com/guides/electrical) guides to get a head start.
+
+## Week 6: Driver practice and continuous iteration
+
+The robot exists. Now the difference between a good team and a great one is **practice and reliability**.
+
+**Drive it, a lot.** Your drivers need real reps to develop muscle memory under match pressure. Run full 2:30 practice matches. Time your cycles. Find what breaks and fix it before a referee or an opponent finds it for you.
+
+And here is where the post-2019 freedom pays off: because there is no bag, **you keep iterating**. Reinforce the part that snapped in practice. Re-tune the autonomous that missed. Add a feature you ran out of time for in Week 4 — then keep improving between competition events too.
+
+**Week 6 checklist:**
+- Run full-length practice matches daily
+- Log and fix every failure (loose bolts, brownouts, dropped CAN devices)
+- Build a pre-match checklist and a spare-parts kit
+- Pack tools, batteries, and a laptop with your code backed up
+- Keep a running "fix-it" list to work through between events
+
+## The one rule that ties it all together
+
+If you remember nothing else: **strategy first, building second.** A team that spends Week 1 deciding exactly what their robot must do, and then protects that decision through a design freeze, will out-build a faster, better-equipped team that started cutting metal on Kickoff night. The six-week clock is unforgiving, but a clear plan turns it from a panic into a process.
+
+Ready to turn your strategy into real hardware? Start with our [Mechanical Build track](https://learnfrc.systemerr.com/guides/mechanical-build).`,
+  },
+  {
+    slug: "frc-pneumatics-guide",
+    title: "FRC Pneumatics: How to Design, Wire, and Program a Pneumatic System",
+    description: "Complete FRC pneumatics guide: components, the REV Pneumatic Hub vs PCM, single vs double solenoids, safe wiring, WPILib programming, and the 60/120 psi limits.",
+    keywords: ["FRC pneumatics tutorial","FRC pneumatics","FRC solenoid wiring","FRC pneumatics programming","REV pneumatics hub","how to use pneumatics FRC"],
+    date: "2026-06-24",
+    readMins: 9,
+    content: `Push a button, and a piston shoots out in a fraction of a second with hundreds of pounds of force. No gears to strip, no motor to burn out, no PID loop to tune. That is the appeal of **pneumatics** in FRC: clean, fast, two-state motion that is almost impossible to break. This guide walks you through the whole system, from picking pneumatics over a motor, to the legal components, to wiring it safely, to controlling it in code with WPILib.
+
+## When to use pneumatics (and when not to)
+
+Pneumatics shine when a mechanism only needs to be in one of **two positions**: deployed or retracted, gripper open or closed, hood up or down. According to the [FIRST Pneumatics Manual](https://www.firstinspires.org/hubfs/web/program/frc/resources/pneumatics-manual.pdf), a pneumatic actuator moves simply and reliably to two locations without the sensors or current limiting a motor needs to hit a hard stop. They are also durable: you can stall an air cylinder against a load indefinitely with no damage, which is exactly what burns out a motor.
+
+The catch is that pneumatics are **binary**. If you need a mechanism to stop at an arbitrary angle, hold a precise height, or move at a controlled speed, a motor (with an encoder) is the right tool. Air also runs out, you carry a fixed amount of stored pressure into a match, so a mechanism that actuates dozens of times can starve the system. The rule of thumb: pneumatics for fast on/off motion, motors for position control. For the motor side of that decision, see the [Mechanical track](https://learnfrc.systemerr.com/guides/mechanical-build).
+
+How strong are they? The Pneumatics Manual notes a **2 inch bore cylinder can apply up to 188 pounds of force at 60 psi**, with no gearing or leverage at all. Force equals piston area times pressure, so bore size and pressure are your two design knobs.
+
+## The core components
+
+An FRC pneumatic system splits into a **high-pressure side** (around 120 psi) and a **working-pressure side** (under 60 psi). The [FIRST Pneumatics Manual](https://www.firstinspires.org/hubfs/web/program/frc/resources/pneumatics-manual.pdf) lists the required parts on the high-pressure side:
+
+| Component | Job |
+| --- | --- |
+| **Compressor** | Compresses air to store in the system |
+| **Pressure relief valve** | Vents excess pressure; must connect directly to the compressor via hard fittings |
+| **Air storage tank(s)** | Hold compressed air for use during the match |
+| **Pressure switch / analog sensor** | Tells the controller when to run the compressor |
+| **Pressure gauges (x2)** | One for stored pressure, one for working pressure |
+| **Vent plug** | Manually releases all stored pressure |
+| **Primary regulator** | Steps pressure down from stored (120 psi) to working (60 psi) |
+
+On the **working-pressure side** you have the parts that actually do work: the **solenoid valves** that switch airflow, the **pneumatic actuators** (cylinders), and optional extras like manifolds, downstream regulators, and **one-way flow controls** that throttle a cylinder's speed in one direction without reducing its force.
+
+One important spec from the manual: solenoid valves typically need a **minimum of 15 to 30 psi** to actuate reliably (an additional regulator placed after the solenoid can bypass this minimum). If you regulate working pressure too low to save air, your valves may not shift.
+
+## The pressure limits and safety
+
+These numbers are not suggestions, they are inspected at every event, and getting them right keeps people safe. Per the [FIRST Pneumatics Manual](https://www.firstinspires.org/hubfs/web/program/frc/resources/pneumatics-manual.pdf) and the FRC Game Manual:
+
+- **Stored pressure must be no greater than 120 psi.** The pressure switch and compressor closed-loop control keep the system at or below this; during validation the compressor should shut off by roughly 110-120 psi, and the relief valve should begin relieving around 120-125 psi so the system never significantly exceeds 125 psi.
+- **Working pressure must be no greater than 60 psi**, provided through a single primary adjustable, relieving regulator. Additional regulators may sit downstream.
+- **All high-pressure components must be rated to handle the full stored pressure the system can reach** (the ~120-125 psi at which the relief valve operates). Check the rating of every fitting, tank, and tube on the stored-pressure side.
+- The **pressure relief valve must be connected and calibrated**, and your system must have a vent plug, a stored-pressure gauge, and a working-pressure gauge.
+
+Always vent the system with the vent plug before you work on it, and never point a cylinder rod or an open fitting at anyone. Compressed air is energy, and a 188-pound piston does not care that you forgot to dump pressure.
+
+## The control module: REV Pneumatic Hub vs PCM
+
+The brain of the system is a CAN-based **pneumatics controller** that runs the compressor and switches the solenoids. There are two legal options.
+
+The **REV Pneumatic Hub (PH, part REV-11-1852)** is the modern choice. Per the [REV Pneumatic Hub documentation](https://docs.revrobotics.com/ion-control/ph/specs), it provides **16 solenoid channels** (up to 16 single-acting solenoids, 8 double-acting, or a mix), switches user-selectable **12 V or 24 V** solenoids, and supplies up to **15 A continuous** to the compressor (with a 200 mA limit per solenoid channel). Its standout feature is a built-in **analog pressure sensor port** (for the REV-11-1107 sensor) alongside the digital pressure switch input, which lets you read actual PSI in code and set custom compressor thresholds. It also has a USB-C port that works with the REV Hardware Client for bench testing without a roboRIO.
+
+The older **CTRE Pneumatics Control Module (PCM)** controls **8 solenoid channels** (8 single-acting or 4 double-acting) and uses a digital pressure switch only, with no analog sensing. It still switches 12 V or 24 V solenoids via a jumper. Both modules drive the compressor automatically once your code creates a solenoid or compressor object.
+
+| Feature | REV Pneumatic Hub | CTRE PCM |
+| --- | --- | --- |
+| Solenoid channels | 16 (8 double) | 8 (4 double) |
+| Analog pressure sensor | Yes (built-in port) | No |
+| Solenoid voltage | 12 V / 24 V (switch) | 12 V / 24 V (jumper) |
+| Default CAN ID | 1 | 0 |
+| WPILib enum | \`PneumaticsModuleType.REVPH\` | \`PneumaticsModuleType.CTREPCM\` |
+
+Remember: **all solenoids on a single module must be the same voltage.**
+
+## Single vs double solenoids
+
+A **single-acting (single) solenoid** has one electrical signal. Energize it and air flows; cut power and it springs back to its default state. This is your "default safe" choice, because when the robot is disabled the mechanism returns to a known position.
+
+A **double-acting (double) solenoid** has two electrical signals, forward and reverse, and **holds its last commanded position** when power is removed. It needs an active signal to change states. Use a double solenoid when you want a mechanism to stay put even when disabled, like a climber that should not drop. In WPILib these map directly to the \`Solenoid\` and \`DoubleSolenoid\` classes.
+
+## Wiring it safely
+
+Per the WPILib guide on [Wiring Pneumatics with the REV Pneumatic Hub](https://docs.wpilib.org/en/stable/docs/hardware/hardware-basics/wiring-pneumatics-ph.html):
+
+- The PH connects to the roboRIO over the **CAN bus** and gets 12 V power from the Power Distribution Hub (a 20 A port is recommended when the PH runs a compressor) or from the PDP.
+- The **compressor wires directly to the PH's compressor connectors** (use 18 AWG or larger for long runs).
+- The **digital pressure switch** connects to the digital input terminals with no polarity. The optional **analog sensor (REV-11-1107)** connects to analog port 0.
+- Each **solenoid channel** is a numbered terminal pair; single-acting valves use one pair, double-acting valves use two. Set the **12 V / 24 V voltage switch correctly before powering on.**
+
+For the broader robot electrical layout, see the [Electrical track](https://learnfrc.systemerr.com/guides/electrical).
+
+## Programming pneumatics with WPILib
+
+The [WPILib pneumatics API](https://docs.wpilib.org/en/stable/docs/software/hardware-apis/pneumatics/index.html) keeps this refreshingly simple. You construct a \`Solenoid\` or \`DoubleSolenoid\` with the module type and channel(s), then call \`set()\`.
+
+A single solenoid in Java:
+
+\`\`\`java
+private final Solenoid m_solenoid = new Solenoid(PneumaticsModuleType.REVPH, 0);
+
+m_solenoid.set(true);   // energize
+m_solenoid.set(false);  // de-energize
+m_solenoid.toggle();    // flip current state
+\`\`\`
+
+A double solenoid uses forward and reverse channels and the \`DoubleSolenoid.Value\` enum, \`kForward\`, \`kReverse\`, and \`kOff\`:
+
+\`\`\`java
+private final DoubleSolenoid m_double =
+    new DoubleSolenoid(PneumaticsModuleType.REVPH, 1, 2);
+
+m_double.set(DoubleSolenoid.Value.kForward);
+m_double.set(DoubleSolenoid.Value.kReverse);
+m_double.set(DoubleSolenoid.Value.kOff);
+\`\`\`
+
+Note from the docs: because a \`DoubleSolenoid\` defaults to \`kOff\`, you must \`set()\` it once before \`toggle()\` will work.
+
+### Controlling the compressor
+
+The [WPILib pressure docs](https://docs.wpilib.org/en/stable/docs/software/hardware-apis/pneumatics/pressure.html) explain that the \`Compressor\` runs in closed-loop mode by default, automatically filling the system when the pressure switch closes, and the docs explicitly recommend that teams not change this setting. You construct it with the module type:
+
+\`\`\`java
+private final Compressor m_compressor = new Compressor(PneumaticsModuleType.REVPH);
+\`\`\`
+
+The control methods are:
+
+- \`enableDigital()\` — closed-loop control off the digital pressure switch (works on both PH and PCM).
+- \`enableAnalog(minPressure, maxPressure)\` — uses the REV analog sensor to run the compressor between a custom PSI window (**PH only**).
+- \`enableHybrid(minPressure, maxPressure)\` — combines the analog sensor and the digital switch (**PH only**).
+- \`disable()\` — turns closed-loop control off.
+
+Useful readbacks include \`getPressure()\` (PSI from the analog sensor, PH only), \`getCurrent()\`, \`getPressureSwitchValue()\`, and \`isEnabled()\`. For more on structuring this as a subsystem in command-based code, see the [Programming track](https://learnfrc.systemerr.com/guides/programming-software).
+
+## Putting it together
+
+A solid first pneumatic system is one compressor, one relief valve hard-fitted to it, a storage tank, a primary regulator set to 60 psi, two gauges, a vent plug, a pressure switch, and one double solenoid driving one cylinder, all run by a REV Pneumatic Hub. Get that working on a bench board first, leak-test it, and only then move it onto the robot. From there, adding a second cylinder is as easy as teeing into the pressure line and adding a few lines of code.
+
+Ready to wire it up the right way? Start with the [LearnFRC Electrical track](https://learnfrc.systemerr.com/guides/electrical).`,
+  },
+  {
+    slug: "frc-command-based-programming",
+    title: "FRC Command-Based Programming: Subsystems, Commands, and the Scheduler",
+    description: "A beginner-friendly guide to WPILib command-based programming in Java: subsystems, commands, the CommandScheduler, triggers, and composing commands.",
+    keywords: ["FRC command-based programming","FRC subsystems and commands","CommandScheduler WPILib","FRC Java command based","command-based FRC tutorial"],
+    date: "2026-06-24",
+    readMins: 9,
+    content: `If you've ever tried to control a robot with one giant \`while\` loop full of \`if\` statements, you already know how fast it turns into spaghetti. Command-based programming is WPILib's answer to that mess: a design pattern that lets you describe *what* your robot should do as small, reusable building blocks, and lets the framework figure out *when* to run them. It's the approach the vast majority of competitive FRC teams use, and once the mental model clicks, your code gets dramatically cleaner. This guide walks through that model in Java, grounded in the official [WPILib command-based docs](https://docs.wpilib.org/en/stable/docs/software/commandbased/what-is-command-based.html).
+
+## The mental model: subsystems and commands
+
+Command-based programming rests on two abstractions. Get these right and everything else follows.
+
+A **subsystem** is an "independently-controlled collection of robot hardware (such as motor controllers, sensors, pneumatic actuators, etc.) that operate together." Think of it as one functional unit of your robot: the drivetrain, the arm, the intake, the shooter. A subsystem owns its hardware and its state.
+
+A **command** is an action that runs over time. "Commands run when scheduled, until they are interrupted or their end condition is met." A command might drive the robot from joystick input, spin a flywheel up to speed, or run an arm to a setpoint.
+
+The single most important rule that makes this work: **only one command can use (require) a given subsystem at the same time.** This is the core of command-based **resource management**. If the arm subsystem is busy running a "go to scoring position" command and you fire a "stow the arm" command, the scheduler resolves the conflict for you instead of letting two commands fight over the same motors.
+
+## Writing a subsystem
+
+In Java, you almost always subclass \`SubsystemBase\`. It gives you two big conveniences: automatic registration with the \`CommandScheduler\`, and a \`Sendable\` implementation so the subsystem shows up on dashboards.
+
+\`\`\`java
+public class IntakeSubsystem extends SubsystemBase {
+  // Hardware is PRIVATE. The outside world never touches it directly.
+  private final SparkMax m_motor = new SparkMax(5, MotorType.kBrushless);
+
+  // Public methods expose ACTIONS, not hardware.
+  public void run()  { m_motor.set(0.8); }
+  public void stop() { m_motor.set(0.0); }
+
+  @Override
+  public void periodic() {
+    // Called once per scheduler run (every 20 ms). Good for telemetry.
+  }
+}
+\`\`\`
+
+Notice the encapsulation: the motor is \`private\`, and the public surface is descriptive methods like \`run()\` and \`stop()\`. The official docs use the same pattern, hiding a \`DoubleSolenoid\` behind \`grabHatch()\` and \`releaseHatch()\`. There's also a companion \`simulationPeriodic()\` that runs only in simulation. Hardware setup like this is exactly where your [electrical](https://learnfrc.systemerr.com/guides/electrical) and [mechanical](https://learnfrc.systemerr.com/guides/mechanical-build) knowledge meets your code: the CAN IDs and motor types must match what's actually wired on the robot.
+
+## Writing commands
+
+You rarely need to write a full command class. WPILib's \`Commands\` utility class provides factory methods for the common cases:
+
+| Factory | What it does |
+|---|---|
+| \`Commands.runOnce(action, reqs)\` | Runs a lambda once, then finishes (\`InstantCommand\`) |
+| \`Commands.run(action, reqs)\` | Runs a lambda repeatedly until interrupted (\`RunCommand\`) |
+| \`Commands.startEnd(start, end, reqs)\` | One lambda on start, another when it ends (\`StartEndCommand\`) |
+| \`Commands.waitSeconds(t)\` | Ends after \`t\` seconds (\`WaitCommand\`) |
+| \`Commands.waitUntil(condition)\` | Ends when a \`BooleanSupplier\` becomes true (\`WaitUntilCommand\`) |
+
+A clean convention is to put **factory methods on the subsystem itself**, so the requirement is wired in automatically:
+
+\`\`\`java
+public Command runCommand() {
+  // run() repeats the lambda; the trailing "this" adds the requirement.
+  return run(this::run).finallyDo(interrupted -> stop());
+}
+\`\`\`
+
+When you need the full lifecycle, extend the abstract \`Command\` class. Every command has four lifecycle methods:
+
+- **\`initialize()\`** — called exactly once when the command is scheduled. One-time setup.
+- **\`execute()\`** — called repeatedly (every 20 ms) while scheduled. Your control loop lives here.
+- **\`isFinished()\`** — checked repeatedly; as soon as it returns \`true\`, the command ends.
+- **\`end(boolean interrupted)\`** — called once when the command ends, whether it finished normally (\`interrupted == false\`) or was cancelled (\`interrupted == true\`). Clean up here, e.g. stop motors.
+
+A command declares which subsystems it needs by calling \`addRequirements(...)\` in its constructor. That's the hook into resource management.
+
+## Default commands
+
+Every subsystem can have one **default command** that runs automatically whenever no other command is using that subsystem. The classic use is teleop driving: your drivetrain's default command reads the joysticks continuously, but it gets cleanly interrupted the moment an auto-align command grabs the drivetrain.
+
+\`\`\`java
+m_drivetrain.setDefaultCommand(
+    m_drivetrain.run(() -> m_drivetrain.arcadeDrive(
+        -driver.getLeftY(), -driver.getRightX())));
+\`\`\`
+
+One hard requirement straight from the docs: a **default command must require its subsystem**, and it must not finish on its own (a default command that ends gets immediately re-scheduled).
+
+## Binding commands to triggers
+
+You don't poll buttons in command-based — you *declare* bindings once, during initialization, and the library handles the rest. The foundation is the \`Trigger\` class, which represents a boolean condition. The easiest way to get triggers is the command-based HID classes like \`CommandXboxController\`:
+
+\`\`\`java
+CommandXboxController driver = new CommandXboxController(0);
+
+// Schedule on the false -> true edge:
+driver.a().onTrue(m_intake.runOnceCommand());
+
+// Run while held, cancel when released:
+driver.rightBumper().whileTrue(m_intake.runCommand());
+\`\`\`
+
+The key binding methods:
+
+- **\`onTrue(cmd)\`** / **\`onFalse(cmd)\`** — schedule once on the rising/falling edge.
+- **\`whileTrue(cmd)\`** — schedule when the trigger goes true, cancel when it goes false.
+- **\`toggleOnTrue(cmd)\`** — schedule on a press, cancel on the next press.
+
+Triggers compose like booleans with \`.and()\`, \`.or()\`, and \`.negate()\`, and you can clean up noisy inputs with \`.debounce(seconds)\`. You can also wrap *any* condition in a trigger — a limit switch, a sensor threshold, anything:
+
+\`\`\`java
+new Trigger(m_arm::atUpperLimit).onTrue(m_arm.stopCommand());
+\`\`\`
+
+(If you read older code that uses \`whenPressed\` or \`whenHeld\`, those binding methods on the deprecated \`Button\` subclass are gone — use \`onTrue\` and \`whileTrue\` instead.)
+
+## Composing commands
+
+The real power of command-based shows up when you stitch commands together. Compositions are themselves commands, so you can nest them freely.
+
+| Composition | Factory | Finishes when… |
+|---|---|---|
+| Sequential | \`Commands.sequence(a, b, c)\` | the last command finishes |
+| Parallel | \`Commands.parallel(a, b)\` | **all** commands finish |
+| Race | \`Commands.race(a, b)\` | **any** command finishes (others cancelled) |
+| Deadline | \`Commands.deadline(deadline, a, b)\` | the deadline command finishes |
+
+Most of these also have **decorator** forms that read like English:
+
+\`\`\`java
+Command scoreThenStow =
+    m_arm.toScoringPosition()
+        .andThen(m_intake.ejectCommand().withTimeout(1.0))
+        .andThen(m_arm.toStowPosition());
+\`\`\`
+
+Useful decorators: \`andThen(...)\` (run after), \`alongWith(...)\` (run in parallel), \`raceWith(...)\`, \`deadlineFor(...)\`, \`withTimeout(seconds)\`, \`until(condition)\`, \`unless(condition)\`, and \`repeatedly()\`. (If you see \`deadlineWith(...)\` in older code, it was deprecated in 2025 for removal — \`deadlineFor(...)\` is the current name.)
+
+Two rules to internalize. First, **a composition inherits the union of its members' requirements** — so a parallel group of an arm command and an intake command requires both subsystems. Second, **a command instance can only be in one composition** (and can't be independently scheduled once it's in one); reusing the same instance throws an exception. When in doubt, build a fresh command from a factory each time.
+
+## Where it all comes together: RobotContainer and the scheduler
+
+A standard command-based project (generated from the WPILib template) has a \`Robot\` class, a \`RobotContainer\`, and a \`Constants\` class.
+
+**\`RobotContainer\`** is where the declarative setup lives. Subsystems are declared as private fields, button bindings go in a \`configureBindings()\` method, and \`getAutonomousCommand()\` returns the command to run in autonomous.
+
+**\`Robot\`** extends \`TimedRobot\` and stays tiny. The one line that makes the whole framework work is in \`robotPeriodic()\`:
+
+\`\`\`java
+@Override
+public void robotPeriodic() {
+  CommandScheduler.getInstance().run();
+}
+\`\`\`
+
+That call drives everything, running at 50 Hz (once every 20 ms). Per the docs, each \`run()\` does four things in order: (1) calls \`periodic()\` on every registered subsystem, (2) polls all trigger/button bindings and schedules commands, (3) runs each scheduled command's \`execute()\` and checks \`isFinished()\`, ending finished commands, and (4) schedules default commands on any subsystem that's now free. You can also schedule and cancel commands manually with \`CommandScheduler.getInstance().schedule(cmd)\` and \`.cancel(cmd)\`, and note that a command's \`initialize()\` runs at *schedule* time, not on the next \`run()\`.
+
+## Putting it together
+
+The whole pattern is: subsystems own hardware and state, commands describe actions over time, triggers decide when commands fire, compositions glue actions into routines, and the \`CommandScheduler\` arbitrates who gets which subsystem. Start small — one subsystem with a default command and a couple of button bindings — and grow from there.
+
+Ready to build your first command-based robot? Dive into the [LearnFRC Programming track](https://learnfrc.systemerr.com/guides/programming-software).`,
+  },
 ];
 
 export function getArticle(slug: string): Article | undefined {
   return ARTICLES.find((a) => a.slug === slug);
+}
+
+/** Most related articles, scored by shared tokens across keywords + title. */
+export function getRelated(slug: string, n = 3): Article[] {
+  const a = getArticle(slug);
+  if (!a) return [];
+  const tokens = (s: string) =>
+    new Set(
+      s
+        .toLowerCase()
+        .split(/[^a-z0-9]+/)
+        .filter((w) => w.length > 2)
+    );
+  const mine = tokens([...a.keywords, a.title].join(" "));
+  return ARTICLES.filter((x) => x.slug !== slug)
+    .map((x) => {
+      const theirs = tokens([...x.keywords, x.title].join(" "));
+      let score = 0;
+      for (const t of theirs) if (mine.has(t)) score++;
+      return { x, score };
+    })
+    .sort((p, q) => q.score - p.score)
+    .slice(0, n)
+    .map((r) => r.x);
 }

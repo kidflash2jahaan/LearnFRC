@@ -2,10 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ArrowRight, Clock } from "lucide-react";
-import { ARTICLES, getArticle } from "@/lib/blog-data";
+import { ARTICLES, getArticle, getRelated } from "@/lib/blog-data";
 import { Markdown } from "@/components/markdown";
 import { JsonLd } from "@/components/json-ld";
 import { Button } from "@/components/ui/button";
+import { ShareButton } from "@/components/share-button";
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.systemerr.com";
 
@@ -54,6 +55,7 @@ export default async function ArticlePage({
   const a = getArticle(slug);
   if (!a) notFound();
   const url = `${SITE}/blog/${a.slug}`;
+  const related = getRelated(a.slug, 3);
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -107,9 +109,40 @@ export default async function ArticlePage({
         </time>
       </div>
 
+      <div className="mt-5">
+        <ShareButton
+          variant="outline"
+          label="Share this guide"
+          text={`${a.title} — a free FRC guide on LearnFRC`}
+          url={url}
+        />
+      </div>
+
       <div className="mt-6">
         <Markdown content={a.content} />
       </div>
+
+      {related.length > 0 && (
+        <section className="mt-14">
+          <h2 className="text-lg font-bold tracking-tight">Keep reading</h2>
+          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            {related.map((r) => (
+              <Link
+                key={r.slug}
+                href={`/blog/${r.slug}`}
+                className="group rounded-2xl border border-border bg-card p-4 transition-colors hover:border-primary/50"
+              >
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Clock className="h-3 w-3" /> {r.readMins} min read
+                </div>
+                <h3 className="mt-2 font-semibold leading-snug tracking-tight transition-colors group-hover:text-primary">
+                  {r.title}
+                </h3>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       <div className="mt-12 rounded-2xl border border-border bg-card p-6 text-center">
         <h2 className="text-lg font-bold">Learn every department of FRC — free</h2>
