@@ -5,6 +5,7 @@ import { Providers } from "@/components/providers";
 import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
 import { ScrollProgress } from "@/components/scroll-progress";
+import { JsonLd } from "@/components/json-ld";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 
@@ -65,6 +66,9 @@ export const metadata: Metadata = {
       "Structured, web-grounded guides for every FRC department. Build robots, write code, win awards.",
   },
   robots: { index: true, follow: true },
+  verification: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION
+    ? { google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION }
+    : undefined,
 };
 
 export const viewport: Viewport = {
@@ -88,6 +92,31 @@ export default function RootLayout({
         <script
           dangerouslySetInnerHTML={{
             __html: `try{if(localStorage.getItem('perf-mode')==='on')document.documentElement.dataset.perf='on';}catch(e){}`,
+          }}
+        />
+        <JsonLd
+          data={{
+            "@context": "https://schema.org",
+            "@graph": [
+              {
+                "@type": "WebSite",
+                "@id": `${SITE_URL}/#website`,
+                url: SITE_URL,
+                name: "LearnFRC",
+                description:
+                  "Free, structured guides for every department of the FIRST Robotics Competition.",
+                publisher: { "@id": `${SITE_URL}/#org` },
+              },
+              {
+                "@type": "Organization",
+                "@id": `${SITE_URL}/#org`,
+                name: "LearnFRC",
+                url: SITE_URL,
+                logo: `${SITE_URL}/opengraph-image`,
+                description:
+                  "A free, complete learning platform for the FIRST Robotics Competition.",
+              },
+            ],
           }}
         />
         <a

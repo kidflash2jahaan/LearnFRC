@@ -43,7 +43,18 @@ export async function generateMetadata({
     .find((m) => m.slug === moduleSlug)
     ?.lessons.find((l) => l.slug === lesson);
   if (!les) return { title: "Lesson" };
-  return { title: les.title, description: les.summary ?? undefined };
+  const url = `${SITE}/guides/${department}/${moduleSlug}/${lesson}`;
+  return {
+    title: les.title,
+    description: les.summary ?? undefined,
+    alternates: { canonical: url },
+    openGraph: {
+      title: les.title,
+      description: les.summary ?? undefined,
+      url,
+      type: "article",
+    },
+  };
 }
 
 export default async function LessonPage({

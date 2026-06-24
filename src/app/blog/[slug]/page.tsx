@@ -20,10 +20,11 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const a = getArticle(slug);
-  if (!a) return { title: "Article not found · LearnFRC" };
+  if (!a) return { title: "Article not found" };
   const url = `${SITE}/blog/${a.slug}`;
+  const img = `${SITE}/opengraph-image`;
   return {
-    title: `${a.title} · LearnFRC`,
+    title: a.title,
     description: a.description,
     keywords: a.keywords,
     alternates: { canonical: url },
@@ -33,6 +34,13 @@ export async function generateMetadata({
       url,
       type: "article",
       publishedTime: a.date,
+      images: [{ url: img, width: 1200, height: 630 }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: a.title,
+      description: a.description,
+      images: [img],
     },
   };
 }
@@ -57,12 +65,24 @@ export default async function ArticlePage({
     author: { "@type": "Organization", name: "LearnFRC", url: SITE },
     publisher: { "@type": "Organization", name: "LearnFRC", url: SITE },
     mainEntityOfPage: url,
+    image: `${SITE}/opengraph-image`,
     keywords: a.keywords.join(", "),
   };
 
   return (
     <article className="mx-auto max-w-3xl px-4 pt-28 pb-20 sm:px-6 lg:px-8">
       <JsonLd data={jsonLd} />
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "BreadcrumbList",
+          itemListElement: [
+            { "@type": "ListItem", position: 1, name: "Home", item: SITE },
+            { "@type": "ListItem", position: 2, name: "Articles", item: `${SITE}/blog` },
+            { "@type": "ListItem", position: 3, name: a.title, item: url },
+          ],
+        }}
+      />
       <Link
         href="/blog"
         className="inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"

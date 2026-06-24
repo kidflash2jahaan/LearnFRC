@@ -13,9 +13,10 @@ import { AuthForm } from "@/components/auth/auth-form";
 import { getSession } from "@/lib/auth";
 
 export const metadata = {
-  title: "Sign up · LearnFRC",
+  title: "Sign up",
   description:
     "Create your free LearnFRC account and start mastering FIRST Robotics.",
+  robots: { index: false, follow: true },
 };
 
 const VALUE_PROPS = [

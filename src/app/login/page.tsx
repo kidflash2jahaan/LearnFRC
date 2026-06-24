@@ -7,8 +7,9 @@ import { AuthForm } from "@/components/auth/auth-form";
 import { getSession } from "@/lib/auth";
 
 export const metadata = {
-  title: "Log in · LearnFRC",
+  title: "Log in",
   description: "Welcome back. Sign in to pick up where you left off.",
+  robots: { index: false, follow: true },
 };
 
 const VALUE_PROPS = [
