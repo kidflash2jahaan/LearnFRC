@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Reveal } from "@/components/motion/reveal";
 import { ActivityChart } from "@/components/admin/activity-chart";
 import { AdminOverview } from "@/components/admin/admin-overview";
+import { AutoRefresh } from "@/components/admin/auto-refresh";
 
 export const metadata: Metadata = { title: "Admin" };
 
@@ -49,6 +50,9 @@ export default async function AdminPage() {
           </Badge>
           <span className="text-sm text-muted-foreground">
             Signed in as {user.email}
+          </span>
+          <span className="ml-auto">
+            <AutoRefresh seconds={30} />
           </span>
         </div>
         <h1 className="mt-4 text-3xl font-bold tracking-tight">Overview</h1>
