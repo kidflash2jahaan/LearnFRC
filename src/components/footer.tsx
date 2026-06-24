@@ -121,6 +121,21 @@ export function Footer() {
             </p>
           </div>
         </div>
+
+        <p className="mt-6 max-w-3xl text-xs leading-relaxed text-muted-foreground/70">
+          LearnFRC lessons are AI-assisted: drafted from primary sources like the
+          WPILib docs, game manual, and vendor sites, then reviewed and
+          fact-checked for accuracy. Spot something off?{" "}
+          <a
+            href="https://www.chiefdelphi.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline underline-offset-2 transition-colors hover:text-foreground"
+          >
+            Let me know
+          </a>{" "}
+          and it gets fixed fast.
+        </p>
       </div>
     </footer>
   );
