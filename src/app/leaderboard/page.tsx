@@ -13,6 +13,7 @@ import {
   getWeeklyLeaderboard,
   getTeamLeaderboard,
   getReferralCount,
+  getXpTotals,
   type WeeklyEntry,
 } from "@/lib/queries";
 import { getSession } from "@/lib/auth";
@@ -71,19 +72,22 @@ function toWeeklyEntry(
 }
 
 export default async function LeaderboardPage() {
-  const [profiles, weekly, teams, { user, profile }] = await Promise.all([
-    getLeaderboard(50),
-    getWeeklyLeaderboard(50),
-    getTeamLeaderboard(50),
-    getSession(),
-  ]);
+  const [profiles, weekly, teams, xpTotals, { user, profile }] =
+    await Promise.all([
+      getLeaderboard(50),
+      getWeeklyLeaderboard(50),
+      getTeamLeaderboard(50),
+      getXpTotals(),
+      getSession(),
+    ]);
 
   const uid = user?.id ?? null;
   const referralCount = uid ? await getReferralCount(uid) : 0;
   const allTimeEntries = profiles.map((p, i) => toEntry(p, i + 1, uid));
   const weeklyEntries = weekly.map((p, i) => toWeeklyEntry(p, i + 1, uid));
   const teamRows: TeamRow[] = teams.map((t, i) => ({ rank: i + 1, ...t }));
-  const totalXp = allTimeEntries.reduce((s, e) => s + e.xp, 0);
+  // Site-wide totals (all learners), so the header matches the admin panel.
+  const totalXp = xpTotals.totalXp;
 
   return (
     <div className="relative">
@@ -112,9 +116,9 @@ export default async function LeaderboardPage() {
               <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card/50 px-3 py-1">
                 <Users className="h-3.5 w-3.5 text-primary" />
                 <span className="font-semibold text-foreground">
-                  {allTimeEntries.length.toLocaleString()}
+                  {xpTotals.learners.toLocaleString()}
                 </span>{" "}
-                ranked {allTimeEntries.length === 1 ? "learner" : "learners"}
+                ranked {xpTotals.learners === 1 ? "learner" : "learners"}
               </span>
               <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card/50 px-3 py-1">
                 <Sparkles className="h-3.5 w-3.5 text-accent" />

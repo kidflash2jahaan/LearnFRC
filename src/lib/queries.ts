@@ -322,3 +322,17 @@ export async function getReferralCount(userId: string): Promise<number> {
     .eq("referred_by", userId);
   return count ?? 0;
 }
+
+/**
+ * Site-wide XP totals for the leaderboard header — counts ALL learners, not
+ * just the top 50 shown, so the numbers match the admin panel exactly.
+ */
+export async function getXpTotals(): Promise<{ learners: number; totalXp: number }> {
+  const supabase = await createClient();
+  const { data } = await supabase.from("profiles").select("xp").gt("xp", 0);
+  const rows = (data as { xp: number }[]) ?? [];
+  return {
+    learners: rows.length,
+    totalXp: rows.reduce((s, r) => s + (r.xp || 0), 0),
+  };
+}
