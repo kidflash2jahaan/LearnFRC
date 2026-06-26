@@ -65,6 +65,7 @@ export default async function AdminPage() {
         data={{
           onlineNow: stats.onlineNow,
           users: stats.totals.users,
+          verifiedUsers: stats.verifiedUsers,
           completions: stats.totals.completions,
           totalXP: stats.totalXP,
           achievementsEarned: stats.totals.achievementsEarned,

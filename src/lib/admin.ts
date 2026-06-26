@@ -44,6 +44,7 @@ export type AdminTeam = {
 export type DailyPoint = {
   day: string; // YYYY-MM-DD
   signups: number;
+  verified: number;
   completions: number;
 };
 
@@ -58,6 +59,8 @@ export type AdminStats = {
     subscribers: number;
   };
   totalXP: number;
+  /** Total signups whose email is confirmed. */
+  verifiedUsers: number;
   signups7d: number;
   signups30d: number;
   completions7d: number;
@@ -185,11 +188,24 @@ export async function getAdminStats(): Promise<AdminStats> {
     daily.push({
       day: key,
       signups: signupsByDay.get(key) ?? 0,
+      verified: 0, // filled from auth list below
       completions: completionsByDay.get(key) ?? 0,
     });
   }
 
   const authList = await supabase.auth.admin.listUsers({ perPage: 1000 });
+
+  // Verified-user totals + per-day, derived from auth (email_confirmed_at).
+  const verifiedByDay = new Map<string, number>();
+  let verifiedUsers = 0;
+  for (const u of authList.data?.users ?? []) {
+    if (!u.email_confirmed_at) continue;
+    verifiedUsers++;
+    const k = dayKey(new Date(u.created_at));
+    verifiedByDay.set(k, (verifiedByDay.get(k) ?? 0) + 1);
+  }
+  for (const d of daily) d.verified = verifiedByDay.get(d.day) ?? 0;
+
   const profsRes = await supabase
     .from("profiles")
     .select("id, full_name, username, team_number, xp");
@@ -328,6 +344,7 @@ export async function getAdminStats(): Promise<AdminStats> {
       subscribers: countOf(subscribersRes),
     },
     totalXP,
+    verifiedUsers,
     signups7d: countOf(signups7dRes),
     signups30d: countOf(signups30dRes),
     completions7d: countOf(completions7dRes),

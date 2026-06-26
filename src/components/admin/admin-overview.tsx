@@ -38,6 +38,7 @@ function relTime(iso: string): string {
 type OverviewData = {
   onlineNow: number;
   users: number;
+  verifiedUsers: number;
   completions: number;
   totalXP: number;
   achievementsEarned: number;
@@ -83,7 +84,7 @@ export function AdminOverview({
       label: "Learners",
       value: data.users,
       icon: Users,
-      sub: `+${data.signups7d} this week`,
+      sub: `${data.verifiedUsers} verified · +${data.signups7d} this week`,
       panel: "users" as Panel,
     },
     { label: "Lessons completed", value: data.completions, icon: CheckCircle2, sub: `+${data.completions7d} this week`, panel: "completions" as Panel },
