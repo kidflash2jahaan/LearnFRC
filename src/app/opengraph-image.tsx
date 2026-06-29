@@ -15,7 +15,7 @@ export default async function Image() {
           flexDirection: "column",
           justifyContent: "center",
           padding: "80px",
-          background: "#060912",
+          background: "#090d15",
           position: "relative",
         }}
       >
@@ -29,7 +29,7 @@ export default async function Image() {
             height: 700,
             borderRadius: "9999px",
             background:
-              "radial-gradient(circle, rgba(47,95,255,0.45), transparent 60%)",
+              "radial-gradient(circle, rgba(198,255,61,0.38), transparent 60%)",
             display: "flex",
           }}
         />
@@ -53,14 +53,28 @@ export default async function Image() {
               width: 84,
               height: 84,
               borderRadius: 22,
-              background: "linear-gradient(135deg, #2f5fff, #22d3ee)",
+              background: "linear-gradient(135deg, #c6ff3d, #22d3ee)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              fontSize: 48,
             }}
           >
-            🤖
+            {/* robot head: dark face with two neon eyes */}
+            <div
+              style={{
+                width: 52,
+                height: 44,
+                borderRadius: 14,
+                background: "#0a1018",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 9,
+              }}
+            >
+              <div style={{ width: 11, height: 11, borderRadius: 6, background: "#c6ff3d", display: "flex" }} />
+              <div style={{ width: 11, height: 11, borderRadius: 6, background: "#22d3ee", display: "flex" }} />
+            </div>
           </div>
           <div
             style={{
@@ -99,7 +113,7 @@ export default async function Image() {
           }}
         >
           Structured, web-grounded guides for every department — 11 departments
-          · 200+ lessons.
+          · 393+ lessons.
         </div>
 
         <div

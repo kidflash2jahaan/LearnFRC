@@ -21,13 +21,15 @@ export function Logo({
           className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary to-transparent"
           aria-hidden
         />
-        <span className="relative -translate-y-px font-mono text-[15px] font-bold leading-none text-primary [text-shadow:0_0_8px_color-mix(in_srgb,var(--primary)_60%,transparent)]">
-          &gt;
-        </span>
-        <span
-          className="relative mb-1.5 h-[3px] w-2 self-end rounded-full bg-accent shadow-[var(--glow-accent)] animate-blink"
-          aria-hidden
-        />
+        <svg viewBox="0 0 24 24" className="relative h-5 w-5" fill="none" aria-hidden>
+          <path d="M12 2.7v2.2" stroke="var(--primary)" strokeWidth="1.6" strokeLinecap="round" />
+          <circle cx="12" cy="2" r="1.15" className="animate-blink" fill="var(--primary)" style={{ filter: "drop-shadow(0 0 3px var(--primary))" }} />
+          <rect x="4.4" y="5.2" width="15.2" height="13.4" rx="4" stroke="var(--primary)" strokeWidth="1.5" />
+          <path d="M4.4 9.6v3M19.6 9.6v3" stroke="var(--primary)" strokeWidth="1.5" strokeLinecap="round" />
+          <circle cx="9.4" cy="11.5" r="1.7" fill="var(--primary)" style={{ filter: "drop-shadow(0 0 3px var(--primary))" }} />
+          <circle cx="14.6" cy="11.5" r="1.7" fill="var(--accent)" style={{ filter: "drop-shadow(0 0 3px var(--accent))" }} />
+          <path d="M9.2 15.6h5.6" stroke="var(--accent)" strokeWidth="1.4" strokeLinecap="round" opacity="0.7" />
+        </svg>
       </span>
       <span className={cn("font-display text-lg font-bold tracking-tight", textClassName)}>
         Learn<span className="text-gradient">FRC</span>
