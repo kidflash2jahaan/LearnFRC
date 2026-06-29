@@ -239,8 +239,7 @@ export function LeaderList({ entries }: { entries: PodiumEntry[] }) {
   return (
     <motion.ul
       initial="hidden"
-      whileInView="show"
-      viewport={{ once: true, margin: "-60px" }}
+      animate="show"
       variants={rowContainer}
       className="divide-y divide-border"
     >

@@ -78,6 +78,7 @@ export function LeaderboardTabs({
         <TeamBoard teams={teams} userTeam={userTeam} />
       ) : (
         <IndividualBoard
+          key={tab}
           entries={tab === "week" ? weekly : allTime}
           emptyLabel={
             tab === "week"
