@@ -12,6 +12,7 @@ import {
   UsersRound,
   ChevronDown,
   Radio,
+  UserPlus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar } from "@/components/ui/avatar";
@@ -24,6 +25,7 @@ type Panel =
   | "online"
   | "users"
   | "teams"
+  | "referrals"
   | "completions"
   | "subscribers"
   | "achievements"
@@ -49,6 +51,7 @@ type OverviewData = {
   signups7d: number;
   completions7d: number;
   totalTeams: number;
+  referralUsers: number;
 };
 
 export function AdminOverview({
@@ -59,6 +62,7 @@ export function AdminOverview({
   subscribers,
   achievements,
   onlineUsers,
+  recruiters,
 }: {
   data: OverviewData;
   users: AdminUser[];
@@ -67,6 +71,7 @@ export function AdminOverview({
   subscribers: { email: string; created_at: string }[];
   achievements: { name: string; icon: string; earned: number }[];
   onlineUsers: { name: string; username: string | null; lastSeen: string }[];
+  recruiters: { name: string; username: string | null; referrals: number }[];
 }) {
   const [open, setOpen] = React.useState<Panel>(null);
   const toggle = (p: Panel) => setOpen((cur) => (cur === p ? null : p));
@@ -86,6 +91,13 @@ export function AdminOverview({
       icon: Users,
       sub: `${data.verifiedUsers} verified · +${data.signups7d} this week`,
       panel: "users" as Panel,
+    },
+    {
+      label: "From referrals",
+      value: data.referralUsers,
+      icon: UserPlus,
+      sub: "joined via invite links",
+      panel: "referrals" as Panel,
     },
     { label: "Lessons completed", value: data.completions, icon: CheckCircle2, sub: `+${data.completions7d} this week`, panel: "completions" as Panel },
     { label: "Total XP awarded", value: data.totalXP, icon: Zap, sub: "across all learners" },
@@ -196,6 +208,52 @@ export function AdminOverview({
                   </div>
                   <span className="shrink-0 text-xs text-muted-foreground">
                     {relTime(u.lastSeen)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
+      {open === "referrals" && (
+        <div className="mt-4 rounded-2xl border border-border bg-card p-6">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="flex items-center gap-2 font-semibold">
+              <UserPlus className="h-4 w-4 text-primary" /> Who referred people
+            </h2>
+            <Badge variant="outline">{data.referralUsers} joined via referrals</Badge>
+          </div>
+          {recruiters.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No one has joined through a referral link yet.
+            </p>
+          ) : (
+            <ul className="max-h-[32rem] divide-y divide-border overflow-auto">
+              {recruiters.map((r, i) => (
+                <li key={i} className="flex items-center justify-between gap-3 py-3">
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    <Avatar
+                      name={r.name}
+                      seed={r.username || r.name}
+                      className="h-8 w-8"
+                    />
+                    <div className="min-w-0">
+                      <div className="truncate font-medium">{r.name}</div>
+                      {r.username && (
+                        <div className="truncate text-xs text-muted-foreground">
+                          @{r.username}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <span className="shrink-0 text-right">
+                    <span className="font-mono text-sm font-bold tabular-nums">
+                      {r.referrals}
+                    </span>
+                    <span className="ml-1 text-[10px] font-medium uppercase text-muted-foreground">
+                      referred
+                    </span>
                   </span>
                 </li>
               ))}

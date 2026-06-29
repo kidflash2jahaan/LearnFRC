@@ -76,6 +76,12 @@ export type AdminStats = {
   /** Signed-in users active within the last few minutes. */
   onlineNow: number;
   onlineUsers: { name: string; username: string | null; lastSeen: string }[];
+  /** Acquisition-source breakdown for the pie chart. */
+  sources: { name: string; count: number }[];
+  /** Number of users who joined via a referral link. */
+  referralUsers: number;
+  /** Who referred how many people, most first. */
+  recruiters: { name: string; username: string | null; referrals: number }[];
   daily: DailyPoint[];
 };
 
@@ -208,7 +214,7 @@ export async function getAdminStats(): Promise<AdminStats> {
 
   const profsRes = await supabase
     .from("profiles")
-    .select("id, full_name, username, team_number, xp");
+    .select("id, full_name, username, team_number, xp, referred_by, source, hide_name");
   const pmap = new Map(
     ((profsRes.data as Record<string, unknown>[]) ?? []).map((p) => [
       p.id as string,
@@ -333,6 +339,43 @@ export async function getAdminStats(): Promise<AdminStats> {
   }));
   const onlineNow = onlineUsers.length;
 
+  // ── Acquisition sources + referrals (from the profiles we already fetched) ──
+  type ProfRow = {
+    id: string;
+    full_name: string | null;
+    username: string | null;
+    referred_by: string | null;
+    source: string | null;
+    hide_name: boolean | null;
+  };
+  const allProfs = (profsRes.data as unknown as ProfRow[]) ?? [];
+
+  const sourceCounts = new Map<string, number>();
+  for (const p of allProfs) {
+    const key = (p.source && p.source.trim()) || "Unknown / Direct";
+    sourceCounts.set(key, (sourceCounts.get(key) ?? 0) + 1);
+  }
+  const sources = [...sourceCounts.entries()]
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count);
+
+  const referralUsers = allProfs.filter((p) => p.referred_by != null).length;
+  const recruiterCounts = new Map<string, number>();
+  for (const p of allProfs) {
+    if (!p.referred_by) continue;
+    recruiterCounts.set(p.referred_by, (recruiterCounts.get(p.referred_by) ?? 0) + 1);
+  }
+  const recruiters = [...recruiterCounts.entries()]
+    .map(([refId, count]) => {
+      const r = pmap.get(refId) as ProfRow | undefined;
+      const name =
+        (r && !r.hide_name && (r.full_name || r.username)) ||
+        r?.username ||
+        "Member";
+      return { name, username: r?.username ?? null, referrals: count };
+    })
+    .sort((a, b) => b.referrals - a.referrals);
+
   return {
     totals: {
       users: countOf(usersRes),
@@ -358,6 +401,9 @@ export async function getAdminStats(): Promise<AdminStats> {
     achievementBreakdown,
     onlineNow,
     onlineUsers,
+    sources,
+    referralUsers,
+    recruiters,
     daily,
   };
 }

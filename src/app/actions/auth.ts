@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -113,22 +114,28 @@ export async function signUp(
   });
   if (error) return { error: error.message };
 
-  // Record who referred this user. The XP reward is paid out only when they
-  // verify their email (see /auth/confirm) — keeps it farm-resistant.
+  // Record acquisition source (first-touch cookie set by <SourceCapture/>) and,
+  // if they came via a referral link, who referred them. The XP referral reward
+  // is still paid out only on email verification (see /auth/confirm).
   // The profile row is created by a trigger. Self-referrals are blocked.
-  if (ref && data.user) {
+  if (data.user) {
     const admin = createAdminClient();
-    const { data: referrer } = await admin
-      .from("profiles")
-      .select("id")
-      .eq("username", ref)
-      .maybeSingle();
-    if (referrer && referrer.id !== data.user.id) {
-      await admin
+    const cookieStore = await cookies();
+    const source = (
+      ref ? "Referral" : cookieStore.get("lf_src")?.value || "Direct"
+    ).slice(0, 40);
+    const update: { source: string; referred_by?: string } = { source };
+    if (ref) {
+      const { data: referrer } = await admin
         .from("profiles")
-        .update({ referred_by: referrer.id })
-        .eq("id", data.user.id);
+        .select("id")
+        .eq("username", ref)
+        .maybeSingle();
+      if (referrer && referrer.id !== data.user.id) {
+        update.referred_by = referrer.id;
+      }
     }
+    await admin.from("profiles").update(update).eq("id", data.user.id);
   }
 
   // Email confirmation is required — send them to a "check your inbox" screen.

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ShieldAlert, TrendingUp } from "lucide-react";
+import { ShieldAlert, TrendingUp, PieChart } from "lucide-react";
 import { getSession } from "@/lib/auth";
 import { getAdminStats } from "@/lib/admin";
 import { deptMeta } from "@/lib/departments";
@@ -11,6 +11,7 @@ import { Reveal } from "@/components/motion/reveal";
 import { ActivityChart } from "@/components/admin/activity-chart";
 import { AdminOverview } from "@/components/admin/admin-overview";
 import { AutoRefresh } from "@/components/admin/auto-refresh";
+import { SourcePie } from "@/components/admin/source-pie";
 
 export const metadata: Metadata = { title: "Admin" };
 
@@ -76,6 +77,7 @@ export default async function AdminPage() {
           signups7d: stats.signups7d,
           completions7d: stats.completions7d,
           totalTeams: stats.totalUniqueTeams,
+          referralUsers: stats.referralUsers,
         }}
         users={stats.users}
         teams={stats.teams}
@@ -83,6 +85,7 @@ export default async function AdminPage() {
         subscribers={stats.subscriberList}
         achievements={stats.achievementBreakdown}
         onlineUsers={stats.onlineUsers}
+        recruiters={stats.recruiters}
       />
 
       <div className="mt-8 grid gap-6 lg:grid-cols-5">
@@ -124,6 +127,20 @@ export default async function AdminPage() {
           </div>
         </Reveal>
       </div>
+
+      <Reveal className="mt-6">
+        <div className="rounded-2xl border border-border bg-card p-6">
+          <div className="mb-1 flex items-center gap-2">
+            <PieChart className="h-4 w-4 text-primary" />
+            <h2 className="font-semibold">Where users come from</h2>
+          </div>
+          <p className="mb-5 max-w-md text-xs text-muted-foreground">
+            Acquisition source captured at signup. Users from before tracking
+            launched show as &ldquo;Unknown / Direct.&rdquo;
+          </p>
+          <SourcePie data={stats.sources} />
+        </div>
+      </Reveal>
 
       <Reveal className="mt-6">
         <div className="rounded-2xl border border-border bg-card p-6">
