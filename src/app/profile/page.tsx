@@ -14,13 +14,17 @@ import { getSession } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { getCompletedLessonIds } from "@/lib/queries";
 import type { Achievement } from "@/lib/types";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { Reveal, Stagger, StaggerItem } from "@/components/motion/reveal";
-import { AnimatedCounter } from "@/components/animated-counter";
+import {
+  TerminalFrame,
+  StatusPill,
+  NeonCounter,
+} from "@/components/motion/terminal";
 import { Icon } from "@/lib/icon-map";
 import { cn } from "@/lib/utils";
 
@@ -44,6 +48,11 @@ function formatJoined(iso: string | null): string {
     year: "numeric",
   });
 }
+
+// cyan → lime fill for HUD progress bars
+const XP_BAR = {
+  background: "linear-gradient(90deg, var(--color-accent), var(--color-primary))",
+} as const;
 
 export default async function ProfilePage() {
   const { user, profile } = await getSession();
@@ -87,31 +96,22 @@ export default async function ProfilePage() {
   const displayName =
     profile?.full_name || profile?.username || user.email?.split("@")[0] || "You";
   const roleLabel = ROLE_LABEL[profile?.role ?? "student"] ?? "Member";
+  const handle = profile?.username || "you";
 
   const stats = [
-    {
-      icon: Zap,
-      label: "Total XP",
-      value: xp,
-      accent: "text-primary",
-    },
-    {
-      icon: Trophy,
-      label: "Level",
-      value: level,
-      accent: "text-accent",
-    },
+    { icon: Zap, label: "Total XP", value: xp, color: "var(--color-primary)" },
+    { icon: Trophy, label: "Level", value: level, color: "var(--color-accent)" },
     {
       icon: BookOpenCheck,
       label: "Lessons done",
       value: lessonsCompleted,
-      accent: "text-success",
+      color: "var(--color-success)",
     },
     {
       icon: Trophy,
       label: "Badges earned",
       value: earnedCount,
-      accent: "text-warning",
+      color: "var(--color-gold)",
     },
   ];
 
@@ -119,19 +119,20 @@ export default async function ProfilePage() {
     <main className="relative overflow-hidden">
       {/* Ambient background */}
       <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute inset-0 bg-grid opacity-40 mask-b-faded" />
+        <div className="absolute inset-0 hud-grid opacity-50 mask-b-faded" />
         <div className="absolute left-1/2 top-[-10%] h-[460px] w-[680px] -translate-x-1/2 rounded-full opacity-20 blur-3xl aurora-bg animate-aurora" />
       </div>
 
       <div className="mx-auto max-w-4xl px-4 pt-28 pb-24 sm:px-6 lg:px-8">
         {/* ===================== HERO ===================== */}
         <Reveal>
-          <Card className="relative overflow-hidden border-border/80 shadow-[var(--shadow-lg)]">
+          <Card className="relative overflow-hidden border-primary/25 shadow-[var(--shadow-lg)]">
             {/* Banner */}
             <div aria-hidden className="absolute inset-x-0 top-0 h-28 bg-brand opacity-90">
-              <div className="absolute inset-0 bg-grid opacity-20" />
+              <div className="absolute inset-0 bg-grid opacity-25" />
+              <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-primary to-transparent" />
             </div>
-            <CardContent className="relative pt-16">
+            <div className="relative p-6 pt-16">
               <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
                   <Avatar
@@ -144,11 +145,9 @@ export default async function ProfilePage() {
                     <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
                       {displayName}
                     </h1>
-                    {profile?.username && (
-                      <p className="mt-0.5 text-sm text-muted-foreground">
-                        @{profile.username}
-                      </p>
-                    )}
+                    <p className="mt-0.5 font-mono text-sm text-muted-foreground">
+                      @{handle}
+                    </p>
                     <div className="mt-3 flex flex-wrap items-center gap-2">
                       <Badge variant="primary">{roleLabel}</Badge>
                       {profile?.team_number != null && (
@@ -188,7 +187,7 @@ export default async function ProfilePage() {
                   {profile.bio}
                 </p>
               )}
-            </CardContent>
+            </div>
           </Card>
         </Reveal>
 
@@ -196,42 +195,56 @@ export default async function ProfilePage() {
         <Stagger className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4" stagger={0.07}>
           {stats.map((s) => (
             <StaggerItem key={s.label}>
-              <Card className="group h-full p-5 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[var(--shadow-md)]">
-                <s.icon className={cn("h-5 w-5", s.accent)} />
-                <div className="mt-3 font-mono text-2xl font-bold tracking-tight">
-                  <AnimatedCounter value={s.value} />
+              <div className="group relative h-full overflow-hidden rounded-xl border border-border bg-card/60 p-5 backdrop-blur transition-all duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-[var(--glow-primary)]">
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute -right-8 -top-8 h-20 w-20 rounded-full opacity-[0.14] blur-2xl transition-opacity duration-300 group-hover:opacity-30"
+                  style={{ background: s.color }}
+                />
+                <s.icon className="h-5 w-5" style={{ color: s.color }} />
+                <div className="mt-3 font-display text-2xl font-bold tracking-tight tabular-nums">
+                  <NeonCounter to={s.value} />
                 </div>
-                <div className="mt-0.5 text-xs text-muted-foreground">
+                <div className="mt-0.5 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
                   {s.label}
                 </div>
-              </Card>
+                <span
+                  aria-hidden
+                  className="mt-2.5 block h-0.5 w-6 rounded-full"
+                  style={{ background: s.color, boxShadow: `0 0 10px ${s.color}` }}
+                />
+              </div>
             </StaggerItem>
           ))}
         </Stagger>
 
         {/* ===================== XP / LEVEL ===================== */}
         <Reveal delay={0.04} className="mt-6">
-          <Card className="overflow-hidden p-6">
+          <TerminalFrame
+            glow
+            title={`level.dat — ~/${handle}`}
+            right={<StatusPill tone="primary">● lvl {level}</StatusPill>}
+          >
             <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-3">
-                <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-soft text-primary">
+                <span className="flex h-11 w-11 items-center justify-center rounded-xl border border-primary/30 bg-primary/10 text-primary shadow-[var(--glow-primary)]">
                   <Zap className="h-5 w-5" />
                 </span>
                 <div>
-                  <div className="text-sm text-muted-foreground">
-                    Level{" "}
+                  <div className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
+                    level{" "}
                     <span className="font-semibold text-foreground">{level}</span>
                   </div>
-                  <div className="font-mono text-xl font-bold">
-                    <AnimatedCounter value={xp} suffix=" XP" />
+                  <div className="font-display text-xl font-bold">
+                    <NeonCounter to={xp} suffix=" XP" />
                   </div>
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-sm font-medium">
-                  {toNext} XP to level {level + 1}
+                <div className="font-mono text-sm font-medium">
+                  {toNext} XP → lvl {level + 1}
                 </div>
-                <div className="text-xs text-muted-foreground">
+                <div className="font-mono text-xs text-muted-foreground">
                   {intoLevel} / 100 this level
                 </div>
               </div>
@@ -239,17 +252,24 @@ export default async function ProfilePage() {
             <Progress
               value={intoLevel}
               className="mt-4 h-2.5"
+              style={XP_BAR}
               aria-label={`${intoLevel} of 100 XP toward level ${level + 1}`}
             />
-          </Card>
+          </TerminalFrame>
         </Reveal>
 
         {/* ===================== ACHIEVEMENTS ===================== */}
         <Reveal delay={0.06} className="mt-10">
           <div className="flex items-baseline justify-between">
-            <h2 className="text-xl font-bold tracking-tight">Achievements</h2>
-            <span className="text-sm text-muted-foreground">
-              {earnedCount} of {achievements.length} earned
+            <div>
+              <span className="inline-flex items-center gap-2 font-mono text-xs uppercase tracking-[0.2em] text-accent">
+                <span aria-hidden className="h-px w-6 bg-gradient-to-r from-accent to-transparent" />
+                unlocks
+              </span>
+              <h2 className="mt-2 text-xl font-bold tracking-tight">Achievements</h2>
+            </div>
+            <span className="font-mono text-sm text-muted-foreground">
+              {earnedCount} / {achievements.length} earned
             </span>
           </div>
         </Reveal>
@@ -258,8 +278,8 @@ export default async function ProfilePage() {
           <Reveal delay={0.08} className="mt-4">
             <Card className="p-10 text-center">
               <Trophy className="mx-auto h-8 w-8 text-muted-foreground/60" />
-              <p className="mt-3 text-sm text-muted-foreground">
-                No achievements available yet. Check back soon.
+              <p className="mt-3 font-mono text-sm text-muted-foreground">
+                // no achievements available yet — check back soon
               </p>
             </Card>
           </Reveal>
@@ -270,18 +290,18 @@ export default async function ProfilePage() {
           >
             {achievements.map((a) => (
               <StaggerItem key={a.id}>
-                <Card
+                <div
                   className={cn(
-                    "group relative h-full overflow-hidden p-5 transition-all duration-300",
+                    "group relative h-full overflow-hidden rounded-xl border p-5 backdrop-blur transition-all duration-300",
                     a.earned
-                      ? "border-primary/30 hover:-translate-y-0.5 hover:shadow-[var(--shadow-md)]"
-                      : "opacity-60"
+                      ? "border-primary/30 bg-card/70 hover:-translate-y-1 hover:border-primary/55 hover:shadow-[var(--glow-primary)]"
+                      : "border-dashed border-border bg-card/30 opacity-70"
                   )}
                 >
                   {a.earned && (
                     <div
                       aria-hidden
-                      className="pointer-events-none absolute -right-6 -top-6 h-20 w-20 rounded-full bg-primary/10 blur-2xl transition-opacity duration-300 group-hover:opacity-80"
+                      className="pointer-events-none absolute -right-6 -top-6 h-20 w-20 rounded-full bg-primary/15 blur-2xl transition-opacity duration-300 group-hover:opacity-80"
                     />
                   )}
                   <div className="flex items-start gap-3">
@@ -289,9 +309,17 @@ export default async function ProfilePage() {
                       className={cn(
                         "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl",
                         a.earned
-                          ? "bg-brand text-white shadow-[var(--shadow-sm)]"
+                          ? "text-primary-foreground shadow-[var(--glow-primary)]"
                           : "bg-muted text-muted-foreground"
                       )}
+                      style={
+                        a.earned
+                          ? {
+                              backgroundImage:
+                                "linear-gradient(135deg, var(--color-primary), var(--color-accent))",
+                            }
+                          : undefined
+                      }
                     >
                       {a.earned ? (
                         <Icon name={a.icon} className="h-5 w-5" />
@@ -310,10 +338,12 @@ export default async function ProfilePage() {
                   </div>
                   {a.earned && (
                     <div className="mt-3">
-                      <Badge variant="success">Earned</Badge>
+                      <StatusPill tone="primary" pulse={false}>
+                        earned
+                      </StatusPill>
                     </div>
                   )}
-                </Card>
+                </div>
               </StaggerItem>
             ))}
           </Stagger>

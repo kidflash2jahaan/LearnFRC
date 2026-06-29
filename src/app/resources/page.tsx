@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
-import { ExternalLink, MessageSquarePlus } from "lucide-react";
+import { ExternalLink, MessageSquarePlus, Library } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { deptMeta } from "@/lib/departments";
 import { Icon } from "@/lib/icon-map";
 import { Reveal, Stagger, StaggerItem } from "@/components/motion/reveal";
 import { FeedbackForm } from "@/components/feedback-form";
+import { StatusPill, NeonCounter, TerminalFrame } from "@/components/motion/terminal";
 import type { Resource } from "@/lib/types";
 
 export const metadata: Metadata = {
@@ -65,11 +66,19 @@ export default async function ResourcesPage() {
     .select("name, slug, sources")
     .order("sort_order");
 
+  const totalLinks = CURATED.reduce((s, g) => s + g.links.length, 0);
+
   return (
     <div className="mx-auto max-w-5xl px-4 pt-28 pb-20 sm:px-6 lg:px-8">
       <Reveal className="max-w-2xl">
-        <h1 className="text-balance text-4xl font-bold tracking-tight sm:text-5xl">
-          FRC <span className="text-gradient">resources</span>
+        <div className="mb-4">
+          <StatusPill tone="accent">
+            <Library className="h-3.5 w-3.5" />
+            <NeonCounter to={totalLinks} suffix=" curated links" />
+          </StatusPill>
+        </div>
+        <h1 className="text-balance font-display text-4xl font-bold tracking-tight sm:text-5xl">
+          FRC <span className="text-gradient-animated">resources</span>
         </h1>
         <p className="mt-4 text-pretty text-lg text-muted-foreground">
           The links every team should bookmark — official docs, software,
@@ -77,12 +86,18 @@ export default async function ResourcesPage() {
         </p>
       </Reveal>
 
-      <div className="mt-12 space-y-10">
-        {CURATED.map((group) => (
+      <div className="mt-12 space-y-12">
+        {CURATED.map((group, gi) => (
           <Reveal key={group.category}>
-            <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              {group.category}
-            </h2>
+            <div className="mb-4 flex items-center gap-3">
+              <span className="font-mono text-xs uppercase tracking-[0.18em] text-primary">
+                {String(gi + 1).padStart(2, "0")}
+              </span>
+              <h2 className="font-mono text-sm font-semibold uppercase tracking-wide text-foreground">
+                {group.category}
+              </h2>
+              <span className="h-px flex-1 bg-gradient-to-r from-border to-transparent" />
+            </div>
             <Stagger className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {group.links.map((l) => (
                 <StaggerItem key={l.url}>
@@ -90,9 +105,11 @@ export default async function ResourcesPage() {
                     href={l.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="group flex items-center justify-between gap-3 rounded-xl border border-border bg-card p-4 transition-all hover:-translate-y-0.5 hover:shadow-[var(--shadow-md)]"
+                    className="group flex items-center justify-between gap-3 rounded-xl border border-border bg-card/60 p-4 backdrop-blur-sm transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-[var(--glow-primary)]"
                   >
-                    <span className="font-medium">{l.title}</span>
+                    <span className="font-medium transition-colors group-hover:text-primary">
+                      {l.title}
+                    </span>
                     <ExternalLink className="h-4 w-4 shrink-0 text-muted-foreground transition-colors group-hover:text-primary" />
                   </a>
                 </StaggerItem>
@@ -104,10 +121,14 @@ export default async function ResourcesPage() {
 
       {/* Sources by department */}
       <Reveal className="mt-16">
-        <h2 className="mb-2 text-2xl font-bold tracking-tight">
+        <div className="mb-2 flex items-center gap-2 font-mono text-xs uppercase tracking-[0.18em] text-accent">
+          <span className="h-1.5 w-1.5 rounded-full bg-accent shadow-[0_0_8px_var(--accent)]" />
+          provenance
+        </div>
+        <h2 className="text-2xl font-bold tracking-tight font-display">
           Sources behind the guides
         </h2>
-        <p className="mb-6 text-muted-foreground">
+        <p className="mb-6 mt-2 text-muted-foreground">
           Every LearnFRC guide is grounded in authoritative sources. Here they
           are, by department.
         </p>
@@ -119,16 +140,18 @@ export default async function ResourcesPage() {
             return (
               <div
                 key={d.slug as string}
-                className="rounded-2xl border border-border bg-card p-5"
+                className="group rounded-2xl border border-border bg-card/60 p-5 backdrop-blur-sm transition-all hover:border-primary/30 hover:shadow-[var(--glow-primary)]"
               >
                 <div className="mb-3 flex items-center gap-2">
                   <span
-                    className="flex h-8 w-8 items-center justify-center rounded-lg text-white"
+                    className="flex h-8 w-8 items-center justify-center rounded-lg text-white ring-1 ring-white/10"
                     style={{ backgroundImage: `linear-gradient(135deg, ${m.color}, ${m.to})` }}
                   >
                     <Icon name={m.icon} className="h-4 w-4" />
                   </span>
-                  <h3 className="text-sm font-semibold">{d.name as string}</h3>
+                  <h3 className="font-display text-sm font-semibold">
+                    {d.name as string}
+                  </h3>
                 </div>
                 <ul className="space-y-1.5">
                   {sources.slice(0, 6).map((s, i) => (
@@ -137,7 +160,7 @@ export default async function ResourcesPage() {
                         href={s.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-start gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+                        className="inline-flex items-start gap-1.5 text-sm text-muted-foreground transition-colors hover:text-primary"
                       >
                         <ExternalLink className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                         <span>{s.title}</span>
@@ -153,19 +176,25 @@ export default async function ResourcesPage() {
 
       {/* Suggest */}
       <Reveal className="mt-16">
-        <div className="rounded-2xl border border-border bg-card p-6 sm:p-8">
+        <TerminalFrame
+          title="suggest.sh — ~/learnfrc"
+          glow
+          right={<StatusPill tone="primary">open</StatusPill>}
+        >
           <div className="mb-4 flex items-center gap-2">
             <MessageSquarePlus className="h-5 w-5 text-primary" />
-            <h2 className="text-xl font-bold">Suggest a topic or resource</h2>
+            <h2 className="font-display text-xl font-bold">
+              Suggest a topic or resource
+            </h2>
           </div>
           <p className="mb-5 max-w-xl text-sm text-muted-foreground">
-            Missing something you'd find useful? Tell us what to add — your
+            Missing something you&apos;d find useful? Tell us what to add — your
             suggestion goes straight to the team.
           </p>
           <div className="max-w-xl">
             <FeedbackForm page="/resources" />
           </div>
-        </div>
+        </TerminalFrame>
       </Reveal>
     </div>
   );

@@ -32,6 +32,10 @@ import type { Profile } from "@/lib/types";
 
 const EASE = [0.21, 0.47, 0.32, 0.98] as const;
 
+/** Terminal-style field label. */
+const LABEL_CLS =
+  "font-mono text-[11px] uppercase tracking-wider text-muted-foreground";
+
 const ROLES = [
   { value: "student", label: "Student" },
   { value: "mentor", label: "Mentor" },
@@ -160,7 +164,9 @@ export function SettingsForm({
 
       {/* Email (read-only) */}
       <motion.div variants={item}>
-        <Label htmlFor="email">Email</Label>
+        <Label htmlFor="email" className={LABEL_CLS}>
+          Email
+        </Label>
         <Input
           id="email"
           type="email"
@@ -176,7 +182,9 @@ export function SettingsForm({
 
       {/* Full name */}
       <motion.div variants={item}>
-        <Label htmlFor="full_name">Full name</Label>
+        <Label htmlFor="full_name" className={LABEL_CLS}>
+          Full name
+        </Label>
         <Field icon={UserIcon}>
           <Input
             id="full_name"
@@ -195,7 +203,9 @@ export function SettingsForm({
       {/* Username + Team number */}
       <motion.div variants={item} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
-          <Label htmlFor="username">Username</Label>
+          <Label htmlFor="username" className={LABEL_CLS}>
+            Username
+          </Label>
           <Field icon={AtSign}>
             <Input
               id="username"
@@ -220,7 +230,9 @@ export function SettingsForm({
           </p>
         </div>
         <div>
-          <Label htmlFor="team_number">FRC team number</Label>
+          <Label htmlFor="team_number" className={LABEL_CLS}>
+            FRC team number
+          </Label>
           <Field icon={Hash}>
             <Input
               id="team_number"
@@ -244,7 +256,9 @@ export function SettingsForm({
 
       {/* Role */}
       <motion.div variants={item}>
-        <Label htmlFor="role">Role on your team</Label>
+        <Label htmlFor="role" className={LABEL_CLS}>
+          Role on your team
+        </Label>
         <div className="relative">
           <BadgeCheck className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <select
@@ -282,7 +296,9 @@ export function SettingsForm({
 
       {/* Avatar URL */}
       <motion.div variants={item}>
-        <Label htmlFor="avatar_url">Avatar image URL</Label>
+        <Label htmlFor="avatar_url" className={LABEL_CLS}>
+          Avatar image URL
+        </Label>
         <Field icon={Link2}>
           <Input
             id="avatar_url"
@@ -304,7 +320,9 @@ export function SettingsForm({
 
       {/* Bio */}
       <motion.div variants={item}>
-        <Label htmlFor="bio">Bio</Label>
+        <Label htmlFor="bio" className={LABEL_CLS}>
+          Bio
+        </Label>
         <Textarea
           id="bio"
           name="bio"

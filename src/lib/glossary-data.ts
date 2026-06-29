@@ -105,5 +105,5 @@ export const GLOSSARY: GlossaryTerm[] = [
   // ---- Community ----
   { term: "Chief Delphi", abbr: "CD", category: "Community", definition: "The largest FRC community forum, where teams share technical knowledge, designs, and code.", link: "https://www.chiefdelphi.com" },
   { term: "Onshape", category: "Community", definition: "A free, cloud-based CAD platform popular in FRC for collaborative robot design.", link: "https://www.onshape.com" },
-  { term: "Open Alliance", category: "Community", definition: "A group of teams that publicly document their build season in real time to share knowledge with the community.", link: "https://www.theopenalliance.com" },
+  { term: "Open Alliance", category: "Community", definition: "A group of teams that publicly document their build season in real time to share knowledge with the community.", link: "https://www.theopenalliance.org" },
 ];

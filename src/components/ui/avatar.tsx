@@ -23,10 +23,13 @@ export function Avatar({
     .join("")
     .toUpperCase();
 
-  // deterministic hue from seed/name
+  // deterministic neon-family color from seed/name (lime / green / cyan / magenta / gold)
   const key = seed || name || "x";
-  let h = 0;
-  for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) % 360;
+  let hash = 0;
+  for (let i = 0; i < key.length; i++) hash = (hash * 31 + key.charCodeAt(i)) % 997;
+  const NEON_HUES = [82, 150, 188, 320, 46];
+  const h = NEON_HUES[hash % NEON_HUES.length];
+  const h2 = NEON_HUES[(hash + 2) % NEON_HUES.length];
 
   return (
     <AvatarPrimitive.Root
@@ -43,11 +46,9 @@ export function Avatar({
         />
       ) : null}
       <AvatarPrimitive.Fallback
-        className="flex h-full w-full items-center justify-center text-sm font-semibold text-white"
+        className="flex h-full w-full items-center justify-center text-sm font-semibold text-[#06070b]"
         style={{
-          backgroundImage: `linear-gradient(135deg, hsl(${h} 80% 55%), hsl(${
-            (h + 50) % 360
-          } 80% 50%))`,
+          backgroundImage: `linear-gradient(135deg, hsl(${h} 90% 62%), hsl(${h2} 90% 56%))`,
         }}
       >
         {initials}

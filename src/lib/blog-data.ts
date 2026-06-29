@@ -526,11 +526,11 @@ Free speed in feet per second equals motor free RPM, times an efficiency factor,
 
 A few notes on the inputs:
 
-- Motor free RPM: use the published no-load speed. Common FRC motors are the NEO at about 5820 RPM, the NEO Vortex at about 6784 RPM, the Falcon 500 V2 at about 6489 RPM, and the Kraken X60 at about 6048 RPM at 12 volts (about 5640 RPM with FOC enabled).
+- Motor free RPM: use the published no-load speed. Common FRC motors are the NEO at about 5676 RPM, the NEO Vortex at about 6784 RPM, the Falcon 500 at about 6380 RPM, and the Kraken X60 at about 6000 RPM at 12 volts (about 5800 RPM with FOC enabled).
 - Efficiency factor: real gearboxes lose energy to friction, and a robot never runs at its theoretical max. Most teams multiply by roughly 0.80 to 0.85 to get a realistic number.
 - Wheel circumference: that is wheel diameter times pi, converted to feet. A 4 inch wheel is about 1.05 feet around.
 
-For a worked example, take a Kraken X60 at 6048 RPM, a 6.75:1 reduction, and a 4 inch wheel. Theoretical free speed is about 17.5 ft/s; after an 85 percent efficiency factor, you land near 14.9 ft/s, which is a sensible real-world target.
+For a worked example, take a Kraken X60 at 6000 RPM, a 6.75:1 reduction, and a 4 inch wheel. Theoretical free speed is about 15.5 ft/s; after an 85 percent efficiency factor, you land near 13.2 ft/s, which is a sensible real-world target.
 
 ## Choosing a ratio for your game
 
@@ -862,7 +862,7 @@ Ready to turn your priority list into a real design? Start with the LearnFRC CAD
     keywords: ["FRC PathPlanner tutorial","FRC autonomous programming","how to make autonomous FRC","PathPlanner FRC","command-based autonomous FRC","FRC auto routines"],
     date: "2026-06-24",
     readMins: 8,
-    content: `The first 15 seconds of an FRC match happen with no driver at the controls. Your robot has to drive, aim, and score entirely on its own. For years, writing that autonomous code meant hand-tuning trajectories and hoping the math worked out. Today, most competitive teams reach for one tool first: **PathPlanner**. It lets you draw a path on a picture of the field, attach actions to it, and hand the whole thing to your robot as a single command. This guide walks you through how it works, from the GUI to the code, in plain terms.
+    content: `The first 20 seconds of an FRC match happen with no driver at the controls. Your robot has to drive, aim, and score entirely on its own. For years, writing that autonomous code meant hand-tuning trajectories and hoping the math worked out. Today, most competitive teams reach for one tool first: **PathPlanner**. It lets you draw a path on a picture of the field, attach actions to it, and hand the whole thing to your robot as a single command. This guide walks you through how it works, from the GUI to the code, in plain terms.
 
 ## What PathPlanner actually is
 
@@ -1169,7 +1169,7 @@ This is the most important week, and almost none of it is spent building. Resist
 
 **Read the manual together.** Watch the Kickoff broadcast, then read the game manual as a team. The arena section and the scoring rules matter more than anything else right now. Note every way to earn points, every penalty, and the endgame.
 
-**Do the scoring math.** Build a simple spreadsheet: how many points is each action worth, and how many can a realistic robot perform in the 2-minute-30-second match (in 2026's REBUILT, that is a 20-second autonomous period followed by 2:20 of driver-controlled teleop)? A robot that does one thing flawlessly almost always beats one that does five things poorly.
+**Do the scoring math.** Build a simple spreadsheet: how many points is each action worth, and how many can a realistic robot perform in the 2-minute-40-second match (in 2026's REBUILT, that is a 20-second autonomous period followed by 2:20 of driver-controlled teleop)? A robot that does one thing flawlessly almost always beats one that does five things poorly.
 
 **Pick a strategy, then a robot.** Decide what role you want to play in an alliance before you design a single mechanism. Strategy drives design — not the other way around.
 
@@ -1248,7 +1248,7 @@ Programming and electrical move fastest when they start in Week 2, not Week 5 �
 
 The robot exists. Now the difference between a good team and a great one is **practice and reliability**.
 
-**Drive it, a lot.** Your drivers need real reps to develop muscle memory under match pressure. Run full 2:30 practice matches. Time your cycles. Find what breaks and fix it before a referee or an opponent finds it for you.
+**Drive it, a lot.** Your drivers need real reps to develop muscle memory under match pressure. Run full 2:40 practice matches. Time your cycles. Find what breaks and fix it before a referee or an opponent finds it for you.
 
 And here is where the post-2019 freedom pays off: because there is no bag, **you keep iterating**. Reinforce the part that snapped in practice. Re-tune the autonomous that missed. Add a feature you ran out of time for in Week 4 — then keep improving between competition events too.
 

@@ -8,6 +8,7 @@ import { ScrollProgress } from "@/components/scroll-progress";
 import { JsonLd } from "@/components/json-ld";
 import { PresenceBeacon } from "@/components/presence-beacon";
 import { SourceCapture } from "@/components/source-capture";
+import { HudBackground } from "@/components/motion/terminal";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 
@@ -74,10 +75,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f5f7fc" },
-    { media: "(prefers-color-scheme: dark)", color: "#060912" },
-  ],
+  themeColor: "#090d15",
 };
 
 export default function RootLayout({
@@ -88,7 +86,7 @@ export default function RootLayout({
       lang="en"
       suppressHydrationWarning
       data-scroll-behavior="smooth"
-      className={`${grotesk.variable} ${inter.variable} ${jbmono.variable} h-full`}
+      className={`dark ${grotesk.variable} ${inter.variable} ${jbmono.variable} h-full`}
     >
       <body className="flex min-h-full flex-col antialiased">
         <script
@@ -127,6 +125,7 @@ export default function RootLayout({
         >
           Skip to content
         </a>
+        <HudBackground />
         <Providers>
           <ScrollProgress />
           <Navbar />

@@ -24,6 +24,10 @@ import { cn } from "@/lib/utils";
 
 const EASE = [0.21, 0.47, 0.32, 0.98] as const;
 
+/** Terminal-style field label. */
+const LABEL_CLS =
+  "font-mono text-[11px] uppercase tracking-wider text-muted-foreground";
+
 type Mode = "login" | "signup";
 
 export function AuthForm({
@@ -107,7 +111,9 @@ export function AuthForm({
 
       {isSignup && (
         <motion.div variants={item}>
-          <Label htmlFor="full_name">Full name</Label>
+          <Label htmlFor="full_name" className={LABEL_CLS}>
+            Full name
+          </Label>
           <Field icon={UserIcon}>
             <Input
               id="full_name"
@@ -123,7 +129,7 @@ export function AuthForm({
       )}
 
       <motion.div variants={item}>
-        <Label htmlFor={isSignup ? "email" : "identifier"}>
+        <Label htmlFor={isSignup ? "email" : "identifier"} className={LABEL_CLS}>
           {isSignup ? "Email" : "Email or username"}
         </Label>
         <Field icon={isSignup ? Mail : AtSign}>
@@ -144,7 +150,9 @@ export function AuthForm({
       {isSignup && (
         <motion.div variants={item} className="grid grid-cols-2 gap-3">
           <div>
-            <Label htmlFor="username">Username</Label>
+            <Label htmlFor="username" className={LABEL_CLS}>
+              Username
+            </Label>
             <Field icon={AtSign}>
               <Input
                 id="username"
@@ -161,9 +169,9 @@ export function AuthForm({
             </Field>
           </div>
           <div>
-            <Label htmlFor="team_number">
+            <Label htmlFor="team_number" className={LABEL_CLS}>
               Team #{" "}
-              <span className="font-normal text-muted-foreground">
+              <span className="normal-case text-muted-foreground/70">
                 (optional)
               </span>
             </Label>
@@ -184,7 +192,9 @@ export function AuthForm({
       )}
 
       <motion.div variants={item}>
-        <Label htmlFor="password">Password</Label>
+        <Label htmlFor="password" className={LABEL_CLS}>
+          Password
+        </Label>
         <Field icon={Lock}>
           <Input
             id="password"

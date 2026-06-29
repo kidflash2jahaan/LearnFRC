@@ -1,31 +1,33 @@
 "use client";
 
 import * as React from "react";
+import { motion } from "framer-motion";
+import { useStaticMotion } from "@/components/perf-mode";
 
-// Known-source brand colors; anything else falls back to the palette by index.
+// Known-source neon colors; anything else falls back to the neon palette by index.
 const COLORS: Record<string, string> = {
-  Google: "#4285F4",
-  Reddit: "#FF4500",
-  "Chief Delphi": "#7c3aed",
-  Referral: "#34d399",
-  YouTube: "#ef4444",
-  Instagram: "#e1306c",
-  Twitter: "#1da1f2",
-  X: "#1da1f2",
-  Discord: "#5865f2",
-  Bing: "#22d3ee",
-  "Unknown / Direct": "#64748b",
-  Direct: "#64748b",
+  Google: "#22d3ee",
+  Reddit: "#ffd23d",
+  "Chief Delphi": "#ff3dcb",
+  Referral: "#5dff9b",
+  YouTube: "#ff8af0",
+  Instagram: "#ff3dcb",
+  Twitter: "#22d3ee",
+  X: "#22d3ee",
+  Discord: "#c6ff3d",
+  Bing: "#5dff9b",
+  "Unknown / Direct": "#5e6b7e",
+  Direct: "#5e6b7e",
 };
 const PALETTE = [
-  "#2f5fff",
-  "#f59e0b",
-  "#a855f7",
-  "#06b6d4",
-  "#ec4899",
-  "#10b981",
-  "#f97316",
-  "#8b5cf6",
+  "#c6ff3d",
+  "#22d3ee",
+  "#ff3dcb",
+  "#ffd23d",
+  "#5dff9b",
+  "#ff8af0",
+  "#7df0c0",
+  "#9bf6ff",
 ];
 
 export function SourcePie({
@@ -33,6 +35,7 @@ export function SourcePie({
 }: {
   data: { name: string; count: number }[];
 }) {
+  const stat = useStaticMotion();
   const total = data.reduce((s, d) => s + d.count, 0) || 1;
   const r = 60;
   const C = 2 * Math.PI * r;
@@ -51,8 +54,8 @@ export function SourcePie({
       <svg viewBox="0 0 160 160" className="h-40 w-40 shrink-0">
         <g transform="rotate(-90 80 80)">
           <circle cx="80" cy="80" r={r} fill="none" stroke="var(--muted)" strokeWidth="20" />
-          {segs.map((s) => (
-            <circle
+          {segs.map((s, i) => (
+            <motion.circle
               key={s.name}
               cx="80"
               cy="80"
@@ -60,26 +63,39 @@ export function SourcePie({
               fill="none"
               stroke={s.color}
               strokeWidth="20"
-              strokeDasharray={`${s.frac * C} ${C - s.frac * C}`}
               strokeDashoffset={-s.offset * C}
+              style={{ filter: `drop-shadow(0 0 3px color-mix(in srgb, ${s.color} 60%, transparent))` }}
+              initial={
+                stat
+                  ? { strokeDasharray: `${s.frac * C} ${C - s.frac * C}` }
+                  : { strokeDasharray: `0 ${C}` }
+              }
+              animate={{ strokeDasharray: `${s.frac * C} ${C - s.frac * C}` }}
+              transition={{ duration: 0.9, delay: 0.15 + i * 0.12, ease: "easeOut" }}
             />
           ))}
         </g>
-        <text x="80" y="77" textAnchor="middle" className="fill-foreground" fontSize="24" fontWeight="700">
+        <text x="80" y="77" textAnchor="middle" className="fill-foreground font-display" fontSize="24" fontWeight="700">
           {total}
         </text>
-        <text x="80" y="95" textAnchor="middle" className="fill-muted-foreground" fontSize="10">
+        <text x="80" y="95" textAnchor="middle" className="fill-muted-foreground font-mono" fontSize="10">
           users
         </text>
       </svg>
 
       <ul className="w-full space-y-2">
         {segs.map((s) => (
-          <li key={s.name} className="flex items-center gap-2.5 text-sm">
-            <span className="h-3 w-3 shrink-0 rounded-sm" style={{ background: s.color }} />
+          <li
+            key={s.name}
+            className="flex items-center gap-2.5 rounded-md px-1.5 py-1 text-sm transition-colors hover:bg-primary/[0.04]"
+          >
+            <span
+              className="h-3 w-3 shrink-0 rounded-sm"
+              style={{ background: s.color, boxShadow: `0 0 8px color-mix(in srgb, ${s.color} 70%, transparent)` }}
+            />
             <span className="flex-1 truncate">{s.name}</span>
             <span className="font-mono text-xs text-muted-foreground">{s.count}</span>
-            <span className="w-11 text-right font-semibold tabular-nums">
+            <span className="w-11 text-right font-mono font-semibold tabular-nums text-accent">
               {Math.round(s.frac * 100)}%
             </span>
           </li>

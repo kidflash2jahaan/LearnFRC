@@ -92,7 +92,7 @@ export function BookmarkCard({ data }: { data: BookmarkCardData }) {
         >
           <Link
             href={href}
-            className="relative flex items-stretch gap-4 overflow-hidden rounded-2xl border border-border bg-card p-4 shadow-[var(--shadow-sm)] transition-[box-shadow,transform] duration-300 hover:-translate-y-0.5 hover:shadow-[var(--shadow-lg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:p-5"
+            className="relative flex items-stretch gap-4 overflow-hidden rounded-2xl border border-border bg-card/80 p-4 shadow-[var(--shadow-sm)] backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-[var(--glow-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:p-5"
           >
             {/* accent glow */}
             <div
@@ -110,7 +110,7 @@ export function BookmarkCard({ data }: { data: BookmarkCardData }) {
             <motion.span
               whileHover={reduce ? undefined : { rotate: -6, scale: 1.06 }}
               transition={{ type: "spring", stiffness: 300, damping: 15 }}
-              className="hidden h-12 w-12 shrink-0 items-center justify-center rounded-xl text-white shadow-[var(--shadow-md)] sm:flex"
+              className="hidden h-12 w-12 shrink-0 items-center justify-center rounded-xl text-primary-foreground shadow-[var(--shadow-md)] sm:flex"
               style={{
                 backgroundImage: `linear-gradient(135deg, ${m.color}, ${m.to})`,
               }}
@@ -135,7 +135,7 @@ export function BookmarkCard({ data }: { data: BookmarkCardData }) {
                 </span>
               </div>
 
-              <h3 className="mt-1 truncate text-base font-semibold tracking-tight">
+              <h3 className="mt-1 truncate font-display text-base font-semibold tracking-tight transition-colors group-hover:text-primary">
                 {data.title}
               </h3>
               {data.summary && (
@@ -145,8 +145,8 @@ export function BookmarkCard({ data }: { data: BookmarkCardData }) {
               )}
 
               <div className="mt-2.5 flex items-center gap-3 text-xs text-muted-foreground">
-                <span className="inline-flex items-center gap-1 font-medium text-foreground/80 transition-colors group-hover:text-foreground">
-                  Open lesson
+                <span className="inline-flex items-center gap-1 font-mono font-medium text-foreground/80 transition-colors group-hover:text-primary">
+                  open_lesson
                   <ArrowUpRight className="h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                 </span>
               </div>

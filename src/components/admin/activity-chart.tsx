@@ -44,8 +44,8 @@ export function ActivityChart({ data }: { data: DailyPoint[] }) {
     `${line(key)} L ${x(n - 1)} ${PAD.t + innerH} L ${x(0)} ${PAD.t + innerH} Z`;
 
   const SERIES = [
-    { key: "completions" as const, color: "#22d3ee", label: "Completions" },
-    { key: "signups" as const, color: "#2f5fff", label: "Signups" },
+    { key: "completions" as const, color: "var(--accent)", label: "Completions" },
+    { key: "signups" as const, color: "var(--primary)", label: "Signups" },
   ];
 
   const gridY = [0, 0.5, 1];
@@ -65,15 +65,15 @@ export function ActivityChart({ data }: { data: DailyPoint[] }) {
     <div className="relative">
       <div className="mb-3 flex items-center gap-4 text-sm">
         {SERIES.map((s) => (
-          <span key={s.key} className="inline-flex items-center gap-1.5">
+          <span key={s.key} className="inline-flex items-center gap-1.5 font-mono text-xs">
             <span
               className="h-2.5 w-2.5 rounded-full"
-              style={{ background: s.color }}
+              style={{ background: s.color, boxShadow: `0 0 8px ${s.color}` }}
             />
             <span className="text-muted-foreground">{s.label}</span>
           </span>
         ))}
-        <span className="ml-auto text-xs text-muted-foreground">
+        <span className="ml-auto font-mono text-xs text-muted-foreground">
           Last {data.length} days
         </span>
       </div>
@@ -88,13 +88,13 @@ export function ActivityChart({ data }: { data: DailyPoint[] }) {
               top: 0,
             }}
           >
-            <div className="font-semibold">{fmtDay(hp.day)}</div>
+            <div className="font-mono font-semibold">{fmtDay(hp.day)}</div>
             <div className="mt-1 flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full" style={{ background: "#2f5fff" }} />
+              <span className="h-2 w-2 rounded-full" style={{ background: "var(--primary)", boxShadow: "0 0 8px var(--primary)" }} />
               Signups: <span className="font-mono font-medium">{hp.signups}</span>
             </div>
             <div className="mt-0.5 flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full" style={{ background: "#22d3ee" }} />
+              <span className="h-2 w-2 rounded-full" style={{ background: "var(--accent)", boxShadow: "0 0 8px var(--accent)" }} />
               Completions: <span className="font-mono font-medium">{hp.completions}</span>
             </div>
           </div>
@@ -105,7 +105,7 @@ export function ActivityChart({ data }: { data: DailyPoint[] }) {
           viewBox={`0 0 ${W} ${H}`}
           className="w-full"
           role="img"
-          aria-label="Activity over the last 14 days"
+          aria-label={`Activity over the last ${data.length} days`}
           onMouseMove={onMove}
           onMouseLeave={() => setHover(null)}
         >
@@ -117,7 +117,7 @@ export function ActivityChart({ data }: { data: DailyPoint[] }) {
               x2={W - PAD.r}
               y1={PAD.t + innerH - g * innerH}
               y2={PAD.t + innerH - g * innerH}
-              stroke="var(--border)"
+              stroke={i === 0 ? "color-mix(in srgb, var(--primary) 28%, var(--border))" : "var(--border)"}
               strokeWidth={1}
               strokeDasharray={i === 0 ? "0" : "3 4"}
             />
@@ -145,6 +145,7 @@ export function ActivityChart({ data }: { data: DailyPoint[] }) {
                 strokeWidth={2.5}
                 strokeLinecap="round"
                 strokeLinejoin="round"
+                style={{ filter: `drop-shadow(0 0 5px ${s.color})` }}
                 initial={reduce ? { pathLength: 1 } : { pathLength: 0 }}
                 animate={{ pathLength: 1 }}
                 transition={{ duration: 1.1, ease: "easeOut" }}
@@ -172,6 +173,7 @@ export function ActivityChart({ data }: { data: DailyPoint[] }) {
                   fill={s.color}
                   stroke="var(--card)"
                   strokeWidth={2}
+                  style={{ filter: `drop-shadow(0 0 6px ${s.color})` }}
                 />
               ))}
             </g>
@@ -185,7 +187,7 @@ export function ActivityChart({ data }: { data: DailyPoint[] }) {
                 x={x(i)}
                 y={H - 8}
                 textAnchor="middle"
-                className="fill-muted-foreground"
+                className="fill-muted-foreground font-mono"
                 style={{ fontSize: 10 }}
               >
                 {d.day.slice(5)}

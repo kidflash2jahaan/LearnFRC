@@ -42,7 +42,7 @@ export function ShareButton({
   return (
     <Button variant={variant} onClick={onClick} className="print:hidden">
       {copied ? (
-        <Check className="h-4 w-4 text-emerald-500" />
+        <Check className="h-4 w-4 text-success" />
       ) : (
         <Share2 className="h-4 w-4" />
       )}

@@ -40,9 +40,14 @@ export function ShareButton({
   };
 
   return (
-    <Button variant="outline" size="sm" onClick={onShare}>
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={onShare}
+      className="font-mono hover:border-primary/50 hover:text-primary hover:shadow-[var(--glow-primary)]"
+    >
       {copied ? <Check className="h-4 w-4" /> : <Share2 className="h-4 w-4" />}
-      Share
+      {copied ? "copied" : "share"}
     </Button>
   );
 }

@@ -109,10 +109,10 @@ export function LessonActions({
         disabled={pending}
         aria-label={bookmarked ? "Remove bookmark" : "Bookmark lesson"}
         className={cn(
-          "inline-flex h-12 w-12 items-center justify-center rounded-xl border transition-colors cursor-pointer",
+          "inline-flex h-12 w-12 items-center justify-center rounded-xl border transition-all cursor-pointer hover:-translate-y-0.5",
           bookmarked
-            ? "border-primary/30 bg-primary/10 text-primary"
-            : "border-border text-muted-foreground hover:text-foreground hover:bg-muted"
+            ? "border-primary/40 bg-primary/10 text-primary shadow-[var(--glow-primary)]"
+            : "border-border text-muted-foreground hover:border-accent/40 hover:text-accent hover:shadow-[var(--glow-accent)]"
         )}
       >
         {bookmarked ? (

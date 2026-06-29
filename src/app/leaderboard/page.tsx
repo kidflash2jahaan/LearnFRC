@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { Trophy, Sparkles, ArrowRight, Users } from "lucide-react";
+import { Trophy, ArrowRight, Users, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Reveal } from "@/components/motion/reveal";
+import { NeonCounter, StatusPill } from "@/components/motion/terminal";
 import { type PodiumEntry } from "@/components/leaderboard/podium";
 import {
   LeaderboardTabs,
@@ -99,46 +100,27 @@ export default async function LeaderboardPage() {
       <div className="mx-auto max-w-5xl px-4 pt-28 pb-20 sm:px-6 lg:px-8">
         {/* Header */}
         <Reveal as="section" className="text-center">
-          <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-3 py-1 text-xs font-medium text-muted-foreground glass">
-            <Trophy className="h-3.5 w-3.5 text-primary" />
-            Global rankings
+          <span className="inline-flex items-center gap-2 font-mono text-xs uppercase tracking-[0.18em] text-accent">
+            <span aria-hidden className="h-px w-6 bg-gradient-to-r from-accent to-transparent" />
+            Leaderboard
           </span>
-          <h1 className="mt-4 text-balance text-4xl font-bold tracking-tight sm:text-5xl">
-            The <span className="text-gradient">Leaderboard</span>
+          <h1 className="mt-4 text-balance font-display text-4xl font-bold tracking-tight sm:text-5xl">
+            The <span className="text-gradient">Ranks</span>
           </h1>
-          <p className="mx-auto mt-3 max-w-xl text-pretty text-base text-muted-foreground sm:text-lg">
-            Every lesson you complete earns XP. Climb the weekly race, chase the
-            all-time greats, and put your team on the map.
+          <p className="mx-auto mt-3 max-w-xl text-pretty font-mono text-sm text-muted-foreground sm:text-base">
+            {"// "}every lesson earns XP. Win the weekly race, chase the all-time
+            greats, put your team on the map.
           </p>
-
-          {allTimeEntries.length > 0 && (
-            <div className="mt-6 flex flex-wrap items-center justify-center gap-2 text-xs text-muted-foreground">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card/50 px-3 py-1">
-                <Users className="h-3.5 w-3.5 text-primary" />
-                <span className="font-semibold text-foreground">
-                  {xpTotals.learners.toLocaleString()}
-                </span>{" "}
-                ranked {xpTotals.learners === 1 ? "learner" : "learners"}
-              </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card/50 px-3 py-1">
-                <Sparkles className="h-3.5 w-3.5 text-accent" />
-                <span className="font-mono font-semibold text-foreground">
-                  {totalXp.toLocaleString()}
-                </span>{" "}
-                XP earned
-              </span>
-            </div>
-          )}
         </Reveal>
 
         {allTimeEntries.length === 0 ? (
           /* Empty state — no learners at all yet */
           <Reveal className="mt-16">
-            <div className="mx-auto max-w-md rounded-2xl border border-border bg-card p-10 text-center shadow-[var(--shadow-sm)]">
-              <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-brand text-white shadow-[var(--shadow-md)]">
+            <div className="mx-auto max-w-md rounded-2xl border border-border bg-card p-10 text-center neon-border">
+              <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-primary/40 bg-primary/10 text-primary shadow-[var(--glow-primary)]">
                 <Trophy className="h-8 w-8" />
               </div>
-              <h2 className="text-xl font-semibold tracking-tight">
+              <h2 className="font-display text-xl font-semibold tracking-tight">
                 No learners on the board yet
               </h2>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
@@ -154,6 +136,30 @@ export default async function LeaderboardPage() {
           </Reveal>
         ) : (
           <>
+            {/* Season status strip */}
+            <Reveal className="mt-8">
+              <div className="flex flex-wrap items-center gap-x-5 gap-y-3 rounded-xl border border-border bg-card/50 px-4 py-3 font-mono text-xs text-muted-foreground backdrop-blur-md sm:px-5">
+                <span className="inline-flex items-center gap-1.5">
+                  <Users className="h-3.5 w-3.5 text-accent" />
+                  <span className="font-semibold text-foreground">
+                    <NeonCounter to={xpTotals.learners} />
+                  </span>{" "}
+                  {xpTotals.learners === 1 ? "learner" : "learners"} ranked
+                </span>
+                <span aria-hidden className="hidden h-3.5 w-px bg-border sm:block" />
+                <span className="inline-flex items-center gap-1.5">
+                  <Zap className="h-3.5 w-3.5 text-primary" />
+                  <span className="font-semibold text-foreground">
+                    <NeonCounter to={totalXp} />
+                  </span>{" "}
+                  XP earned
+                </span>
+                <StatusPill tone="primary" className="ml-auto">
+                  resets weekly
+                </StatusPill>
+              </div>
+            </Reveal>
+
             {user && profile?.username && (
               <Reveal>
                 <InviteCard username={profile.username} count={referralCount} />
@@ -168,7 +174,7 @@ export default async function LeaderboardPage() {
             />
 
             <Reveal className="mt-12 text-center">
-              <p className="text-sm text-muted-foreground">
+              <p className="font-mono text-sm text-muted-foreground">
                 Not on the board yet?{" "}
                 <Link
                   href="/guides"

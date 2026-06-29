@@ -3,7 +3,7 @@
 import * as React from "react";
 import { motion } from "framer-motion";
 import { Users2 } from "lucide-react";
-import { AnimatedCounter } from "@/components/animated-counter";
+import { NeonCounter, TerminalFrame } from "@/components/motion/terminal";
 import { Podium, LeaderList, type PodiumEntry } from "./podium";
 import { cn } from "@/lib/utils";
 
@@ -15,11 +15,17 @@ export type TeamRow = {
 };
 
 const TABS = [
-  { key: "week", label: "This Week" },
+  { key: "week", label: "Weekly" },
   { key: "all", label: "All-Time" },
   { key: "team", label: "By Team" },
 ] as const;
 type TabKey = (typeof TABS)[number]["key"];
+
+const BOARD_TITLE: Record<TabKey, string> = {
+  week: "~/learnfrc $ rank --weekly --list",
+  all: "~/learnfrc $ rank --all-time --list",
+  team: "~/learnfrc $ rank --by-team",
+};
 
 export function LeaderboardTabs({
   weekly,
@@ -36,11 +42,11 @@ export function LeaderboardTabs({
 
   return (
     <div>
-      {/* Tab switcher */}
+      {/* Tab switcher — terminal segmented control */}
       <div
         role="tablist"
         aria-label="Leaderboard views"
-        className="mx-auto mt-10 flex w-full max-w-md items-center gap-1 rounded-full border border-border bg-card/60 p-1 glass"
+        className="mx-auto mt-10 flex w-full max-w-md items-center gap-1 rounded-xl border border-border bg-card/60 p-1.5 font-mono backdrop-blur-md"
       >
         {TABS.map((t) => (
           <button
@@ -49,16 +55,16 @@ export function LeaderboardTabs({
             aria-selected={tab === t.key}
             onClick={() => setTab(t.key)}
             className={cn(
-              "relative flex-1 rounded-full px-3 py-2 text-sm font-medium transition-colors cursor-pointer",
+              "relative flex-1 cursor-pointer rounded-lg px-3 py-2 text-sm font-semibold transition-colors",
               tab === t.key
-                ? "text-white"
+                ? "text-primary-foreground"
                 : "text-muted-foreground hover:text-foreground"
             )}
           >
             {tab === t.key && (
               <motion.span
                 layoutId="lb-tab"
-                className="absolute inset-0 rounded-full bg-brand shadow-[var(--shadow-sm)]"
+                className="absolute inset-0 rounded-lg bg-primary shadow-[var(--glow-primary)]"
                 transition={{ type: "spring", stiffness: 380, damping: 30 }}
               />
             )}
@@ -68,17 +74,18 @@ export function LeaderboardTabs({
       </div>
 
       {tab === "week" && (
-        <p className="mt-3 text-center text-xs text-muted-foreground">
-          Ranked by XP earned in the last 7 days — resets weekly, so anyone can
-          reach the top.
+        <p className="mt-3 text-center font-mono text-xs text-muted-foreground">
+          // ranked by XP earned in the last 7 days — resets weekly, so anyone
+          can reach the top.
         </p>
       )}
 
       {tab === "team" ? (
-        <TeamBoard teams={teams} userTeam={userTeam} />
+        <TeamBoard key="team" teams={teams} userTeam={userTeam} />
       ) : (
         <IndividualBoard
           key={tab}
+          title={BOARD_TITLE[tab]}
           entries={tab === "week" ? weekly : allTime}
           emptyLabel={
             tab === "week"
@@ -94,9 +101,11 @@ export function LeaderboardTabs({
 function IndividualBoard({
   entries,
   emptyLabel,
+  title,
 }: {
   entries: PodiumEntry[];
   emptyLabel: string;
+  title: string;
 }) {
   if (!entries.length) return <Empty label={emptyLabel} />;
   const podium = entries.slice(0, 3);
@@ -109,16 +118,16 @@ function IndividualBoard({
         </section>
       )}
       {rest.length > 0 && (
-        <div className="mt-12 overflow-hidden rounded-2xl border border-border bg-card shadow-[var(--shadow-sm)]">
-          <div className="hidden items-center gap-4 border-b border-border px-5 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground sm:flex">
-            <span className="w-9 text-center">#</span>
-            <span className="flex-1">Learner</span>
+        <TerminalFrame title={title} glow bodyClassName="p-0" className="mt-12">
+          <div className="hidden items-center gap-4 border-b border-border px-5 py-2.5 font-mono text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-muted-foreground sm:flex">
+            <span className="w-9 text-center">Rank</span>
+            <span className="ml-[3.25rem] flex-1">Learner</span>
             <span className="w-[4.5rem] text-center">Level</span>
             <span className="hidden w-20 text-right md:block">Lessons</span>
             <span className="w-24 text-right">XP</span>
           </div>
           <LeaderList entries={rest} />
-        </div>
+        </TerminalFrame>
       )}
     </>
   );
@@ -132,59 +141,107 @@ function TeamBoard({
   userTeam: number | null;
 }) {
   if (!teams.length)
-    return <Empty label="No teams on the board yet — add your team number in settings." />;
+    return (
+      <Empty label="No teams on the board yet — add your team number in settings." />
+    );
   return (
-    <div className="mt-12 overflow-hidden rounded-2xl border border-border bg-card shadow-[var(--shadow-sm)]">
-      <div className="hidden items-center gap-4 border-b border-border px-5 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground sm:flex">
-        <span className="w-9 text-center">#</span>
-        <span className="flex-1">Team</span>
+    <TerminalFrame
+      title={BOARD_TITLE.team}
+      glow
+      bodyClassName="p-0"
+      className="mt-12"
+    >
+      <div className="hidden items-center gap-4 border-b border-border px-5 py-2.5 font-mono text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-muted-foreground sm:flex">
+        <span className="w-9 text-center">Rank</span>
+        <span className="ml-[3.25rem] flex-1">Team</span>
         <span className="w-24 text-right">Members</span>
         <span className="w-24 text-right">XP</span>
       </div>
-      <ul className="divide-y divide-border">
-        {teams.map((t) => (
-          <li
-            key={t.team_number}
-            className={cn(
-              "flex items-center gap-3 px-3 py-3 sm:gap-4 sm:px-5",
-              t.team_number === userTeam && "bg-primary/[0.06]"
-            )}
-          >
-            <span className="w-7 shrink-0 text-center font-mono text-sm font-semibold text-muted-foreground sm:w-9 sm:text-base">
-              {t.rank}
-            </span>
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand text-white">
-              <Users2 className="h-5 w-5" />
-            </span>
-            <div className="min-w-0 flex-1">
-              <div className="font-semibold tracking-tight">
-                Team {t.team_number}
-                {t.team_number === userTeam && (
-                  <span className="ml-2 rounded-full bg-primary/15 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
-                    Your team
-                  </span>
+      <motion.ul
+        initial="hidden"
+        animate="show"
+        variants={{ hidden: {}, show: { transition: { staggerChildren: 0.045 } } }}
+        className="divide-y divide-border"
+      >
+        {teams.map((t) => {
+          const mine = t.team_number === userTeam;
+          return (
+            <motion.li
+              key={t.team_number}
+              variants={{
+                hidden: { opacity: 0, y: 14 },
+                show: {
+                  opacity: 1,
+                  y: 0,
+                  transition: { duration: 0.4, ease: [0.21, 0.47, 0.32, 0.98] },
+                },
+              }}
+              className={cn(
+                "relative flex items-center gap-3 px-4 py-3.5 transition-colors sm:gap-4 sm:px-5",
+                mine
+                  ? "bg-primary/[0.07] ring-1 ring-inset ring-primary/40"
+                  : "hover:bg-primary/[0.04]"
+              )}
+            >
+              {mine && (
+                <span
+                  aria-hidden
+                  className="absolute inset-y-0 left-0 w-1 rounded-r bg-primary shadow-[0_0_12px_var(--primary)]"
+                />
+              )}
+              <span
+                className={cn(
+                  "w-7 shrink-0 text-center font-mono text-sm font-bold tabular-nums sm:w-9 sm:text-base",
+                  mine ? "text-primary" : "text-muted-foreground"
                 )}
-              </div>
-            </div>
-            <span className="w-24 text-right text-xs text-muted-foreground sm:text-sm">
-              {t.members} {t.members === 1 ? "member" : "members"}
-            </span>
-            <span className="w-16 shrink-0 text-right font-mono text-sm font-bold tabular-nums sm:w-24 sm:text-base">
-              <AnimatedCounter value={t.totalXp} />
-              <span className="ml-1 text-[10px] font-medium uppercase text-muted-foreground">
-                xp
+              >
+                {t.rank}
               </span>
-            </span>
-          </li>
-        ))}
-      </ul>
-    </div>
+              <span
+                className={cn(
+                  "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border text-primary",
+                  mine
+                    ? "border-primary/50 bg-primary/15"
+                    : "border-border bg-primary/10"
+                )}
+              >
+                <Users2 className="h-5 w-5" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="font-display font-semibold tracking-tight">
+                  Team {t.team_number}
+                  {mine && (
+                    <span className="ml-2 rounded bg-primary px-1.5 py-0.5 font-mono text-[0.58rem] font-bold uppercase tracking-[0.1em] text-primary-foreground">
+                      Your team
+                    </span>
+                  )}
+                </div>
+              </div>
+              <span className="w-24 text-right font-mono text-xs text-muted-foreground sm:text-sm">
+                {t.members} {t.members === 1 ? "member" : "members"}
+              </span>
+              <span
+                className={cn(
+                  "w-16 shrink-0 text-right font-mono text-sm font-bold tabular-nums sm:w-24 sm:text-base",
+                  mine ? "text-primary" : "text-foreground"
+                )}
+              >
+                <NeonCounter to={t.totalXp} />
+                <span className="ml-1 text-[0.6rem] font-medium uppercase text-muted-foreground">
+                  xp
+                </span>
+              </span>
+            </motion.li>
+          );
+        })}
+      </motion.ul>
+    </TerminalFrame>
   );
 }
 
 function Empty({ label }: { label: string }) {
   return (
-    <div className="mx-auto mt-12 max-w-md rounded-2xl border border-border bg-card p-10 text-center text-sm text-muted-foreground">
+    <div className="mx-auto mt-12 max-w-md rounded-2xl border border-border bg-card p-10 text-center font-mono text-sm text-muted-foreground">
       {label}
     </div>
   );

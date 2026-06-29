@@ -27,6 +27,9 @@ type ResultItem =
   | { type: "dept"; href: string; dept: Dept }
   | { type: "lesson"; href: string; lesson: LessonHit };
 
+const KBD =
+  "inline-flex h-5 min-w-5 items-center justify-center rounded border border-border bg-muted px-1 font-mono text-[10px] text-muted-foreground";
+
 export function CommandPalette() {
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
@@ -136,23 +139,40 @@ export function CommandPalette() {
   return (
     <DialogPrimitive.Root open={open} onOpenChange={setOpen}>
       <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className="fixed inset-0 z-[60] bg-black/55 backdrop-blur-sm data-[state=open]:animate-in data-[state=open]:fade-in-0" />
+        <DialogPrimitive.Overlay className="fixed inset-0 z-[60] bg-black/65 backdrop-blur-sm data-[state=open]:animate-in data-[state=open]:fade-in-0" />
         <DialogPrimitive.Content
           onKeyDown={onKeyDown}
           className={cn(
             "fixed left-1/2 top-[12vh] z-[61] w-[92vw] max-w-xl -translate-x-1/2",
-            "overflow-hidden rounded-2xl border border-border bg-popover shadow-[var(--shadow-lg)]",
+            "overflow-hidden rounded-2xl border border-primary/30 bg-popover shadow-[0_0_40px_-10px_var(--primary)]",
             "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95"
           )}
         >
           <DialogPrimitive.Title className="sr-only">Search LearnFRC</DialogPrimitive.Title>
-          <div className="flex items-center gap-3 border-b border-border px-4">
-            <Search className="h-4.5 w-4.5 shrink-0 text-muted-foreground" />
+
+          {/* terminal titlebar */}
+          <div className="terminal-titlebar flex items-center gap-2 px-4 py-2.5">
+            <span className="flex gap-1.5" aria-hidden>
+              <span className="h-3 w-3 rounded-full bg-[#ff5f57]" />
+              <span className="h-3 w-3 rounded-full bg-[#febc2e]" />
+              <span className="h-3 w-3 rounded-full bg-[#28c840] shadow-[0_0_8px_rgba(40,200,64,.6)]" />
+            </span>
+            <span className="ml-1 inline-flex items-center gap-1.5 font-mono text-xs text-muted-foreground">
+              <Search className="h-3.5 w-3.5" /> search.sh — ~/learnfrc
+            </span>
+            <kbd className={cn(KBD, "ml-auto")}>ESC</kbd>
+          </div>
+
+          {/* prompt + input */}
+          <div className="flex items-center gap-2 border-b border-border px-4">
+            <span aria-hidden className="font-mono text-sm text-primary select-none">
+              ~/learnfrc $
+            </span>
             <input
               autoFocus
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search departments, lessons, topics…"
+              placeholder="search departments, lessons, topics…"
               role="combobox"
               aria-expanded={results.length > 0}
               aria-controls="cmdk-list"
@@ -161,27 +181,26 @@ export function CommandPalette() {
                 results[active] ? `cmdk-opt-${active}` : undefined
               }
               aria-label="Search LearnFRC"
-              className="h-14 w-full bg-transparent text-[0.95rem] outline-none placeholder:text-muted-foreground/70"
+              className="w-full bg-transparent py-3.5 font-mono text-sm outline-none placeholder:text-muted-foreground/55"
             />
-            <kbd className="hidden sm:inline-flex h-6 items-center rounded-md border border-border bg-muted px-1.5 font-mono text-[10px] text-muted-foreground">
-              ESC
-            </kbd>
           </div>
 
-          <div ref={listRef} id="cmdk-list" role="listbox" aria-label="Search results" className="max-h-[56vh] overflow-y-auto p-2">
+          <div ref={listRef} id="cmdk-list" role="listbox" aria-label="Search results" className="max-h-[52vh] overflow-y-auto p-2">
             {!loaded && (
-              <div className="px-3 py-8 text-center text-sm text-muted-foreground">
-                Loading…
+              <div className="px-3 py-8 text-center font-mono text-sm text-muted-foreground">
+                indexing<span className="caret" aria-hidden />
               </div>
             )}
             {loaded && results.length === 0 && (
-              <div className="px-3 py-10 text-center text-sm text-muted-foreground">
-                No results for “{query}”.
+              <div className="px-3 py-10 text-center font-mono text-sm text-muted-foreground">
+                <span className="text-primary">//</span> no matches for &ldquo;{query}&rdquo;
               </div>
             )}
             {results.map((r, i) => {
-              const activeCls =
-                i === active ? "bg-muted" : "hover:bg-muted/60";
+              const isActive = i === active;
+              const activeCls = isActive
+                ? "border-primary/50 bg-primary/10"
+                : "border-transparent hover:border-border hover:bg-muted/50";
               if (r.type === "dept") {
                 const m = deptMeta(r.dept.slug);
                 return (
@@ -189,17 +208,21 @@ export function CommandPalette() {
                     key={`d-${r.dept.slug}`}
                     id={`cmdk-opt-${i}`}
                     role="option"
-                    aria-selected={i === active}
+                    aria-selected={isActive}
                     onMouseEnter={() => setActive(i)}
                     onClick={() => go(r.href)}
                     className={cn(
-                      "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors",
+                      "flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-colors",
                       activeCls
                     )}
                   >
                     <span
-                      className="flex h-9 w-9 items-center justify-center rounded-lg text-white"
-                      style={{ background: m.color }}
+                      className="flex h-9 w-9 items-center justify-center rounded-lg border"
+                      style={{
+                        color: m.color,
+                        borderColor: `color-mix(in srgb, ${m.color} 40%, var(--border))`,
+                        background: `color-mix(in srgb, ${m.color} 14%, transparent)`,
+                      }}
                     >
                       <Icon name={r.dept.icon} className="h-4.5 w-4.5" />
                     </span>
@@ -207,11 +230,15 @@ export function CommandPalette() {
                       <span className="block truncate text-sm font-medium">
                         {r.dept.name}
                       </span>
-                      <span className="block truncate text-xs text-muted-foreground">
+                      <span className="block truncate font-mono text-xs text-muted-foreground">
                         {r.dept.tagline}
                       </span>
                     </span>
-                    <Layers className="h-3.5 w-3.5 text-muted-foreground" />
+                    {isActive ? (
+                      <CornerDownLeft className="h-3.5 w-3.5 text-primary" />
+                    ) : (
+                      <Layers className="h-3.5 w-3.5 text-muted-foreground" />
+                    )}
                   </button>
                 );
               }
@@ -220,29 +247,48 @@ export function CommandPalette() {
                   key={`l-${r.lesson.deptSlug}-${r.lesson.slug}`}
                   id={`cmdk-opt-${i}`}
                   role="option"
-                  aria-selected={i === active}
+                  aria-selected={isActive}
                   onMouseEnter={() => setActive(i)}
                   onClick={() => go(r.href)}
                   className={cn(
-                    "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors",
+                    "flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-colors",
                     activeCls
                   )}
                 >
-                  <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-lg border border-accent/30 bg-accent/10 text-accent">
                     <BookOpen className="h-4.5 w-4.5" />
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-medium">
                       {r.lesson.title}
                     </span>
-                    <span className="block truncate text-xs text-muted-foreground">
+                    <span className="block truncate font-mono text-xs text-muted-foreground">
                       {r.lesson.deptName}
                     </span>
                   </span>
-                  <CornerDownLeft className="h-3.5 w-3.5 text-muted-foreground opacity-0 data-[a=1]:opacity-100" />
+                  {isActive && (
+                    <CornerDownLeft className="h-3.5 w-3.5 text-primary" />
+                  )}
                 </button>
               );
             })}
+          </div>
+
+          {/* terminal hint bar */}
+          <div className="flex items-center gap-4 border-t border-border px-4 py-2.5 font-mono text-[10px] text-muted-foreground">
+            <span className="inline-flex items-center gap-1">
+              <kbd className={KBD}>↑</kbd>
+              <kbd className={KBD}>↓</kbd> navigate
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <kbd className={KBD}>↵</kbd> open
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <kbd className={KBD}>esc</kbd> close
+            </span>
+            <span className="ml-auto inline-flex items-center gap-1 text-primary/80">
+              learnfrc<span className="caret" aria-hidden />
+            </span>
           </div>
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>

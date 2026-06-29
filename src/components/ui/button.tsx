@@ -4,9 +4,9 @@ import { cn } from "@/lib/utils";
 
 const variants = {
   primary:
-    "bg-primary text-primary-foreground hover:brightness-110 shadow-[var(--shadow-md)]",
+    "bg-primary text-primary-foreground hover:brightness-110 shadow-[var(--glow-primary)] hover:shadow-[0_0_26px_-4px_var(--primary)]",
   brand:
-    "bg-brand text-white shadow-[var(--shadow-md)] hover:brightness-110",
+    "bg-brand text-primary-foreground shadow-[var(--glow-primary)] hover:brightness-110 hover:shadow-[0_0_26px_-4px_var(--primary)]",
   secondary:
     "bg-secondary text-secondary-foreground hover:bg-muted border border-border",
   outline:

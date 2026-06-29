@@ -108,11 +108,18 @@ export function LessonComplete({
     return (
       <div
         ref={completedRef}
-        className="relative mt-10 scroll-mt-24 overflow-hidden rounded-2xl border border-success/30 bg-success/10 p-6 text-center"
+        className="relative mt-10 scroll-mt-24 overflow-hidden rounded-2xl border border-success/40 bg-gradient-to-b from-success/[0.12] to-success/[0.02] p-6 text-center shadow-[0_0_28px_-8px_var(--success)]"
       >
         <Confetti trigger={burst} />
-        <CheckCircle2 className="mx-auto h-10 w-10 text-success" />
-        <h2 className="mt-3 text-xl font-bold">Lesson complete</h2>
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-success to-transparent"
+        />
+        <p className="mb-3 font-mono text-[0.7rem] uppercase tracking-[0.2em] text-success/80">
+          // build status: passing
+        </p>
+        <CheckCircle2 className="mx-auto h-10 w-10 text-success drop-shadow-[0_0_10px_var(--success)]" />
+        <h2 className="mt-3 font-display text-xl font-bold">Lesson complete</h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Nice work — your progress is saved.
         </p>
@@ -138,18 +145,29 @@ export function LessonComplete({
     return (
       <div
         id="lesson-quiz"
-        className="relative mt-10 scroll-mt-24 rounded-2xl border border-border bg-card p-6"
+        className="relative mt-10 scroll-mt-24 overflow-hidden rounded-2xl border border-border bg-card/80 backdrop-blur-md"
       >
         <Confetti trigger={burst} />
+        <div className="terminal-titlebar flex items-center gap-2 px-4 py-2.5">
+          <span className="flex gap-1.5" aria-hidden>
+            <span className="h-3 w-3 rounded-full bg-[#ff5f57]" />
+            <span className="h-3 w-3 rounded-full bg-[#febc2e]" />
+            <span className="h-3 w-3 rounded-full bg-[#28c840]" />
+          </span>
+          <span className="ml-1 font-mono text-xs text-muted-foreground">
+            quiz.run — ~/team5835
+          </span>
+        </div>
+        <div className="p-6">
         <div className="flex items-center gap-2">
           <ListChecks className="h-5 w-5 text-primary" />
-          <h2 className="text-xl font-bold">Lesson quiz</h2>
-          <span className="inline-flex items-center gap-1 rounded-full border border-border bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+          <h2 className="font-display text-xl font-bold">Lesson quiz</h2>
+          <span className="inline-flex items-center gap-1 rounded-full border border-magenta/40 bg-magenta/10 px-2 py-0.5 font-mono text-[11px] font-medium uppercase tracking-wider text-magenta">
             <Lock className="h-3 w-3" /> Required
           </span>
         </div>
         <p className="mt-1 text-sm text-muted-foreground">
-          Answer all {quiz.length} questions correctly to complete this lesson.
+          <span className="font-mono text-primary/80">$</span> Answer all {quiz.length} questions correctly to complete this lesson.
         </p>
 
         <div className="mt-6 space-y-6">
@@ -158,8 +176,8 @@ export function LessonComplete({
             return (
               <div key={qi}>
                 <p className="font-medium">
-                  <span className="mr-2 font-mono text-sm text-muted-foreground">
-                    {qi + 1}.
+                  <span className="mr-2 font-mono text-sm text-primary/80">
+                    {String(qi + 1).padStart(2, "0")}.
                   </span>
                   {q.question}
                 </p>
@@ -186,19 +204,20 @@ export function LessonComplete({
                         disabled={graded}
                         onClick={() => setAnswers((a) => ({ ...a, [qi]: oi }))}
                         className={cn(
-                          "flex items-center gap-3 rounded-xl border px-4 py-3 text-left text-sm transition-colors",
-                          state === "idle" && "border-border hover:bg-muted cursor-pointer",
-                          state === "selected" && "border-primary bg-primary/10 cursor-pointer",
-                          state === "correct" && "border-success/50 bg-success/10",
-                          state === "wrong" && "border-destructive/50 bg-destructive/10"
+                          "flex items-center gap-3 rounded-xl border px-4 py-3 text-left text-sm transition-all",
+                          state === "idle" && "border-border hover:-translate-y-0.5 hover:border-accent/40 hover:bg-muted cursor-pointer",
+                          state === "selected" && "border-primary/60 bg-primary/10 shadow-[var(--glow-primary)] cursor-pointer",
+                          state === "correct" && "border-success/60 bg-success/10 shadow-[0_0_18px_-6px_var(--success)]",
+                          state === "wrong" && "border-destructive/60 bg-destructive/10"
                         )}
                       >
                         <span
                           className={cn(
-                            "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[11px] font-semibold",
-                            state === "correct" && "border-success bg-success text-white",
+                            "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border font-mono text-[11px] font-semibold",
+                            state === "correct" && "border-success bg-success text-[#04140a]",
                             state === "wrong" && "border-destructive bg-destructive text-white",
-                            (state === "selected" || state === "idle") && "border-current"
+                            state === "selected" && "border-primary text-primary",
+                            state === "idle" && "border-current text-muted-foreground"
                           )}
                         >
                           {state === "correct" ? "✓" : state === "wrong" ? "✕" : String.fromCharCode(65 + oi)}
@@ -251,15 +270,19 @@ export function LessonComplete({
             </motion.div>
           ) : null}
         </AnimatePresence>
+        </div>
       </div>
     );
   }
 
   // ---- Fallback: lesson has no quiz yet → allow direct completion ----
   return (
-    <div className="relative mt-10 rounded-2xl border border-border bg-card p-6 text-center">
+    <div className="relative mt-10 overflow-hidden rounded-2xl border border-primary/25 bg-gradient-to-b from-primary/[0.06] to-transparent p-6 text-center transition-shadow hover:shadow-[var(--glow-primary)]">
       <Confetti trigger={burst} />
-      <h2 className="text-lg font-semibold">Finished this lesson?</h2>
+      <p className="mb-2 font-mono text-[0.7rem] uppercase tracking-[0.2em] text-primary/70">
+        // ready to commit
+      </p>
+      <h2 className="font-display text-lg font-semibold">Finished this lesson?</h2>
       <p className="mt-1 text-sm text-muted-foreground">
         Mark it complete to earn XP and track your progress.
       </p>

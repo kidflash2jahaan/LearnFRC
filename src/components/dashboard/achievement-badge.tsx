@@ -48,17 +48,17 @@ export function AchievementBadge({
         whileTap={reduce ? undefined : { scale: 0.97 }}
         transition={{ type: "spring", stiffness: 320, damping: 20 }}
         className={cn(
-          "group flex w-full cursor-pointer flex-col items-center gap-2 rounded-2xl border p-4 text-center transition-colors duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+          "group flex w-full cursor-pointer flex-col items-center gap-2 rounded-xl border p-4 text-center backdrop-blur transition-colors duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
           earned
-            ? "border-border bg-card shadow-[var(--shadow-sm)] hover:shadow-[var(--shadow-md)]"
-            : "border-dashed border-border bg-card/40"
+            ? "border-primary/30 bg-card/70 hover:border-primary/55 hover:shadow-[var(--glow-primary)]"
+            : "border-dashed border-border bg-card/30 hover:border-border"
         )}
       >
         <span
           className={cn(
-            "relative flex h-14 w-14 items-center justify-center rounded-2xl transition-all duration-300",
+            "relative flex h-14 w-14 items-center justify-center rounded-xl transition-all duration-300",
             earned
-              ? "text-white shadow-[var(--shadow-md)]"
+              ? "text-primary-foreground shadow-[var(--glow-primary)]"
               : "bg-muted text-muted-foreground"
           )}
           style={
@@ -74,7 +74,7 @@ export function AchievementBadge({
           {earned && !reduce && (
             <motion.span
               aria-hidden
-              className="pointer-events-none absolute inset-0 rounded-2xl ring-2 ring-primary/50"
+              className="pointer-events-none absolute inset-0 rounded-xl ring-2 ring-primary/60"
               initial={{ opacity: 0.6, scale: 1 }}
               animate={{ opacity: 0, scale: 1.45 }}
               transition={{
@@ -109,7 +109,7 @@ export function AchievementBadge({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 6, scale: 0.96 }}
             transition={{ duration: 0.16, ease: "easeOut" }}
-            className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 w-52 -translate-x-1/2 rounded-xl border border-border bg-popover p-3 text-left shadow-[var(--shadow-lg)]"
+            className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 w-52 -translate-x-1/2 rounded-xl border border-primary/25 bg-popover/95 p-3 text-left shadow-[var(--shadow-lg)] backdrop-blur"
           >
             <p className="text-sm font-semibold">{name}</p>
             <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
@@ -117,19 +117,19 @@ export function AchievementBadge({
             </p>
             <p
               className={cn(
-                "mt-1.5 text-[11px] font-medium",
+                "mt-1.5 font-mono text-[11px] font-medium",
                 earned ? "text-success" : "text-muted-foreground"
               )}
             >
               {earned
                 ? earnedLabel
-                  ? `Earned ${earnedLabel}`
-                  : "Earned"
-                : "Locked — keep learning to unlock"}
+                  ? `// earned ${earnedLabel}`
+                  : "// earned"
+                : "// locked — keep learning"}
             </p>
             <span
               aria-hidden
-              className="absolute left-1/2 top-full h-2 w-2 -translate-x-1/2 -translate-y-1/2 rotate-45 border-b border-r border-border bg-popover"
+              className="absolute left-1/2 top-full h-2 w-2 -translate-x-1/2 -translate-y-1/2 rotate-45 border-b border-r border-primary/25 bg-popover"
             />
           </motion.div>
         )}

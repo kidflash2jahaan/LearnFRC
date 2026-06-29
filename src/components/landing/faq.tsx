@@ -30,20 +30,35 @@ const FAQS = [
 export function Faq() {
   const [open, setOpen] = React.useState<number | null>(0);
   return (
-    <div className="mx-auto max-w-3xl divide-y divide-border rounded-2xl border border-border bg-card">
+    <div className="mx-auto max-w-3xl space-y-3">
       {FAQS.map((item, i) => {
         const isOpen = open === i;
         return (
-          <div key={i} className="px-5">
+          <div
+            key={i}
+            className={`overflow-hidden rounded-xl border bg-card/60 backdrop-blur-sm transition-colors duration-300 ${
+              isOpen
+                ? "border-primary/40 shadow-[var(--glow-primary)]"
+                : "border-border hover:border-border/80"
+            }`}
+          >
             <button
               onClick={() => setOpen(isOpen ? null : i)}
-              className="flex w-full items-center justify-between gap-4 py-5 text-left cursor-pointer"
+              className="flex w-full items-center gap-4 px-5 py-4 text-left cursor-pointer"
               aria-expanded={isOpen}
             >
-              <span className="font-medium">{item.q}</span>
+              <span
+                className={`font-mono text-xs transition-colors ${
+                  isOpen ? "text-primary" : "text-accent"
+                }`}
+                aria-hidden
+              >
+                {String(i + 1).padStart(2, "0")}
+              </span>
+              <span className="flex-1 font-medium">{item.q}</span>
               <ChevronDown
-                className={`h-5 w-5 shrink-0 text-muted-foreground transition-transform duration-300 ${
-                  isOpen ? "rotate-180" : ""
+                className={`h-5 w-5 shrink-0 transition-transform duration-300 ${
+                  isOpen ? "rotate-180 text-primary" : "text-muted-foreground"
                 }`}
               />
             </button>
@@ -56,7 +71,7 @@ export function Faq() {
                   transition={{ duration: 0.3, ease: [0.21, 0.47, 0.32, 0.98] }}
                   className="overflow-hidden"
                 >
-                  <p className="pb-5 text-sm leading-relaxed text-muted-foreground">
+                  <p className="border-t border-border/60 px-5 pb-5 pt-4 pl-12 text-sm leading-relaxed text-muted-foreground">
                     {item.a}
                   </p>
                 </motion.div>

@@ -14,12 +14,15 @@ import {
   Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Avatar } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { DepartmentCard } from "@/components/department-card";
 import { Reveal, Stagger, StaggerItem } from "@/components/motion/reveal";
-import { AnimatedCounter } from "@/components/animated-counter";
+import {
+  TerminalFrame,
+  StatusPill,
+  NeonCounter,
+} from "@/components/motion/terminal";
 import { LevelRing } from "@/components/dashboard/level-ring";
 import {
   AchievementBadge,
@@ -240,49 +243,58 @@ export default async function DashboardPage() {
 
   const stats = [
     { icon: BookOpenCheck, label: "Lessons completed", value: completedCount, accent: "var(--color-primary)" },
-    { icon: Layers, label: "Departments in progress", value: departmentsInProgress, accent: "#06b6d4" },
-    { icon: GraduationCap, label: "Departments completed", value: departmentsCompleted, accent: "#10b981" },
-    { icon: Trophy, label: "Achievements earned", value: achievementsEarned, accent: "#eab308" },
-    { icon: Flame, label: "Day streak", value: streak, accent: "#f97316" },
-    { icon: Zap, label: "Total XP", value: xp, accent: "#8b5cf6" },
+    { icon: Layers, label: "Departments in progress", value: departmentsInProgress, accent: "var(--color-accent)" },
+    { icon: GraduationCap, label: "Departments completed", value: departmentsCompleted, accent: "var(--color-success)" },
+    { icon: Trophy, label: "Achievements earned", value: achievementsEarned, accent: "var(--color-gold)" },
+    { icon: Flame, label: "Day streak", value: streak, accent: "var(--color-gold)" },
+    { icon: Zap, label: "Total XP", value: xp, accent: "var(--color-magenta)" },
   ];
 
   const cm = continueLesson ? deptMeta(continueLesson.deptSlug) : null;
+  const teamLabel = profile?.team_number
+    ? `team${profile.team_number}`
+    : profile?.username || "learnfrc";
+  // cyan → lime fill for HUD progress bars
+  const xpBar = {
+    background: "linear-gradient(90deg, var(--color-accent), var(--color-primary))",
+  } as const;
 
   return (
     <div className="relative mx-auto max-w-7xl px-4 pt-28 pb-20 sm:px-6 lg:px-8">
       {/* ambient background */}
       <div aria-hidden className="pointer-events-none fixed inset-0 -z-10">
-        <div className="absolute inset-x-0 top-0 h-[460px] bg-grid opacity-40 mask-b-faded" />
+        <div className="absolute inset-x-0 top-0 h-[460px] hud-grid opacity-50 mask-b-faded" />
         <div className="absolute left-1/2 top-[-8%] h-[420px] w-[760px] -translate-x-1/2 rounded-full opacity-25 blur-3xl aurora-bg" />
       </div>
 
-      {/* ============================ WELCOME ============================ */}
+      {/* ============================ MISSION CONTROL ============================ */}
       <Reveal>
-        <div className="relative overflow-hidden rounded-3xl border border-border bg-card/70 p-6 shadow-[var(--shadow-sm)] backdrop-blur sm:p-8">
-          <div
-            aria-hidden
-            className="pointer-events-none absolute -right-20 -top-20 h-56 w-56 rounded-full bg-brand opacity-20 blur-3xl"
-          />
+        <TerminalFrame
+          glow
+          title={`build_status.log — ~/${teamLabel}`}
+          right={<StatusPill tone="primary">● ONLINE</StatusPill>}
+          bodyClassName="p-6 sm:p-8"
+        >
           <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-4">
               <Avatar
                 name={displayName}
                 src={profile?.avatar_url}
                 seed={user.id}
-                className="h-16 w-16 ring-2 ring-border"
+                className="h-16 w-16 ring-2 ring-primary/40"
               />
               <div className="min-w-0">
-                <Badge variant="primary" className="mb-1.5">
-                  <Sparkles className="h-3 w-3" /> Welcome back
-                </Badge>
-                <h1 className="truncate text-2xl font-bold tracking-tight sm:text-3xl">
-                  Hey, {firstName} 👋
+                <p className="flex items-center gap-1.5 font-mono text-xs uppercase tracking-[0.18em] text-accent">
+                  <Sparkles className="h-3 w-3" /> welcome back
+                </p>
+                <h1 className="mt-1 truncate text-2xl font-bold tracking-tight sm:text-3xl">
+                  Hey, <span className="text-gradient">{firstName}</span>
                 </h1>
-                <p className="mt-0.5 text-sm text-muted-foreground">
+                <p className="mt-1 font-mono text-sm text-muted-foreground">
                   {completedCount > 0
-                    ? `You've completed ${pluralize(completedCount, "lesson")}${streak > 1 ? ` · ${streak}-day streak 🔥 (${xpMultiplier}× XP)` : ""}.`
-                    : "Let's start your FRC journey today."}
+                    ? `${pluralize(completedCount, "lesson")} cleared${streak > 1 ? ` · ${streak}-day streak (${xpMultiplier}× XP)` : ""}`
+                    : "// boot sequence ready — start your FRC journey"}
+                  <span className="caret" aria-hidden />
                 </p>
               </div>
             </div>
@@ -291,18 +303,21 @@ export default async function DashboardPage() {
               <LevelRing level={level} progressPct={levelPct} />
               <div className="text-sm">
                 <div className="font-display text-xl font-bold">
-                  <AnimatedCounter value={xp} /> <span className="text-muted-foreground text-base font-medium">XP</span>
+                  <NeonCounter to={xp} />{" "}
+                  <span className="font-mono text-base font-medium text-muted-foreground">
+                    XP
+                  </span>
                 </div>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  {xpToNext} XP to level {level + 1}
+                <p className="mt-0.5 font-mono text-xs text-muted-foreground">
+                  {xpToNext} XP → lvl {level + 1}
                 </p>
                 <div className="mt-2 w-32">
-                  <Progress value={levelPct} />
+                  <Progress value={levelPct} style={xpBar} />
                 </div>
               </div>
             </div>
           </div>
-        </div>
+        </TerminalFrame>
       </Reveal>
 
       {/* ============================ PROFILE NUDGE ============================ */}
@@ -310,15 +325,15 @@ export default async function DashboardPage() {
         <Reveal className="mt-4">
           <Link
             href="/settings"
-            className="group flex items-center justify-between gap-4 rounded-2xl border border-primary/30 bg-primary/[0.07] p-4 transition-colors hover:bg-primary/[0.12]"
+            className="group flex items-center justify-between gap-4 rounded-2xl border border-primary/30 bg-primary/[0.06] p-4 transition-all hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-[var(--glow-primary)]"
           >
             <div className="flex items-center gap-3">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-soft text-primary">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-primary/30 bg-primary/10 text-primary">
                 <Sparkles className="h-5 w-5" />
               </span>
               <div>
                 <p className="text-sm font-semibold">Complete your profile</p>
-                <p className="text-xs text-muted-foreground">
+                <p className="font-mono text-xs text-muted-foreground">
                   Add a username{!profile?.team_number ? " and your FRC team number" : ""} to
                   show up on the leaderboard.
                 </p>
@@ -330,27 +345,42 @@ export default async function DashboardPage() {
       )}
 
       {/* ============================ STAT CARDS ============================ */}
-      <Stagger className="mt-6 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-6">
+      <Reveal className="mt-8" delay={0.04}>
+        <span className="inline-flex items-center gap-2 font-mono text-xs uppercase tracking-[0.2em] text-accent">
+          <span aria-hidden className="h-px w-6 bg-gradient-to-r from-accent to-transparent" />
+          system metrics
+        </span>
+      </Reveal>
+      <Stagger className="mt-4 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-6">
         {stats.map((s) => (
           <StaggerItem key={s.label}>
-            <div className="group relative h-full overflow-hidden rounded-2xl border border-border bg-card p-4 shadow-[var(--shadow-sm)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[var(--shadow-md)]">
+            <div className="group relative h-full overflow-hidden rounded-xl border border-border bg-card/60 p-4 backdrop-blur transition-all duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-[var(--glow-primary)]">
               <div
                 aria-hidden
-                className="pointer-events-none absolute -right-8 -top-8 h-20 w-20 rounded-full opacity-10 blur-2xl transition-opacity duration-300 group-hover:opacity-25"
+                className="pointer-events-none absolute -right-8 -top-8 h-20 w-20 rounded-full opacity-[0.14] blur-2xl transition-opacity duration-300 group-hover:opacity-30"
                 style={{ background: s.accent }}
               />
               <div
-                className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg"
-                style={{ background: `color-mix(in srgb, ${s.accent} 14%, transparent)`, color: s.accent }}
+                className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg border"
+                style={{
+                  borderColor: `color-mix(in srgb, ${s.accent} 38%, var(--border))`,
+                  background: `color-mix(in srgb, ${s.accent} 12%, transparent)`,
+                  color: s.accent,
+                }}
               >
                 <s.icon className="h-4.5 w-4.5" />
               </div>
-              <div className="font-display text-2xl font-bold tracking-tight">
-                <AnimatedCounter value={s.value} />
+              <div className="font-display text-2xl font-bold tracking-tight tabular-nums">
+                <NeonCounter to={s.value} />
               </div>
-              <div className="mt-0.5 text-xs leading-tight text-muted-foreground">
+              <div className="mt-0.5 font-mono text-[11px] uppercase leading-tight tracking-wider text-muted-foreground">
                 {s.label}
               </div>
+              <span
+                aria-hidden
+                className="mt-2.5 block h-0.5 w-6 rounded-full"
+                style={{ background: s.accent, boxShadow: `0 0 10px ${s.accent}` }}
+              />
             </div>
           </StaggerItem>
         ))}
@@ -375,10 +405,16 @@ export default async function DashboardPage() {
                 className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full opacity-20 blur-3xl transition-opacity duration-500 group-hover:opacity-35"
                 style={{ background: cm.color }}
               />
-              <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+              <p className="font-mono text-xs text-muted-foreground">
+                ~/learnfrc ${" "}
+                <span style={{ color: cm.color }}>
+                  {continueLesson.fresh ? "begin" : "resume"} --dept {continueLesson.deptSlug}
+                </span>
+              </p>
+              <div className="mt-3 flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
                   <span
-                    className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider"
+                    className="inline-flex items-center gap-1.5 font-mono text-xs font-semibold uppercase tracking-wider"
                     style={{ color: cm.color }}
                   >
                     <Play className="h-3.5 w-3.5 fill-current" />
@@ -387,12 +423,12 @@ export default async function DashboardPage() {
                   <h2 className="mt-2 text-balance text-xl font-bold tracking-tight sm:text-2xl">
                     {continueLesson.lessonTitle}
                   </h2>
-                  <p className="mt-1 text-sm text-muted-foreground">
+                  <p className="mt-1 font-mono text-sm text-muted-foreground">
                     {continueLesson.deptName} · {continueLesson.moduleTitle}
                   </p>
                   {!continueLesson.fresh && (
                     <div className="mt-4 max-w-sm">
-                      <div className="mb-1 flex items-center justify-between text-xs text-muted-foreground">
+                      <div className="mb-1 flex items-center justify-between font-mono text-xs text-muted-foreground">
                         <span>{continueLesson.deptName} progress</span>
                         <span className="font-medium text-foreground">
                           {continueLesson.pct}%
@@ -407,7 +443,7 @@ export default async function DashboardPage() {
                 </div>
                 <Button
                   size="lg"
-                  className="shrink-0 self-start border-0 text-white shadow-[var(--shadow-md)] sm:self-center"
+                  className="shrink-0 self-start border-0 text-primary-foreground shadow-[var(--shadow-md)] sm:self-center"
                   style={{ backgroundImage: `linear-gradient(135deg, ${cm.color}, ${cm.to})` }}
                   asChild
                 >
@@ -427,9 +463,13 @@ export default async function DashboardPage() {
         <Reveal>
           <div className="flex items-end justify-between gap-4">
             <div>
-              <h2 className="text-2xl font-bold tracking-tight">Your departments</h2>
+              <span className="inline-flex items-center gap-2 font-mono text-xs uppercase tracking-[0.2em] text-accent">
+                <span aria-hidden className="h-px w-6 bg-gradient-to-r from-accent to-transparent" />
+                system map · {departments.length} tracks
+              </span>
+              <h2 className="mt-2 text-2xl font-bold tracking-tight">Your departments</h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                Pick up where you left off across all {departments.length} tracks.
+                Pick up where you left off across every track.
               </p>
             </div>
             <Button asChild variant="outline" size="sm" className="shrink-0">
@@ -457,12 +497,11 @@ export default async function DashboardPage() {
           </Stagger>
         ) : (
           <Reveal className="mt-6">
-            <div className="rounded-2xl border border-dashed border-border bg-card/50 p-10 text-center text-muted-foreground">
-              Departments are loading. Check back in a moment, or{" "}
+            <div className="rounded-2xl border border-dashed border-border bg-card/50 p-10 text-center font-mono text-sm text-muted-foreground">
+              // departments loading — check back in a moment, or{" "}
               <Link href="/guides" className="text-primary underline-offset-4 hover:underline">
                 browse the guides
               </Link>
-              .
             </div>
           </Reveal>
         )}
@@ -474,17 +513,20 @@ export default async function DashboardPage() {
           <Reveal>
             <div className="flex items-end justify-between gap-4">
               <div>
-                <h2 className="text-2xl font-bold tracking-tight">Achievements</h2>
-                <p className="mt-1 text-sm text-muted-foreground">
+                <span className="inline-flex items-center gap-2 font-mono text-xs uppercase tracking-[0.2em] text-accent">
+                  <span aria-hidden className="h-px w-6 bg-gradient-to-r from-accent to-transparent" />
+                  unlocks
+                </span>
+                <h2 className="mt-2 text-2xl font-bold tracking-tight">Achievements</h2>
+                <p className="mt-1 font-mono text-sm text-muted-foreground">
                   {achievementsEarned > 0
-                    ? `${achievementsEarned} of ${achievements.length} unlocked — keep going!`
-                    : `Complete lessons to unlock all ${achievements.length} badges.`}
+                    ? `${achievementsEarned} of ${achievements.length} unlocked — keep going`
+                    : `// complete lessons to unlock all ${achievements.length} badges`}
                 </p>
               </div>
-              <Badge variant="accent" className="shrink-0">
-                <Trophy className="h-3.5 w-3.5" />
-                {achievementsEarned}/{achievements.length}
-              </Badge>
+              <StatusPill tone="primary" pulse={achievementsEarned > 0} className="shrink-0">
+                {achievementsEarned}/{achievements.length} unlocked
+              </StatusPill>
             </div>
           </Reveal>
 
@@ -492,6 +534,7 @@ export default async function DashboardPage() {
             <Progress
               value={clampPct((achievementsEarned / achievements.length) * 100)}
               className="h-2.5"
+              style={xpBar}
             />
           </Reveal>
 
@@ -508,9 +551,9 @@ export default async function DashboardPage() {
       {/* ============================ ZERO STATE ENCOURAGEMENT ============================ */}
       {completedCount === 0 && (
         <Reveal className="mt-14">
-          <div className="relative overflow-hidden rounded-3xl border border-border bg-card/60 p-8 text-center">
+          <div className="relative overflow-hidden rounded-3xl border border-border bg-card/60 p-8 text-center backdrop-blur">
             <div aria-hidden className="absolute inset-0 -z-10 bg-dots opacity-40" />
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-soft text-primary">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-primary/30 bg-primary/10 text-primary shadow-[var(--glow-primary)]">
               <CheckCircle2 className="h-7 w-7" />
             </div>
             <h3 className="mt-4 text-lg font-semibold">Complete your first lesson</h3>

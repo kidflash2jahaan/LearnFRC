@@ -34,7 +34,7 @@ export function FeedbackForm({ page = "/" }: { page?: string }) {
         placeholder="Suggest a topic, resource, or improvement…"
         aria-label="Your suggestion"
       />
-      <Button type="submit" variant="brand" disabled={pending}>
+      <Button type="submit" variant="brand" className="font-mono" disabled={pending}>
         {pending ? (
           <Loader2 className="h-4 w-4 animate-spin" />
         ) : (

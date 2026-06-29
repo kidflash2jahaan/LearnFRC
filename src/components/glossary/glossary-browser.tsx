@@ -34,14 +34,20 @@ export function GlossaryBrowser({
 
   return (
     <div>
-      {/* search */}
-      <div className="relative mx-auto max-w-xl">
-        <Search className="pointer-events-none absolute left-4 top-1/2 h-4.5 w-4.5 -translate-y-1/2 text-muted-foreground" />
+      {/* search — terminal input */}
+      <div className="group relative mx-auto max-w-xl">
+        <span
+          aria-hidden
+          className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 font-mono text-sm text-primary"
+        >
+          $
+        </span>
+        <Search className="pointer-events-none absolute left-9 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search terms, acronyms, definitions…"
-          className="h-12 w-full rounded-xl border border-border bg-card pl-11 pr-4 text-sm outline-none transition-colors focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/30"
+          placeholder="search terms, acronyms, definitions…"
+          className="h-12 w-full rounded-xl border border-border bg-card/60 pl-16 pr-4 font-mono text-sm text-foreground outline-none backdrop-blur-sm transition-colors placeholder:text-muted-foreground/70 focus-visible:border-primary focus-visible:shadow-[var(--glow-primary)]"
           aria-label="Search glossary"
         />
       </div>
@@ -53,10 +59,10 @@ export function GlossaryBrowser({
             key={c}
             onClick={() => setActive(c)}
             className={cn(
-              "rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors cursor-pointer",
+              "cursor-pointer rounded-full border px-3.5 py-1.5 font-mono text-xs font-medium transition-all",
               active === c
-                ? "border-primary bg-primary/10 text-primary"
-                : "border-border text-muted-foreground hover:text-foreground hover:bg-muted"
+                ? "border-primary/60 bg-primary/10 text-primary shadow-[var(--glow-primary)]"
+                : "border-border text-muted-foreground hover:border-border/80 hover:bg-muted hover:text-foreground"
             )}
           >
             {c}
@@ -64,8 +70,10 @@ export function GlossaryBrowser({
         ))}
       </div>
 
-      <p className="mt-6 text-center text-sm text-muted-foreground">
-        {filtered.length} {filtered.length === 1 ? "term" : "terms"}
+      <p className="mt-6 text-center font-mono text-sm text-muted-foreground">
+        <span className="text-muted-foreground/60">// </span>
+        <span className="text-primary">{filtered.length}</span>{" "}
+        {filtered.length === 1 ? "term" : "terms"}
       </p>
 
       {/* grid */}
@@ -83,17 +91,19 @@ export function GlossaryBrowser({
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.96 }}
                 transition={{ duration: 0.25 }}
-                className="flex flex-col rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-sm)]"
+                className="group flex flex-col rounded-2xl border border-border bg-card/60 p-5 backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-[var(--glow-primary)]"
               >
                 <div className="flex items-start justify-between gap-2">
-                  <h3 className="font-semibold leading-tight">{t.term}</h3>
+                  <h3 className="font-display font-semibold leading-tight">
+                    {t.term}
+                  </h3>
                   {t.abbr && t.abbr !== t.term && (
-                    <span className="shrink-0 rounded-md bg-muted px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground">
+                    <span className="shrink-0 rounded-md border border-border bg-background/50 px-1.5 py-0.5 font-mono text-[11px] text-accent">
                       {t.abbr}
                     </span>
                   )}
                 </div>
-                <span className="mt-1 text-[11px] font-medium uppercase tracking-wide text-primary/80">
+                <span className="mt-1 font-mono text-[11px] uppercase tracking-wider text-primary/80">
                   {t.category}
                 </span>
                 <p className="mt-2 flex-1 text-sm leading-relaxed text-muted-foreground">
@@ -104,9 +114,9 @@ export function GlossaryBrowser({
                     href={t.link}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline"
+                    className="mt-3 inline-flex items-center gap-1.5 font-mono text-xs font-medium text-primary transition-colors hover:text-accent"
                   >
-                    Learn more <ExternalLink className="h-3 w-3" />
+                    learn_more <ExternalLink className="h-3 w-3" />
                   </a>
                 )}
               </motion.div>
@@ -118,7 +128,9 @@ export function GlossaryBrowser({
       {filtered.length === 0 && (
         <div className="mt-10 flex flex-col items-center text-center text-muted-foreground">
           <BookA className="h-10 w-10 opacity-40" />
-          <p className="mt-3 text-sm">No terms match “{query}”.</p>
+          <p className="mt-3 font-mono text-sm">
+            No terms match &ldquo;{query}&rdquo;.
+          </p>
         </div>
       )}
     </div>

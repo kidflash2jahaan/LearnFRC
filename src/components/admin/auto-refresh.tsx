@@ -30,10 +30,10 @@ export function AutoRefresh({ seconds = 30 }: { seconds?: number }) {
   }, [router, seconds]);
 
   return (
-    <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/5 px-2.5 py-1 font-mono text-[11px] uppercase tracking-wider text-primary">
       <span className="relative flex h-2 w-2">
-        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-        <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
+        <span className="relative inline-flex h-2 w-2 rounded-full bg-primary shadow-[0_0_8px_var(--primary)]" />
       </span>
       Live · auto-updating
     </span>

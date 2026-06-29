@@ -1,146 +1,126 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
-import { Code2, Cog, PenTool, Zap, Trophy, Cpu, CheckCircle2 } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
+import { StatusPill } from "@/components/motion/terminal";
 
 const ROWS = [
-  { label: "Programming", color: "#10b981", to: "#22d3ee", pct: 82, Icon: Code2 },
-  { label: "Mechanical", color: "#f97316", to: "#f59e0b", pct: 64, Icon: Cog },
-  { label: "CAD & Design", color: "#8b5cf6", to: "#d946ef", pct: 48, Icon: PenTool },
-  { label: "Electrical", color: "#f59e0b", to: "#facc15", pct: 30, Icon: Zap },
-];
-
-const FLOATERS = [
-  { Icon: Trophy, color: "#eab308", x: "-8%", y: "12%", d: 0 },
-  { Icon: Cpu, color: "#06b6d4", x: "92%", y: "8%", d: 0.6 },
-  { Icon: CheckCircle2, color: "#22c55e", x: "96%", y: "70%", d: 1.1 },
+  { label: "Programming", pct: 82 },
+  { label: "Mechanical", pct: 64 },
+  { label: "CAD & Design", pct: 48 },
+  { label: "Electrical", pct: 30 },
 ];
 
 export function HeroVisual() {
   const reduce = useReducedMotion();
-  const R = 34;
-  const C = 2 * Math.PI * R;
-  const overall = 56;
 
   return (
     <div className="relative mx-auto w-full max-w-md">
-      {/* glow */}
+      {/* ambient glow */}
       <div
         aria-hidden
-        className="absolute inset-0 -z-10 aurora-bg opacity-60 blur-3xl animate-aurora"
+        className="absolute inset-0 -z-10 aurora-bg opacity-50 blur-3xl animate-aurora"
       />
+      {/* code-bracket accents */}
+      <span
+        aria-hidden
+        className="pointer-events-none absolute -left-7 -top-8 select-none font-mono text-[7rem] leading-none text-primary/10"
+      >
+        {"{"}
+      </span>
+      <span
+        aria-hidden
+        className="pointer-events-none absolute -bottom-12 -right-5 select-none font-mono text-[7rem] leading-none text-primary/10"
+      >
+        {"}"}
+      </span>
 
       <motion.div
-        initial={{ opacity: 0, y: 24, rotateX: 8 }}
-        animate={{ opacity: 1, y: 0, rotateX: 0 }}
-        transition={{ duration: 0.8, ease: [0.21, 0.47, 0.32, 0.98] }}
+        initial={{ opacity: 0, y: 24 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.7, ease: [0.21, 0.47, 0.32, 0.98] }}
         className="relative"
-        style={{ perspective: 1000 }}
       >
         <motion.div
-          animate={reduce ? {} : { y: [0, -10, 0] }}
+          animate={reduce ? {} : { y: [0, -8, 0] }}
           transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-          className="glass rounded-3xl border border-border p-6 shadow-[var(--shadow-lg)]"
+          className="overflow-hidden rounded-2xl border border-border bg-card/80 shadow-[var(--shadow-lg)] backdrop-blur-md neon-border"
         >
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                Your FRC Mastery
-              </div>
-              <div className="mt-1 font-display text-2xl font-bold">
-                Build season ready
-              </div>
-            </div>
-            {/* XP ring */}
-            <div className="relative h-20 w-20">
-              <svg viewBox="0 0 80 80" className="h-20 w-20 -rotate-90">
-                <circle
-                  cx="40"
-                  cy="40"
-                  r={R}
-                  fill="none"
-                  stroke="var(--muted)"
-                  strokeWidth="8"
-                />
-                <motion.circle
-                  cx="40"
-                  cy="40"
-                  r={R}
-                  fill="none"
-                  stroke="url(#ring)"
-                  strokeWidth="8"
-                  strokeLinecap="round"
-                  strokeDasharray={C}
-                  initial={{ strokeDashoffset: C }}
-                  animate={{ strokeDashoffset: C - (C * overall) / 100 }}
-                  transition={{ duration: 1.4, delay: 0.4, ease: "easeOut" }}
-                />
-                <defs>
-                  <linearGradient id="ring" x1="0" y1="0" x2="1" y2="1">
-                    <stop offset="0%" stopColor="#2f5fff" />
-                    <stop offset="100%" stopColor="#22d3ee" />
-                  </linearGradient>
-                </defs>
-              </svg>
-              <div className="absolute inset-0 flex items-center justify-center font-display text-lg font-bold">
-                {overall}%
-              </div>
-            </div>
+          {/* title bar */}
+          <div className="terminal-titlebar flex items-center gap-2 px-4 py-2.5">
+            <span className="flex gap-1.5" aria-hidden>
+              <span className="h-3 w-3 rounded-full bg-[#ff5f57]" />
+              <span className="h-3 w-3 rounded-full bg-[#febc2e]" />
+              <span className="h-3 w-3 rounded-full bg-[#28c840] shadow-[0_0_8px_rgba(40,200,64,.6)]" />
+            </span>
+            <span className="ml-1 truncate font-mono text-xs text-muted-foreground">
+              build_status.log — ~/team5835
+            </span>
           </div>
 
-          <div className="mt-6 space-y-4">
+          {/* header */}
+          <div className="flex items-start justify-between px-5 pt-4">
+            <div>
+              <h3 className="font-mono text-sm font-semibold text-foreground">
+                Build Season Ready
+              </h3>
+              <p className="mt-0.5 font-mono text-xs text-muted-foreground">
+                // progress across core departments
+              </p>
+            </div>
+            <StatusPill tone="primary">LIVE</StatusPill>
+          </div>
+
+          {/* progress rows */}
+          <div className="flex flex-col gap-4 px-5 pb-5 pt-4">
             {ROWS.map((r, i) => (
               <div key={r.label}>
-                <div className="mb-1.5 flex items-center justify-between text-sm">
-                  <span className="inline-flex items-center gap-2 font-medium">
-                    <span
-                      className="flex h-6 w-6 items-center justify-center rounded-md text-white"
-                      style={{ background: `linear-gradient(135deg, ${r.color}, ${r.to})` }}
-                    >
-                      <r.Icon className="h-3.5 w-3.5" />
-                    </span>
-                    {r.label}
-                  </span>
-                  <span className="font-mono text-xs text-muted-foreground">
-                    {r.pct}%
-                  </span>
+                <div className="mb-1.5 flex items-baseline justify-between font-mono text-xs">
+                  <span className="text-foreground">{r.label}</span>
+                  <span className="text-primary">{r.pct}%</span>
                 </div>
-                <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
                   <motion.div
                     className="h-full rounded-full"
-                    style={{ background: `linear-gradient(90deg, ${r.color}, ${r.to})` }}
-                    initial={{ width: 0 }}
-                    animate={{ width: `${r.pct}%` }}
-                    transition={{ duration: 1, delay: 0.5 + i * 0.15, ease: "easeOut" }}
+                    style={{
+                      background:
+                        "linear-gradient(90deg, var(--accent), var(--primary))",
+                      boxShadow:
+                        "0 0 12px color-mix(in srgb, var(--primary) 45%, transparent)",
+                    }}
+                    initial={{ width: reduce ? `${r.pct}%` : 0 }}
+                    whileInView={{ width: `${r.pct}%` }}
+                    viewport={{ once: true }}
+                    transition={{
+                      duration: 1,
+                      delay: 0.2 + i * 0.15,
+                      ease: "easeOut",
+                    }}
                   />
                 </div>
               </div>
             ))}
           </div>
+
+          {/* footer */}
+          <div className="flex items-center gap-2 border-t border-border bg-primary/[0.03] px-5 py-3 font-mono text-xs text-muted-foreground">
+            <CheckCircle2 className="h-4 w-4 shrink-0 text-primary" />
+            <span>system: on track for kickoff — next module loaded</span>
+            <span className="caret" aria-hidden />
+          </div>
+        </motion.div>
+
+        {/* floating XP badge */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.7 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.6, type: "spring", stiffness: 260, damping: 18 }}
+          className="absolute -right-3 -top-4 flex items-center gap-2 rounded-xl border border-border bg-background-2/90 px-3 py-2 font-mono text-xs shadow-[var(--shadow-md)] backdrop-blur"
+        >
+          <span className="h-1.5 w-1.5 rounded-full bg-accent shadow-[0_0_8px_var(--accent)] animate-glow-pulse" />
+          +50 XP <span className="text-accent">earned today</span>
         </motion.div>
       </motion.div>
-
-      {/* floating chips */}
-      {FLOATERS.map((f, i) => (
-        <motion.div
-          key={i}
-          className="absolute flex h-12 w-12 items-center justify-center rounded-2xl border border-border bg-card shadow-[var(--shadow-md)]"
-          style={{ left: f.x, top: f.y, color: f.color }}
-          initial={{ opacity: 0, scale: 0.5 }}
-          animate={
-            reduce
-              ? { opacity: 1, scale: 1 }
-              : { opacity: 1, scale: 1, y: [0, -12, 0] }
-          }
-          transition={{
-            opacity: { delay: 0.8 + i * 0.2 },
-            scale: { delay: 0.8 + i * 0.2, type: "spring" },
-            y: { duration: 4 + i, repeat: Infinity, ease: "easeInOut", delay: f.d },
-          }}
-        >
-          <f.Icon className="h-5 w-5" />
-        </motion.div>
-      ))}
     </div>
   );
 }

@@ -14,13 +14,12 @@ import {
   Settings,
   Shield,
   LogOut,
-  Bot,
   ChevronDown,
   Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { Logo } from "@/components/logo";
 import { Avatar } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -102,20 +101,12 @@ export function Navbar() {
       className={cn(
         "fixed inset-x-0 top-0 z-40 transition-all duration-300",
         scrolled
-          ? "glass border-b border-border shadow-[var(--shadow-sm)]"
-          : "bg-transparent"
+          ? "glass border-b border-primary/15 shadow-[var(--shadow-sm)]"
+          : "border-b border-transparent bg-transparent"
       )}
     >
       <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
-        {/* Logo */}
-        <Link href="/" className="group flex items-center gap-2.5">
-          <span className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-brand text-white shadow-[var(--shadow-md)] transition-transform group-hover:scale-105">
-            <Bot className="h-5 w-5" />
-          </span>
-          <span className="text-lg font-bold tracking-tight">
-            Learn<span className="text-gradient">FRC</span>
-          </span>
-        </Link>
+        <Logo />
 
         {/* Desktop nav */}
         <div className="hidden items-center gap-1 md:flex">
@@ -130,7 +121,7 @@ export function Navbar() {
                 className={cn(
                   "relative rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                   active
-                    ? "text-foreground"
+                    ? "text-primary"
                     : "text-muted-foreground hover:text-foreground"
                 )}
               >
@@ -138,7 +129,7 @@ export function Navbar() {
                 {active && (
                   <motion.span
                     layoutId="nav-active"
-                    className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-brand"
+                    className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-primary shadow-[var(--glow-primary)]"
                     transition={{ type: "spring", stiffness: 380, damping: 30 }}
                   />
                 )}
@@ -151,39 +142,34 @@ export function Navbar() {
         <div className="flex items-center gap-2">
           <button
             onClick={openSearch}
-            className="hidden items-center gap-2 rounded-lg border border-border bg-background/50 px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground sm:flex cursor-pointer"
+            className="hidden cursor-pointer items-center gap-2 rounded-lg border border-border bg-background/50 px-3 py-2 font-mono text-sm text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground sm:flex"
             aria-label="Search"
           >
             <Search className="h-4 w-4" />
             <span className="hidden lg:inline">Search</span>
-            <kbd className="hidden lg:inline-flex h-5 items-center rounded border border-border bg-muted px-1 font-mono text-[10px]">
+            <kbd className="hidden h-5 items-center rounded border border-border bg-muted px-1 font-mono text-[10px] lg:inline-flex">
               ⌘K
             </kbd>
           </button>
           <button
             onClick={openSearch}
-            className="flex h-10 w-10 items-center justify-center rounded-lg border border-border text-muted-foreground hover:text-foreground sm:hidden cursor-pointer"
+            className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg border border-border text-muted-foreground hover:border-primary/40 hover:text-foreground sm:hidden"
             aria-label="Search"
           >
             <Search className="h-4 w-4" />
           </button>
 
-          <ThemeToggle className="hidden sm:inline-flex" />
-
           {!loaded ? (
-            <div
-              className="h-9 w-9 rounded-full bg-muted animate-pulse"
-              aria-hidden
-            />
+            <div className="h-9 w-9 animate-pulse rounded-full bg-muted" aria-hidden />
           ) : authed ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-1.5 rounded-full outline-none cursor-pointer focus-visible:ring-2 focus-visible:ring-ring">
+                <button className="flex cursor-pointer items-center gap-1.5 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring">
                   <Avatar
                     name={profile?.full_name || profile?.username || email}
                     src={profile?.avatar_url}
                     seed={profile?.id}
-                    className="h-9 w-9"
+                    className="h-9 w-9 ring-1 ring-primary/30"
                   />
                   <ChevronDown className="hidden h-4 w-4 text-muted-foreground sm:block" />
                 </button>
@@ -254,7 +240,7 @@ export function Navbar() {
           {/* Mobile menu toggle */}
           <button
             onClick={() => setMobileOpen((o) => !o)}
-            className="flex h-10 w-10 items-center justify-center rounded-lg border border-border text-foreground md:hidden cursor-pointer"
+            className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg border border-border text-foreground hover:border-primary/40 md:hidden"
             aria-label="Menu"
           >
             {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -270,31 +256,28 @@ export function Navbar() {
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.25 }}
-            className="overflow-hidden border-b border-border glass md:hidden"
+            className="glass overflow-hidden border-b border-primary/15 md:hidden"
           >
             <div className="space-y-1 px-4 py-4">
               {NAV.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="block rounded-lg px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted"
+                  className="block rounded-lg px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted hover:text-primary"
                 >
                   {item.label}
                 </Link>
               ))}
-              <div className="flex items-center gap-2 pt-2">
-                <ThemeToggle />
-                {loaded && !authed && (
-                  <>
-                    <Button asChild variant="outline" size="sm" className="flex-1">
-                      <Link href="/login">Log in</Link>
-                    </Button>
-                    <Button asChild variant="brand" size="sm" className="flex-1">
-                      <Link href="/signup">Get started</Link>
-                    </Button>
-                  </>
-                )}
-              </div>
+              {loaded && !authed && (
+                <div className="flex items-center gap-2 pt-2">
+                  <Button asChild variant="outline" size="sm" className="flex-1">
+                    <Link href="/login">Log in</Link>
+                  </Button>
+                  <Button asChild variant="brand" size="sm" className="flex-1">
+                    <Link href="/signup">Get started</Link>
+                  </Button>
+                </div>
+              )}
             </div>
           </motion.div>
         )}

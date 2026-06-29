@@ -24,19 +24,19 @@ export function NewsletterForm({ className }: { className?: string }) {
 
   return (
     <form action={action} className={cn("w-full max-w-sm", className)}>
-      <div className="flex items-center gap-2 rounded-xl border border-border bg-background/60 p-1.5 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/25">
+      <div className="flex items-center gap-2 rounded-xl border border-border bg-background/60 p-1.5 backdrop-blur-sm transition-shadow focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/25 focus-within:shadow-[var(--glow-primary)]">
         <input
           type="email"
           name="email"
           required
           placeholder="you@team5835.org"
           aria-label="Email address"
-          className="h-9 flex-1 bg-transparent px-2.5 text-sm outline-none placeholder:text-muted-foreground/70"
+          className="h-9 flex-1 bg-transparent px-2.5 font-mono text-sm outline-none placeholder:text-muted-foreground/70"
         />
         <button
           type="submit"
           disabled={pending}
-          className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand px-3.5 text-sm font-medium text-white transition hover:brightness-110 disabled:opacity-60 cursor-pointer"
+          className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary px-3.5 font-mono text-sm font-semibold text-primary-foreground shadow-[var(--glow-primary)] transition hover:brightness-110 disabled:opacity-60 cursor-pointer"
         >
           {pending ? (
             <Loader2 className="h-4 w-4 animate-spin" />

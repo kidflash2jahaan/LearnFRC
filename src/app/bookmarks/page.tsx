@@ -5,6 +5,7 @@ import { Bookmark, BookmarkX, Compass } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Reveal, Stagger, StaggerItem } from "@/components/motion/reveal";
+import { TerminalFrame, NeonCounter, TypeLine } from "@/components/motion/terminal";
 import {
   BookmarkCard,
   type BookmarkCardData,
@@ -81,11 +82,11 @@ export default async function BookmarksPage() {
       <Reveal>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <Badge variant="primary" className="mb-3 px-3 py-1">
+            <Badge variant="primary" className="mb-3 px-3 py-1 font-mono uppercase tracking-wider">
               <Bookmark className="h-3.5 w-3.5" />
               Saved for later
             </Badge>
-            <h1 className="text-balance text-3xl font-bold tracking-tight sm:text-4xl">
+            <h1 className="text-balance font-display text-3xl font-bold tracking-tight sm:text-4xl">
               Your <span className="text-gradient">bookmarks</span>
             </h1>
             <p className="mt-2 text-pretty text-muted-foreground">
@@ -105,17 +106,37 @@ export default async function BookmarksPage() {
         </div>
       </Reveal>
 
+      {total > 0 && (
+        <Reveal delay={0.06} className="mt-6">
+          <div className="flex items-center justify-between gap-4 rounded-xl border border-primary/25 bg-primary/[0.05] px-4 py-3">
+            <TypeLine
+              prompt="~/learnfrc $"
+              text="ls ~/bookmarks"
+              className="text-xs text-muted-foreground"
+            />
+            <span className="flex items-baseline gap-1.5 font-mono text-sm text-muted-foreground">
+              <NeonCounter
+                to={total}
+                className="font-display text-lg font-bold text-primary neon-text"
+              />
+              saved
+            </span>
+          </div>
+        </Reveal>
+      )}
+
       {total === 0 ? (
         <Reveal delay={0.1} className="mt-12">
-          <div className="relative overflow-hidden rounded-3xl border border-dashed border-border bg-card/60 px-6 py-16 text-center">
-            <div
-              aria-hidden
-              className="pointer-events-none absolute inset-0 -z-10 bg-grid opacity-30 mask-b-faded"
-            />
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-soft text-primary">
+          <TerminalFrame
+            title="bookmarks — ~/saved"
+            bodyClassName="px-6 py-16 text-center"
+          >
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-primary/40 bg-primary/10 text-primary glow-primary">
               <BookmarkX className="h-8 w-8" />
             </div>
-            <h2 className="mt-5 text-xl font-semibold">No bookmarks yet</h2>
+            <h2 className="mt-5 font-display text-xl font-semibold">
+              No bookmarks yet
+            </h2>
             <p className="mx-auto mt-2 max-w-md text-pretty text-muted-foreground">
               Tap the bookmark icon on any lesson to save it here. Build your own
               reading list across all 11 departments.
@@ -128,10 +149,10 @@ export default async function BookmarksPage() {
                 <Link href="/guides/getting-started">Start with the basics</Link>
               </Button>
             </div>
-          </div>
+          </TerminalFrame>
         </Reveal>
       ) : (
-        <Stagger className="mt-10 flex flex-col gap-3">
+        <Stagger className="mt-8 flex flex-col gap-3">
           {bookmarks.map((b) => (
             <StaggerItem key={b.lessonId}>
               <BookmarkCard data={b} />
