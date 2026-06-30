@@ -19,7 +19,7 @@ export function HeroVisual() {
       {/* ambient glow */}
       <div
         aria-hidden
-        className="absolute inset-0 -z-10 aurora-bg opacity-50 blur-3xl animate-aurora"
+        className="absolute inset-0 -z-10 aurora-bg opacity-50 blur-3xl"
       />
       {/* code-bracket accents */}
       <span

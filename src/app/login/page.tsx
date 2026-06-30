@@ -46,7 +46,7 @@ export default async function LoginPage({
       {/* Ambient background */}
       <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
         <div className="absolute inset-0 bg-grid opacity-40 mask-b-faded" />
-        <div className="absolute left-1/2 top-[-12%] h-[440px] w-[720px] -translate-x-1/2 rounded-full opacity-25 blur-3xl aurora-bg animate-aurora" />
+        <div className="absolute left-1/2 top-[-12%] h-[440px] w-[720px] -translate-x-1/2 rounded-full opacity-25 blur-3xl aurora-bg" />
         {/* code-bracket accents */}
         <span className="absolute left-[6%] top-[16%] hidden select-none font-mono text-[8rem] leading-none text-primary/[0.06] lg:block">
           {"{"}

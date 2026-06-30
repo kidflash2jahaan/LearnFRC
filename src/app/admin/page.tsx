@@ -57,7 +57,7 @@ export default async function AdminPage() {
           </span>
         </div>
         <h1 className="mt-4 font-display text-3xl font-bold tracking-tight sm:text-4xl">
-          Mission <span className="text-gradient-animated">control</span>
+          Mission <span className="text-gradient">control</span>
         </h1>
         <p className="mt-1.5 font-mono text-sm text-muted-foreground">
           // live metrics across LearnFRC — tap a highlighted card to drill in

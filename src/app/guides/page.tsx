@@ -67,7 +67,7 @@ export default async function GuidesPage() {
           <Reveal delay={0.05}>
             <h1 className="mt-5 text-balance font-display text-4xl font-bold tracking-tight sm:text-5xl">
               Master FRC,{" "}
-              <span className="text-gradient-animated">department by department</span>
+              <span className="text-gradient">department by department</span>
             </h1>
           </Reveal>
 

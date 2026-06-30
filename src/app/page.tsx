@@ -156,7 +156,7 @@ export default async function HomePage() {
       {/* ============================ HERO ============================ */}
       <section className="relative overflow-hidden">
         <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
-          <div className="absolute left-1/2 top-[-12%] h-[520px] w-[820px] -translate-x-1/2 rounded-full opacity-40 blur-3xl aurora-bg animate-aurora" />
+          <div className="absolute left-1/2 top-[-12%] h-[520px] w-[820px] -translate-x-1/2 rounded-full opacity-40 blur-3xl aurora-bg" />
         </div>
 
         <div className="mx-auto grid max-w-7xl items-center gap-12 px-4 pb-16 pt-28 sm:px-6 lg:grid-cols-2 lg:gap-8 lg:pb-24 lg:pt-36">
@@ -177,7 +177,7 @@ export default async function HomePage() {
             <Reveal delay={0.08}>
               <h1 className="mt-5 text-balance font-display text-4xl font-bold leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl">
                 Master every part of{" "}
-                <span className="text-gradient-animated">FIRST Robotics</span>.
+                <span className="text-gradient">FIRST Robotics</span>.
               </h1>
             </Reveal>
             <Reveal delay={0.14}>
@@ -358,7 +358,7 @@ export default async function HomePage() {
           {FEATURES.map((f, i) => (
             <StaggerItem key={f.title} className="h-full">
               <div className="group relative h-full overflow-hidden rounded-xl border border-border bg-gradient-to-b from-white/[0.03] to-transparent p-6 transition-all duration-300 hover:-translate-y-1 hover:border-accent/40 hover:shadow-[var(--glow-accent)]">
-                <span className="absolute right-5 top-5 font-mono text-xs text-muted-foreground/70">
+                <span className="absolute right-5 top-5 font-mono text-xs text-muted-foreground">
                   {String(i + 1).padStart(2, "0")}
                 </span>
                 <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-accent/25 bg-accent/[0.08] text-accent shadow-[var(--glow-accent)]">
@@ -466,7 +466,7 @@ export default async function HomePage() {
             </div>
             <h2 className="mt-4 text-balance font-display text-3xl font-bold tracking-tight sm:text-4xl">
               Start your first lesson —{" "}
-              <span className="text-gradient-animated">free</span>.
+              <span className="text-gradient">free</span>.
             </h2>
             <p className="mx-auto mt-3 max-w-xl text-pretty text-muted-foreground">
               No experience needed. No credit card. Just pick a department, track

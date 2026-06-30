@@ -24,7 +24,7 @@ export default async function SettingsPage() {
       {/* Ambient background */}
       <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
         <div className="absolute inset-0 bg-grid opacity-40 mask-b-faded" />
-        <div className="absolute right-[-15%] top-[-10%] h-[420px] w-[560px] rounded-full opacity-20 blur-3xl aurora-bg animate-aurora" />
+        <div className="absolute right-[-15%] top-[-10%] h-[420px] w-[560px] rounded-full opacity-20 blur-3xl aurora-bg" />
       </div>
 
       <div className="mx-auto max-w-2xl px-4 pt-28 pb-24 sm:px-6">

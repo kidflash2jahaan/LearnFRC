@@ -76,7 +76,7 @@ export default async function ForTeamsPage() {
   return (
     <div className="relative">
       <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[560px] overflow-hidden">
-        <div className="absolute left-1/2 top-[-8%] h-[440px] w-[820px] -translate-x-1/2 rounded-full opacity-30 blur-3xl aurora-bg animate-aurora" />
+        <div className="absolute left-1/2 top-[-8%] h-[440px] w-[820px] -translate-x-1/2 rounded-full opacity-30 blur-3xl aurora-bg" />
       </div>
 
       {/* HERO */}
@@ -89,7 +89,7 @@ export default async function ForTeamsPage() {
           </div>
           <h1 className="text-balance font-display text-4xl font-bold tracking-tight sm:text-5xl">
             Onboard your{" "}
-            <span className="text-gradient-animated">whole team</span> — without
+            <span className="text-gradient">whole team</span> — without
             rebuilding training every year
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">

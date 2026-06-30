@@ -29,7 +29,7 @@ export default function PathsPage() {
           </StatusPill>
         </div>
         <h1 className="text-balance font-display text-4xl font-bold tracking-tight sm:text-5xl">
-          Learning <span className="text-gradient-animated">paths</span>
+          Learning <span className="text-gradient">paths</span>
         </h1>
         <p className="mt-4 text-pretty text-lg text-muted-foreground">
           Not sure where to start? Follow a guided path that threads the right

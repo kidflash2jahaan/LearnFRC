@@ -78,7 +78,7 @@ export default async function ResourcesPage() {
           </StatusPill>
         </div>
         <h1 className="text-balance font-display text-4xl font-bold tracking-tight sm:text-5xl">
-          FRC <span className="text-gradient-animated">resources</span>
+          FRC <span className="text-gradient">resources</span>
         </h1>
         <p className="mt-4 text-pretty text-lg text-muted-foreground">
           The links every team should bookmark — official docs, software,

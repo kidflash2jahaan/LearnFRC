@@ -128,7 +128,7 @@ export function Footer() {
           </div>
         </div>
 
-        <p className="mt-6 max-w-3xl text-xs leading-relaxed text-muted-foreground/70">
+        <p className="mt-6 max-w-3xl text-xs leading-relaxed text-muted-foreground">
           LearnFRC lessons are AI-assisted: drafted from primary sources like the
           WPILib docs, game manual, and vendor sites, then reviewed and
           fact-checked for accuracy. Spot something off?{" "}

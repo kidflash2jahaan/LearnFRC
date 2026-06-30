@@ -22,7 +22,7 @@ export default function GlossaryPage() {
           </StatusPill>
         </div>
         <h1 className="text-balance font-display text-4xl font-bold tracking-tight sm:text-5xl">
-          The FRC <span className="text-gradient-animated">glossary</span>
+          The FRC <span className="text-gradient">glossary</span>
         </h1>
         <p className="mt-4 text-pretty text-lg text-muted-foreground">
           Every acronym and bit of jargon you&apos;ll hear in the pit, decoded.

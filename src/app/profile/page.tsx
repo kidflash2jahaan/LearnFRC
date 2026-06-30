@@ -120,7 +120,7 @@ export default async function ProfilePage() {
       {/* Ambient background */}
       <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
         <div className="absolute inset-0 hud-grid opacity-50 mask-b-faded" />
-        <div className="absolute left-1/2 top-[-10%] h-[460px] w-[680px] -translate-x-1/2 rounded-full opacity-20 blur-3xl aurora-bg animate-aurora" />
+        <div className="absolute left-1/2 top-[-10%] h-[460px] w-[680px] -translate-x-1/2 rounded-full opacity-20 blur-3xl aurora-bg" />
       </div>
 
       <div className="mx-auto max-w-4xl px-4 pt-28 pb-24 sm:px-6 lg:px-8">

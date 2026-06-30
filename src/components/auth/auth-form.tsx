@@ -171,7 +171,7 @@ export function AuthForm({
           <div>
             <Label htmlFor="team_number" className={LABEL_CLS}>
               Team #{" "}
-              <span className="normal-case text-muted-foreground/70">
+              <span className="normal-case text-muted-foreground">
                 (optional)
               </span>
             </Label>

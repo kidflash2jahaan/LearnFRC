@@ -47,7 +47,7 @@ export function GlossaryBrowser({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="search terms, acronyms, definitions…"
-          className="h-12 w-full rounded-xl border border-border bg-card/60 pl-16 pr-4 font-mono text-sm text-foreground outline-none backdrop-blur-sm transition-colors placeholder:text-muted-foreground/70 focus-visible:border-primary focus-visible:shadow-[var(--glow-primary)]"
+          className="h-12 w-full rounded-xl border border-border bg-card/60 pl-16 pr-4 font-mono text-sm text-foreground outline-none backdrop-blur-sm transition-colors placeholder:text-muted-foreground focus-visible:border-primary focus-visible:shadow-[var(--glow-primary)]"
           aria-label="Search glossary"
         />
       </div>
