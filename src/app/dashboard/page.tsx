@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { DepartmentCard } from "@/components/department-card";
+import { InviteCard } from "@/components/leaderboard/invite-card";
 import { Reveal, Stagger, StaggerItem } from "@/components/motion/reveal";
 import {
   TerminalFrame,
@@ -29,7 +30,7 @@ import {
   type AchievementView,
 } from "@/components/dashboard/achievement-badge";
 import { getSession } from "@/lib/auth";
-import { getDepartments, getDepartmentBySlug } from "@/lib/queries";
+import { getDepartments, getDepartmentBySlug, getReferralCount } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/server";
 import { deptMeta } from "@/lib/departments";
 import { clampPct, pluralize } from "@/lib/utils";
@@ -172,6 +173,8 @@ export default async function DashboardPage() {
   const displayName =
     profile?.full_name || profile?.username || user.email?.split("@")[0] || "there";
   const firstName = displayName.split(" ")[0];
+
+  const referralCount = profile?.username ? await getReferralCount(user.id) : 0;
 
   // ── Continue learning target ──────────────────────────────────
   // Pick the started-but-not-finished department with the most progress;
@@ -341,6 +344,13 @@ export default async function DashboardPage() {
             </div>
             <ArrowRight className="h-4 w-4 shrink-0 text-primary transition-transform group-hover:translate-x-1" />
           </Link>
+        </Reveal>
+      )}
+
+      {/* ============================ INVITE / REFERRALS ============================ */}
+      {profile?.username && (
+        <Reveal>
+          <InviteCard username={profile.username} count={referralCount} />
         </Reveal>
       )}
 

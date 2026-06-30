@@ -19,7 +19,8 @@ import { DepartmentCard } from "@/components/department-card";
 import { Reveal, Stagger, StaggerItem } from "@/components/motion/reveal";
 import { NeonCounter, TypeLine } from "@/components/motion/terminal";
 import { HeroVisual } from "@/components/landing/hero-visual";
-import { Faq } from "@/components/landing/faq";
+import { Faq, FAQS } from "@/components/landing/faq";
+import { JsonLd } from "@/components/json-ld";
 import { getDepartments, getOverviewStats } from "@/lib/queries";
 import { DEPT_CATALOG } from "@/lib/dept-catalog";
 
@@ -429,6 +430,17 @@ export default async function HomePage() {
         <Reveal>
           <Faq />
         </Reveal>
+        <JsonLd
+          data={{
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            mainEntity: FAQS.map((f) => ({
+              "@type": "Question",
+              name: f.q,
+              acceptedAnswer: { "@type": "Answer", text: f.a },
+            })),
+          }}
+        />
       </section>
 
       {/* ============================= CTA ============================ */}

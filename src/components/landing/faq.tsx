@@ -4,7 +4,7 @@ import * as React from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronDown } from "lucide-react";
 
-const FAQS = [
+export const FAQS = [
   {
     q: "Is LearnFRC free?",
     a: "Yes — completely free. Create an account to track your progress, earn XP and achievements, and pick up where you left off. You can browse every guide without signing in.",
