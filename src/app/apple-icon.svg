@@ -1,15 +1,15 @@
 <svg width="180" height="180" viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <linearGradient id="g" x1="0" y1="0" x2="180" y2="180" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#c6ff3d"/>
-      <stop offset="1" stop-color="#22d3ee"/>
+      <stop stop-color="#2f6bff"/>
+      <stop offset="1" stop-color="#1aa9d6"/>
     </linearGradient>
   </defs>
   <rect width="180" height="180" rx="40" fill="url(#g)"/>
-  <rect x="85" y="34" width="10" height="24" rx="5" fill="#0a1018"/>
-  <circle cx="90" cy="34" r="9.5" fill="#0a1018"/>
-  <rect x="46" y="56" width="88" height="72" rx="20" fill="#0a1018"/>
-  <circle cx="73" cy="92" r="10.5" fill="#c6ff3d"/>
-  <circle cx="107" cy="92" r="10.5" fill="#22d3ee"/>
-  <rect x="70" y="110" width="40" height="9" rx="4.5" fill="#22d3ee" opacity="0.55"/>
+  <rect x="85" y="32" width="10" height="22" rx="5" fill="#ffffff"/>
+  <circle cx="90" cy="30" r="9.5" fill="#ffffff"/>
+  <rect x="46" y="56" width="88" height="72" rx="22" fill="#ffffff"/>
+  <circle cx="73" cy="90" r="10.5" fill="#2560e6"/>
+  <circle cx="107" cy="90" r="10.5" fill="#1aa9d6"/>
+  <rect x="72" y="108" width="36" height="9" rx="4.5" fill="#2560e6" opacity="0.5"/>
 </svg>
