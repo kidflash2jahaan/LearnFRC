@@ -1,8 +1,7 @@
+import type { CSSProperties } from "react";
 import Link from "next/link";
-import { Trophy, ArrowRight, Users, Zap } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Trophy, ArrowRight, Users, Zap, Sparkles } from "lucide-react";
 import { Reveal } from "@/components/motion/reveal";
-import { NeonCounter, StatusPill } from "@/components/motion/terminal";
 import { type PodiumEntry } from "@/components/leaderboard/podium";
 import {
   LeaderboardTabs,
@@ -25,6 +24,15 @@ export const metadata = {
   description:
     "See the top FRC learners climbing the ranks — earn XP, level up, and represent your team on the global LearnFRC leaderboard.",
 };
+
+const HEADLINE_GRADIENT: CSSProperties = {
+  background: "linear-gradient(120deg,#2560e6,#1aa9d6)",
+  WebkitBackgroundClip: "text",
+  backgroundClip: "text",
+  color: "transparent",
+};
+
+const nf = new Intl.NumberFormat("en-US");
 
 function displayName(p: Profile): string {
   if (p.hide_name) return p.username?.trim() || "Learner";
@@ -91,72 +99,101 @@ export default async function LeaderboardPage() {
   const totalXp = xpTotals.totalXp;
 
   return (
-    <div className="relative">
+    <div className="relative overflow-hidden">
+      {/* ambient glows */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[420px] aurora-bg opacity-25 mask-b-faded"
+        className="pointer-events-none absolute -top-32 left-1/2 -z-10 h-[560px] w-[820px] -translate-x-1/2 rounded-full opacity-70 blur-3xl"
+        style={{
+          background:
+            "radial-gradient(closest-side, color-mix(in srgb, var(--primary) 22%, transparent), transparent 72%)",
+        }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -top-10 right-[8%] -z-10 h-72 w-72 rounded-full opacity-60 blur-3xl"
+        style={{
+          background:
+            "radial-gradient(closest-side, color-mix(in srgb, var(--accent) 26%, transparent), transparent 70%)",
+        }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute top-24 left-[6%] -z-10 h-64 w-64 rounded-full opacity-50 blur-3xl"
+        style={{
+          background:
+            "radial-gradient(closest-side, color-mix(in srgb, #a855f7 22%, transparent), transparent 70%)",
+        }}
       />
 
-      <div className="mx-auto max-w-5xl px-4 pt-28 pb-20 sm:px-6 lg:px-8">
-        {/* Header */}
-        <Reveal as="section" className="text-center">
-          <span className="inline-flex items-center gap-2 font-mono text-xs uppercase tracking-[0.18em] text-accent">
-            <span aria-hidden className="h-px w-6 bg-gradient-to-r from-accent to-transparent" />
-            Leaderboard
+      <div className="mx-auto max-w-5xl px-4 pt-28 pb-24 sm:px-6 lg:px-8">
+        {/* Hero */}
+        <section className="text-center">
+          <span className="aq-eyebrow aq-rise aq-rise-1 justify-center">
+            <Trophy className="h-3.5 w-3.5" aria-hidden />
+            Climb the ranks
           </span>
-          <h1 className="mt-4 text-balance font-display text-4xl font-bold tracking-tight sm:text-5xl">
-            The <span className="text-gradient">Ranks</span>
+          <h1 className="aq-rise aq-rise-2 mt-4 text-balance text-5xl font-bold tracking-tight sm:text-6xl">
+            The{" "}
+            <span style={HEADLINE_GRADIENT}>podium</span>
           </h1>
-          <p className="mx-auto mt-3 max-w-xl text-pretty font-mono text-sm text-muted-foreground sm:text-base">
-            {"// "}every lesson earns XP. Win the weekly race, chase the all-time
-            greats, put your team on the map.
+          <p className="aq-rise aq-rise-3 mx-auto mt-4 max-w-xl text-pretty text-base leading-relaxed text-foreground/70 sm:text-lg">
+            Every lesson you finish earns XP. Win the weekly sprint, chase the
+            all-time greats, and put your team on the map — the same gracious
+            grind that wins build season.
           </p>
-        </Reveal>
+        </section>
 
         {allTimeEntries.length === 0 ? (
           /* Empty state — no learners at all yet */
           <Reveal className="mt-16">
-            <div className="mx-auto max-w-md rounded-2xl border border-border bg-card p-10 text-center neon-border">
-              <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-primary/40 bg-primary/10 text-primary shadow-[var(--glow-primary)]">
-                <Trophy className="h-8 w-8" />
+            <div className="aq-glass mx-auto max-w-md rounded-3xl p-10 text-center">
+              <div
+                className="aq-badge mx-auto mb-5 flex h-16 w-16 items-center justify-center"
+                style={{ "--a": "#2560e6" } as CSSProperties}
+              >
+                <Trophy className="h-8 w-8 text-foreground" aria-hidden />
               </div>
-              <h2 className="font-display text-xl font-semibold tracking-tight">
+              <h2 className="text-2xl font-bold tracking-tight">
                 No learners on the board yet
               </h2>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+              <p className="mt-2 text-base leading-relaxed text-foreground/70">
                 Be the first — start learning, earn XP, and claim the top spot.
               </p>
-              <Button asChild variant="brand" className="mt-6">
-                <Link href="/guides">
+              <div className="mt-6 flex justify-center">
+                <Link href="/guides" className="aq-cta">
                   Start learning
-                  <ArrowRight className="h-4 w-4" />
+                  <ArrowRight className="h-4 w-4" aria-hidden />
                 </Link>
-              </Button>
+              </div>
             </div>
           </Reveal>
         ) : (
           <>
-            {/* Season status strip */}
-            <Reveal className="mt-8">
-              <div className="flex flex-wrap items-center gap-x-5 gap-y-3 rounded-xl border border-border bg-card/50 px-4 py-3 font-mono text-xs text-muted-foreground backdrop-blur-md sm:px-5">
-                <span className="inline-flex items-center gap-1.5">
-                  <Users className="h-3.5 w-3.5 text-accent" />
-                  <span className="font-semibold text-foreground">
-                    <NeonCounter to={xpTotals.learners} />
-                  </span>{" "}
-                  {xpTotals.learners === 1 ? "learner" : "learners"} ranked
-                </span>
-                <span aria-hidden className="hidden h-3.5 w-px bg-border sm:block" />
-                <span className="inline-flex items-center gap-1.5">
-                  <Zap className="h-3.5 w-3.5 text-primary" />
-                  <span className="font-semibold text-foreground">
-                    <NeonCounter to={totalXp} />
-                  </span>{" "}
-                  XP earned
-                </span>
-                <StatusPill tone="primary" className="ml-auto">
-                  resets weekly
-                </StatusPill>
+            {/* Season stat strip */}
+            <Reveal className="mt-10">
+              <div className="aq-card grid grid-cols-2 gap-3 rounded-3xl p-3 sm:grid-cols-3 sm:gap-4 sm:p-4">
+                <StatTile
+                  icon={<Users className="h-4 w-4 text-foreground" aria-hidden />}
+                  accent="#2560e6"
+                  value={nf.format(xpTotals.learners)}
+                  label={xpTotals.learners === 1 ? "learner ranked" : "learners ranked"}
+                />
+                <StatTile
+                  icon={<Zap className="h-4 w-4 text-foreground" aria-hidden />}
+                  accent="#1aa9d6"
+                  value={nf.format(totalXp)}
+                  label="XP earned"
+                />
+                <div
+                  className="aq-tile col-span-2 flex items-center justify-center gap-2 rounded-2xl px-4 py-3 sm:col-span-1"
+                  style={{ "--a": "#7c3aed" } as CSSProperties}
+                >
+                  <Sparkles className="h-4 w-4 text-foreground/80" aria-hidden />
+                  <span className="text-sm font-semibold text-foreground">
+                    Weekly race resets Monday
+                  </span>
+                </div>
               </div>
             </Reveal>
 
@@ -173,12 +210,12 @@ export default async function LeaderboardPage() {
               userTeam={profile?.team_number ?? null}
             />
 
-            <Reveal className="mt-12 text-center">
-              <p className="font-mono text-sm text-muted-foreground">
+            <Reveal className="mt-14 text-center">
+              <p className="text-base text-foreground/70">
                 Not on the board yet?{" "}
                 <Link
                   href="/guides"
-                  className="font-medium text-primary underline-offset-4 hover:underline"
+                  className="font-semibold text-primary underline-offset-4 hover:underline"
                 >
                   Start a lesson
                 </Link>{" "}
@@ -188,6 +225,37 @@ export default async function LeaderboardPage() {
           </>
         )}
       </div>
+    </div>
+  );
+}
+
+function StatTile({
+  icon,
+  accent,
+  value,
+  label,
+}: {
+  icon: React.ReactNode;
+  accent: string;
+  value: string;
+  label: string;
+}) {
+  return (
+    <div
+      className="aq-tile flex items-center gap-3 rounded-2xl px-4 py-3"
+      style={{ "--a": accent } as CSSProperties}
+    >
+      <span className="aq-badge flex h-9 w-9 shrink-0 items-center justify-center">
+        {icon}
+      </span>
+      <span className="min-w-0">
+        <span className="block text-lg font-bold tabular-nums leading-none text-foreground">
+          {value}
+        </span>
+        <span className="mt-1 block truncate text-xs font-medium text-foreground/70">
+          {label}
+        </span>
+      </span>
     </div>
   );
 }

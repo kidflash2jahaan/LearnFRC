@@ -4,23 +4,23 @@ import { cn } from "@/lib/utils";
 
 const variants = {
   primary:
-    "bg-primary text-primary-foreground hover:brightness-110 shadow-[var(--glow-primary)] hover:shadow-[0_0_26px_-4px_var(--primary)]",
+    "bg-gradient-to-br from-[#3b78f2] to-[#149fd0] text-white shadow-[0_10px_22px_rgba(37,96,230,0.26),inset_0_1px_0_rgba(255,255,255,0.5)] hover:brightness-[1.05] hover:-translate-y-0.5",
   brand:
-    "bg-brand text-primary-foreground shadow-[var(--glow-primary)] hover:brightness-110 hover:shadow-[0_0_26px_-4px_var(--primary)]",
+    "bg-gradient-to-br from-[#3b78f2] to-[#149fd0] text-white shadow-[0_10px_22px_rgba(37,96,230,0.26),inset_0_1px_0_rgba(255,255,255,0.5)] hover:brightness-[1.05] hover:-translate-y-0.5",
   secondary:
-    "bg-secondary text-secondary-foreground hover:bg-muted border border-border",
+    "bg-white/70 text-foreground border border-white/80 shadow-[0_6px_16px_rgba(60,95,160,0.12)] hover:bg-white backdrop-blur",
   outline:
-    "border border-border bg-transparent hover:bg-muted text-foreground",
-  ghost: "text-foreground/75 hover:text-foreground hover:bg-muted",
+    "border border-border bg-white/50 text-foreground hover:bg-white backdrop-blur",
+  ghost: "text-foreground/70 hover:text-foreground hover:bg-black/[0.04]",
   destructive:
-    "bg-destructive text-destructive-foreground hover:brightness-110",
+    "bg-destructive text-destructive-foreground hover:brightness-[1.05]",
 } as const;
 
 const sizes = {
-  sm: "h-9 px-3.5 text-sm gap-1.5 rounded-lg",
-  md: "h-11 px-5 text-sm gap-2 rounded-xl",
-  lg: "h-12 px-7 text-[0.95rem] gap-2 rounded-xl",
-  icon: "h-10 w-10 rounded-lg",
+  sm: "h-9 px-4 text-sm gap-1.5 rounded-xl",
+  md: "h-11 px-5 text-sm gap-2 rounded-2xl",
+  lg: "h-12 px-7 text-[0.95rem] gap-2 rounded-2xl",
+  icon: "h-10 w-10 rounded-xl",
 } as const;
 
 export interface ButtonProps

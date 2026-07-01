@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import type { CSSProperties } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
@@ -25,12 +26,6 @@ import { Markdown } from "@/components/markdown";
 import { LessonActions } from "@/components/lesson/lesson-actions";
 import { LessonComplete } from "@/components/lesson/lesson-complete";
 import { Reveal, Stagger, StaggerItem } from "@/components/motion/reveal";
-import {
-  TerminalFrame,
-  StatusPill,
-  TypeLine,
-  NeonCounter,
-} from "@/components/motion/terminal";
 import { JsonLd } from "@/components/json-ld";
 import { cn } from "@/lib/utils";
 import type { Resource, QuizQuestion } from "@/lib/types";
@@ -101,9 +96,26 @@ export default async function LessonPage({
   const total = flat.length;
   const pct = total ? Math.round((doneInDept / total) * 100) : 0;
   const deptGradient = `linear-gradient(135deg, ${meta.color}, ${meta.to})`;
+  const accentStyle = { "--a": meta.color } as CSSProperties;
 
   return (
-    <div className="mx-auto max-w-7xl px-4 pt-24 pb-20 sm:px-6 lg:px-8">
+    <div className="relative mx-auto max-w-7xl px-4 pt-24 pb-20 sm:px-6 lg:px-8">
+      {/* ambient glows */}
+      <div aria-hidden className="aq-glow -z-10">
+        <span
+          className="left-[-6%] top-[6%] h-72 w-72 opacity-50"
+          style={{ background: "radial-gradient(circle, #2560e6, transparent 70%)" }}
+        />
+        <span
+          className="right-[-4%] top-[30%] h-80 w-80 opacity-40"
+          style={{ background: `radial-gradient(circle, ${meta.color}, transparent 70%)` }}
+        />
+        <span
+          className="bottom-[8%] left-[24%] h-72 w-72 opacity-30"
+          style={{ background: "radial-gradient(circle, #1aa9d6, transparent 70%)" }}
+        />
+      </div>
+
       <JsonLd
         data={{
           "@context": "https://schema.org",
@@ -116,75 +128,79 @@ export default async function LessonPage({
           provider: { "@type": "Organization", name: "LearnFRC", url: SITE },
         }}
       />
-      {/* breadcrumb — terminal path */}
-      <Reveal>
-        <nav
-          className="flex flex-wrap items-center gap-1.5 font-mono text-[0.8rem] text-muted-foreground"
-          aria-label="Breadcrumb"
-        >
-          <Link href="/guides" className="transition-colors hover:text-primary">
-            guides
-          </Link>
-          <span className="text-muted-foreground/50">/</span>
-          <Link
-            href={`/guides/${dept.slug}`}
-            className="transition-colors hover:text-primary"
-          >
-            {dept.slug}
-          </Link>
-          <span className="text-muted-foreground/50">/</span>
-          <span className="truncate text-primary">{les.slug}</span>
-        </nav>
-      </Reveal>
 
-      <div className="mt-6 grid gap-10 lg:grid-cols-[1fr_300px] lg:gap-12">
+      {/* breadcrumb */}
+      <nav
+        className="aq-rise aq-rise-1 flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground"
+        aria-label="Breadcrumb"
+      >
+        <Link href="/guides" className="transition-colors hover:text-primary">
+          Guides
+        </Link>
+        <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50" aria-hidden />
+        <Link
+          href={`/guides/${dept.slug}`}
+          className="transition-colors hover:text-primary"
+        >
+          {dept.name}
+        </Link>
+        <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50" aria-hidden />
+        <span className="truncate font-medium text-foreground">{les.title}</span>
+      </nav>
+
+      <div className="mt-6 grid gap-10 lg:grid-cols-[1fr_320px] lg:gap-12">
         {/* main */}
         <article className="min-w-0">
-          <Reveal>
-            <TypeLine
-              prompt="~/learnfrc $"
-              text={`open ${dept.slug}/${les.slug}`}
-              className="text-xs text-muted-foreground"
-            />
-            <Stagger className="mt-4 flex flex-wrap items-center gap-2.5" stagger={0.06}>
+          {/* hero: the reading experience */}
+          <header className="aq-rise aq-rise-2">
+            <Stagger className="flex flex-wrap items-center gap-2.5" stagger={0.06}>
+              {/* department chip w/ glossy badge */}
               <StaggerItem>
-                <span
-                  className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 font-mono text-xs font-medium"
-                  style={{
-                    color: meta.color,
-                    borderColor: `color-mix(in srgb, ${meta.color} 40%, var(--border))`,
-                    background: `color-mix(in srgb, ${meta.color} 10%, transparent)`,
-                  }}
+                <Link
+                  href={`/guides/${dept.slug}`}
+                  className="aq-chip aq-card-hover gap-2 !py-1 !pl-1.5 !pr-3.5"
+                  style={accentStyle}
                 >
-                  <Icon name={meta.icon} className="h-3.5 w-3.5" />
-                  {dept.name}
-                </span>
+                  <span className="aq-badge flex h-7 w-7 items-center justify-center rounded-full" style={accentStyle}>
+                    <Icon name={meta.icon} className="h-4 w-4" />
+                  </span>
+                  <span className="font-medium">{dept.name}</span>
+                </Link>
               </StaggerItem>
-              <StaggerItem className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/40 px-3 py-1 font-mono text-xs text-muted-foreground">
-                lesson {idx + 1} / {flat.length}
+              <StaggerItem className="aq-chip font-mono text-xs">
+                Lesson {idx + 1} / {flat.length}
               </StaggerItem>
-              <StaggerItem className="inline-flex items-center gap-1.5 rounded-full border border-accent/30 bg-accent/5 px-3 py-1 font-mono text-xs text-accent">
+              <StaggerItem className="aq-chip gap-1.5 font-mono text-xs text-primary">
                 <Zap className="h-3.5 w-3.5" /> +10 XP
               </StaggerItem>
-              <StaggerItem>
-                <StatusPill tone={isCompleted ? "primary" : "accent"}>
-                  {isCompleted ? "completed" : "in progress"}
-                </StatusPill>
+              <StaggerItem
+                className={cn(
+                  "aq-chip gap-1.5 font-mono text-xs",
+                  isCompleted ? "text-primary" : "text-accent"
+                )}
+              >
+                {isCompleted ? (
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                ) : (
+                  <Circle className="h-3.5 w-3.5" />
+                )}
+                {isCompleted ? "Completed" : "In progress"}
               </StaggerItem>
             </Stagger>
 
-            <h1 className="mt-4 text-balance font-display text-3xl font-bold tracking-tight sm:text-4xl lg:text-[2.7rem] lg:leading-[1.08]">
+            <h1 className="mt-5 text-balance font-display text-3xl font-bold tracking-tight sm:text-4xl lg:text-[2.7rem] lg:leading-[1.08]">
               {les.title}
             </h1>
             {les.summary && (
-              <p className="mt-3 max-w-2xl text-pretty text-lg leading-relaxed text-muted-foreground">
+              <p className="mt-3 max-w-2xl text-pretty text-lg leading-relaxed text-foreground/70">
                 {les.summary}
               </p>
             )}
-          </Reveal>
+          </header>
 
-          <Reveal delay={0.05}>
-            <div className="mt-6 border-y border-border py-5">
+          {/* actions bar */}
+          <div className="aq-rise aq-rise-3 mt-6">
+            <div className="aq-card p-4 sm:p-5">
               <LessonActions
                 lessonId={les.id}
                 deptSlug={dept.slug}
@@ -196,47 +212,57 @@ export default async function LessonPage({
               />
               {!user && (
                 <p className="mt-3 flex items-center gap-1.5 text-sm text-muted-foreground">
-                  <Info className="h-4 w-4" />
-                  <Link href={`/login?next=${encodeURIComponent(lessonPath)}`} className="text-primary hover:underline">
+                  <Info className="h-4 w-4 text-primary" />
+                  <Link
+                    href={`/login?next=${encodeURIComponent(lessonPath)}`}
+                    className="font-medium text-primary hover:underline"
+                  >
                     Sign in
                   </Link>{" "}
                   to track progress, earn XP, and save lessons.
                 </p>
               )}
             </div>
-          </Reveal>
+          </div>
 
           {/* content */}
-          <div className="mt-8">
+          <Reveal className="mt-8">
             <Markdown content={les.content} />
-          </div>
+          </Reveal>
 
           {/* key takeaways */}
           {takeaways.length > 0 && (
             <Reveal>
-              <TerminalFrame title="key_takeaways.md" className="mt-10" glow>
-                <h2 className="flex items-center gap-2 font-display text-lg font-semibold">
-                  <Lightbulb className="h-5 w-5 text-primary" />
+              <section className="aq-card aq-reveal mt-10 p-6">
+                <h2 className="flex items-center gap-2.5 font-display text-xl font-semibold">
+                  <span className="aq-icon h-9 w-9">
+                    <Lightbulb className="h-5 w-5" />
+                  </span>
                   Key takeaways
                 </h2>
-                <ul className="mt-4 space-y-2.5">
+                <ul className="mt-4 space-y-3">
                   {takeaways.map((t, i) => (
-                    <li key={i} className="flex gap-2.5 text-foreground/85">
+                    <li key={i} className="flex gap-3 text-foreground/85">
                       <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
-                      <span>{t}</span>
+                      <span className="leading-relaxed">{t}</span>
                     </li>
                   ))}
                 </ul>
-              </TerminalFrame>
+              </section>
             </Reveal>
           )}
 
           {/* resources */}
           {resources.length > 0 && (
             <Reveal>
-              <TerminalFrame title="resources.links" className="mt-8">
-                <h2 className="flex items-center gap-2 font-display text-lg font-semibold">
-                  <ExternalLink className="h-5 w-5 text-accent" />
+              <section className="aq-card aq-reveal mt-8 p-6">
+                <h2 className="flex items-center gap-2.5 font-display text-xl font-semibold">
+                  <span
+                    className="aq-icon h-9 w-9"
+                    style={{ background: "color-mix(in srgb, var(--accent) 12%, transparent)", color: "var(--accent)" }}
+                  >
+                    <ExternalLink className="h-5 w-5" />
+                  </span>
                   Go deeper
                 </h2>
                 <ul className="mt-4 space-y-2.5">
@@ -256,7 +282,7 @@ export default async function LessonPage({
                     </li>
                   ))}
                 </ul>
-              </TerminalFrame>
+              </section>
             </Reveal>
           )}
 
@@ -277,9 +303,9 @@ export default async function LessonPage({
               <StaggerItem>
                 <Link
                   href={`/guides/${dept.slug}/${prev.moduleSlug}/${prev.slug}`}
-                  className="group flex h-full items-center gap-3 rounded-2xl border border-border bg-card p-5 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-[var(--glow-primary)]"
+                  className="aq-card aq-card-hover group flex h-full items-center gap-3 p-5"
                 >
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors group-hover:border-primary/50 group-hover:text-primary">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground transition-colors group-hover:border-primary/50 group-hover:text-primary">
                     <ArrowLeft className="h-4 w-4" />
                   </span>
                   <span className="min-w-0">
@@ -299,9 +325,9 @@ export default async function LessonPage({
               <StaggerItem>
                 <Link
                   href={`/guides/${dept.slug}/${next.moduleSlug}/${next.slug}`}
-                  className="group flex h-full flex-row-reverse items-center gap-3 rounded-2xl border border-border bg-card p-5 text-right transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-[var(--glow-primary)]"
+                  className="aq-card aq-card-hover group flex h-full flex-row-reverse items-center gap-3 p-5 text-right"
                 >
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors group-hover:border-primary/50 group-hover:text-primary">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground transition-colors group-hover:border-primary/50 group-hover:text-primary">
                     <ArrowRight className="h-4 w-4" />
                   </span>
                   <span className="min-w-0">
@@ -318,9 +344,9 @@ export default async function LessonPage({
               <StaggerItem>
                 <Link
                   href={`/guides/${dept.slug}`}
-                  className="group flex h-full flex-row-reverse items-center gap-3 rounded-2xl border border-border bg-card p-5 text-right transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-[var(--glow-primary)]"
+                  className="aq-card aq-card-hover group flex h-full flex-row-reverse items-center gap-3 p-5 text-right"
                 >
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors group-hover:border-primary/50 group-hover:text-primary">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground transition-colors group-hover:border-primary/50 group-hover:text-primary">
                     <ArrowRight className="h-4 w-4" />
                   </span>
                   <span className="min-w-0">
@@ -337,35 +363,28 @@ export default async function LessonPage({
           </Stagger>
         </article>
 
-        {/* sidebar — progress + contents file tree */}
+        {/* sidebar — progress + tidy contents rail */}
         <aside className="hidden lg:block">
           <div className="sticky top-24 space-y-4">
             {user && (
               <Reveal>
-                <div className="rounded-2xl border border-border bg-card p-5">
-                  <div className="flex items-center justify-between font-mono text-[0.7rem] uppercase tracking-[0.14em] text-muted-foreground">
-                    <span>// your progress</span>
-                    <span
-                      className="h-1.5 w-1.5 rounded-full bg-accent animate-glow-pulse"
-                      style={{ boxShadow: "0 0 8px var(--accent)" }}
-                      aria-hidden
-                    />
-                  </div>
+                <div className="aq-card aq-reveal p-5">
+                  <div className="aq-eyebrow">Your progress</div>
                   <div className="mt-3 flex items-baseline gap-2">
                     <span className="font-display text-3xl font-bold text-foreground">
-                      <NeonCounter to={pct} suffix="%" />
+                      {pct}%
                     </span>
-                    <span className="font-mono text-sm text-muted-foreground">
+                    <span className="text-sm text-muted-foreground">
                       through {dept.name}
                     </span>
                   </div>
-                  <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-muted">
+                  <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
                     <div
-                      className="h-full rounded-full bg-gradient-to-r from-accent to-primary shadow-[0_0_10px_var(--primary)]"
-                      style={{ width: `${pct}%` }}
+                      className="h-full rounded-full"
+                      style={{ width: `${pct}%`, backgroundImage: deptGradient }}
                     />
                   </div>
-                  <div className="mt-2 font-mono text-xs text-muted-foreground">
+                  <div className="mt-2 text-xs text-muted-foreground">
                     {doneInDept} / {total} lessons complete
                   </div>
                 </div>
@@ -373,17 +392,17 @@ export default async function LessonPage({
             )}
 
             <Reveal delay={0.05}>
-              <TerminalFrame
-                title="contents.md"
-                bodyClassName="max-h-[calc(100vh-15rem)] overflow-y-auto p-3"
+              <nav
+                aria-label="Lesson contents"
+                className="aq-card aq-reveal max-h-[calc(100vh-15rem)] overflow-y-auto p-4"
               >
                 <Link
                   href={`/guides/${dept.slug}`}
-                  className="mb-3 flex items-center gap-2 border-b border-border px-1 pb-3"
+                  className="mb-3 flex items-center gap-2.5 border-b border-border pb-3"
                 >
                   <span
-                    className="flex h-8 w-8 items-center justify-center rounded-lg text-primary-foreground"
-                    style={{ backgroundImage: deptGradient }}
+                    className="aq-badge flex h-9 w-9 items-center justify-center rounded-xl"
+                    style={accentStyle}
                   >
                     <Icon name={meta.icon} className="h-4 w-4" />
                   </span>
@@ -405,10 +424,10 @@ export default async function LessonPage({
                                 href={`/guides/${dept.slug}/${m.slug}/${l.slug}`}
                                 aria-current={active ? "page" : undefined}
                                 className={cn(
-                                  "flex items-center gap-2 rounded-lg border-l-2 px-2 py-1.5 text-sm transition-colors",
+                                  "flex items-center gap-2 rounded-xl px-2.5 py-2 text-sm transition-colors",
                                   active
-                                    ? "border-primary bg-primary/10 font-medium text-primary"
-                                    : "border-transparent text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                                    ? "bg-primary/10 font-medium text-primary"
+                                    : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
                                 )}
                               >
                                 {done ? (
@@ -425,7 +444,7 @@ export default async function LessonPage({
                     </div>
                   ))}
                 </div>
-              </TerminalFrame>
+              </nav>
             </Reveal>
           </div>
         </aside>

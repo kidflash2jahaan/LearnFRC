@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Calendar, Zap, Trophy, BookOpen } from "lucide-react";
@@ -7,7 +8,6 @@ import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Icon } from "@/lib/icon-map";
 import { Reveal, Stagger, StaggerItem } from "@/components/motion/reveal";
-import { NeonCounter, StatusPill } from "@/components/motion/terminal";
 import { ShareButton } from "@/components/profile/share-button";
 import type { Profile } from "@/lib/types";
 
@@ -71,73 +71,100 @@ export default async function PublicProfilePage({
     .filter(Boolean) as Ach[];
 
   const stats = [
-    { label: "XP", value: p.xp, icon: Zap, color: "var(--color-primary)" },
-    { label: "Level", value: level, icon: Trophy, color: "var(--color-accent)" },
-    { label: "Lessons", value: lessons, icon: BookOpen, color: "var(--color-success)" },
-    { label: "Badges", value: achievements.length, icon: Trophy, color: "var(--color-gold)" },
+    { label: "XP", value: p.xp, icon: Zap, color: "#2560e6" },
+    { label: "Level", value: level, icon: Trophy, color: "#1aa9d6" },
+    { label: "Lessons", value: lessons, icon: BookOpen, color: "#12b565" },
+    { label: "Badges", value: achievements.length, icon: Trophy, color: "#e0a415" },
   ];
 
   return (
     <main className="relative overflow-hidden">
-      {/* Ambient background */}
+      {/* Ambient light glows the glass refracts */}
       <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute inset-0 hud-grid opacity-50 mask-b-faded" />
-        <div className="absolute left-1/2 top-[-10%] h-[420px] w-[640px] -translate-x-1/2 rounded-full opacity-20 blur-3xl aurora-bg" />
+        <div className="absolute left-1/2 top-[-8%] h-[440px] w-[720px] -translate-x-1/2 rounded-full bg-primary/25 opacity-60 blur-3xl" />
+        <div className="absolute right-[6%] top-[24%] h-[320px] w-[320px] rounded-full bg-accent/25 opacity-50 blur-3xl" />
+        <div className="absolute left-[4%] top-[46%] h-[300px] w-[300px] rounded-full bg-[#8b7fff]/20 opacity-50 blur-3xl" />
       </div>
 
-      <div className="mx-auto max-w-3xl px-4 pt-28 pb-20 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-4xl px-4 pt-28 pb-20 sm:px-6 lg:px-8">
+        {/* Hero — the learner card, front and center */}
         <Reveal>
-          <div className="flex flex-col items-center text-center">
-            <p className="font-mono text-xs uppercase tracking-[0.2em] text-accent">
-              // learner profile
-            </p>
-            <Avatar
-              name={displayName}
-              src={p.avatar_url}
-              seed={p.id}
-              className="mt-4 h-24 w-24 text-2xl ring-2 ring-primary/40"
+          <div className="aq-glass aq-rise aq-rise-1 relative overflow-hidden rounded-[28px] p-8 sm:p-10">
+            <div
+              aria-hidden
+              className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-primary/15 blur-3xl"
             />
-            <h1 className="mt-4 text-3xl font-bold tracking-tight">
-              <span className="text-gradient">{displayName}</span>
-            </h1>
-            <p className="mt-1 font-mono text-sm text-muted-foreground">
-              @{p.username}
-            </p>
-            <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
-              <Badge variant="primary">{ROLE_LABEL[p.role] ?? "Member"}</Badge>
-              {p.team_number && (
-                <Badge variant="accent">Team {p.team_number}</Badge>
-              )}
-              <Badge variant="outline">
-                <Calendar className="h-3 w-3" />
-                Joined {new Date(p.created_at).toLocaleDateString(undefined, { month: "short", year: "numeric" })}
-              </Badge>
-            </div>
-            {p.bio && (
-              <p className="mt-4 max-w-md text-pretty text-muted-foreground">
-                {p.bio}
-              </p>
-            )}
-            <div className="mt-5">
-              <ShareButton username={username} name={displayName} />
+            <div className="relative flex flex-col items-center text-center sm:flex-row sm:items-center sm:text-left sm:gap-7">
+              <Avatar
+                name={displayName}
+                src={p.avatar_url}
+                seed={p.id}
+                className="aq-rise aq-rise-1 h-28 w-28 shrink-0 text-3xl shadow-[0_16px_38px_rgba(40,80,150,0.22)] ring-4 ring-white/80"
+              />
+              <div className="mt-5 min-w-0 sm:mt-0">
+                <p className="aq-eyebrow aq-rise aq-rise-1 justify-center sm:justify-start">
+                  Learner profile
+                </p>
+                <h1 className="aq-display aq-rise aq-rise-2 mt-2 text-4xl font-extrabold leading-tight sm:text-5xl">
+                  <span
+                    style={{
+                      background: "linear-gradient(120deg,#2560e6,#1aa9d6)",
+                      WebkitBackgroundClip: "text",
+                      backgroundClip: "text",
+                      color: "transparent",
+                    }}
+                  >
+                    {displayName}
+                  </span>
+                </h1>
+                <p className="aq-rise aq-rise-2 mt-1 font-mono text-sm text-muted-foreground">
+                  @{p.username}
+                </p>
+                <div className="aq-rise aq-rise-3 mt-4 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+                  <Badge variant="primary">{ROLE_LABEL[p.role] ?? "Member"}</Badge>
+                  {p.team_number && (
+                    <Badge variant="accent">Team {p.team_number}</Badge>
+                  )}
+                  <Badge variant="outline">
+                    <Calendar className="h-3 w-3" />
+                    Joined{" "}
+                    {new Date(p.created_at).toLocaleDateString(undefined, {
+                      month: "short",
+                      year: "numeric",
+                    })}
+                  </Badge>
+                </div>
+                {p.bio && (
+                  <p className="aq-rise aq-rise-3 mt-4 max-w-md text-pretty text-base leading-relaxed text-foreground/70">
+                    {p.bio}
+                  </p>
+                )}
+                <div className="aq-rise aq-rise-4 mt-6 flex justify-center sm:justify-start">
+                  <ShareButton username={username} name={displayName} />
+                </div>
+              </div>
             </div>
           </div>
         </Reveal>
 
-        <Stagger className="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-4">
+        {/* Stats — a row of clay tiles */}
+        <Stagger className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
           {stats.map((s) => (
             <StaggerItem key={s.label}>
-              <div className="group relative overflow-hidden rounded-xl border border-border bg-card/60 p-5 text-center backdrop-blur transition-all duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-[var(--glow-primary)]">
-                <div
-                  aria-hidden
-                  className="pointer-events-none absolute -right-8 -top-8 h-20 w-20 rounded-full opacity-[0.14] blur-2xl transition-opacity duration-300 group-hover:opacity-30"
-                  style={{ background: s.color }}
-                />
-                <s.icon className="mx-auto h-5 w-5" style={{ color: s.color }} />
-                <div className="mt-2 font-display text-2xl font-bold tabular-nums">
-                  <NeonCounter to={s.value} />
+              <div
+                className="aq-tile group flex flex-col items-center rounded-3xl p-5 text-center"
+                style={{ "--a": s.color } as CSSProperties}
+              >
+                <span
+                  className="aq-badge flex h-11 w-11 items-center justify-center rounded-2xl"
+                  style={{ "--a": s.color } as CSSProperties}
+                >
+                  <s.icon className="h-5 w-5" />
+                </span>
+                <div className="aq-display mt-3 text-3xl font-extrabold tabular-nums text-foreground">
+                  {s.value.toLocaleString()}
                 </div>
-                <div className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+                <div className="font-mono text-[11px] uppercase tracking-wider text-foreground/60">
                   {s.label}
                 </div>
               </div>
@@ -145,42 +172,45 @@ export default async function PublicProfilePage({
           ))}
         </Stagger>
 
-        <Reveal className="mt-10">
-          <div className="mb-4 flex items-baseline justify-between">
+        {/* Achievements — earned badges */}
+        <Reveal className="mt-12">
+          <div className="mb-5 flex items-end justify-between gap-4">
             <div>
-              <span className="inline-flex items-center gap-2 font-mono text-xs uppercase tracking-[0.2em] text-accent">
-                <span aria-hidden className="h-px w-6 bg-gradient-to-r from-accent to-transparent" />
-                unlocks
-              </span>
-              <h2 className="mt-2 text-xl font-bold tracking-tight">Achievements</h2>
+              <p className="aq-eyebrow">Every badge, earned</p>
+              <h2 className="aq-display mt-2 text-2xl font-bold sm:text-3xl">
+                Achievements
+              </h2>
             </div>
             {achievements.length > 0 && (
-              <StatusPill tone="primary" pulse={false}>
-                {achievements.length} earned
-              </StatusPill>
+              <Badge variant="primary">{achievements.length} earned</Badge>
             )}
           </div>
+
           {achievements.length === 0 ? (
-            <p className="rounded-xl border border-dashed border-border bg-card/40 p-6 text-center font-mono text-sm text-muted-foreground">
-              // no badges yet
-            </p>
+            <div className="aq-card flex flex-col items-center gap-3 rounded-3xl border-dashed p-10 text-center">
+              <span className="aq-icon flex h-12 w-12 items-center justify-center">
+                <Trophy className="h-6 w-6" />
+              </span>
+              <p className="text-base text-foreground/70">
+                No badges yet — the first ones unlock during build season.
+              </p>
+            </div>
           ) : (
-            <Stagger className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <Stagger className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               {achievements.map((a) => (
                 <StaggerItem key={a.slug}>
-                  <div className="group flex items-center gap-3 rounded-xl border border-primary/25 bg-card/70 p-4 backdrop-blur transition-all duration-300 hover:-translate-y-1 hover:border-primary/50 hover:shadow-[var(--glow-primary)]">
+                  <div className="aq-card aq-card-hover flex items-center gap-4 rounded-3xl p-5">
                     <span
-                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-primary-foreground shadow-[var(--glow-primary)]"
-                      style={{
-                        backgroundImage:
-                          "linear-gradient(135deg, var(--color-primary), var(--color-accent))",
-                      }}
+                      className="aq-badge flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl"
+                      style={{ "--a": "#2560e6" } as CSSProperties}
                     >
-                      <Icon name={a.icon} className="h-5 w-5" />
+                      <Icon name={a.icon} className="h-6 w-6" />
                     </span>
                     <div className="min-w-0">
-                      <div className="truncate text-sm font-semibold">{a.name}</div>
-                      <div className="truncate text-xs text-muted-foreground">
+                      <div className="truncate text-base font-semibold text-foreground">
+                        {a.name}
+                      </div>
+                      <div className="truncate text-sm text-foreground/65">
                         {a.description}
                       </div>
                     </div>

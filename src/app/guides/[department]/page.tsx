@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import type { CSSProperties } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
@@ -17,10 +18,6 @@ import { getDepartmentBySlug, getCompletedLessonIds, flattenLessons } from "@/li
 import { getSession } from "@/lib/auth";
 import { deptMeta } from "@/lib/departments";
 import { Icon } from "@/lib/icon-map";
-import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
-import { Reveal } from "@/components/motion/reveal";
-import { StatusPill, TypeLine, NeonCounter } from "@/components/motion/terminal";
 import { DepartmentModules } from "@/components/guides/department-modules";
 import { JsonLd } from "@/components/json-ld";
 import type { Resource } from "@/lib/types";
@@ -74,8 +71,13 @@ export default async function DepartmentPage({
   const prereqs = (dept.prerequisites ?? []) as string[];
   const sources = (dept.sources ?? []) as Resource[];
 
+  const accent = meta.color;
+
   return (
-    <div className="relative">
+    <div
+      data-theme="arena"
+      className="aq-root relative isolate overflow-hidden text-foreground"
+    >
       <JsonLd
         data={{
           "@context": "https://schema.org",
@@ -91,117 +93,172 @@ export default async function DepartmentPage({
         }}
       />
 
-      {/* hero */}
-      <section className="relative overflow-hidden border-b border-border">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 -z-10 opacity-[0.14]"
-          style={{ background: `radial-gradient(60% 80% at 20% 0%, ${meta.color}, transparent 60%)` }}
+      {/* ambient light the glass refracts */}
+      <div className="aq-glow" aria-hidden>
+        <span
+          className="h-[620px] w-[620px] opacity-60"
+          style={{
+            left: "-180px",
+            top: "-220px",
+            background: `radial-gradient(circle, ${accent}, transparent 70%)`,
+          }}
         />
-        <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 bg-grid mask-b-faded opacity-50" />
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-px"
-          style={{ background: `linear-gradient(90deg, transparent, ${meta.color}, transparent)` }}
+        <span
+          className="h-[560px] w-[560px] opacity-45"
+          style={{
+            right: "-160px",
+            top: "-120px",
+            background: "radial-gradient(circle, #6ff0ea, transparent 70%)",
+          }}
         />
+        <span
+          className="h-[520px] w-[520px] opacity-40"
+          style={{
+            left: "30%",
+            top: "420px",
+            background: "radial-gradient(circle, #c8b6ff, transparent 70%)",
+          }}
+        />
+      </div>
 
-        <div className="mx-auto max-w-5xl px-4 pt-28 pb-12 sm:px-6 lg:px-8">
-          <Reveal>
-            <Link
-              href="/guides"
-              className="group/back inline-flex items-center gap-1.5 font-mono text-xs text-muted-foreground transition-colors hover:text-primary"
-            >
-              <ArrowLeft className="h-4 w-4 transition-transform group-hover/back:-translate-x-0.5" />
-              cd ../guides
-            </Link>
-          </Reveal>
+      {/* ============================ HERO ============================ */}
+      <section className="mx-auto max-w-6xl px-4 pb-10 pt-28 sm:px-6 lg:px-8 lg:pt-32">
+        <Link
+          href="/guides"
+          className="aq-rise aq-rise-1 group/back inline-flex items-center gap-1.5 rounded-full px-1 text-sm font-medium text-muted-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        >
+          <ArrowLeft className="h-4 w-4 transition-transform group-hover/back:-translate-x-0.5" />
+          All departments
+        </Link>
 
-          <Reveal delay={0.04}>
-            <p className="mt-4 font-mono text-xs text-foreground/70">
-              <TypeLine prompt="~/learnfrc/guides $" text={`open ${dept.slug}`} />
+        <div className="mt-6 grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-12">
+          {/* hero copy */}
+          <div>
+            <p className="aq-rise aq-rise-1 aq-eyebrow">
+              <Sparkles className="h-3.5 w-3.5" /> Department guide
             </p>
-          </Reveal>
 
-          <Reveal delay={0.08}>
-            <div className="mt-6 flex flex-col gap-5 sm:flex-row sm:items-center">
+            <div className="aq-rise aq-rise-2 mt-4 flex items-center gap-4">
               <span
-                className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl text-white shadow-[var(--shadow-md)]"
-                style={{ backgroundImage: `linear-gradient(135deg, ${meta.color}, ${meta.to})` }}
+                className="aq-badge aq-badge-bob flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl"
+                style={{ "--a": accent } as CSSProperties}
               >
                 <Icon name={meta.icon} className="h-8 w-8" />
               </span>
-              <div>
-                <h1 className="text-balance font-display text-3xl font-bold tracking-tight sm:text-4xl">
+              <h1 className="aq-display text-balance text-4xl font-extrabold leading-[1.05] sm:text-5xl">
+                <span
+                  style={{
+                    background: `linear-gradient(120deg, ${accent}, #1aa9d6)`,
+                    WebkitBackgroundClip: "text",
+                    backgroundClip: "text",
+                    color: "transparent",
+                  }}
+                >
                   {dept.name}
-                </h1>
-                <p className="mt-1.5 text-pretty text-lg text-muted-foreground">
-                  {dept.tagline}
-                </p>
-              </div>
+                </span>
+              </h1>
             </div>
-          </Reveal>
 
-          {dept.description && (
-            <Reveal delay={0.12}>
-              <p className="mt-6 max-w-3xl text-pretty leading-relaxed text-foreground/85">
+            {dept.tagline && (
+              <p className="aq-rise aq-rise-2 mt-4 max-w-2xl text-pretty text-xl font-medium text-foreground/80">
+                {dept.tagline}
+              </p>
+            )}
+
+            {dept.description && (
+              <p className="aq-rise aq-rise-3 mt-3 max-w-2xl text-pretty text-lg leading-relaxed text-foreground/70">
                 {dept.description}
               </p>
-            </Reveal>
-          )}
+            )}
 
-          <Reveal delay={0.16}>
-            <div className="mt-6 flex flex-wrap items-center gap-2.5">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card/60 px-3 py-1 font-mono text-xs text-muted-foreground">
-                <Layers className="h-3.5 w-3.5" style={{ color: meta.color }} />
-                <NeonCounter to={totalModules} duration={1} /> modules
+            <div className="aq-rise aq-rise-3 mt-6 flex flex-wrap items-center gap-2.5">
+              <span className="aq-chip">
+                <Layers className="h-4 w-4" style={{ color: accent }} />
+                {totalModules} modules
               </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card/60 px-3 py-1 font-mono text-xs text-muted-foreground">
-                <BookOpen className="h-3.5 w-3.5" style={{ color: meta.color }} />
-                <NeonCounter to={totalLessons} duration={1.2} /> lessons
+              <span className="aq-chip">
+                <BookOpen className="h-4 w-4" style={{ color: accent }} />
+                {totalLessons} lessons
               </span>
               {user && doneCount > 0 && (
-                <StatusPill tone="primary">{pct}% complete</StatusPill>
+                <span className="aq-chip font-semibold text-primary">
+                  {pct}% complete
+                </span>
               )}
             </div>
-          </Reveal>
 
-          <Reveal delay={0.2}>
-            <div className="mt-7 flex flex-wrap items-center gap-3">
-              <Button asChild variant="brand" size="lg">
-                <Link href={ctaHref}>
-                  {ctaLabel}
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-              </Button>
+            <div className="aq-rise aq-rise-4 mt-7 flex flex-wrap items-center gap-3">
+              <Link
+                href={ctaHref}
+                className="aq-cta inline-flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              >
+                {ctaLabel}
+                <ArrowRight className="h-4 w-4" />
+              </Link>
               {pct === 100 && (
-                <Button asChild variant="outline" size="lg">
-                  <Link href={`/certificate/${dept.slug}`}>
-                    <Award className="h-4 w-4" /> Get certificate
-                  </Link>
-                </Button>
-              )}
-              {user && (
-                <div className="flex min-w-[180px] flex-1 items-center gap-3">
-                  <Progress
-                    value={pct}
-                    style={{ background: `linear-gradient(90deg, ${meta.color}, ${meta.to})` }}
-                  />
-                  <span className="font-mono text-sm font-medium">{pct}%</span>
-                </div>
+                <Link
+                  href={`/certificate/${dept.slug}`}
+                  className="aq-ghost inline-flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                >
+                  <Award className="h-4 w-4" /> Get certificate
+                </Link>
               )}
             </div>
-          </Reveal>
+          </div>
+
+          {/* progress panel */}
+          <aside className="aq-rise aq-rise-4 lg:pt-1">
+            <div
+              className="aq-glass aq-sheen relative overflow-hidden rounded-3xl p-6"
+              style={{ "--a": accent } as CSSProperties}
+            >
+              <p className="aq-eyebrow">Your progress</p>
+              <div className="mt-4 flex items-end gap-2">
+                <span
+                  className="aq-display text-5xl font-extrabold leading-none"
+                  style={{ color: accent }}
+                >
+                  {pct}%
+                </span>
+                <span className="mb-1 text-sm font-medium text-foreground/70">
+                  {doneCount} of {totalLessons} lessons
+                </span>
+              </div>
+              <div className="mt-4 h-2.5 w-full overflow-hidden rounded-full bg-primary/10">
+                <div
+                  className="aq-bar-anim h-full rounded-full"
+                  style={{
+                    width: `${pct}%`,
+                    background: `linear-gradient(90deg, ${accent}, #1aa9d6)`,
+                  }}
+                />
+              </div>
+              {!user && (
+                <p className="mt-4 text-sm leading-relaxed text-foreground/70">
+                  Reading is free — no login needed. Sign in to track what
+                  you&apos;ve mastered through the season.
+                </p>
+              )}
+              {user && doneCount === totalLessons && totalLessons > 0 && (
+                <p className="mt-4 text-sm font-medium text-foreground/80">
+                  Department complete. Gracious professionalism, well earned.
+                </p>
+              )}
+            </div>
+          </aside>
         </div>
       </section>
 
-      <div className="mx-auto grid max-w-5xl gap-10 px-4 py-12 sm:px-6 lg:grid-cols-3 lg:gap-12 lg:px-8">
+      {/* ============================ BODY ============================ */}
+      <div className="mx-auto grid max-w-6xl gap-10 px-4 py-10 sm:px-6 lg:grid-cols-3 lg:gap-12 lg:px-8 lg:py-14">
         {/* main: modules */}
-        <div className="lg:col-span-2">
+        <div className="aq-reveal lg:col-span-2">
           <div className="mb-5 flex items-end justify-between gap-4">
-            <h2 className="flex items-center gap-2 font-display text-xl font-bold tracking-tight">
-              <span className="font-mono text-primary">{"//"}</span> Curriculum
-            </h2>
-            <span className="font-mono text-xs text-muted-foreground">
+            <div>
+              <p className="aq-eyebrow">The curriculum</p>
+              <h2 className="aq-display mt-1 text-2xl font-bold">Modules &amp; lessons</h2>
+            </div>
+            <span className="hidden shrink-0 text-sm text-muted-foreground sm:block">
               {totalModules} modules · {totalLessons} lessons
             </span>
           </div>
@@ -209,75 +266,85 @@ export default async function DepartmentPage({
             departmentSlug={dept.slug}
             modules={dept.modules}
             completedIds={[...completed]}
-            accent={meta.color}
+            accent={accent}
           />
         </div>
 
         {/* sidebar */}
         <aside className="space-y-5 lg:sticky lg:top-24 lg:self-start">
           {learn.length > 0 && (
-            <Reveal className="rounded-xl border border-border bg-card/60 p-5 backdrop-blur-md transition-all duration-300 hover:border-primary/40 hover:shadow-[var(--glow-primary)]">
-              <h3 className="mb-3 flex items-center gap-2 font-mono text-xs uppercase tracking-wider text-muted-foreground">
-                <Sparkles className="h-4 w-4 text-primary" /> what_you&apos;ll_learn
+            <div className="aq-reveal aq-card aq-card-hover p-5">
+              <h3 className="mb-3 flex items-center gap-2 text-base font-bold">
+                <span
+                  className="aq-icon flex h-8 w-8 items-center justify-center"
+                  style={{
+                    background: `color-mix(in srgb, ${accent} 14%, transparent)`,
+                    color: accent,
+                  }}
+                >
+                  <Sparkles className="h-4 w-4" />
+                </span>
+                What you&apos;ll learn
               </h3>
               <ul className="space-y-2.5">
                 {learn.map((item, i) => (
-                  <li key={i} className="flex gap-2.5 text-sm text-foreground/85">
-                    <Check className="mt-0.5 h-4 w-4 shrink-0" style={{ color: meta.color }} />
+                  <li key={i} className="flex gap-2.5 text-[15px] leading-relaxed text-foreground/85">
+                    <Check className="mt-0.5 h-4 w-4 shrink-0" style={{ color: accent }} />
                     <span>{item}</span>
                   </li>
                 ))}
               </ul>
-            </Reveal>
+            </div>
           )}
 
           {tools.length > 0 && (
-            <Reveal className="rounded-xl border border-border bg-card/60 p-5 backdrop-blur-md transition-all duration-300 hover:border-accent/40 hover:shadow-[var(--glow-accent)]">
-              <h3 className="mb-3 flex items-center gap-2 font-mono text-xs uppercase tracking-wider text-muted-foreground">
-                <Wrench className="h-4 w-4 text-accent" /> tools &amp; tech
+            <div className="aq-reveal aq-card aq-card-hover p-5">
+              <h3 className="mb-3 flex items-center gap-2 text-base font-bold">
+                <span className="aq-icon flex h-8 w-8 items-center justify-center text-accent">
+                  <Wrench className="h-4 w-4" />
+                </span>
+                Tools &amp; tech
               </h3>
               <div className="flex flex-wrap gap-2">
                 {tools.map((t, i) => (
-                  <span
-                    key={i}
-                    className="inline-flex items-center rounded-md border border-border bg-background/50 px-2.5 py-1 font-mono text-xs text-foreground/80"
-                  >
+                  <span key={i} className="aq-chip">
                     {t}
                   </span>
                 ))}
               </div>
-            </Reveal>
+            </div>
           )}
 
           {prereqs.length > 0 && (
-            <Reveal className="rounded-xl border border-border bg-card/60 p-5 backdrop-blur-md transition-all duration-300 hover:border-primary/40">
-              <h3 className="mb-3 flex items-center gap-2 font-mono text-xs uppercase tracking-wider text-muted-foreground">
-                <ListChecks className="h-4 w-4 text-primary" /> prerequisites
+            <div className="aq-reveal aq-card aq-card-hover p-5">
+              <h3 className="mb-3 flex items-center gap-2 text-base font-bold">
+                <span className="aq-icon flex h-8 w-8 items-center justify-center">
+                  <ListChecks className="h-4 w-4" />
+                </span>
+                Before you start
               </h3>
-              <ul className="space-y-2 text-sm text-foreground/85">
+              <ul className="space-y-2 text-[15px] leading-relaxed text-foreground/85">
                 {prereqs.map((p, i) => (
-                  <li key={i} className="flex gap-2">
-                    <span className="font-mono text-primary">&gt;</span>
+                  <li key={i} className="flex gap-2.5">
+                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                     <span>{p}</span>
                   </li>
                 ))}
               </ul>
-            </Reveal>
+            </div>
           )}
 
           {sources.length > 0 && (
-            <Reveal className="rounded-xl border border-border bg-card/60 p-5 backdrop-blur-md transition-all duration-300 hover:border-accent/40">
-              <h3 className="mb-3 font-mono text-xs uppercase tracking-wider text-muted-foreground">
-                sources
-              </h3>
-              <ul className="space-y-2">
+            <div className="aq-reveal aq-card aq-card-hover p-5">
+              <h3 className="mb-3 text-base font-bold">Sources</h3>
+              <ul className="space-y-1">
                 {sources.slice(0, 8).map((s, i) => (
                   <li key={i}>
                     <a
                       href={s.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="group/src inline-flex items-start gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+                      className="group/src flex items-start gap-2 rounded-lg px-2 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-primary/5 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     >
                       <ExternalLink className="mt-0.5 h-3.5 w-3.5 shrink-0 transition-colors group-hover/src:text-accent" />
                       <span>{s.title}</span>
@@ -285,7 +352,7 @@ export default async function DepartmentPage({
                   </li>
                 ))}
               </ul>
-            </Reveal>
+            </div>
           )}
         </aside>
       </div>

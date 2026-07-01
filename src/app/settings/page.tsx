@@ -1,11 +1,10 @@
+import type { CSSProperties } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { LogOut, Settings as SettingsIcon, UserRound } from "lucide-react";
+import { LogOut, Settings as SettingsIcon, UserRound, ExternalLink } from "lucide-react";
 import { getSession } from "@/lib/auth";
 import { signOut } from "@/app/actions/auth";
 import { Button } from "@/components/ui/button";
-import { Reveal } from "@/components/motion/reveal";
-import { TerminalFrame, StatusPill } from "@/components/motion/terminal";
 import { SettingsForm } from "@/components/settings/settings-form";
 import { PerfModeCard } from "@/components/perf-mode";
 
@@ -21,101 +20,129 @@ export default async function SettingsPage() {
 
   return (
     <main className="relative overflow-hidden">
-      {/* Ambient background */}
+      {/* Ambient glows */}
       <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute inset-0 bg-grid opacity-40 mask-b-faded" />
-        <div className="absolute right-[-15%] top-[-10%] h-[420px] w-[560px] rounded-full opacity-20 blur-3xl aurora-bg" />
+        <div className="absolute left-[-10%] top-[-8%] h-[380px] w-[520px] rounded-full bg-[radial-gradient(circle,rgba(37,96,230,0.18),transparent_70%)] blur-3xl" />
+        <div className="absolute right-[-12%] top-[6%] h-[340px] w-[460px] rounded-full bg-[radial-gradient(circle,rgba(26,169,214,0.16),transparent_70%)] blur-3xl" />
+        <div className="absolute bottom-[-14%] left-[24%] h-[320px] w-[520px] rounded-full bg-[radial-gradient(circle,rgba(139,92,246,0.12),transparent_70%)] blur-3xl" />
       </div>
 
       <div className="mx-auto max-w-2xl px-4 pt-28 pb-24 sm:px-6">
-        {/* Header */}
-        <Reveal>
-          <div className="flex items-center gap-3">
-            <span className="flex h-11 w-11 items-center justify-center rounded-xl border border-primary/40 bg-primary/10 text-primary glow-primary">
-              <SettingsIcon className="h-5.5 w-5.5" />
+        {/* Hero */}
+        <header className="flex flex-col items-start gap-4">
+          <span className="aq-rise aq-rise-1 aq-eyebrow">Your account</span>
+          <div className="aq-rise aq-rise-2 flex items-center gap-4">
+            <span
+              className="aq-badge shrink-0"
+              style={{ "--a": "#2560e6" } as CSSProperties}
+            >
+              <SettingsIcon className="h-6 w-6" strokeWidth={2.25} />
             </span>
-            <div>
-              <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-accent">
-                // account settings
-              </p>
-              <h1 className="mt-1 font-display text-2xl font-bold tracking-tight sm:text-3xl">
+            <h1 className="aq-display text-3xl font-bold tracking-tight sm:text-4xl">
+              <span
+                style={{
+                  background: "linear-gradient(120deg,#2560e6,#1aa9d6)",
+                  WebkitBackgroundClip: "text",
+                  backgroundClip: "text",
+                  color: "transparent",
+                }}
+              >
                 Settings
-              </h1>
-            </div>
+              </span>
+            </h1>
           </div>
-          <p className="mt-3 text-sm text-muted-foreground">
-            Manage your profile and how you appear across LearnFRC.
+          <p className="aq-rise aq-rise-3 max-w-xl text-base leading-relaxed text-foreground/70">
+            Tune your profile and how you show up across LearnFRC — from the
+            leaderboard to your team&apos;s pit crew. Small details, gracious
+            first impressions.
           </p>
-        </Reveal>
 
-        {/* Quick link to profile */}
-        <Reveal delay={0.06}>
-          <div className="mt-5 flex flex-wrap items-center gap-3">
-            <Button asChild variant="outline" size="sm">
+          {/* Profile shortcuts */}
+          <div className="aq-rise aq-rise-4 flex flex-wrap items-center gap-3">
+            <Button asChild className="aq-cta">
               <Link href="/profile">
                 <UserRound className="h-4 w-4" />
                 View your profile
               </Link>
             </Button>
             {profile?.username && (
-              <Button asChild variant="ghost" size="sm">
-                <Link href={`/u/${profile.username}`}>See public profile</Link>
+              <Button asChild className="aq-ghost">
+                <Link href={`/u/${profile.username}`}>
+                  <ExternalLink className="h-4 w-4" />
+                  See public profile
+                </Link>
               </Button>
             )}
           </div>
-        </Reveal>
+        </header>
 
         {/* Profile form */}
-        <Reveal delay={0.1} className="mt-7">
-          <TerminalFrame
-            title="profile — ~/settings"
-            glow
-            bodyClassName="p-5 sm:p-6"
-            right={<StatusPill tone="accent">editable</StatusPill>}
-          >
-            <h2 className="font-display text-lg font-semibold tracking-tight">
-              Profile
-            </h2>
-            <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-              These details power your public profile and the leaderboard.
-            </p>
-            <div className="mt-5">
-              <SettingsForm profile={profile} email={user.email} />
+        <section className="aq-reveal mt-10">
+          <div className="aq-card aq-card-hover p-6 sm:p-7">
+            <div className="flex items-center gap-3">
+              <span
+                className="aq-icon shrink-0"
+                style={{ "--a": "#2560e6" } as CSSProperties}
+              >
+                <UserRound className="h-5 w-5" />
+              </span>
+              <div>
+                <h2 className="aq-display text-xl font-semibold tracking-tight">
+                  Profile
+                </h2>
+                <p className="mt-0.5 text-sm leading-relaxed text-muted-foreground">
+                  These details power your public profile and the leaderboard.
+                </p>
+              </div>
             </div>
-          </TerminalFrame>
-        </Reveal>
+            <div className="aq-divider my-6" />
+            <SettingsForm profile={profile} email={user.email} />
+          </div>
+        </section>
 
         {/* Performance card */}
-        <Reveal delay={0.13} className="mt-6">
+        <section className="aq-reveal mt-6">
           <PerfModeCard />
-        </Reveal>
+        </section>
 
-        {/* Sign out card */}
-        <Reveal delay={0.16} className="mt-6">
-          <TerminalFrame title="session — ~/account" bodyClassName="p-5 sm:p-6">
-            <h2 className="font-display text-lg font-semibold tracking-tight">
-              Account
-            </h2>
-            <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-              You&apos;re signed in as{" "}
-              <span className="font-mono font-medium text-foreground">
-                {user.email}
+        {/* Account / sign out */}
+        <section className="aq-reveal mt-6">
+          <div className="aq-card aq-card-hover p-6 sm:p-7">
+            <div className="flex items-center gap-3">
+              <span
+                className="aq-icon shrink-0"
+                style={{ "--a": "#1aa9d6" } as CSSProperties}
+              >
+                <LogOut className="h-5 w-5" />
               </span>
-              .
-            </p>
-            <div className="mt-5 flex flex-col items-start justify-between gap-4 border-t border-border pt-5 sm:flex-row sm:items-center">
-              <p className="text-sm text-muted-foreground">
-                Sign out of LearnFRC on this device.
+              <div>
+                <h2 className="aq-display text-xl font-semibold tracking-tight">
+                  Account
+                </h2>
+                <p className="mt-0.5 text-sm leading-relaxed text-muted-foreground">
+                  You&apos;re signed in as{" "}
+                  <span className="font-mono font-medium text-foreground">
+                    {user.email}
+                  </span>
+                  .
+                </p>
+              </div>
+            </div>
+            <div className="aq-divider my-6" />
+            <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                Sign out of LearnFRC on this device. You can always jump back in
+                before the next build season.
               </p>
               <form action={signOut}>
-                <Button type="submit" variant="destructive" size="md">
+                <Button type="submit" variant="destructive" size="md" className="shrink-0">
                   <LogOut className="h-4 w-4" />
                   Sign out
                 </Button>
               </form>
             </div>
-          </TerminalFrame>
-        </Reveal>
+          </div>
+        </section>
       </div>
     </main>
   );

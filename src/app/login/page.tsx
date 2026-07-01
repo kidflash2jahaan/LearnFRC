@@ -1,8 +1,7 @@
+import type { CSSProperties } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Bot, GitBranch, Gauge, Trophy } from "lucide-react";
-import { Reveal, Stagger, StaggerItem } from "@/components/motion/reveal";
-import { TerminalFrame, StatusPill, TypeLine } from "@/components/motion/terminal";
+import { Bot, GitBranch, Gauge, Trophy, ShieldCheck } from "lucide-react";
 import { AuthForm } from "@/components/auth/auth-form";
 import { getSession } from "@/lib/auth";
 
@@ -10,6 +9,13 @@ export const metadata = {
   title: "Log in",
   description: "Welcome back. Sign in to pick up where you left off.",
   robots: { index: false, follow: true },
+};
+
+const HEADING_GRADIENT: CSSProperties = {
+  background: "linear-gradient(120deg,#2560e6,#1aa9d6)",
+  WebkitBackgroundClip: "text",
+  backgroundClip: "text",
+  color: "transparent",
 };
 
 const VALUE_PROPS = [
@@ -43,97 +49,83 @@ export default async function LoginPage({
 
   return (
     <main className="relative min-h-[100svh] overflow-hidden">
-      {/* Ambient background */}
+      {/* Ambient glows */}
       <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute inset-0 bg-grid opacity-40 mask-b-faded" />
-        <div className="absolute left-1/2 top-[-12%] h-[440px] w-[720px] -translate-x-1/2 rounded-full opacity-25 blur-3xl aurora-bg" />
-        {/* code-bracket accents */}
-        <span className="absolute left-[6%] top-[16%] hidden select-none font-mono text-[8rem] leading-none text-primary/[0.06] lg:block">
-          {"{"}
-        </span>
-        <span className="absolute bottom-[10%] right-[6%] hidden select-none font-mono text-[8rem] leading-none text-primary/[0.06] lg:block">
-          {"}"}
-        </span>
+        <div className="absolute left-[-8%] top-[-6%] h-[460px] w-[460px] rounded-full bg-primary/25 blur-3xl" />
+        <div className="absolute right-[-10%] top-[24%] h-[420px] w-[420px] rounded-full bg-accent/20 blur-3xl" />
+        <div className="absolute bottom-[-12%] left-[38%] h-[380px] w-[380px] rounded-full bg-violet-400/15 blur-3xl" />
       </div>
 
-      <div className="mx-auto flex min-h-[100svh] w-full max-w-md flex-col justify-center px-4 py-24 sm:px-6">
-        {/* Wordmark */}
-        <Reveal>
+      <div className="mx-auto grid min-h-[100svh] w-full max-w-6xl items-center gap-12 px-4 py-24 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:gap-16">
+        {/* Left: welcome + what you get */}
+        <div className="order-2 lg:order-1">
           <Link
             href="/"
-            className="mx-auto inline-flex items-center gap-2.5"
+            className="aq-rise aq-rise-1 inline-flex items-center gap-2.5"
             aria-label="LearnFRC home"
           >
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-primary/40 bg-primary/10 text-primary glow-primary">
-              <Bot className="h-5 w-5" />
+            <span className="aq-badge grid h-9 w-9 place-items-center" style={{ "--a": "#2560e6" } as CSSProperties}>
+              <Bot className="h-5 w-5 text-foreground" />
             </span>
-            <span className="font-display text-lg font-bold tracking-tight">
+            <span className="aq-display text-lg font-bold tracking-tight text-foreground">
               Learn<span className="text-primary">FRC</span>
             </span>
           </Link>
-        </Reveal>
 
-        {/* Terminal login card */}
-        <Reveal delay={0.08} className="mt-8">
-          <TerminalFrame
-            title="auth — ~/login"
-            glow
-            bodyClassName="p-6 sm:p-8"
-            right={<StatusPill tone="accent">secure</StatusPill>}
-          >
-            <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-accent">
-              // welcome back
-            </p>
-            <h1 className="mt-3 font-display text-2xl font-bold tracking-tight">
-              Sign in to <span className="text-gradient">LearnFRC</span>
-            </h1>
-            <p className="mt-1.5 text-sm text-muted-foreground">
-              Pick up exactly where you left off.
-            </p>
+          <p className="aq-eyebrow aq-rise aq-rise-1 mt-8">Welcome back to the pit</p>
+          <h1 className="aq-rise aq-rise-2 mt-3 max-w-xl text-4xl font-bold tracking-tight sm:text-5xl">
+            Pick up right where{" "}
+            <span style={HEADING_GRADIENT}>you left off</span>
+          </h1>
+          <p className="aq-rise aq-rise-3 mt-4 max-w-lg text-lg leading-relaxed text-foreground/70">
+            Sign in to keep building. Your lessons, XP, and streak are waiting —
+            every seat on the team, from drivetrain to scouting.
+          </p>
 
-            <TypeLine
-              prompt="~/learnfrc $"
-              text="auth login --resume"
-              className="mt-5 block text-xs text-muted-foreground"
-            />
+          <ul className="aq-rise aq-rise-4 mt-10 grid gap-4 sm:grid-cols-2">
+            {VALUE_PROPS.map((p) => (
+              <li
+                key={p.title}
+                className="aq-card aq-card-hover aq-reveal flex items-start gap-3.5 p-5"
+              >
+                <span className="aq-icon grid h-10 w-10 shrink-0 place-items-center">
+                  <p.icon className="h-5 w-5" />
+                </span>
+                <div>
+                  <p className="font-semibold text-foreground">{p.title}</p>
+                  <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                    {p.body}
+                  </p>
+                </div>
+              </li>
+            ))}
+          </ul>
 
-            <div className="mt-5">
-              <AuthForm mode="login" next={safeNext} />
-            </div>
-          </TerminalFrame>
-        </Reveal>
-
-        {/* Value props as terminal output */}
-        <Reveal delay={0.16} className="mt-6">
-          <div className="panel rounded-xl p-4">
-            <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-              // what&apos;s waiting for you
-            </p>
-            <Stagger className="mt-3 space-y-2.5" stagger={0.07}>
-              {VALUE_PROPS.map((p) => (
-                <StaggerItem key={p.title}>
-                  <div className="flex items-start gap-2.5">
-                    <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-primary/30 bg-primary/10 text-primary">
-                      <p.icon className="h-3.5 w-3.5" />
-                    </span>
-                    <p className="text-sm leading-relaxed">
-                      <span className="font-medium text-foreground">
-                        {p.title}.
-                      </span>{" "}
-                      <span className="text-muted-foreground">{p.body}</span>
-                    </p>
-                  </div>
-                </StaggerItem>
-              ))}
-            </Stagger>
-          </div>
-        </Reveal>
-
-        <Reveal delay={0.24} className="mt-5">
-          <p className="text-center font-mono text-xs text-muted-foreground">
+          <p className="aq-reveal mt-8 text-sm text-muted-foreground">
             100% free · No experience needed · Built for every seat on the team.
           </p>
-        </Reveal>
+        </div>
+
+        {/* Right: welcoming glass auth card */}
+        <div className="order-1 lg:order-2">
+          <div className="aq-glass aq-rise aq-rise-2 relative mx-auto w-full max-w-md rounded-3xl p-6 sm:p-8">
+            <span className="aq-chip inline-flex items-center gap-1.5">
+              <ShieldCheck className="h-3.5 w-3.5 text-primary" />
+              Secure sign in
+            </span>
+
+            <h2 className="aq-display mt-5 text-2xl font-bold tracking-tight text-foreground">
+              Sign in to <span style={HEADING_GRADIENT}>LearnFRC</span>
+            </h2>
+            <p className="mt-1.5 text-sm text-muted-foreground">
+              Enter your details to jump back into build season.
+            </p>
+
+            <hr className="aq-divider my-6" />
+
+            <AuthForm mode="login" next={safeNext} />
+          </div>
+        </div>
       </div>
     </main>
   );

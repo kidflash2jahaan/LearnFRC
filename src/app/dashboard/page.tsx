@@ -1,8 +1,10 @@
+import type { CSSProperties } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
   ArrowRight,
+  ArrowUpRight,
   BookOpenCheck,
   CheckCircle2,
   Flame,
@@ -19,12 +21,6 @@ import { Progress } from "@/components/ui/progress";
 import { DepartmentCard } from "@/components/department-card";
 import { InviteCard } from "@/components/leaderboard/invite-card";
 import { Reveal, Stagger, StaggerItem } from "@/components/motion/reveal";
-import {
-  TerminalFrame,
-  StatusPill,
-  NeonCounter,
-} from "@/components/motion/terminal";
-import { LevelRing } from "@/components/dashboard/level-ring";
 import {
   AchievementBadge,
   type AchievementView,
@@ -245,100 +241,161 @@ export default async function DashboardPage() {
   }
 
   const stats = [
-    { icon: BookOpenCheck, label: "Lessons completed", value: completedCount, accent: "var(--color-primary)" },
-    { icon: Layers, label: "Departments in progress", value: departmentsInProgress, accent: "var(--color-accent)" },
-    { icon: GraduationCap, label: "Departments completed", value: departmentsCompleted, accent: "var(--color-success)" },
-    { icon: Trophy, label: "Achievements earned", value: achievementsEarned, accent: "var(--color-gold)" },
-    { icon: Flame, label: "Day streak", value: streak, accent: "var(--color-gold)" },
-    { icon: Zap, label: "Total XP", value: xp, accent: "var(--color-magenta)" },
+    { icon: BookOpenCheck, label: "Lessons completed", value: completedCount, accent: "#2560e6" },
+    { icon: Layers, label: "Departments in progress", value: departmentsInProgress, accent: "#1aa9d6" },
+    { icon: GraduationCap, label: "Departments completed", value: departmentsCompleted, accent: "#12b565" },
+    { icon: Trophy, label: "Achievements earned", value: achievementsEarned, accent: "#f5a623" },
+    { icon: Flame, label: "Day streak", value: streak, accent: "#ff8a3d" },
+    { icon: Zap, label: "Total XP", value: xp, accent: "#8b7fff" },
   ];
 
   const cm = continueLesson ? deptMeta(continueLesson.deptSlug) : null;
-  const teamLabel = profile?.team_number
-    ? `team${profile.team_number}`
-    : profile?.username || "learnfrc";
-  // cyan → lime fill for HUD progress bars
+
+  const blueGradient = {
+    background: "linear-gradient(120deg,#2560e6,#1aa9d6)",
+    WebkitBackgroundClip: "text",
+    backgroundClip: "text",
+    color: "transparent",
+  } as CSSProperties;
+  // shared blue→cyan progress fill
   const xpBar = {
-    background: "linear-gradient(90deg, var(--color-accent), var(--color-primary))",
+    background: "linear-gradient(90deg,#2560e6,#1aa9d6)",
   } as const;
 
   return (
     <div className="relative mx-auto max-w-7xl px-4 pt-28 pb-20 sm:px-6 lg:px-8">
-      {/* ambient background */}
+      {/* ambient glows */}
       <div aria-hidden className="pointer-events-none fixed inset-0 -z-10">
-        <div className="absolute inset-x-0 top-0 h-[460px] hud-grid opacity-50 mask-b-faded" />
-        <div className="absolute left-1/2 top-[-8%] h-[420px] w-[760px] -translate-x-1/2 rounded-full opacity-25 blur-3xl aurora-bg" />
+        <div
+          className="absolute left-[-10%] top-[-6%] h-[440px] w-[560px] rounded-full opacity-60 blur-3xl"
+          style={{ background: "radial-gradient(circle,rgba(37,96,230,0.18),transparent 68%)" }}
+        />
+        <div
+          className="absolute right-[-8%] top-[8%] h-[400px] w-[520px] rounded-full opacity-55 blur-3xl"
+          style={{ background: "radial-gradient(circle,rgba(26,169,214,0.16),transparent 68%)" }}
+        />
+        <div
+          className="absolute left-1/2 top-[36%] h-[420px] w-[620px] -translate-x-1/2 rounded-full opacity-40 blur-3xl"
+          style={{ background: "radial-gradient(circle,rgba(139,127,255,0.14),transparent 70%)" }}
+        />
       </div>
 
-      {/* ============================ MISSION CONTROL ============================ */}
-      <Reveal>
-        <TerminalFrame
-          glow
-          title={`build_status.log — ~/${teamLabel}`}
-          right={<StatusPill tone="primary">● ONLINE</StatusPill>}
-          bodyClassName="p-6 sm:p-8"
-        >
-          <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-4">
+      {/* ============================ HERO — PROGRESS AT A GLANCE ============================ */}
+      <section className="aq-glass aq-reveal overflow-hidden rounded-[28px] p-6 sm:p-9">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full opacity-30 blur-3xl"
+          style={{ background: "radial-gradient(circle,rgba(37,96,230,0.35),transparent 70%)" }}
+        />
+        <div className="relative flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
+          {/* Greeting */}
+          <div className="min-w-0 flex-1">
+            <span className="aq-eyebrow aq-rise aq-rise-1">
+              <Sparkles className="h-3.5 w-3.5" /> Welcome back
+            </span>
+            <div className="aq-rise aq-rise-2 mt-4 flex items-center gap-4">
               <Avatar
                 name={displayName}
                 src={profile?.avatar_url}
                 seed={user.id}
-                className="h-16 w-16 ring-2 ring-primary/40"
+                className="h-16 w-16 shrink-0 shadow-[0_10px_26px_rgba(38,78,150,0.22),inset_0_1px_0_rgba(255,255,255,0.9)] ring-2 ring-white/80"
               />
               <div className="min-w-0">
-                <p className="flex items-center gap-1.5 font-mono text-xs uppercase tracking-[0.18em] text-accent">
-                  <Sparkles className="h-3 w-3" /> welcome back
-                </p>
-                <h1 className="mt-1 truncate text-2xl font-bold tracking-tight sm:text-3xl">
-                  Hey, <span className="text-gradient">{firstName}</span>
+                <h1 className="aq-display truncate text-3xl font-bold leading-tight sm:text-4xl">
+                  Hey, <span style={blueGradient}>{firstName}</span>
                 </h1>
-                <p className="mt-1 font-mono text-sm text-muted-foreground">
+                <p className="mt-1 text-[15px] text-foreground/70">
                   {completedCount > 0
-                    ? `${pluralize(completedCount, "lesson")} cleared${streak > 1 ? ` · ${streak}-day streak (${xpMultiplier}× XP)` : ""}`
-                    : "// boot sequence ready — start your FRC journey"}
-                  <span className="caret" aria-hidden />
+                    ? `${pluralize(completedCount, "lesson")} cleared${
+                        streak > 1 ? ` · ${streak}-day streak (${xpMultiplier}× XP)` : ""
+                      }`
+                    : "Fresh start — pick a department and begin your build season."}
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-4 sm:gap-5">
-              <LevelRing level={level} progressPct={levelPct} />
-              <div className="text-sm">
-                <div className="font-display text-xl font-bold">
-                  <NeonCounter to={xp} />{" "}
-                  <span className="font-mono text-base font-medium text-muted-foreground">
-                    XP
-                  </span>
-                </div>
-                <p className="mt-0.5 font-mono text-xs text-muted-foreground">
-                  {xpToNext} XP → lvl {level + 1}
-                </p>
-                <div className="mt-2 w-32">
-                  <Progress value={levelPct} style={xpBar} />
-                </div>
-              </div>
+            <div className="aq-rise aq-rise-3 mt-6 flex flex-wrap items-center gap-3">
+              {continueLesson && cm ? (
+                <Link
+                  href={`/guides/${continueLesson.deptSlug}/${continueLesson.moduleSlug}/${continueLesson.lessonSlug}`}
+                  className="aq-cta inline-flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                >
+                  <Play className="h-4 w-4 fill-current" />
+                  {continueLesson.fresh ? "Start learning" : "Continue learning"}
+                </Link>
+              ) : (
+                <Link
+                  href="/guides"
+                  className="aq-cta inline-flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                >
+                  <Play className="h-4 w-4 fill-current" />
+                  Browse the guides
+                </Link>
+              )}
+              <Link
+                href="/leaderboard"
+                className="aq-ghost inline-flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              >
+                <Trophy className="h-4 w-4" />
+                Leaderboard
+              </Link>
             </div>
           </div>
-        </TerminalFrame>
-      </Reveal>
+
+          {/* Level / XP glass panel */}
+          <div className="aq-rise aq-rise-4 aq-card w-full shrink-0 rounded-[22px] p-6 lg:w-80">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
+                  Level {level}
+                </p>
+                <p className="aq-display mt-1 text-4xl font-bold tabular-nums text-foreground">
+                  {xp.toLocaleString()}
+                  <span className="ml-1.5 font-sans text-base font-semibold text-muted-foreground">
+                    XP
+                  </span>
+                </p>
+              </div>
+              <span
+                className="aq-badge flex h-14 w-14 items-center justify-center rounded-2xl"
+                style={{ "--a": "#2560e6" } as CSSProperties}
+              >
+                <Zap className="h-7 w-7" />
+              </span>
+            </div>
+            <div className="mt-5">
+              <div className="mb-1.5 flex items-center justify-between text-xs font-medium text-foreground/70">
+                <span>Progress to level {level + 1}</span>
+                <span className="font-semibold text-foreground">{levelPct}%</span>
+              </div>
+              <Progress value={levelPct} className="h-2.5 bg-white/55" style={xpBar} />
+              <p className="mt-2 font-mono text-[11px] text-muted-foreground">
+                {xpToNext} XP to go
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* ============================ PROFILE NUDGE ============================ */}
       {(!profile?.username || !profile?.team_number) && (
-        <Reveal className="mt-4">
+        <Reveal className="mt-6">
           <Link
             href="/settings"
-            className="group flex items-center justify-between gap-4 rounded-2xl border border-primary/30 bg-primary/[0.06] p-4 transition-all hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-[var(--glow-primary)]"
+            className="aq-card aq-card-hover group flex items-center justify-between gap-4 rounded-[20px] p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
             <div className="flex items-center gap-3">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-primary/30 bg-primary/10 text-primary">
+              <span className="aq-icon flex h-11 w-11 shrink-0 rounded-2xl">
                 <Sparkles className="h-5 w-5" />
               </span>
               <div>
-                <p className="text-sm font-semibold">Complete your profile</p>
-                <p className="font-mono text-xs text-muted-foreground">
-                  Add a username{!profile?.team_number ? " and your FRC team number" : ""} to
-                  show up on the leaderboard.
+                <p className="text-[15px] font-semibold text-foreground">
+                  Complete your profile
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Add a username
+                  {!profile?.team_number ? " and your FRC team number" : ""} to show up
+                  on the leaderboard.
                 </p>
               </div>
             </div>
@@ -355,42 +412,28 @@ export default async function DashboardPage() {
       )}
 
       {/* ============================ STAT CARDS ============================ */}
-      <Reveal className="mt-8" delay={0.04}>
-        <span className="inline-flex items-center gap-2 font-mono text-xs uppercase tracking-[0.2em] text-accent">
-          <span aria-hidden className="h-px w-6 bg-gradient-to-r from-accent to-transparent" />
-          system metrics
-        </span>
+      <Reveal className="mt-10" delay={0.04}>
+        <span className="aq-eyebrow">Your stats</span>
+        <h2 className="aq-display mt-2 text-2xl font-bold text-foreground">
+          Progress at a glance
+        </h2>
       </Reveal>
-      <Stagger className="mt-4 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-6">
+      <Stagger className="mt-5 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-6">
         {stats.map((s) => (
           <StaggerItem key={s.label}>
-            <div className="group relative h-full overflow-hidden rounded-xl border border-border bg-card/60 p-4 backdrop-blur transition-all duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-[var(--glow-primary)]">
-              <div
-                aria-hidden
-                className="pointer-events-none absolute -right-8 -top-8 h-20 w-20 rounded-full opacity-[0.14] blur-2xl transition-opacity duration-300 group-hover:opacity-30"
-                style={{ background: s.accent }}
-              />
-              <div
-                className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg border"
-                style={{
-                  borderColor: `color-mix(in srgb, ${s.accent} 38%, var(--border))`,
-                  background: `color-mix(in srgb, ${s.accent} 12%, transparent)`,
-                  color: s.accent,
-                }}
+            <div className="aq-card aq-card-hover h-full rounded-[20px] p-4">
+              <span
+                className="aq-badge mb-3 flex h-10 w-10 items-center justify-center rounded-2xl"
+                style={{ "--a": s.accent } as CSSProperties}
               >
-                <s.icon className="h-4.5 w-4.5" />
+                <s.icon className="h-5 w-5" />
+              </span>
+              <div className="aq-display text-3xl font-bold tabular-nums text-foreground">
+                {s.value.toLocaleString()}
               </div>
-              <div className="font-display text-2xl font-bold tracking-tight tabular-nums">
-                <NeonCounter to={s.value} />
-              </div>
-              <div className="mt-0.5 font-mono text-[11px] uppercase leading-tight tracking-wider text-muted-foreground">
+              <div className="mt-1 text-xs font-medium leading-snug text-muted-foreground">
                 {s.label}
               </div>
-              <span
-                aria-hidden
-                className="mt-2.5 block h-0.5 w-6 rounded-full"
-                style={{ background: s.accent, boxShadow: `0 0 10px ${s.accent}` }}
-              />
             </div>
           </StaggerItem>
         ))}
@@ -398,71 +441,42 @@ export default async function DashboardPage() {
 
       {/* ============================ CONTINUE LEARNING ============================ */}
       {continueLesson && cm && (
-        <Reveal className="mt-8">
+        <Reveal className="mt-10">
           <Link
             href={`/guides/${continueLesson.deptSlug}/${continueLesson.moduleSlug}/${continueLesson.lessonSlug}`}
-            className="group relative block overflow-hidden rounded-3xl border border-border p-px shadow-[var(--shadow-md)] transition-transform duration-300 hover:-translate-y-1"
+            className="aq-tile group block rounded-[24px] p-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:p-8"
+            style={{ "--a": cm.color } as CSSProperties}
           >
-            {/* gradient frame */}
-            <div
-              aria-hidden
-              className="absolute inset-0 -z-10 opacity-90"
-              style={{ backgroundImage: `linear-gradient(120deg, ${cm.color}, ${cm.to})` }}
-            />
-            <div className="relative overflow-hidden rounded-[calc(1.5rem-1px)] bg-card p-6 sm:p-8">
-              <div
-                aria-hidden
-                className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full opacity-20 blur-3xl transition-opacity duration-500 group-hover:opacity-35"
-                style={{ background: cm.color }}
-              />
-              <p className="font-mono text-xs text-muted-foreground">
-                ~/learnfrc ${" "}
-                <span style={{ color: cm.color }}>
-                  {continueLesson.fresh ? "begin" : "resume"} --dept {continueLesson.deptSlug}
+            <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <span className="inline-flex items-center gap-1.5 font-mono text-xs font-semibold uppercase tracking-wider text-foreground/75">
+                  <Play className="h-3.5 w-3.5 fill-current" />
+                  {continueLesson.fresh ? "Start learning" : "Continue learning"}
                 </span>
-              </p>
-              <div className="mt-3 flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-                <div className="min-w-0">
-                  <span
-                    className="inline-flex items-center gap-1.5 font-mono text-xs font-semibold uppercase tracking-wider"
-                    style={{ color: cm.color }}
-                  >
-                    <Play className="h-3.5 w-3.5 fill-current" />
-                    {continueLesson.fresh ? "Start learning" : "Continue learning"}
-                  </span>
-                  <h2 className="mt-2 text-balance text-xl font-bold tracking-tight sm:text-2xl">
-                    {continueLesson.lessonTitle}
-                  </h2>
-                  <p className="mt-1 font-mono text-sm text-muted-foreground">
-                    {continueLesson.deptName} · {continueLesson.moduleTitle}
-                  </p>
-                  {!continueLesson.fresh && (
-                    <div className="mt-4 max-w-sm">
-                      <div className="mb-1 flex items-center justify-between font-mono text-xs text-muted-foreground">
-                        <span>{continueLesson.deptName} progress</span>
-                        <span className="font-medium text-foreground">
-                          {continueLesson.pct}%
-                        </span>
-                      </div>
-                      <Progress
-                        value={continueLesson.pct}
-                        style={{ background: `linear-gradient(90deg, ${cm.color}, ${cm.to})` }}
-                      />
+                <h3 className="aq-display mt-2 text-balance text-2xl font-bold leading-tight text-foreground sm:text-3xl">
+                  {continueLesson.lessonTitle}
+                </h3>
+                <p className="mt-1.5 text-[15px] font-medium text-foreground/75">
+                  {continueLesson.deptName} · {continueLesson.moduleTitle}
+                </p>
+                {!continueLesson.fresh && (
+                  <div className="mt-4 max-w-sm">
+                    <div className="mb-1.5 flex items-center justify-between font-mono text-[11px] font-semibold text-foreground/75">
+                      <span>{continueLesson.deptName} progress</span>
+                      <span className="text-foreground">{continueLesson.pct}%</span>
                     </div>
-                  )}
-                </div>
-                <Button
-                  size="lg"
-                  className="shrink-0 self-start border-0 text-primary-foreground shadow-[var(--shadow-md)] sm:self-center"
-                  style={{ backgroundImage: `linear-gradient(135deg, ${cm.color}, ${cm.to})` }}
-                  asChild
-                >
-                  <span>
-                    {continueLesson.fresh ? "Begin" : "Resume"}
-                    <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
-                  </span>
-                </Button>
+                    <Progress
+                      value={continueLesson.pct}
+                      className="h-2 bg-white/45"
+                      barClassName="bg-[color-mix(in_srgb,var(--a)_78%,#141f2c)]"
+                    />
+                  </div>
+                )}
               </div>
+              <span className="aq-cta inline-flex shrink-0 items-center gap-2 self-start rounded-2xl px-5 py-3 text-sm font-semibold sm:self-center">
+                {continueLesson.fresh ? "Begin" : "Resume"}
+                <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+              </span>
             </div>
           </Link>
         </Reveal>
@@ -473,18 +487,19 @@ export default async function DashboardPage() {
         <Reveal>
           <div className="flex items-end justify-between gap-4">
             <div>
-              <span className="inline-flex items-center gap-2 font-mono text-xs uppercase tracking-[0.2em] text-accent">
-                <span aria-hidden className="h-px w-6 bg-gradient-to-r from-accent to-transparent" />
-                system map · {departments.length} tracks
+              <span className="aq-eyebrow">
+                {departments.length} departments
               </span>
-              <h2 className="mt-2 text-2xl font-bold tracking-tight">Your departments</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
+              <h2 className="aq-display mt-2 text-2xl font-bold text-foreground sm:text-3xl">
+                Your departments
+              </h2>
+              <p className="mt-1.5 text-[15px] text-muted-foreground">
                 Pick up where you left off across every track.
               </p>
             </div>
-            <Button asChild variant="outline" size="sm" className="shrink-0">
+            <Button asChild variant="secondary" size="sm" className="shrink-0">
               <Link href="/guides">
-                All guides <ArrowRight className="h-4 w-4" />
+                All guides <ArrowUpRight className="h-4 w-4" />
               </Link>
             </Button>
           </div>
@@ -507,11 +522,15 @@ export default async function DashboardPage() {
           </Stagger>
         ) : (
           <Reveal className="mt-6">
-            <div className="rounded-2xl border border-dashed border-border bg-card/50 p-10 text-center font-mono text-sm text-muted-foreground">
-              // departments loading — check back in a moment, or{" "}
-              <Link href="/guides" className="text-primary underline-offset-4 hover:underline">
+            <div className="aq-card rounded-[20px] p-10 text-center text-[15px] text-muted-foreground">
+              Departments are loading — check back in a moment, or{" "}
+              <Link
+                href="/guides"
+                className="font-semibold text-primary underline-offset-4 hover:underline"
+              >
                 browse the guides
               </Link>
+              .
             </div>
           </Reveal>
         )}
@@ -523,27 +542,26 @@ export default async function DashboardPage() {
           <Reveal>
             <div className="flex items-end justify-between gap-4">
               <div>
-                <span className="inline-flex items-center gap-2 font-mono text-xs uppercase tracking-[0.2em] text-accent">
-                  <span aria-hidden className="h-px w-6 bg-gradient-to-r from-accent to-transparent" />
-                  unlocks
-                </span>
-                <h2 className="mt-2 text-2xl font-bold tracking-tight">Achievements</h2>
-                <p className="mt-1 font-mono text-sm text-muted-foreground">
+                <span className="aq-eyebrow">Unlocks</span>
+                <h2 className="aq-display mt-2 text-2xl font-bold text-foreground sm:text-3xl">
+                  Achievements
+                </h2>
+                <p className="mt-1.5 text-[15px] text-muted-foreground">
                   {achievementsEarned > 0
-                    ? `${achievementsEarned} of ${achievements.length} unlocked — keep going`
-                    : `// complete lessons to unlock all ${achievements.length} badges`}
+                    ? `${achievementsEarned} of ${achievements.length} unlocked — keep going.`
+                    : `Complete lessons to unlock all ${achievements.length} badges.`}
                 </p>
               </div>
-              <StatusPill tone="primary" pulse={achievementsEarned > 0} className="shrink-0">
+              <span className="aq-chip shrink-0 font-mono text-xs font-semibold">
                 {achievementsEarned}/{achievements.length} unlocked
-              </StatusPill>
+              </span>
             </div>
           </Reveal>
 
           <Reveal delay={0.05} className="mt-4">
             <Progress
               value={clampPct((achievementsEarned / achievements.length) * 100)}
-              className="h-2.5"
+              className="h-2.5 bg-white/55"
               style={xpBar}
             />
           </Reveal>
@@ -561,21 +579,33 @@ export default async function DashboardPage() {
       {/* ============================ ZERO STATE ENCOURAGEMENT ============================ */}
       {completedCount === 0 && (
         <Reveal className="mt-14">
-          <div className="relative overflow-hidden rounded-3xl border border-border bg-card/60 p-8 text-center backdrop-blur">
-            <div aria-hidden className="absolute inset-0 -z-10 bg-dots opacity-40" />
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-primary/30 bg-primary/10 text-primary shadow-[var(--glow-primary)]">
-              <CheckCircle2 className="h-7 w-7" />
-            </div>
-            <h3 className="mt-4 text-lg font-semibold">Complete your first lesson</h3>
-            <p className="mx-auto mt-1.5 max-w-md text-sm text-muted-foreground">
-              Mark a lesson complete to earn XP, start your streak, and unlock your
-              first achievement.
+          <div className="aq-glass relative overflow-hidden rounded-[28px] p-8 text-center sm:p-10">
+            <div
+              aria-hidden
+              className="pointer-events-none absolute left-1/2 top-[-30%] h-56 w-72 -translate-x-1/2 rounded-full opacity-40 blur-3xl"
+              style={{ background: "radial-gradient(circle,rgba(37,96,230,0.3),transparent 70%)" }}
+            />
+            <span
+              className="aq-badge relative mx-auto flex h-16 w-16 items-center justify-center rounded-2xl"
+              style={{ "--a": "#2560e6" } as CSSProperties}
+            >
+              <CheckCircle2 className="h-8 w-8" />
+            </span>
+            <h3 className="aq-display mt-5 text-2xl font-bold text-foreground">
+              Complete your first lesson
+            </h3>
+            <p className="mx-auto mt-2 max-w-md text-[15px] text-foreground/70">
+              Mark a lesson complete to earn XP, start your streak, and unlock your first
+              achievement. Gracious professionalism starts with rep one.
             </p>
-            <Button asChild variant="brand" size="lg" className="mt-6">
-              <Link href="/guides/getting-started">
+            <div className="mt-6 flex justify-center">
+              <Link
+                href="/guides/getting-started"
+                className="aq-cta inline-flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              >
                 Start with the basics <ArrowRight className="h-4 w-4" />
               </Link>
-            </Button>
+            </div>
           </div>
         </Reveal>
       )}

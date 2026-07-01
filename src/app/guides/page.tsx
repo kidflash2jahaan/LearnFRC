@@ -1,21 +1,25 @@
 import type { Metadata } from "next";
-import { BookOpen, Layers, GraduationCap, TerminalSquare } from "lucide-react";
+import type { CSSProperties } from "react";
+import Link from "next/link";
 import { getDepartments, getCompletedLessonIds } from "@/lib/queries";
 import { getSession } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { DepartmentCard } from "@/components/department-card";
-import { Reveal, Stagger, StaggerItem } from "@/components/motion/reveal";
-import {
-  TerminalFrame,
-  StatusPill,
-  TypeLine,
-  NeonCounter,
-} from "@/components/motion/terminal";
+import { Icon } from "@/lib/icon-map";
+import { deptMeta } from "@/lib/departments";
+import { GraduationCap, Layers, BookOpen, ArrowRight, Compass } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Guides",
   description:
     "Explore every FRC department — mechanical, CAD, programming, electrical, business, outreach, scouting, drive team and more. Structured guides from fundamentals to advanced.",
+};
+
+const HEADLINE_GRADIENT: CSSProperties = {
+  background: "linear-gradient(120deg,#2560e6,#1aa9d6)",
+  WebkitBackgroundClip: "text",
+  backgroundClip: "text",
+  color: "transparent",
 };
 
 export default async function GuidesPage() {
@@ -48,106 +52,178 @@ export default async function GuidesPage() {
   const totalModules = departments.reduce((s, d) => s + d.moduleCount, 0);
   const totalLessons = departments.reduce((s, d) => s + d.lessonCount, 0);
 
+  const stats = [
+    {
+      label: "Departments",
+      value: departments.length,
+      icon: GraduationCap,
+      accent: "#2560e6",
+    },
+    {
+      label: "Modules",
+      value: totalModules,
+      icon: Layers,
+      accent: "#1aa9d6",
+    },
+    {
+      label: "Lessons",
+      value: totalLessons,
+      icon: BookOpen,
+      accent: "#7c5cff",
+    },
+  ];
+
   return (
-    <div className="relative">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-96 bg-grid mask-b-faded opacity-60"
-      />
+    <div className="relative overflow-hidden">
+      {/* ambient glows */}
+      <div aria-hidden className="aq-glow -z-10">
+        <span
+          className="h-[36rem] w-[36rem] opacity-70"
+          style={{
+            top: "-10rem",
+            left: "-8rem",
+            background:
+              "radial-gradient(circle, rgba(37,96,230,0.28), transparent 70%)",
+          }}
+        />
+        <span
+          className="h-[30rem] w-[30rem] opacity-60"
+          style={{
+            top: "-6rem",
+            right: "-6rem",
+            background:
+              "radial-gradient(circle, rgba(26,169,214,0.26), transparent 70%)",
+          }}
+        />
+        <span
+          className="h-[26rem] w-[26rem] opacity-50"
+          style={{
+            top: "22rem",
+            left: "40%",
+            background:
+              "radial-gradient(circle, rgba(124,92,255,0.2), transparent 70%)",
+          }}
+        />
+      </div>
 
-      <div className="mx-auto max-w-7xl px-4 pt-28 pb-20 sm:px-6 lg:px-8">
-        {/* hero */}
-        <div className="mx-auto max-w-3xl text-center">
-          <Reveal className="flex justify-center">
-            <StatusPill tone="accent">
-              system map · {departments.length} departments
-            </StatusPill>
-          </Reveal>
+      <div className="mx-auto max-w-7xl px-4 pt-28 pb-24 sm:px-6 lg:px-8">
+        {/* hero — the department map */}
+        <div className="grid items-center gap-12 lg:grid-cols-[1.05fr_0.95fr]">
+          <div className="max-w-2xl">
+            <p className="aq-eyebrow aq-rise aq-rise-1">
+              <Compass className="h-4 w-4" />
+              Pick your department
+            </p>
 
-          <Reveal delay={0.05}>
-            <h1 className="mt-5 text-balance font-display text-4xl font-bold tracking-tight sm:text-5xl">
+            <h1 className="aq-rise aq-rise-2 mt-4 text-balance text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
               Master FRC,{" "}
-              <span className="text-gradient">department by department</span>
+              <span style={HEADLINE_GRADIENT}>department by department</span>
             </h1>
-          </Reveal>
 
-          <Reveal delay={0.1}>
-            <p className="mx-auto mt-4 max-w-2xl text-pretty text-lg text-foreground/80">
-              Every track is a complete curriculum — structured modules and
-              example-rich lessons that build from the fundamentals to advanced.
-            </p>
-          </Reveal>
-        </div>
-
-        {/* system terminal — animated stat scan */}
-        <Reveal delay={0.15} className="mx-auto mt-10 max-w-3xl">
-          <TerminalFrame
-            title="system_map.sh — ~/learnfrc"
-            glow
-            right={<StatusPill tone="primary">live</StatusPill>}
-          >
-            <p className="font-mono text-sm text-foreground/80">
-              <TypeLine prompt="~/learnfrc $" text="scan ./departments --recursive" />
+            <p className="aq-rise aq-rise-3 mt-5 max-w-xl text-pretty text-lg leading-relaxed text-foreground/70">
+              The whole map of build season in one place. Every track is a
+              complete curriculum — structured modules and example-rich lessons
+              that carry you from your first day in the pit to robot-ready.
             </p>
 
-            <div className="mt-4 grid grid-cols-3 gap-3">
-              <div className="rounded-lg border border-primary/25 bg-primary/[0.05] p-4">
-                <div className="flex items-center gap-2 text-primary">
-                  <GraduationCap className="h-4 w-4" />
-                  <NeonCounter
-                    to={departments.length}
-                    className="font-display text-2xl font-bold neon-text"
-                  />
-                </div>
-                <div className="mt-1 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-                  Departments
-                </div>
-              </div>
+            <div className="aq-rise aq-rise-4 mt-8 flex flex-wrap items-center gap-3">
+              <Link
+                href="/guides/getting-started"
+                className="aq-cta inline-flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold"
+              >
+                Start with the basics
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+              <Link
+                href="/glossary"
+                className="aq-ghost inline-flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold"
+              >
+                Decode the acronyms
+              </Link>
+            </div>
+          </div>
 
-              <div className="rounded-lg border border-accent/25 bg-accent/[0.05] p-4">
-                <div className="flex items-center gap-2 text-accent">
-                  <Layers className="h-4 w-4" />
-                  <NeonCounter
-                    to={totalModules}
-                    className="font-display text-2xl font-bold"
-                  />
-                </div>
-                <div className="mt-1 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-                  Modules
-                </div>
-              </div>
-
-              <div className="rounded-lg border border-border bg-background/40 p-4">
-                <div className="flex items-center gap-2 text-foreground">
-                  <BookOpen className="h-4 w-4 text-magenta" />
-                  <NeonCounter
-                    to={totalLessons}
-                    className="font-display text-2xl font-bold"
-                  />
-                </div>
-                <div className="mt-1 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-                  Lessons
-                </div>
+          {/* clean glass stat panel — no terminal frame */}
+          <div className="aq-glass aq-rise aq-rise-4 relative rounded-3xl p-6 sm:p-8">
+            <div className="flex items-center gap-2">
+              <span
+                className="aq-badge flex h-9 w-9 items-center justify-center rounded-xl"
+                style={{ "--a": "#2560e6" } as CSSProperties}
+              >
+                <Compass className="h-5 w-5" />
+              </span>
+              <div className="font-display text-lg font-semibold text-foreground">
+                The department map
               </div>
             </div>
 
-            <p className="mt-4 font-mono text-xs text-muted-foreground">
-              <span className="text-primary">{"// "}</span>
-              every path starts from zero and ends robot-ready — 100% free.
+            <div className="mt-6 grid grid-cols-3 gap-3 sm:gap-4">
+              {stats.map((s) => {
+                const StatIcon = s.icon;
+                return (
+                  <div
+                    key={s.label}
+                    className="aq-tile rounded-2xl p-4 text-center"
+                    style={{ "--a": s.accent } as CSSProperties}
+                  >
+                    <span
+                      className="aq-badge mx-auto flex h-9 w-9 items-center justify-center rounded-xl"
+                      style={{ "--a": s.accent } as CSSProperties}
+                    >
+                      <StatIcon className="h-5 w-5" />
+                    </span>
+                    <div className="mt-3 font-display text-3xl font-bold text-foreground">
+                      {s.value}
+                    </div>
+                    <div className="mt-1 font-mono text-[11px] uppercase tracking-wider text-foreground/70">
+                      {s.label}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="aq-divider mt-6" />
+            <p className="mt-4 text-sm leading-relaxed text-foreground/70">
+              Every path starts from zero and ends robot-ready — and all of it
+              is 100% free, in the spirit of gracious professionalism.
             </p>
-          </TerminalFrame>
-        </Reveal>
+          </div>
+        </div>
 
         {/* departments grid */}
-        <div className="mt-16">
-          <Reveal className="mb-6 flex items-center gap-2 font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground">
-            <TerminalSquare className="h-4 w-4 text-primary" />
-            <span className="text-primary">$</span> ls ./departments
-          </Reveal>
+        <div className="mt-20">
+          <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <p className="aq-eyebrow">
+                <Layers className="h-4 w-4" />
+                Every track, mapped
+              </p>
+              <h2 className="mt-2 font-display text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+                Explore the {departments.length} departments
+              </h2>
+            </div>
+            <span
+              className="aq-chip"
+              style={{ "--a": "#2560e6" } as CSSProperties}
+            >
+              <Icon name="Rocket" className="h-4 w-4 text-primary" />
+              Fundamentals → advanced
+            </span>
+          </div>
 
-          <Stagger className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {departments.map((d) => (
-              <StaggerItem key={d.slug}>
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {departments.map((d, i) => (
+              <div
+                key={d.slug}
+                className="aq-reveal h-full"
+                style={
+                  {
+                    "--a": deptMeta(d.slug).color,
+                    animationDelay: `${(i % 3) * 0.06}s`,
+                  } as CSSProperties
+                }
+              >
                 <DepartmentCard
                   slug={d.slug}
                   name={d.name}
@@ -155,10 +231,11 @@ export default async function GuidesPage() {
                   moduleCount={d.moduleCount}
                   lessonCount={d.lessonCount}
                   progressPct={user ? progress[d.id] : undefined}
+                  inStagger={false}
                 />
-              </StaggerItem>
+              </div>
             ))}
-          </Stagger>
+          </div>
         </div>
       </div>
     </div>

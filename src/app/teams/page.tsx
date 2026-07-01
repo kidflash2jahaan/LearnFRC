@@ -1,3 +1,4 @@
+import type { CSSProperties, ComponentType } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -11,12 +12,9 @@ import {
 } from "lucide-react";
 import { getSession } from "@/lib/auth";
 import { getTeamByNumber } from "@/lib/queries";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Avatar } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { Reveal } from "@/components/motion/reveal";
-import { TerminalFrame, NeonCounter, StatusPill } from "@/components/motion/terminal";
 import { ShareButton } from "@/components/share-button";
 import { clampPct, pluralize } from "@/lib/utils";
 
@@ -24,6 +22,13 @@ export const metadata: Metadata = {
   title: "My Team · LearnFRC",
   description:
     "See your whole FRC team's progress. Everyone who signs up with your team number is grouped automatically.",
+};
+
+const HEADLINE_GRADIENT: CSSProperties = {
+  background: "linear-gradient(120deg,#2560e6,#1aa9d6)",
+  WebkitBackgroundClip: "text",
+  backgroundClip: "text",
+  color: "transparent",
 };
 
 function relTime(iso: string | null): string {
@@ -38,41 +43,71 @@ function relTime(iso: string | null): string {
   return `${Math.floor(days / 30)}mo ago`;
 }
 
+/* Soft ambient light blobs behind the hero — the glass refracts them. */
+function AmbientGlows() {
+  return (
+    <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+      <div
+        className="absolute -top-32 left-1/2 h-[540px] w-[820px] -translate-x-1/2 rounded-full opacity-70 blur-3xl"
+        style={{
+          background:
+            "radial-gradient(closest-side, color-mix(in srgb, var(--primary) 22%, transparent), transparent 72%)",
+        }}
+      />
+      <div
+        className="absolute -top-10 right-[6%] h-72 w-72 rounded-full opacity-60 blur-3xl"
+        style={{
+          background:
+            "radial-gradient(closest-side, color-mix(in srgb, var(--accent) 26%, transparent), transparent 70%)",
+        }}
+      />
+      <div
+        className="absolute top-28 left-[4%] h-64 w-64 rounded-full opacity-50 blur-3xl"
+        style={{
+          background:
+            "radial-gradient(closest-side, color-mix(in srgb, #a855f7 22%, transparent), transparent 70%)",
+        }}
+      />
+    </div>
+  );
+}
+
 export default async function TeamsPage() {
   const { user, profile } = await getSession();
   if (!user) redirect("/login?next=/teams");
 
   return (
-    <div className="relative mx-auto max-w-5xl px-4 pt-28 pb-20 sm:px-6 lg:px-8">
-      <div aria-hidden className="pointer-events-none fixed inset-0 -z-10">
-        <div className="absolute inset-x-0 top-0 h-[420px] bg-grid opacity-40 mask-b-faded" />
-      </div>
+    <div className="relative overflow-hidden">
+      <AmbientGlows />
 
-      {!profile?.team_number ? (
-        <Reveal>
-          <Badge
-            variant="primary"
-            className="mb-3 font-mono uppercase tracking-wider"
-          >
-            <Users className="h-3 w-3" /> Your team
-          </Badge>
-          <h1 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">
-            See your whole team&apos;s progress
-          </h1>
-          <p className="mt-2 max-w-2xl text-muted-foreground">
-            Add your FRC team number and everyone on your team who uses LearnFRC
-            shows up here automatically — no codes, no setup. You&apos;ll all be
-            able to see each other&apos;s progress and push each other to finish.
-          </p>
-          <Button asChild variant="brand" className="mt-6">
-            <Link href="/settings">
-              Add your team number <ArrowRight className="h-4 w-4" />
-            </Link>
-          </Button>
-        </Reveal>
-      ) : (
-        await renderTeam(profile.team_number, user.id)
-      )}
+      <div className="mx-auto max-w-5xl px-4 pt-28 pb-24 sm:px-6 lg:px-8">
+        {!profile?.team_number ? (
+          <section className="mx-auto max-w-2xl text-center">
+            <span className="aq-eyebrow aq-rise aq-rise-1 justify-center">
+              <Users className="h-3.5 w-3.5" aria-hidden />
+              Your pit crew
+            </span>
+            <h1 className="aq-rise aq-rise-2 mt-4 text-balance text-4xl font-bold tracking-tight sm:text-5xl">
+              See your whole{" "}
+              <span style={HEADLINE_GRADIENT}>team&apos;s progress</span>
+            </h1>
+            <p className="aq-rise aq-rise-3 mx-auto mt-4 max-w-xl text-pretty text-base leading-relaxed text-foreground/70 sm:text-lg">
+              Add your FRC team number and everyone on your team who uses
+              LearnFRC shows up here automatically — no codes, no setup.
+              You&apos;ll all see each other&apos;s progress and push each other
+              to finish before build season.
+            </p>
+            <div className="aq-rise aq-rise-4 mt-8 flex justify-center">
+              <Link href="/settings" className="aq-cta">
+                Add your team number
+                <ArrowRight className="h-4 w-4" aria-hidden />
+              </Link>
+            </div>
+          </section>
+        ) : (
+          await renderTeam(profile.team_number, user.id)
+        )}
+      </div>
     </div>
   );
 
@@ -84,116 +119,131 @@ export default async function TeamsPage() {
         ? clampPct((totalCompleted / (members.length * totalLessons)) * 100)
         : 0;
 
-    const stats = [
+    const stats: {
+      icon: ComponentType<{ className?: string }>;
+      label: string;
+      value: string;
+      accent: string;
+    }[] = [
       {
         icon: Users,
         label: "Members",
-        to: members.length,
-        suffix: "",
-        accent: "var(--primary)",
+        value: String(members.length),
+        accent: "#2560e6",
       },
       {
         icon: CheckCircle2,
         label: "Lessons completed",
-        to: totalCompleted,
-        suffix: "",
-        accent: "var(--accent)",
+        value: String(totalCompleted),
+        accent: "#1aa9d6",
       },
       {
         icon: Trophy,
         label: "Avg. completion",
-        to: avgPct,
-        suffix: "%",
-        accent: "var(--magenta)",
+        value: `${avgPct}%`,
+        accent: "#a855f7",
       },
     ];
 
     return (
       <div className="space-y-8">
-        <Reveal>
-          <Badge
-            variant="primary"
-            className="mb-2 font-mono uppercase tracking-wider"
-          >
-            <Users className="h-3 w-3" /> Your team
-          </Badge>
-          <h1 className="font-display text-3xl font-bold tracking-tight">
-            Team <span className="text-gradient">#{teamNumber}</span>
+        {/* Hero — the team badge is the most characteristic thing here */}
+        <section>
+          <span className="aq-eyebrow aq-rise aq-rise-1">
+            <Users className="h-3.5 w-3.5" aria-hidden />
+            Your pit crew
+          </span>
+          <h1 className="aq-rise aq-rise-2 mt-4 text-4xl font-bold tracking-tight sm:text-5xl">
+            Team <span style={HEADLINE_GRADIENT}>#{teamNumber}</span>
           </h1>
-          <p className="mt-1.5 flex items-center gap-1.5 text-sm text-muted-foreground">
-            <Info className="h-3.5 w-3.5 shrink-0" />
-            Everyone who signed up with team #{teamNumber} is here — and you can
-            all see each other&apos;s progress.
+          <p className="aq-rise aq-rise-3 mt-3 flex items-start gap-2 text-base leading-relaxed text-foreground/70">
+            <Info className="mt-1 h-4 w-4 shrink-0 text-primary" aria-hidden />
+            <span>
+              Everyone who signed up with team #{teamNumber} is here — and you
+              can all see each other&apos;s progress.
+            </span>
           </p>
-        </Reveal>
+        </section>
 
-        <Reveal delay={0.05}>
-          <div className="grid grid-cols-3 gap-3 sm:gap-4">
+        {/* Stat tiles */}
+        <Reveal>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             {stats.map((s) => (
               <div
                 key={s.label}
-                className="rounded-2xl border border-border bg-card/80 p-4 backdrop-blur-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-[var(--glow-primary)]"
+                className="aq-tile flex items-center gap-3 rounded-2xl px-4 py-4"
+                style={{ "--a": s.accent } as CSSProperties}
               >
-                <div
-                  className="mb-2 flex h-9 w-9 items-center justify-center rounded-lg"
-                  style={{
-                    background: `color-mix(in srgb, ${s.accent} 14%, transparent)`,
-                    color: s.accent,
-                  }}
-                >
-                  <s.icon className="h-4.5 w-4.5" />
-                </div>
-                <div className="font-display text-2xl font-bold tracking-tight">
-                  <NeonCounter to={s.to} suffix={s.suffix} />
-                </div>
-                <div className="mt-0.5 font-mono text-[11px] uppercase tracking-wide text-muted-foreground">
-                  {s.label}
-                </div>
+                <span className="aq-badge flex h-11 w-11 shrink-0 items-center justify-center rounded-xl">
+                  <s.icon className="h-5 w-5" />
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-2xl font-bold leading-none tracking-tight text-foreground tabular-nums">
+                    {s.value}
+                  </span>
+                  <span className="mt-1.5 block truncate font-mono text-[11px] font-medium uppercase tracking-wide text-foreground/70">
+                    {s.label}
+                  </span>
+                </span>
               </div>
             ))}
           </div>
         </Reveal>
 
-        <Reveal delay={0.06}>
-          <div className="flex flex-col gap-3 rounded-2xl border border-primary/30 bg-primary/[0.06] p-5 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="font-display text-sm font-semibold">
-                Invite your teammates
-              </h2>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                Anyone who signs up with team #{teamNumber} joins automatically —
-                no codes, no setup.
-              </p>
+        {/* Invite callout */}
+        <Reveal>
+          <div className="aq-glass flex flex-col gap-4 rounded-3xl p-6 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <span
+                className="aq-badge flex h-11 w-11 shrink-0 items-center justify-center rounded-xl"
+                style={{ "--a": "#2560e6" } as CSSProperties}
+              >
+                <Sparkles className="h-5 w-5" />
+              </span>
+              <div>
+                <h2 className="text-lg font-bold tracking-tight">
+                  Invite your teammates
+                </h2>
+                <p className="mt-1 text-sm leading-relaxed text-foreground/70">
+                  Anyone who signs up with team #{teamNumber} joins
+                  automatically — no codes, no setup.
+                </p>
+              </div>
             </div>
-            <ShareButton
-              variant="brand"
-              label="Share invite"
-              text={`Join our FRC team on LearnFRC — sign up with team #${teamNumber} and we can track each other's progress and learn together:`}
-              url="https://learnfrc.systemerr.com"
-            />
+            <div className="shrink-0">
+              <ShareButton
+                variant="brand"
+                label="Share invite"
+                text={`Join our FRC team on LearnFRC — sign up with team #${teamNumber} and we can track each other's progress and learn together:`}
+                url="https://learnfrc.systemerr.com"
+              />
+            </div>
           </div>
         </Reveal>
 
-        <Reveal delay={0.08}>
-          <TerminalFrame
-            title={`roster — ~/team/${teamNumber}`}
-            glow
-            bodyClassName="p-0"
-            right={
-              <StatusPill tone="primary">
+        {/* Roster */}
+        <Reveal>
+          <div className="aq-card overflow-hidden rounded-3xl">
+            <div className="flex items-center justify-between gap-3 px-6 pt-5 pb-4">
+              <h2 className="text-lg font-bold tracking-tight">Roster</h2>
+              <span className="aq-chip font-mono text-xs">
                 {pluralize(members.length, "member")}
-              </StatusPill>
-            }
-          >
+              </span>
+            </div>
+            <hr className="aq-divider" />
+
             {members.length === 0 ? (
-              <div className="px-5 py-10 text-center">
-                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl border border-primary/40 bg-primary/10 text-primary glow-primary">
+              <div className="px-6 py-14 text-center">
+                <div
+                  className="aq-badge mx-auto flex h-14 w-14 items-center justify-center rounded-2xl"
+                  style={{ "--a": "#2560e6" } as CSSProperties}
+                >
                   <Sparkles className="h-6 w-6" />
                 </div>
-                <p className="mt-3 text-sm font-medium">
+                <p className="mt-4 text-base font-semibold text-foreground">
                   You&apos;re the first one here
                 </p>
-                <p className="mx-auto mt-1 max-w-sm text-xs text-muted-foreground">
+                <p className="mx-auto mt-1.5 max-w-sm text-sm leading-relaxed text-foreground/70">
                   Tell your teammates to sign up with team #{teamNumber} and
                   they&apos;ll appear here automatically.
                 </p>
@@ -209,30 +259,28 @@ export default async function TeamsPage() {
                   return (
                     <li
                       key={m.userId}
-                      className={`flex items-center gap-4 px-5 py-3.5 transition-colors ${
-                        isYou
-                          ? "bg-primary/[0.06]"
-                          : "hover:bg-primary/[0.03]"
+                      className={`flex items-center gap-4 px-6 py-4 transition-colors ${
+                        isYou ? "bg-primary/[0.06]" : "hover:bg-primary/[0.04]"
                       }`}
                     >
                       <Avatar
                         name={m.name}
                         src={m.avatarUrl}
                         seed={m.userId}
-                        className="h-9 w-9 shrink-0"
+                        className="h-10 w-10 shrink-0"
                       />
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
-                          <span className="truncate text-sm font-medium">
+                          <span className="truncate text-sm font-semibold text-foreground">
                             {m.name}
                           </span>
                           {isYou && (
-                            <span className="shrink-0 rounded-full bg-primary/15 px-1.5 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wide text-primary">
+                            <span className="shrink-0 rounded-full bg-primary/15 px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wide text-primary">
                               You
                             </span>
                           )}
                         </div>
-                        <div className="mt-1 flex items-center gap-2">
+                        <div className="mt-1.5 flex items-center gap-2">
                           <Progress
                             value={pct}
                             className="h-1.5 max-w-[180px]"
@@ -243,7 +291,7 @@ export default async function TeamsPage() {
                         </div>
                       </div>
                       <div className="hidden shrink-0 text-right sm:block">
-                        <div className="font-display text-sm font-semibold text-primary">
+                        <div className="text-sm font-bold text-primary">
                           {m.xp} XP
                         </div>
                         <div className="font-mono text-xs text-muted-foreground">
@@ -255,7 +303,7 @@ export default async function TeamsPage() {
                 })}
               </ul>
             )}
-          </TerminalFrame>
+          </div>
         </Reveal>
       </div>
     );

@@ -1,16 +1,23 @@
+import type { CSSProperties } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ArrowRight, Clock } from "lucide-react";
+import { ArrowLeft, ArrowRight, BookOpen, Clock, Calendar } from "lucide-react";
 import { ARTICLES, getArticle, getRelated } from "@/lib/blog-data";
 import { Markdown } from "@/components/markdown";
 import { JsonLd } from "@/components/json-ld";
 import { Button } from "@/components/ui/button";
 import { ShareButton } from "@/components/share-button";
 import { Reveal } from "@/components/motion/reveal";
-import { StatusPill } from "@/components/motion/terminal";
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.systemerr.com";
+
+const GRADIENT_TEXT: CSSProperties = {
+  background: "linear-gradient(120deg,#2560e6,#1aa9d6)",
+  WebkitBackgroundClip: "text",
+  backgroundClip: "text",
+  color: "transparent",
+};
 
 export function generateStaticParams() {
   return ARTICLES.map((a) => ({ slug: a.slug }));
@@ -59,6 +66,12 @@ export default async function ArticlePage({
   const url = `${SITE}/blog/${a.slug}`;
   const related = getRelated(a.slug, 3);
 
+  const formattedDate = new Date(`${a.date}T12:00:00`).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Article",
@@ -74,7 +87,23 @@ export default async function ArticlePage({
   };
 
   return (
-    <article className="mx-auto max-w-3xl px-4 pt-28 pb-20 sm:px-6 lg:px-8">
+    <article className="relative mx-auto max-w-3xl px-4 pt-28 pb-20 sm:px-6 lg:px-8">
+      {/* Ambient glows */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+        <div
+          className="absolute -top-24 -left-20 h-72 w-72 rounded-full opacity-60 blur-3xl"
+          style={{ background: "radial-gradient(circle, rgba(37,96,230,0.20), transparent 70%)" }}
+        />
+        <div
+          className="absolute top-40 -right-24 h-80 w-80 rounded-full opacity-50 blur-3xl"
+          style={{ background: "radial-gradient(circle, rgba(26,169,214,0.18), transparent 70%)" }}
+        />
+        <div
+          className="absolute bottom-10 left-1/3 h-72 w-72 rounded-full opacity-40 blur-3xl"
+          style={{ background: "radial-gradient(circle, rgba(124,92,246,0.14), transparent 70%)" }}
+        />
+      </div>
+
       <JsonLd data={jsonLd} />
       <JsonLd
         data={{
@@ -88,100 +117,107 @@ export default async function ArticlePage({
         }}
       />
 
-      <Reveal>
+      {/* Hero */}
+      <header>
         <Link
           href="/blog"
-          className="inline-flex items-center gap-1.5 font-mono text-sm text-muted-foreground transition-colors hover:text-primary"
+          className="aq-rise aq-rise-1 inline-flex items-center gap-1.5 rounded-full text-sm font-medium text-muted-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
         >
-          <ArrowLeft className="h-4 w-4" /> cd ../articles
+          <ArrowLeft className="h-4 w-4" /> Back to all articles
         </Link>
 
-        <div className="mt-5 flex flex-wrap items-center gap-3 font-mono text-xs text-muted-foreground">
-          <StatusPill tone="accent" pulse={false}>
-            guide
-          </StatusPill>
-          <span className="inline-flex items-center gap-1.5">
+        <div className="aq-rise aq-rise-2 mt-6 flex flex-wrap items-center gap-2.5">
+          <span className="aq-chip inline-flex items-center gap-1.5">
+            <BookOpen className="h-3.5 w-3.5" /> Guide
+          </span>
+          <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
             <Clock className="h-3.5 w-3.5" /> {a.readMins} min read
           </span>
-          <span className="text-muted-foreground/50">·</span>
-          <time dateTime={a.date}>
-            {new Date(`${a.date}T12:00:00`).toLocaleDateString("en-US", {
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-            })}
+          <span aria-hidden className="text-border">•</span>
+          <time
+            dateTime={a.date}
+            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground"
+          >
+            <Calendar className="h-3.5 w-3.5" /> {formattedDate}
           </time>
         </div>
 
-        <h1 className="mt-4 text-balance font-display text-3xl font-bold tracking-tight sm:text-4xl">
-          {a.title}
+        <h1 className="aq-rise aq-rise-3 aq-display mt-5 text-balance text-3xl font-bold leading-[1.1] tracking-tight sm:text-4xl md:text-5xl">
+          <span style={GRADIENT_TEXT}>{a.title}</span>
         </h1>
 
-        <div className="mt-5">
+        {a.description && (
+          <p className="aq-rise aq-rise-3 mt-4 max-w-2xl text-lg leading-relaxed text-foreground/70">
+            {a.description}
+          </p>
+        )}
+
+        <div className="aq-rise aq-rise-4 mt-6">
           <ShareButton
-            variant="outline"
+            variant="ghost"
             label="Share this guide"
             text={`${a.title} — a free FRC guide on LearnFRC`}
             url={url}
           />
         </div>
-      </Reveal>
+      </header>
 
-      <div
-        aria-hidden
-        className="mt-8 h-px w-full bg-gradient-to-r from-primary/50 via-border to-transparent"
-      />
+      <hr aria-hidden className="aq-divider mt-8" />
 
+      {/* Article body */}
       <Reveal delay={0.1}>
-        <div className="mt-6">
+        <div className="mt-8">
           <Markdown content={a.content} />
         </div>
       </Reveal>
 
+      {/* Keep reading */}
       {related.length > 0 && (
-        <Reveal as="section" className="mt-14">
-          <h2 className="flex items-center gap-2 font-display text-lg font-bold tracking-tight">
-            <span aria-hidden className="font-mono text-primary">
-              //
-            </span>
-            Keep reading
+        <Reveal as="section" className="mt-16 aq-reveal">
+          <p className="aq-eyebrow">Keep reading</p>
+          <h2 className="aq-display mt-2 text-2xl font-bold tracking-tight">
+            More from the pit
           </h2>
-          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+          <div className="mt-5 grid gap-4 sm:grid-cols-3">
             {related.map((r) => (
               <Link
                 key={r.slug}
                 href={`/blog/${r.slug}`}
-                className="group rounded-2xl border border-border bg-card/70 p-4 backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-[var(--glow-primary)]"
+                className="aq-card aq-card-hover group flex flex-col gap-3 p-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
               >
-                <div className="flex items-center gap-1.5 font-mono text-xs text-muted-foreground">
+                <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
                   <Clock className="h-3 w-3" /> {r.readMins} min read
-                </div>
-                <h3 className="mt-2 font-display font-semibold leading-snug tracking-tight transition-colors group-hover:text-primary">
+                </span>
+                <h3 className="aq-display font-semibold leading-snug tracking-tight transition-colors group-hover:text-primary">
                   {r.title}
                 </h3>
+                <span className="mt-auto inline-flex items-center gap-1 text-sm font-medium text-primary">
+                  Read <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+                </span>
               </Link>
             ))}
           </div>
         </Reveal>
       )}
 
-      <Reveal>
-        <div className="relative mt-12 overflow-hidden rounded-2xl border border-primary/25 bg-card/70 p-6 text-center backdrop-blur-sm shadow-[var(--glow-primary)]">
-          <span
-            aria-hidden
-            className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/70 to-transparent"
-          />
-          <div className="font-mono text-xs text-accent">
-            ~/learnfrc $ ./start.sh --free<span className="caret" aria-hidden />
+      {/* CTA */}
+      <Reveal className="aq-reveal">
+        <div
+          className="aq-glass relative mt-14 overflow-hidden p-8 text-center"
+          style={{ "--a": "#2560e6" } as CSSProperties}
+        >
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl aq-icon">
+            <BookOpen className="h-6 w-6 text-primary" />
           </div>
-          <h2 className="mt-3 font-display text-lg font-bold">
-            Learn every department of FRC — free
+          <h2 className="aq-display text-2xl font-bold tracking-tight">
+            Learn every department of FRC —{" "}
+            <span style={GRADIENT_TEXT}>free</span>
           </h2>
-          <p className="mx-auto mt-1.5 max-w-md text-sm text-muted-foreground">
+          <p className="mx-auto mt-2 max-w-md text-base leading-relaxed text-foreground/70">
             393+ structured lessons, quizzes, and team tools. Built by an FRC student,
             for the community.
           </p>
-          <Button asChild variant="brand" className="mt-4">
+          <Button asChild variant="brand" className="mt-6">
             <Link href="/guides">
               Browse the guides <ArrowRight className="h-4 w-4" />
             </Link>
