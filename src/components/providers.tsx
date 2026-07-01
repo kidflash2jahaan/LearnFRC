@@ -5,7 +5,6 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { useTheme } from "next-themes";
 import { Toaster as Sonner } from "sonner";
 import { CommandPalette } from "@/components/search/command-palette";
-import { Terminal } from "@/components/terminal/terminal";
 
 function Toaster() {
   const { resolvedTheme } = useTheme();
@@ -35,7 +34,6 @@ export function Providers({ children }: { children: React.ReactNode }) {
     >
       {children}
       <CommandPalette />
-      <Terminal />
       <Toaster />
     </ThemeProvider>
   );

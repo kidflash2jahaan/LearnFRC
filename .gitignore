@@ -45,3 +45,7 @@ content/lessons-manifest.json
 content/structure.json
 content/quizzes.json
 content/quiz-modules.json
+
+# QA screenshots + scaffolds (not source)
+design-gallery/qa/
+design-gallery/qa_*.html

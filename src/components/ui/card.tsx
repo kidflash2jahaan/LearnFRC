@@ -7,7 +7,7 @@ export function Card({
 }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cn("aq-card text-card-foreground", className)}
+      className={cn("aq-card aq-reveal text-card-foreground", className)}
       {...props}
     />
   );

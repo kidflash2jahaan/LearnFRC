@@ -453,10 +453,10 @@
   transition: transform 0.18s ease, box-shadow 0.18s ease;
 }
 .aq-tile:hover {
-  transform: translateY(-4px);
+  transform: translateY(-6px) scale(1.03);
   box-shadow:
-    14px 16px 32px color-mix(in srgb, var(--a) 36%, transparent),
-    -7px -7px 18px rgba(255, 255, 255, 0.8),
+    16px 20px 38px color-mix(in srgb, var(--a) 42%, transparent),
+    -7px -7px 18px rgba(255, 255, 255, 0.85),
     inset 0 1px 0 rgba(255, 255, 255, 0.95);
 }
 
@@ -524,22 +524,10 @@
 .aq-bar-anim { transform-origin: left; animation: aq-grow 1.3s cubic-bezier(.35,0,.15,1) both; }
 .aq-badge-bob { animation: aq-bob 4.6s ease-in-out infinite; }
 
-/* continuous sheen sweep across glass surfaces */
+/* (glass sheen removed per preference — pop-in + scroll reveals instead) */
 .aq-sheen { position: relative; }
-.aq-sheen::before {
-  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; overflow: hidden;
-  background: linear-gradient(100deg, transparent 36%, rgba(255,255,255,.4) 50%, transparent 64%);
-  background-size: 250% 100%; background-position: 190% 0;
-  animation: aq-sheen-move 6.5s ease-in-out infinite;
-}
 
-/* department tile: hover lift already set; add a shine sweep + badge/arrow reactions */
-.aq-tile::before {
-  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
-  background: linear-gradient(100deg, transparent 30%, rgba(255,255,255,.5) 50%, transparent 70%);
-  background-size: 250% 100%; background-position: -120% 0; transition: background-position .7s ease;
-}
-.aq-tile:hover::before { background-position: 220% 0; }
+/* department tile: badge + arrow hover reactions (glint removed) */
 .aq-tile .aq-badge { transition: transform .28s cubic-bezier(.2,1.5,.5,1); }
 .aq-tile:hover .aq-badge { transform: scale(1.14) rotate(-7deg); }
 .aq-tile .aq-arw { transition: transform .28s ease, opacity .28s ease; }
@@ -555,14 +543,9 @@
   animation: aq-spin 9s linear infinite; opacity: .75;
 }
 
-/* glossy shine sweep on buttons (hover) */
-.aq-cta, .aq-ghost { position: relative; overflow: hidden; }
-.aq-cta::after, .aq-ghost::after {
-  content: ""; position: absolute; top: 0; left: 0; width: 38%; height: 100%; pointer-events: none;
-  background: linear-gradient(100deg, transparent, rgba(255,255,255,.55), transparent);
-  transform: translateX(-170%) skewX(-18deg); transition: transform .6s ease;
-}
-.aq-cta:hover::after, .aq-ghost:hover::after { transform: translateX(340%) skewX(-18deg); }
+/* button hover pop (glint removed) */
+.aq-cta, .aq-ghost { position: relative; transition: transform .18s ease, box-shadow .18s ease, filter .18s ease; }
+.aq-cta:hover, .aq-ghost:hover { transform: translateY(-2px) scale(1.03); filter: brightness(1.03); }
 
 /* ================================================================== */
 /*  ARENA CLAY foundation — global Baloo headings + reusable kit so     */
@@ -587,8 +570,8 @@
 }
 .aq-card-hover { transition: transform 0.2s ease, box-shadow 0.2s ease; }
 .aq-card-hover:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 24px 50px rgba(40, 80, 150, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  transform: translateY(-6px) scale(1.02);
+  box-shadow: 0 28px 56px rgba(40, 80, 150, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.95);
 }
 
 .aq-eyebrow {
@@ -618,12 +601,12 @@
 .aq-divider { height: 1px; background: var(--border); border: 0; }
 
 /* scroll-reveal (CSS scroll-driven where supported; else content just shows) */
-@keyframes aq-reveal-kf { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: none; } }
+@keyframes aq-reveal-kf { from { opacity: 0; transform: translateY(30px) scale(0.9); } to { opacity: 1; transform: none; } }
 @supports (animation-timeline: view()) {
   .aq-reveal { animation: aq-reveal-kf linear both; animation-timeline: view(); animation-range: entry 2% cover 20%; }
 }
 /* on-load staggered rise for above-the-fold hero content */
-.aq-rise { animation: aq-reveal-kf 0.6s cubic-bezier(0.21, 0.47, 0.32, 0.98) both; }
+.aq-rise { animation: aq-reveal-kf 0.62s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
 .aq-rise-1 { animation-delay: 0.06s; }
 .aq-rise-2 { animation-delay: 0.12s; }
 .aq-rise-3 { animation-delay: 0.18s; }
