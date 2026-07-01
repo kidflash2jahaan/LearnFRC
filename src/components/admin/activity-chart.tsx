@@ -65,15 +65,15 @@ export function ActivityChart({ data }: { data: DailyPoint[] }) {
     <div className="relative">
       <div className="mb-3 flex items-center gap-4 text-sm">
         {SERIES.map((s) => (
-          <span key={s.key} className="inline-flex items-center gap-1.5 font-mono text-xs">
+          <span key={s.key} className="inline-flex items-center gap-1.5 text-xs">
             <span
               className="h-2.5 w-2.5 rounded-full"
-              style={{ background: s.color, boxShadow: `0 0 8px ${s.color}` }}
+              style={{ background: s.color }}
             />
             <span className="text-muted-foreground">{s.label}</span>
           </span>
         ))}
-        <span className="ml-auto font-mono text-xs text-muted-foreground">
+        <span className="ml-auto text-xs text-muted-foreground">
           Last {data.length} days
         </span>
       </div>
@@ -82,20 +82,20 @@ export function ActivityChart({ data }: { data: DailyPoint[] }) {
         {/* Hover tooltip */}
         {hp && hover !== null && (
           <div
-            className="pointer-events-none absolute z-10 -translate-x-1/2 whitespace-nowrap rounded-lg border border-border bg-card px-3 py-2 text-xs shadow-[var(--shadow-md)]"
+            className="aq-card pointer-events-none absolute z-10 -translate-x-1/2 whitespace-nowrap px-3 py-2 text-xs"
             style={{
               left: `clamp(70px, ${(x(hover) / W) * 100}%, calc(100% - 70px))`,
               top: 0,
             }}
           >
-            <div className="font-mono font-semibold">{fmtDay(hp.day)}</div>
+            <div className="font-semibold">{fmtDay(hp.day)}</div>
             <div className="mt-1 flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full" style={{ background: "var(--primary)", boxShadow: "0 0 8px var(--primary)" }} />
-              Signups: <span className="font-mono font-medium">{hp.signups}</span>
+              <span className="h-2 w-2 rounded-full" style={{ background: "var(--primary)" }} />
+              Signups: <span className="font-medium tabular-nums">{hp.signups}</span>
             </div>
             <div className="mt-0.5 flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full" style={{ background: "var(--accent)", boxShadow: "0 0 8px var(--accent)" }} />
-              Completions: <span className="font-mono font-medium">{hp.completions}</span>
+              <span className="h-2 w-2 rounded-full" style={{ background: "var(--accent)" }} />
+              Completions: <span className="font-medium tabular-nums">{hp.completions}</span>
             </div>
           </div>
         )}
@@ -145,7 +145,6 @@ export function ActivityChart({ data }: { data: DailyPoint[] }) {
                 strokeWidth={2.5}
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                style={{ filter: `drop-shadow(0 0 5px ${s.color})` }}
                 initial={reduce ? { pathLength: 1 } : { pathLength: 0 }}
                 animate={{ pathLength: 1 }}
                 transition={{ duration: 1.1, ease: "easeOut" }}
@@ -173,7 +172,6 @@ export function ActivityChart({ data }: { data: DailyPoint[] }) {
                   fill={s.color}
                   stroke="var(--card)"
                   strokeWidth={2}
-                  style={{ filter: `drop-shadow(0 0 6px ${s.color})` }}
                 />
               ))}
             </g>

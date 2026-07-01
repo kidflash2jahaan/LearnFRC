@@ -67,10 +67,8 @@ export function DepartmentModules({
             viewport={{ once: true, margin: "-60px" }}
             transition={{ duration: 0.45, delay: mi * 0.04 }}
             className={cn(
-              "group/mod relative overflow-hidden rounded-xl border bg-card/70 backdrop-blur-md transition-all duration-300",
-              isPre
-                ? "border-primary/40 bg-primary/[0.05]"
-                : "border-border hover:border-primary/40 hover:shadow-[var(--glow-primary)]"
+              "group/mod aq-card aq-card-hover relative overflow-hidden transition-all duration-300",
+              isPre && "border-primary/40 bg-primary/[0.04]"
             )}
           >
             {/* top accent line on hover */}

@@ -24,9 +24,9 @@ import { cn } from "@/lib/utils";
 
 const EASE = [0.21, 0.47, 0.32, 0.98] as const;
 
-/** Terminal-style field label. */
+/** Standard field label. */
 const LABEL_CLS =
-  "font-mono text-[11px] uppercase tracking-wider text-muted-foreground";
+  "text-sm font-medium text-foreground";
 
 type Mode = "login" | "signup";
 
@@ -171,7 +171,7 @@ export function AuthForm({
           <div>
             <Label htmlFor="team_number" className={LABEL_CLS}>
               Team #{" "}
-              <span className="normal-case text-muted-foreground">
+              <span className="font-normal text-muted-foreground">
                 (optional)
               </span>
             </Label>

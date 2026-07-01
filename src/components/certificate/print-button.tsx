@@ -8,7 +8,7 @@ export function PrintButton() {
     <Button
       variant="brand"
       onClick={() => window.print()}
-      className="font-mono print:hidden"
+      className="print:hidden"
     >
       <Printer className="h-4 w-4" /> Print / Save as PDF
     </Button>

@@ -148,16 +148,6 @@ export function LessonComplete({
         className="relative mt-10 scroll-mt-24 overflow-hidden rounded-2xl border border-border bg-card/80 backdrop-blur-md"
       >
         <Confetti trigger={burst} />
-        <div className="terminal-titlebar flex items-center gap-2 px-4 py-2.5">
-          <span className="flex gap-1.5" aria-hidden>
-            <span className="h-3 w-3 rounded-full bg-[#ff5f57]" />
-            <span className="h-3 w-3 rounded-full bg-[#febc2e]" />
-            <span className="h-3 w-3 rounded-full bg-[#28c840]" />
-          </span>
-          <span className="ml-1 font-mono text-xs text-muted-foreground">
-            quiz.run — ~/learnfrc
-          </span>
-        </div>
         <div className="p-6">
         <div className="flex items-center gap-2">
           <ListChecks className="h-5 w-5 text-primary" />

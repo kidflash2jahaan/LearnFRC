@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import type { CSSProperties } from "react";
 import { motion } from "framer-motion";
 import {
   Users,
@@ -18,7 +19,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { NeonCounter, TerminalFrame } from "@/components/motion/terminal";
+import { AnimatedCounter } from "@/components/animated-counter";
 import { Stagger, StaggerItem } from "@/components/motion/reveal";
 import { useStaticMotion } from "@/components/perf-mode";
 import type { AdminUser, AdminTeam } from "@/lib/admin";
@@ -41,19 +42,27 @@ function relTime(iso: string): string {
   return `${m}m ago`;
 }
 
-/** A drill-in panel: a terminal window that slides in when opened. */
+/** A drill-in panel: a clay-glass card that slides in when opened. */
 function PanelShell({
   title,
+  count,
   children,
 }: {
   title: string;
+  count?: React.ReactNode;
   children: React.ReactNode;
 }) {
   const stat = useStaticMotion();
   const inner = (
-    <TerminalFrame title={title} bodyClassName="p-5 sm:p-6">
+    <div className="aq-card p-5 sm:p-6">
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <h2 className="aq-display text-lg font-semibold text-foreground">
+          {title}
+        </h2>
+        {count != null && <Badge variant="outline">{count}</Badge>}
+      </div>
       {children}
-    </TerminalFrame>
+    </div>
   );
   if (stat) return <div className="mt-4">{inner}</div>;
   return (
@@ -154,32 +163,19 @@ export function AdminOverview({
           const card = (
             <div
               className={cn(
-                "group relative h-full overflow-hidden rounded-xl border bg-card/70 p-5 backdrop-blur-sm transition-all",
-                clickable &&
-                  "cursor-pointer hover:-translate-y-1 hover:border-primary/50 hover:shadow-[var(--glow-primary)]",
-                active
-                  ? "border-primary/70 shadow-[var(--glow-primary)] ring-1 ring-primary/40"
-                  : "border-border"
+                "aq-card group relative h-full overflow-hidden p-5 transition-transform",
+                clickable && "aq-card-hover cursor-pointer",
+                active && "ring-2 ring-primary/50"
               )}
             >
-              {/* neon top edge — lights up on hover / when active */}
-              <span
-                aria-hidden
-                className={cn(
-                  "pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/70 to-transparent transition-opacity",
-                  active ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-                )}
-              />
               <div className="flex items-center justify-between">
                 <span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
                   {c.label}
                 </span>
                 <span
                   className={cn(
-                    "flex h-7 w-7 items-center justify-center rounded-md border bg-muted/50 text-primary transition-colors",
-                    active
-                      ? "border-primary/50"
-                      : "border-border group-hover:border-primary/40"
+                    "aq-icon flex h-8 w-8 items-center justify-center",
+                    active && "bg-primary/20"
                   )}
                 >
                   {clickable ? (
@@ -194,13 +190,15 @@ export function AdminOverview({
                   )}
                 </span>
               </div>
-              <div className="mt-3 font-display text-3xl font-bold tracking-tight text-foreground">
-                <NeonCounter to={c.value} />
+              <div className="aq-display mt-3 text-3xl font-bold tracking-tight text-foreground">
+                <AnimatedCounter value={c.value} />
               </div>
-              <div className="mt-1 font-mono text-[11px] text-muted-foreground">
+              <div className="mt-1 text-[13px] text-muted-foreground">
                 {c.sub}
                 {clickable && (
-                  <span className="ml-1 text-primary">· {active ? "hide" : "view all"}</span>
+                  <span className="ml-1 font-medium text-primary">
+                    · {active ? "hide" : "view all"}
+                  </span>
                 )}
               </div>
             </div>
@@ -212,7 +210,7 @@ export function AdminOverview({
                   type="button"
                   onClick={() => toggle(c.panel)}
                   aria-expanded={active}
-                  className="block w-full rounded-xl text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="block w-full rounded-[20px] text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   {card}
                 </button>
@@ -225,17 +223,10 @@ export function AdminOverview({
       </Stagger>
 
       {open === "online" && (
-        <PanelShell title="~/admin $ who --online">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="flex items-center gap-2 font-display font-semibold">
-              <span className="relative flex h-2.5 w-2.5">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
-                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-primary shadow-[0_0_8px_var(--primary)]" />
-              </span>
-              Online now
-            </h2>
-            <Badge variant="outline">{onlineUsers.length} online</Badge>
-          </div>
+        <PanelShell
+          title="Who's online"
+          count={`${onlineUsers.length} online`}
+        >
           {onlineUsers.length === 0 ? (
             <p className="text-sm text-muted-foreground">
               No signed-in users are active right now.
@@ -248,6 +239,10 @@ export function AdminOverview({
                   className="flex items-center justify-between gap-3 py-3 transition-colors hover:bg-primary/[0.04]"
                 >
                   <div className="flex min-w-0 items-center gap-2.5">
+                    <span className="relative flex h-2.5 w-2.5 shrink-0">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
+                      <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-primary" />
+                    </span>
                     <Avatar
                       name={u.name}
                       seed={u.username || u.name}
@@ -273,13 +268,10 @@ export function AdminOverview({
       )}
 
       {open === "referrals" && (
-        <PanelShell title="~/admin $ git log --referrals">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="flex items-center gap-2 font-display font-semibold">
-              <UserPlus className="h-4 w-4 text-primary" /> Who referred people
-            </h2>
-            <Badge variant="outline">{data.referralUsers} joined via referrals</Badge>
-          </div>
+        <PanelShell
+          title="Who referred people"
+          count={`${data.referralUsers} joined via referrals`}
+        >
           {recruiters.length === 0 ? (
             <p className="text-sm text-muted-foreground">
               No one has joined through a referral link yet.
@@ -322,11 +314,7 @@ export function AdminOverview({
       )}
 
       {open === "users" && (
-        <PanelShell title="~/admin $ cat users.json">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="font-display font-semibold">All users</h2>
-            <Badge variant="outline">{users.length} total</Badge>
-          </div>
+        <PanelShell title="Users" count={`${users.length} total`}>
           {users.length === 0 ? (
             <p className="text-sm text-muted-foreground">No users yet.</p>
           ) : (
@@ -378,11 +366,7 @@ export function AdminOverview({
       )}
 
       {open === "teams" && (
-        <PanelShell title="~/admin $ ls teams/">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="font-display font-semibold">Teams</h2>
-            <Badge variant="outline">{teams.length} total</Badge>
-          </div>
+        <PanelShell title="Teams" count={`${teams.length} total`}>
           {teams.length === 0 ? (
             <p className="text-sm text-muted-foreground">No teams yet.</p>
           ) : (
@@ -414,11 +398,10 @@ export function AdminOverview({
       )}
 
       {open === "completions" && (
-        <PanelShell title="~/admin $ tail completions.log">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="font-display font-semibold">Recent lesson completions</h2>
-            <Badge variant="outline">last {completions.length}</Badge>
-          </div>
+        <PanelShell
+          title="Recent lesson completions"
+          count={`last ${completions.length}`}
+        >
           {completions.length === 0 ? (
             <p className="text-sm text-muted-foreground">No completions yet.</p>
           ) : (
@@ -454,11 +437,10 @@ export function AdminOverview({
       )}
 
       {open === "subscribers" && (
-        <PanelShell title="~/admin $ cat subscribers.list">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="font-display font-semibold">Email subscribers</h2>
-            <Badge variant="outline">{subscribers.length} total</Badge>
-          </div>
+        <PanelShell
+          title="Email subscribers"
+          count={`${subscribers.length} total`}
+        >
           {subscribers.length === 0 ? (
             <p className="text-sm text-muted-foreground">No subscribers yet.</p>
           ) : (
@@ -490,11 +472,10 @@ export function AdminOverview({
       )}
 
       {open === "achievements" && (
-        <PanelShell title="~/admin $ cat achievements.db">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="font-display font-semibold">Achievements earned</h2>
-            <Badge variant="outline">{achievements.length} badges</Badge>
-          </div>
+        <PanelShell
+          title="Achievements earned"
+          count={`${achievements.length} badges`}
+        >
           {achievements.length === 0 ? (
             <p className="text-sm text-muted-foreground">No achievements yet.</p>
           ) : (
@@ -510,13 +491,13 @@ export function AdminOverview({
                   <div className="h-2 overflow-hidden rounded-full bg-muted">
                     <div
                       className="h-full rounded-full"
-                      style={{
-                        width: `${Math.round((a.earned / maxAch) * 100)}%`,
-                        background:
-                          "linear-gradient(90deg, var(--accent), var(--primary))",
-                        boxShadow:
-                          "0 0 10px color-mix(in srgb, var(--primary) 45%, transparent)",
-                      }}
+                      style={
+                        {
+                          width: `${Math.round((a.earned / maxAch) * 100)}%`,
+                          background:
+                            "linear-gradient(90deg, var(--accent), var(--primary))",
+                        } as CSSProperties
+                      }
                     />
                   </div>
                 </div>

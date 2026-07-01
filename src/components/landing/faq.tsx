@@ -14,10 +14,8 @@ export function Faq() {
         return (
           <div
             key={i}
-            className={`overflow-hidden rounded-xl border bg-card/60 backdrop-blur-sm transition-colors duration-300 ${
-              isOpen
-                ? "border-primary/40 shadow-[var(--glow-primary)]"
-                : "border-border hover:border-border/80"
+            className={`aq-card overflow-hidden transition-colors duration-300 ${
+              isOpen ? "border-primary/40" : "aq-card-hover"
             }`}
           >
             <button
@@ -26,14 +24,14 @@ export function Faq() {
               aria-expanded={isOpen}
             >
               <span
-                className={`font-mono text-xs transition-colors ${
+                className={`font-mono text-xs tabular-nums transition-colors ${
                   isOpen ? "text-primary" : "text-accent"
                 }`}
                 aria-hidden
               >
                 {String(i + 1).padStart(2, "0")}
               </span>
-              <span className="flex-1 font-medium">{item.q}</span>
+              <span className="flex-1 font-medium text-foreground">{item.q}</span>
               <ChevronDown
                 className={`h-5 w-5 shrink-0 transition-transform duration-300 ${
                   isOpen ? "rotate-180 text-primary" : "text-muted-foreground"
@@ -49,7 +47,7 @@ export function Faq() {
                   transition={{ duration: 0.3, ease: [0.21, 0.47, 0.32, 0.98] }}
                   className="overflow-hidden"
                 >
-                  <p className="border-t border-border/60 px-5 pb-5 pt-4 pl-12 text-sm leading-relaxed text-muted-foreground">
+                  <p className="border-t border-border/60 px-5 pb-5 pt-4 pl-12 text-base leading-relaxed text-muted-foreground">
                     {item.a}
                   </p>
                 </motion.div>

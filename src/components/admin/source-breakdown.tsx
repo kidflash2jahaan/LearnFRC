@@ -20,7 +20,7 @@ export function SourceBreakdown({
 
   return (
     <div>
-      <div className="mb-5 inline-flex rounded-lg border border-border bg-muted/40 p-0.5 font-mono text-xs">
+      <div className="mb-5 inline-flex rounded-2xl border border-border bg-card p-1 text-sm">
         {(
           [
             ["7d", "Last 7 days"],
@@ -32,9 +32,9 @@ export function SourceBreakdown({
             onClick={() => setRange(key)}
             aria-pressed={range === key}
             className={cn(
-              "cursor-pointer rounded-md px-3 py-1.5 transition-colors",
+              "cursor-pointer rounded-xl px-4 py-1.5 font-medium transition-colors",
               range === key
-                ? "bg-primary/15 text-primary shadow-[var(--glow-primary)]"
+                ? "bg-primary/10 text-primary"
                 : "text-muted-foreground hover:text-foreground"
             )}
           >

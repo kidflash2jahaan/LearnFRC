@@ -44,21 +44,14 @@ export function Footer() {
         isHome ? "mt-0 bg-background" : "mt-24 bg-card/30"
       }`}
     >
-      {/* neon top hairline */}
-      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
+      {/* soft top hairline */}
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
       <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
-        {/* system-status strip */}
-        <div className="mb-10 flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-          <span className="inline-flex items-center gap-1.5 text-primary">
-            <span className="h-1.5 w-1.5 rounded-full bg-primary shadow-[var(--glow-primary)] animate-glow-pulse" />
-            system: online
-          </span>
-          <span className="text-border">/</span>
-          <span>393+ lessons</span>
-          <span className="text-border">/</span>
-          <span>11 departments</span>
-          <span className="text-border">/</span>
-          <span>100% free, forever</span>
+        {/* stats strip */}
+        <div className="mb-10 flex flex-wrap items-center gap-2.5">
+          <span className="aq-chip">393+ lessons</span>
+          <span className="aq-chip">11 departments</span>
+          <span className="aq-chip">100% free, forever</span>
         </div>
 
         <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-5">
@@ -69,9 +62,7 @@ export function Footer() {
               FIRST Robotics Competition — from swerve drives to the Impact Award.
             </p>
             <div className="mt-5">
-              <p className="mb-2 font-mono text-xs uppercase tracking-wider text-muted-foreground">
-                $ subscribe --new-content
-              </p>
+              <p className="mb-2 aq-eyebrow">New lessons in your inbox</p>
               <NewsletterForm />
             </div>
           </div>

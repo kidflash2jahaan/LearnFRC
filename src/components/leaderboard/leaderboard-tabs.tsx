@@ -3,7 +3,7 @@
 import * as React from "react";
 import { motion } from "framer-motion";
 import { Users2 } from "lucide-react";
-import { NeonCounter, TerminalFrame } from "@/components/motion/terminal";
+import { AnimatedCounter } from "@/components/animated-counter";
 import { Podium, LeaderList, type PodiumEntry } from "./podium";
 import { cn } from "@/lib/utils";
 
@@ -22,9 +22,9 @@ const TABS = [
 type TabKey = (typeof TABS)[number]["key"];
 
 const BOARD_TITLE: Record<TabKey, string> = {
-  week: "~/learnfrc $ rank --weekly --list",
-  all: "~/learnfrc $ rank --all-time --list",
-  team: "~/learnfrc $ rank --by-team",
+  week: "This week's rankings",
+  all: "All-time rankings",
+  team: "Team rankings",
 };
 
 export function LeaderboardTabs({
@@ -118,7 +118,10 @@ function IndividualBoard({
         </section>
       )}
       {rest.length > 0 && (
-        <TerminalFrame title={title} glow bodyClassName="p-0" className="mt-12">
+        <div className="aq-card mt-12 overflow-hidden">
+          <div className="border-b border-border px-5 py-3">
+            <h3 className="aq-display text-base font-semibold text-foreground">{title}</h3>
+          </div>
           <div className="hidden items-center gap-4 border-b border-border px-5 py-2.5 font-mono text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-muted-foreground sm:flex">
             <span className="w-9 text-center">Rank</span>
             <span className="ml-[3.25rem] flex-1">Learner</span>
@@ -127,7 +130,7 @@ function IndividualBoard({
             <span className="w-24 text-right">XP</span>
           </div>
           <LeaderList entries={rest} />
-        </TerminalFrame>
+        </div>
       )}
     </>
   );
@@ -145,12 +148,12 @@ function TeamBoard({
       <Empty label="No teams on the board yet — add your team number in settings." />
     );
   return (
-    <TerminalFrame
-      title={BOARD_TITLE.team}
-      glow
-      bodyClassName="p-0"
-      className="mt-12"
-    >
+    <div className="aq-card mt-12 overflow-hidden">
+      <div className="border-b border-border px-5 py-3">
+        <h3 className="aq-display text-base font-semibold text-foreground">
+          {BOARD_TITLE.team}
+        </h3>
+      </div>
       <div className="hidden items-center gap-4 border-b border-border px-5 py-2.5 font-mono text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-muted-foreground sm:flex">
         <span className="w-9 text-center">Rank</span>
         <span className="ml-[3.25rem] flex-1">Team</span>
@@ -226,7 +229,7 @@ function TeamBoard({
                   mine ? "text-primary" : "text-foreground"
                 )}
               >
-                <NeonCounter to={t.totalXp} />
+                <AnimatedCounter value={t.totalXp} />
                 <span className="ml-1 text-[0.6rem] font-medium uppercase text-muted-foreground">
                   xp
                 </span>
@@ -235,7 +238,7 @@ function TeamBoard({
           );
         })}
       </motion.ul>
-    </TerminalFrame>
+    </div>
   );
 }
 

@@ -4,6 +4,7 @@ import * as React from "react";
 import { AnimatePresence, motion, LayoutGroup } from "framer-motion";
 import { Search, ExternalLink, BookA } from "lucide-react";
 import type { GlossaryTerm } from "@/lib/glossary-data";
+import { AnimatedCounter } from "@/components/animated-counter";
 import { cn } from "@/lib/utils";
 
 export function GlossaryBrowser({
@@ -34,35 +35,29 @@ export function GlossaryBrowser({
 
   return (
     <div>
-      {/* search — terminal input */}
-      <div className="group relative mx-auto max-w-xl">
-        <span
-          aria-hidden
-          className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 font-mono text-sm text-primary"
-        >
-          $
-        </span>
-        <Search className="pointer-events-none absolute left-9 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+      {/* search */}
+      <div className="relative mx-auto max-w-xl">
+        <Search className="pointer-events-none absolute left-5 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="search terms, acronyms, definitions…"
-          className="h-12 w-full rounded-xl border border-border bg-card/60 pl-16 pr-4 font-mono text-sm text-foreground outline-none backdrop-blur-sm transition-colors placeholder:text-muted-foreground focus-visible:border-primary focus-visible:shadow-[var(--glow-primary)]"
+          placeholder="Search terms, acronyms, and definitions…"
+          className="aq-input h-14 w-full pl-14 pr-5 text-base"
           aria-label="Search glossary"
         />
       </div>
 
-      {/* category chips */}
+      {/* category filters */}
       <div className="mt-5 flex flex-wrap justify-center gap-2">
         {chips.map((c) => (
           <button
             key={c}
             onClick={() => setActive(c)}
             className={cn(
-              "cursor-pointer rounded-full border px-3.5 py-1.5 font-mono text-xs font-medium transition-all",
+              "aq-chip cursor-pointer transition-all",
               active === c
-                ? "border-primary/60 bg-primary/10 text-primary shadow-[var(--glow-primary)]"
-                : "border-border text-muted-foreground hover:border-border/80 hover:bg-muted hover:text-foreground"
+                ? "border-primary/60 bg-primary/10 text-primary"
+                : "text-muted-foreground hover:text-foreground"
             )}
           >
             {c}
@@ -70,8 +65,11 @@ export function GlossaryBrowser({
         ))}
       </div>
 
-      <p className="mt-6 text-center font-mono text-sm text-muted-foreground">
-        <span className="text-primary">{filtered.length}</span>{" "}
+      <p className="mt-6 text-center text-base text-muted-foreground">
+        <AnimatedCounter
+          value={filtered.length}
+          className="font-semibold text-foreground"
+        />{" "}
         {filtered.length === 1 ? "term" : "terms"}
       </p>
 
@@ -90,19 +88,19 @@ export function GlossaryBrowser({
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.96 }}
                 transition={{ duration: 0.25 }}
-                className="group flex flex-col rounded-2xl border border-border bg-card/60 p-5 backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-[var(--glow-primary)]"
+                className="aq-card aq-card-hover flex flex-col p-5"
               >
                 <div className="flex items-start justify-between gap-2">
-                  <h3 className="font-display font-semibold leading-tight">
+                  <h3 className="aq-display text-lg font-semibold leading-tight text-foreground">
                     {t.term}
                   </h3>
                   {t.abbr && t.abbr !== t.term && (
-                    <span className="shrink-0 rounded-md border border-border bg-background/50 px-1.5 py-0.5 font-mono text-[11px] text-accent">
+                    <span className="shrink-0 rounded-lg border border-border bg-background/60 px-2 py-0.5 font-mono text-[11px] font-medium text-accent">
                       {t.abbr}
                     </span>
                   )}
                 </div>
-                <span className="mt-1 font-mono text-[11px] uppercase tracking-wider text-primary/80">
+                <span className="mt-1.5 font-mono text-[11px] uppercase tracking-wider text-primary">
                   {t.category}
                 </span>
                 <p className="mt-2 flex-1 text-sm leading-relaxed text-muted-foreground">
@@ -113,9 +111,9 @@ export function GlossaryBrowser({
                     href={t.link}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="mt-3 inline-flex items-center gap-1.5 font-mono text-xs font-medium text-primary transition-colors hover:text-accent"
+                    className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-primary transition-colors hover:text-accent"
                   >
-                    learn_more <ExternalLink className="h-3 w-3" />
+                    Learn more <ExternalLink className="h-3.5 w-3.5" />
                   </a>
                 )}
               </motion.div>
@@ -127,7 +125,7 @@ export function GlossaryBrowser({
       {filtered.length === 0 && (
         <div className="mt-10 flex flex-col items-center text-center text-muted-foreground">
           <BookA className="h-10 w-10 opacity-40" />
-          <p className="mt-3 font-mono text-sm">
+          <p className="mt-3 text-base">
             No terms match &ldquo;{query}&rdquo;.
           </p>
         </div>

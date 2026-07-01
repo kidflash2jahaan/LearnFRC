@@ -150,24 +150,9 @@ export function CommandPalette() {
         >
           <DialogPrimitive.Title className="sr-only">Search LearnFRC</DialogPrimitive.Title>
 
-          {/* terminal titlebar */}
-          <div className="terminal-titlebar flex items-center gap-2 px-4 py-2.5">
-            <span className="flex gap-1.5" aria-hidden>
-              <span className="h-3 w-3 rounded-full bg-[#ff5f57]" />
-              <span className="h-3 w-3 rounded-full bg-[#febc2e]" />
-              <span className="h-3 w-3 rounded-full bg-[#28c840] shadow-[0_0_8px_rgba(40,200,64,.6)]" />
-            </span>
-            <span className="ml-1 inline-flex items-center gap-1.5 font-mono text-xs text-muted-foreground">
-              <Search className="h-3.5 w-3.5" /> search.sh — ~/learnfrc
-            </span>
-            <kbd className={cn(KBD, "ml-auto")}>ESC</kbd>
-          </div>
-
-          {/* prompt + input */}
+          {/* search input */}
           <div className="flex items-center gap-2 border-b border-border px-4">
-            <span aria-hidden className="font-mono text-sm text-primary select-none">
-              ~/learnfrc $
-            </span>
+            <Search aria-hidden className="h-4 w-4 shrink-0 text-muted-foreground" />
             <input
               autoFocus
               value={query}

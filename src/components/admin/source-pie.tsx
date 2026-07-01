@@ -4,30 +4,30 @@ import * as React from "react";
 import { motion } from "framer-motion";
 import { useStaticMotion } from "@/components/perf-mode";
 
-// Known-source neon colors; anything else falls back to the neon palette by index.
+// Arena Clay palette — known sources get a fixed hue; anything else cycles the palette.
 const COLORS: Record<string, string> = {
-  Google: "#22d3ee",
-  Reddit: "#ffd23d",
-  "Chief Delphi": "#ff3dcb",
-  Referral: "#5dff9b",
-  YouTube: "#ff8af0",
-  Instagram: "#ff3dcb",
-  Twitter: "#22d3ee",
-  X: "#22d3ee",
-  Discord: "#c6ff3d",
-  Bing: "#5dff9b",
-  "Unknown / Direct": "#5e6b7e",
-  Direct: "#5e6b7e",
+  Google: "#2560e6",
+  Reddit: "#f0932b",
+  "Chief Delphi": "#7c5cff",
+  Referral: "#1aa9d6",
+  YouTube: "#e0447a",
+  Instagram: "#c74bd6",
+  Twitter: "#1aa9d6",
+  X: "#182338",
+  Discord: "#5865f2",
+  Bing: "#12b981",
+  "Unknown / Direct": "#8a97ad",
+  Direct: "#8a97ad",
 };
 const PALETTE = [
-  "#c6ff3d",
-  "#22d3ee",
-  "#ff3dcb",
-  "#ffd23d",
-  "#5dff9b",
-  "#ff8af0",
-  "#7df0c0",
-  "#9bf6ff",
+  "#2560e6",
+  "#1aa9d6",
+  "#7c5cff",
+  "#12b981",
+  "#f0932b",
+  "#e0447a",
+  "#c74bd6",
+  "#4d5b78",
 ];
 
 export function SourcePie({
@@ -63,8 +63,8 @@ export function SourcePie({
               fill="none"
               stroke={s.color}
               strokeWidth="20"
+              strokeLinecap="butt"
               strokeDashoffset={-s.offset * C}
-              style={{ filter: `drop-shadow(0 0 3px color-mix(in srgb, ${s.color} 60%, transparent))` }}
               initial={
                 stat
                   ? { strokeDasharray: `${s.frac * C} ${C - s.frac * C}` }
@@ -75,10 +75,10 @@ export function SourcePie({
             />
           ))}
         </g>
-        <text x="80" y="77" textAnchor="middle" className="fill-foreground font-display" fontSize="24" fontWeight="700">
+        <text x="80" y="77" textAnchor="middle" className="fill-foreground aq-display" fontSize="24" fontWeight="700">
           {total}
         </text>
-        <text x="80" y="95" textAnchor="middle" className="fill-muted-foreground font-mono" fontSize="10">
+        <text x="80" y="95" textAnchor="middle" className="fill-muted-foreground" fontSize="10">
           users
         </text>
       </svg>
@@ -87,15 +87,15 @@ export function SourcePie({
         {segs.map((s) => (
           <li
             key={s.name}
-            className="flex items-center gap-2.5 rounded-md px-1.5 py-1 text-sm transition-colors hover:bg-primary/[0.04]"
+            className="flex items-center gap-2.5 rounded-lg px-1.5 py-1 text-sm transition-colors hover:bg-primary/[0.04]"
           >
             <span
-              className="h-3 w-3 shrink-0 rounded-sm"
-              style={{ background: s.color, boxShadow: `0 0 8px color-mix(in srgb, ${s.color} 70%, transparent)` }}
+              className="h-3 w-3 shrink-0 rounded-sm ring-1 ring-black/5"
+              style={{ background: s.color }}
             />
-            <span className="flex-1 truncate">{s.name}</span>
-            <span className="font-mono text-xs text-muted-foreground">{s.count}</span>
-            <span className="w-11 text-right font-mono font-semibold tabular-nums text-accent">
+            <span className="flex-1 truncate text-foreground">{s.name}</span>
+            <span className="text-xs text-muted-foreground">{s.count}</span>
+            <span className="w-11 text-right font-mono font-semibold tabular-nums text-primary">
               {Math.round(s.frac * 100)}%
             </span>
           </li>

@@ -48,17 +48,17 @@ export function AchievementBadge({
         whileTap={reduce ? undefined : { scale: 0.97 }}
         transition={{ type: "spring", stiffness: 320, damping: 20 }}
         className={cn(
-          "group flex w-full cursor-pointer flex-col items-center gap-2 rounded-xl border p-4 text-center backdrop-blur transition-colors duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+          "group flex w-full cursor-pointer flex-col items-center gap-2 rounded-2xl border p-4 text-center transition-colors duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
           earned
-            ? "border-primary/30 bg-card/70 hover:border-primary/55 hover:shadow-[var(--glow-primary)]"
-            : "border-dashed border-border bg-card/30 hover:border-border"
+            ? "border-primary/25 bg-card hover:border-primary/45 hover:shadow-[var(--shadow-lg)]"
+            : "border-dashed border-border bg-card/60 hover:border-border"
         )}
       >
         <span
           className={cn(
-            "relative flex h-14 w-14 items-center justify-center rounded-xl transition-all duration-300",
+            "relative flex h-14 w-14 items-center justify-center rounded-2xl transition-all duration-300",
             earned
-              ? "text-primary-foreground shadow-[var(--glow-primary)]"
+              ? "text-primary-foreground shadow-[var(--shadow-md)]"
               : "bg-muted text-muted-foreground"
           )}
           style={
@@ -74,7 +74,7 @@ export function AchievementBadge({
           {earned && !reduce && (
             <motion.span
               aria-hidden
-              className="pointer-events-none absolute inset-0 rounded-xl ring-2 ring-primary/60"
+              className="pointer-events-none absolute inset-0 rounded-2xl ring-2 ring-primary/40"
               initial={{ opacity: 0.6, scale: 1 }}
               animate={{ opacity: 0, scale: 1.45 }}
               transition={{

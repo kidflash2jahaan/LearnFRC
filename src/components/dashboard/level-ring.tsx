@@ -4,8 +4,8 @@ import * as React from "react";
 import { motion, useReducedMotion } from "framer-motion";
 
 /**
- * Animated circular XP ring — neon "reactor core" style. Shows the current
- * level in the center and fills a glowing arc toward the next level (XP % 100).
+ * Animated circular XP ring. Shows the current level in the center and fills a
+ * soft arc toward the next level (XP % 100), in the Arena Clay blue/cyan accent.
  */
 export function LevelRing({
   level,
@@ -31,17 +31,8 @@ export function LevelRing({
       role="img"
       aria-label={`Level ${level}, ${Math.round(pct)}% to next level`}
     >
-      {/* ambient reactor glow */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-1 rounded-full opacity-70 blur-md"
-        style={{
-          background:
-            "radial-gradient(circle, color-mix(in srgb, var(--primary) 28%, transparent), transparent 72%)",
-        }}
-      />
       <svg width={size} height={size} className="relative -rotate-90">
-        {/* faint tick track */}
+        {/* track */}
         <circle
           cx={size / 2}
           cy={size / 2}
@@ -75,10 +66,6 @@ export function LevelRing({
           strokeWidth={stroke}
           strokeLinecap="round"
           strokeDasharray={c}
-          style={{
-            filter:
-              "drop-shadow(0 0 5px color-mix(in srgb, var(--primary) 75%, transparent))",
-          }}
           initial={{ strokeDashoffset: reduce ? offset : c }}
           animate={{ strokeDashoffset: offset }}
           transition={{ duration: 1.1, ease: [0.21, 0.47, 0.32, 0.98], delay: 0.2 }}
@@ -88,7 +75,7 @@ export function LevelRing({
         <span className="font-mono text-[9px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
           lvl
         </span>
-        <span className="font-display text-2xl font-bold leading-none text-gradient">
+        <span className="font-display text-2xl font-bold leading-none text-primary">
           {level}
         </span>
       </div>
