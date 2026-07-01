@@ -4,6 +4,7 @@ import { BookA, Search, Sparkles, Tags } from "lucide-react";
 import { GLOSSARY, GLOSSARY_CATEGORIES } from "@/lib/glossary-data";
 import { GlossaryBrowser } from "@/components/glossary/glossary-browser";
 import { Reveal } from "@/components/motion/reveal";
+import { AnimatedCounter } from "@/components/animated-counter";
 
 export const metadata: Metadata = {
   title: "FRC Glossary",
@@ -51,7 +52,7 @@ export default function GlossaryPage() {
 
         <h1 className="aq-display aq-rise aq-rise-2 mt-4 text-balance text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
           The FRC{" "}
-          <span style={HEADING_GRADIENT}>glossary</span>
+          <span className="aq-grad-anim" style={HEADING_GRADIENT}>glossary</span>
         </h1>
 
         <p className="aq-rise aq-rise-3 mx-auto mt-5 max-w-2xl text-pretty text-lg leading-relaxed text-foreground/70">
@@ -62,17 +63,20 @@ export default function GlossaryPage() {
 
         {/* stat badges */}
         <div className="aq-rise aq-rise-4 mt-7 flex flex-wrap items-center justify-center gap-3">
-          {stats.map(({ icon: StatIcon, label, value }) => (
+          {stats.map(({ icon: StatIcon, label, value }, i) => (
             <span
               key={label}
-              className="aq-card inline-flex items-center gap-2 rounded-2xl px-4 py-2"
+              className="aq-card aq-card-hover aq-reveal inline-flex items-center gap-2 rounded-2xl px-4 py-2"
+              style={{ animationDelay: `${0.12 + i * 0.09}s` } as CSSProperties}
             >
-              <span className="aq-icon flex h-7 w-7 items-center justify-center rounded-xl">
+              <span className="aq-icon aq-badge-bob flex h-7 w-7 items-center justify-center rounded-xl">
                 <StatIcon className="h-3.5 w-3.5 text-primary" aria-hidden />
               </span>
-              <span className="font-mono text-sm font-semibold text-foreground">
-                {value}
-              </span>
+              <AnimatedCounter
+                value={value}
+                suffix="+"
+                className="text-sm font-semibold text-foreground"
+              />
               <span className="text-sm text-muted-foreground">{label}</span>
             </span>
           ))}
@@ -81,9 +85,9 @@ export default function GlossaryPage() {
 
       {/* search + browser panel */}
       <Reveal className="mt-14" delay={0.05}>
-        <div className="aq-glass rounded-3xl p-5 sm:p-8">
+        <div className="aq-glass aq-sheen rounded-3xl p-5 sm:p-8">
           <div className="mb-6 flex items-center gap-3">
-            <span className="aq-badge flex h-11 w-11 items-center justify-center" style={{ "--a": "#2560e6" } as CSSProperties}>
+            <span className="aq-badge aq-badge-bob flex h-11 w-11 items-center justify-center" style={{ "--a": "#2560e6" } as CSSProperties}>
               <Search className="h-5 w-5" aria-hidden />
             </span>
             <div>

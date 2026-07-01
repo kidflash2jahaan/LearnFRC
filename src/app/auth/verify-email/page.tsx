@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { MailCheck, ArrowLeft, Inbox, ShieldCheck } from "lucide-react";
 import { ResendButton } from "@/components/auth/resend-button";
+import { AnimatedCounter } from "@/components/animated-counter";
 
 export const metadata: Metadata = {
   title: "Verify your email",
@@ -34,8 +35,8 @@ export default async function VerifyEmailPage({
         />
       </div>
 
-      <div className="aq-glass aq-rise aq-rise-1 w-full max-w-md rounded-3xl p-8 text-center sm:p-10">
-        <span className="aq-badge aq-rise aq-rise-1 mx-auto flex h-16 w-16 items-center justify-center" style={{ "--a": "#2560e6" } as CSSProperties}>
+      <div className="aq-glass aq-sheen aq-rise aq-rise-1 w-full max-w-md rounded-3xl p-8 text-center sm:p-10">
+        <span className="aq-badge aq-badge-bob aq-rise aq-rise-1 mx-auto flex h-16 w-16 items-center justify-center" style={{ "--a": "#2560e6" } as CSSProperties}>
           <MailCheck className="h-8 w-8" aria-hidden />
         </span>
 
@@ -47,6 +48,7 @@ export default async function VerifyEmailPage({
         <h1 className="aq-display aq-rise aq-rise-2 mt-3 text-3xl font-extrabold tracking-tight sm:text-4xl">
           Verify your{" "}
           <span
+            className="aq-grad-anim"
             style={{
               background: "linear-gradient(120deg,#2560e6,#1aa9d6)",
               WebkitBackgroundClip: "text",
@@ -68,8 +70,8 @@ export default async function VerifyEmailPage({
           . Click it to activate your account, then head to the pit and sign in.
         </p>
 
-        <div className="aq-rise aq-rise-3 mt-6 flex items-center gap-3 rounded-2xl border border-border bg-card/60 p-4 text-left">
-          <span className="aq-icon flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
+        <div className="aq-reveal aq-rise aq-rise-3 mt-6 flex items-center gap-3 rounded-2xl border border-border bg-card/60 p-4 text-left">
+          <span className="aq-icon aq-badge-bob flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
             <Inbox className="h-5 w-5" aria-hidden />
           </span>
           <p className="text-sm leading-relaxed text-muted-foreground">
@@ -77,7 +79,51 @@ export default async function VerifyEmailPage({
           </p>
         </div>
 
-        <div className="aq-rise aq-rise-4 mt-7 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+        <div className="aq-reveal aq-rise aq-rise-4 mt-6 grid grid-cols-3 gap-3" style={{ animationDelay: "120ms" } as CSSProperties}>
+          <div className="aq-tile aq-card-hover rounded-2xl border border-border bg-card/50 p-3">
+            <div className="aq-display text-xl font-extrabold text-foreground">
+              <AnimatedCounter value={12} suffix="+" />
+            </div>
+            <p className="mt-0.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+              Departments
+            </p>
+          </div>
+          <div className="aq-tile aq-card-hover rounded-2xl border border-border bg-card/50 p-3">
+            <div className="aq-display text-xl font-extrabold text-foreground">
+              <AnimatedCounter value={80} suffix="+" />
+            </div>
+            <p className="mt-0.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+              Lessons
+            </p>
+          </div>
+          <div className="aq-tile aq-card-hover rounded-2xl border border-border bg-card/50 p-3">
+            <div className="aq-display text-xl font-extrabold text-foreground">
+              <AnimatedCounter value={30} />
+              <span>s</span>
+            </div>
+            <p className="mt-0.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+              To activate
+            </p>
+          </div>
+        </div>
+
+        <div className="aq-reveal aq-rise aq-rise-4 mt-6" style={{ animationDelay: "200ms" } as CSSProperties}>
+          <div className="mb-2 flex items-center justify-between text-xs font-medium text-muted-foreground">
+            <span className="inline-flex items-center gap-1.5">
+              <span className="aq-pulse inline-block h-2 w-2 rounded-full" style={{ background: "#2560e6" } as CSSProperties} />
+              Almost there
+            </span>
+            <span>Step 3 of 4</span>
+          </div>
+          <div className="h-2 w-full overflow-hidden rounded-full bg-card">
+            <div
+              className="aq-bar-anim h-full rounded-full"
+              style={{ width: "75%", background: "linear-gradient(90deg,#2560e6,#1aa9d6)" } as CSSProperties}
+            />
+          </div>
+        </div>
+
+        <div className="aq-rise aq-rise-5 mt-7 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
           {email && <ResendButton email={email} />}
           <Link
             href="/login"

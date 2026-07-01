@@ -26,6 +26,7 @@ import { Markdown } from "@/components/markdown";
 import { LessonActions } from "@/components/lesson/lesson-actions";
 import { LessonComplete } from "@/components/lesson/lesson-complete";
 import { Reveal, Stagger, StaggerItem } from "@/components/motion/reveal";
+import { AnimatedCounter } from "@/components/animated-counter";
 import { JsonLd } from "@/components/json-ld";
 import { cn } from "@/lib/utils";
 import type { Resource, QuizQuestion } from "@/lib/types";
@@ -103,16 +104,16 @@ export default async function LessonPage({
       {/* ambient glows */}
       <div aria-hidden className="aq-glow -z-10">
         <span
-          className="left-[-6%] top-[6%] h-72 w-72 opacity-50"
+          className="aq-float left-[-6%] top-[6%] h-72 w-72 opacity-50"
           style={{ background: "radial-gradient(circle, #2560e6, transparent 70%)" }}
         />
         <span
-          className="right-[-4%] top-[30%] h-80 w-80 opacity-40"
-          style={{ background: `radial-gradient(circle, ${meta.color}, transparent 70%)` }}
+          className="aq-float right-[-4%] top-[30%] h-80 w-80 opacity-40"
+          style={{ background: `radial-gradient(circle, ${meta.color}, transparent 70%)`, animationDelay: "1.4s" }}
         />
         <span
-          className="bottom-[8%] left-[24%] h-72 w-72 opacity-30"
-          style={{ background: "radial-gradient(circle, #1aa9d6, transparent 70%)" }}
+          className="aq-float bottom-[8%] left-[24%] h-72 w-72 opacity-30"
+          style={{ background: "radial-gradient(circle, #1aa9d6, transparent 70%)", animationDelay: "2.6s" }}
         />
       </div>
 
@@ -161,14 +162,14 @@ export default async function LessonPage({
                   className="aq-chip aq-card-hover gap-2 !py-1 !pl-1.5 !pr-3.5"
                   style={accentStyle}
                 >
-                  <span className="aq-badge flex h-7 w-7 items-center justify-center rounded-full" style={accentStyle}>
+                  <span className="aq-badge aq-badge-bob flex h-7 w-7 items-center justify-center rounded-full" style={accentStyle}>
                     <Icon name={meta.icon} className="h-4 w-4" />
                   </span>
                   <span className="font-medium">{dept.name}</span>
                 </Link>
               </StaggerItem>
               <StaggerItem className="aq-chip font-mono text-xs">
-                Lesson {idx + 1} / {flat.length}
+                Lesson <AnimatedCounter value={idx + 1} /> / <AnimatedCounter value={flat.length} />
               </StaggerItem>
               <StaggerItem className="aq-chip gap-1.5 font-mono text-xs text-primary">
                 <Zap className="h-3.5 w-3.5" /> +10 XP
@@ -182,14 +183,16 @@ export default async function LessonPage({
                 {isCompleted ? (
                   <CheckCircle2 className="h-3.5 w-3.5" />
                 ) : (
-                  <Circle className="h-3.5 w-3.5" />
+                  <span className="aq-pulse inline-block h-2 w-2 rounded-full bg-accent" aria-hidden />
                 )}
                 {isCompleted ? "Completed" : "In progress"}
               </StaggerItem>
             </Stagger>
 
             <h1 className="mt-5 text-balance font-display text-3xl font-bold tracking-tight sm:text-4xl lg:text-[2.7rem] lg:leading-[1.08]">
-              {les.title}
+              <span className="aq-grad-anim bg-gradient-to-r from-[#2560e6] via-[color:var(--a)] to-[#1aa9d6] bg-clip-text text-transparent" style={accentStyle}>
+                {les.title}
+              </span>
             </h1>
             {les.summary && (
               <p className="mt-3 max-w-2xl text-pretty text-lg leading-relaxed text-foreground/70">
@@ -200,7 +203,7 @@ export default async function LessonPage({
 
           {/* actions bar */}
           <div className="aq-rise aq-rise-3 mt-6">
-            <div className="aq-card p-4 sm:p-5">
+            <div className="aq-card aq-sheen p-4 sm:p-5">
               <LessonActions
                 lessonId={les.id}
                 deptSlug={dept.slug}
@@ -233,16 +236,20 @@ export default async function LessonPage({
           {/* key takeaways */}
           {takeaways.length > 0 && (
             <Reveal>
-              <section className="aq-card aq-reveal mt-10 p-6">
+              <section className="aq-card aq-card-hover aq-reveal mt-10 p-6">
                 <h2 className="flex items-center gap-2.5 font-display text-xl font-semibold">
-                  <span className="aq-icon h-9 w-9">
+                  <span className="aq-icon aq-badge-bob h-9 w-9">
                     <Lightbulb className="h-5 w-5" />
                   </span>
                   Key takeaways
                 </h2>
                 <ul className="mt-4 space-y-3">
                   {takeaways.map((t, i) => (
-                    <li key={i} className="flex gap-3 text-foreground/85">
+                    <li
+                      key={i}
+                      className="aq-reveal flex gap-3 text-foreground/85"
+                      style={{ animationDelay: `${i * 0.07}s` }}
+                    >
                       <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
                       <span className="leading-relaxed">{t}</span>
                     </li>
@@ -255,10 +262,10 @@ export default async function LessonPage({
           {/* resources */}
           {resources.length > 0 && (
             <Reveal>
-              <section className="aq-card aq-reveal mt-8 p-6">
+              <section className="aq-card aq-card-hover aq-reveal mt-8 p-6">
                 <h2 className="flex items-center gap-2.5 font-display text-xl font-semibold">
                   <span
-                    className="aq-icon h-9 w-9"
+                    className="aq-icon aq-badge-bob h-9 w-9"
                     style={{ background: "color-mix(in srgb, var(--accent) 12%, transparent)", color: "var(--accent)" }}
                   >
                     <ExternalLink className="h-5 w-5" />
@@ -267,7 +274,7 @@ export default async function LessonPage({
                 </h2>
                 <ul className="mt-4 space-y-2.5">
                   {resources.map((r, i) => (
-                    <li key={i}>
+                    <li key={i} className="aq-reveal" style={{ animationDelay: `${i * 0.06}s` }}>
                       <a
                         href={r.url}
                         target="_blank"
@@ -368,11 +375,11 @@ export default async function LessonPage({
           <div className="sticky top-24 space-y-4">
             {user && (
               <Reveal>
-                <div className="aq-card aq-reveal p-5">
+                <div className="aq-card aq-card-hover aq-sheen aq-reveal p-5">
                   <div className="aq-eyebrow">Your progress</div>
                   <div className="mt-3 flex items-baseline gap-2">
                     <span className="font-display text-3xl font-bold text-foreground">
-                      {pct}%
+                      <AnimatedCounter value={pct} suffix="%" />
                     </span>
                     <span className="text-sm text-muted-foreground">
                       through {dept.name}
@@ -380,12 +387,12 @@ export default async function LessonPage({
                   </div>
                   <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
                     <div
-                      className="h-full rounded-full"
+                      className="aq-bar-anim h-full rounded-full"
                       style={{ width: `${pct}%`, backgroundImage: deptGradient }}
                     />
                   </div>
                   <div className="mt-2 text-xs text-muted-foreground">
-                    {doneInDept} / {total} lessons complete
+                    <AnimatedCounter value={doneInDept} /> / {total} lessons complete
                   </div>
                 </div>
               </Reveal>
@@ -394,14 +401,14 @@ export default async function LessonPage({
             <Reveal delay={0.05}>
               <nav
                 aria-label="Lesson contents"
-                className="aq-card aq-reveal max-h-[calc(100vh-15rem)] overflow-y-auto p-4"
+                className="aq-card aq-card-hover aq-reveal max-h-[calc(100vh-15rem)] overflow-y-auto p-4"
               >
                 <Link
                   href={`/guides/${dept.slug}`}
                   className="mb-3 flex items-center gap-2.5 border-b border-border pb-3"
                 >
                   <span
-                    className="aq-badge flex h-9 w-9 items-center justify-center rounded-xl"
+                    className="aq-badge aq-badge-bob flex h-9 w-9 items-center justify-center rounded-xl"
                     style={accentStyle}
                   >
                     <Icon name={meta.icon} className="h-4 w-4" />
@@ -410,7 +417,7 @@ export default async function LessonPage({
                 </Link>
                 <div className="space-y-3">
                   {dept.modules.map((m, mi) => (
-                    <div key={m.id}>
+                    <div key={m.id} className="aq-reveal" style={{ animationDelay: `${mi * 0.05}s` }}>
                       <div className="px-1 font-mono text-[0.7rem] uppercase tracking-wide text-muted-foreground">
                         {String(mi + 1).padStart(2, "0")} · {m.title}
                       </div>

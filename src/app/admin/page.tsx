@@ -11,6 +11,7 @@ import { ActivityChart } from "@/components/admin/activity-chart";
 import { AdminOverview } from "@/components/admin/admin-overview";
 import { AutoRefresh } from "@/components/admin/auto-refresh";
 import { SourceBreakdown } from "@/components/admin/source-breakdown";
+import { AnimatedCounter } from "@/components/animated-counter";
 
 export const metadata: Metadata = { title: "Admin" };
 
@@ -56,7 +57,10 @@ export default async function AdminPage() {
 
       {/* Hero */}
       <div className="flex flex-wrap items-center gap-3 aq-rise aq-rise-1">
-        <span className="aq-eyebrow">Mission control</span>
+        <span className="aq-eyebrow inline-flex items-center gap-2">
+          <span className="aq-pulse inline-block h-2 w-2 rounded-full bg-primary" />
+          Mission control
+        </span>
         <span className="aq-chip font-mono text-xs">
           Signed in as {user.email}
         </span>
@@ -67,8 +71,9 @@ export default async function AdminPage() {
       <h1 className="mt-4 text-4xl font-bold tracking-tight sm:text-5xl aq-rise aq-rise-2">
         Live across{" "}
         <span
+          className="aq-grad-anim"
           style={{
-            background: "linear-gradient(120deg,#2560e6,#1aa9d6)",
+            background: "linear-gradient(120deg,#2560e6,#1aa9d6,#8b7fff,#2560e6)",
             WebkitBackgroundClip: "text",
             backgroundClip: "text",
             color: "transparent",
@@ -113,18 +118,18 @@ export default async function AdminPage() {
 
       <div className="mt-8 grid gap-6 lg:grid-cols-5">
         <Reveal className="lg:col-span-3 h-full">
-          <section className="aq-card aq-card-hover flex h-full flex-col p-5 sm:p-6">
+          <section className="aq-card aq-card-hover aq-sheen flex h-full flex-col p-5 sm:p-6">
             <div className="mb-4 flex items-center justify-between gap-3">
               <h2 className="flex items-center gap-2 text-lg font-semibold">
                 <span
-                  className="aq-icon h-9 w-9"
+                  className="aq-icon aq-badge-bob h-9 w-9"
                   style={{ "--a": "#2560e6" } as CSSProperties}
                 >
                   <TrendingUp className="h-4.5 w-4.5" />
                 </span>
                 Activity
               </h2>
-              <span className="aq-chip font-mono text-[11px]">Last 14 days</span>
+              <span className="aq-chip text-[11px]">Last 14 days</span>
             </div>
             <ActivityChart data={stats.daily} />
           </section>
@@ -134,23 +139,28 @@ export default async function AdminPage() {
           <section className="aq-card aq-card-hover flex h-full flex-col p-5 sm:p-6">
             <h2 className="mb-5 text-lg font-semibold">Top departments</h2>
             <div className="space-y-3.5">
-              {stats.topDepartments.slice(0, 8).map((d) => {
+              {stats.topDepartments.slice(0, 8).map((d, i) => {
                 const pct = Math.round(((d.completions ?? 0) / maxCompletions) * 100);
                 return (
-                  <div key={d.id}>
+                  <div
+                    key={d.id}
+                    className="aq-reveal"
+                    style={{ animationDelay: `${i * 60}ms` }}
+                  >
                     <div className="mb-1.5 flex items-center justify-between text-sm">
                       <span className="truncate font-medium text-foreground">
                         {d.name}
                       </span>
                       <span className="font-mono text-xs font-semibold text-primary">
-                        {d.completions ?? 0}
+                        <AnimatedCounter value={d.completions ?? 0} />
                       </span>
                     </div>
                     <div className="h-2.5 overflow-hidden rounded-full bg-primary/10">
                       <div
-                        className="h-full rounded-full"
+                        className="aq-bar-anim h-full rounded-full"
                         style={{
                           width: `${pct}%`,
+                          animationDelay: `${i * 60}ms`,
                           background:
                             "linear-gradient(90deg, var(--accent), var(--primary))",
                         }}
@@ -168,7 +178,7 @@ export default async function AdminPage() {
         <section className="aq-card p-5 sm:p-6">
           <h2 className="mb-1.5 flex items-center gap-2 text-lg font-semibold">
             <span
-              className="aq-icon h-9 w-9"
+              className="aq-icon aq-badge-bob h-9 w-9"
               style={{ "--a": "#1aa9d6" } as CSSProperties}
             >
               <PieChart className="h-4.5 w-4.5" />
@@ -188,7 +198,7 @@ export default async function AdminPage() {
         <section className="aq-card p-5 sm:p-6">
           <h2 className="mb-5 flex items-center gap-2 text-lg font-semibold">
             <span
-              className="aq-icon h-9 w-9"
+              className="aq-icon aq-badge-bob h-9 w-9"
               style={{ "--a": "#8b7fff" } as CSSProperties}
             >
               <Users className="h-4.5 w-4.5" />
@@ -201,7 +211,7 @@ export default async function AdminPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm [&_th]:px-3 [&_td]:px-3 [&_th:first-child]:pl-0 [&_td:first-child]:pl-0 [&_th:last-child]:pr-0 [&_td:last-child]:pr-0">
                 <thead>
-                  <tr className="border-b border-border text-left font-mono text-xs uppercase tracking-wider text-muted-foreground">
+                  <tr className="border-b border-border text-left text-xs uppercase tracking-wider text-muted-foreground">
                     <th className="pb-2.5 font-medium">Member</th>
                     <th className="pb-2.5 font-medium">Team</th>
                     <th className="pb-2.5 text-right font-medium">XP</th>
@@ -209,10 +219,11 @@ export default async function AdminPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {stats.recentSignups.map((p) => (
+                  {stats.recentSignups.map((p, i) => (
                     <tr
                       key={p.id}
-                      className="border-b border-border/60 transition-colors last:border-0 hover:bg-primary/[0.05]"
+                      className="aq-reveal border-b border-border/60 transition-colors last:border-0 hover:bg-primary/[0.05]"
+                      style={{ animationDelay: `${i * 45}ms` }}
                     >
                       <td className="py-3">
                         <div className="flex items-center gap-2.5">
@@ -230,7 +241,7 @@ export default async function AdminPage() {
                         {p.team_number ? `#${p.team_number}` : "—"}
                       </td>
                       <td className="py-3 text-right font-mono font-semibold text-primary">
-                        {p.xp}
+                        <AnimatedCounter value={p.xp} />
                       </td>
                       <td className="py-3 text-right font-mono text-muted-foreground">
                         {new Date(p.created_at).toLocaleDateString()}

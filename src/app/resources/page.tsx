@@ -6,6 +6,7 @@ import { deptMeta } from "@/lib/departments";
 import { Icon } from "@/lib/icon-map";
 import { Reveal, Stagger, StaggerItem } from "@/components/motion/reveal";
 import { FeedbackForm } from "@/components/feedback-form";
+import { AnimatedCounter } from "@/components/animated-counter";
 import type { Resource } from "@/lib/types";
 
 export const metadata: Metadata = {
@@ -78,6 +79,10 @@ export default async function ResourcesPage() {
   const withSources = (departments ?? []).filter(
     (d) => ((d.sources as Resource[]) ?? []).length > 0,
   );
+  const totalSources = withSources.reduce(
+    (s, d) => s + ((d.sources as Resource[]) ?? []).length,
+    0,
+  );
 
   return (
     <div className="relative mx-auto max-w-6xl px-4 pt-28 pb-24 sm:px-6 lg:px-8">
@@ -100,8 +105,9 @@ export default async function ResourcesPage() {
           <h1 className="aq-display aq-rise aq-rise-2 mt-3 text-balance text-4xl font-bold tracking-tight sm:text-5xl">
             Every FRC{" "}
             <span
+              className="aq-grad-anim"
               style={{
-                background: "linear-gradient(120deg,#2560e6,#1aa9d6)",
+                background: "linear-gradient(120deg,#2560e6,#1aa9d6,#7c5cff,#2560e6)",
                 WebkitBackgroundClip: "text",
                 backgroundClip: "text",
                 color: "transparent",
@@ -129,25 +135,33 @@ export default async function ResourcesPage() {
         </div>
 
         {/* Floating stat panel */}
-        <div className="aq-glass aq-rise aq-rise-3 rounded-3xl p-6 sm:p-7">
+        <div className="aq-glass aq-sheen aq-float aq-rise aq-rise-3 rounded-3xl p-6 sm:p-7">
           <div className="grid grid-cols-2 gap-4">
-            <div className="aq-card rounded-2xl p-4">
-              <div className="aq-display text-3xl font-bold text-foreground">{totalLinks}</div>
-              <div className="mt-1 font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+            <div className="aq-card aq-card-hover rounded-2xl p-4">
+              <div className="aq-display text-3xl font-bold text-foreground">
+                <AnimatedCounter value={totalLinks} />
+              </div>
+              <div className="mt-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                 Curated links
               </div>
             </div>
-            <div className="aq-card rounded-2xl p-4">
-              <div className="aq-display text-3xl font-bold text-foreground">{CURATED.length}</div>
-              <div className="mt-1 font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+            <div className="aq-card aq-card-hover rounded-2xl p-4">
+              <div className="aq-display text-3xl font-bold text-foreground">
+                <AnimatedCounter value={CURATED.length} />
+              </div>
+              <div className="mt-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                 Categories
               </div>
             </div>
           </div>
           <div className="aq-divider my-5" />
           <div className="flex flex-wrap gap-2">
-            {CURATED.map((g) => (
-              <span key={g.category} className="aq-chip">
+            {CURATED.map((g, i) => (
+              <span
+                key={g.category}
+                className="aq-chip aq-reveal"
+                style={{ animationDelay: `${i * 70}ms` }}
+              >
                 {g.category}
               </span>
             ))}
@@ -162,12 +176,15 @@ export default async function ResourcesPage() {
           return (
             <Reveal key={group.category} className="aq-reveal">
               <div className="mb-5 flex items-center gap-3">
-                <span className="aq-badge h-10 w-10" style={{ "--a": cm.a } as CSSProperties}>
+                <span
+                  className="aq-badge aq-badge-bob h-10 w-10"
+                  style={{ "--a": cm.a } as CSSProperties}
+                >
                   <Icon name={cm.icon} className="h-5 w-5" />
                 </span>
                 <div>
                   <h2 className="aq-display text-xl font-bold leading-tight">{group.category}</h2>
-                  <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                     {group.links.length} link{group.links.length === 1 ? "" : "s"}
                   </p>
                 </div>
@@ -202,23 +219,44 @@ export default async function ResourcesPage() {
         <h2 className="aq-display mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
           Sources behind the guides
         </h2>
-        <p className="mb-8 mt-3 max-w-2xl text-foreground/70">
+        <p className="mb-6 mt-3 max-w-2xl text-foreground/70">
           Every LearnFRC guide is built on authoritative references — the same
           docs and manuals mentors point rookies to. Here they are, department by
           department.
         </p>
+        <div className="mb-8 flex flex-wrap gap-3">
+          <div className="aq-card aq-card-hover rounded-2xl px-5 py-3">
+            <span className="aq-display text-2xl font-bold text-foreground">
+              <AnimatedCounter value={totalSources} suffix="+" />
+            </span>{" "}
+            <span className="text-sm font-semibold text-muted-foreground">
+              cited sources
+            </span>
+          </div>
+          <div className="aq-card aq-card-hover rounded-2xl px-5 py-3">
+            <span className="aq-display text-2xl font-bold text-foreground">
+              <AnimatedCounter value={withSources.length} />
+            </span>{" "}
+            <span className="text-sm font-semibold text-muted-foreground">
+              departments
+            </span>
+          </div>
+        </div>
         <div className="grid gap-4 sm:grid-cols-2">
-          {withSources.map((d) => {
+          {withSources.map((d, di) => {
             const m = deptMeta(d.slug as string);
             const sources = ((d.sources as Resource[]) ?? []).slice(0, 6);
             return (
               <div
                 key={d.slug as string}
-                className="aq-tile rounded-2xl p-5"
-                style={{ "--a": m.color } as CSSProperties}
+                className="aq-tile aq-card-hover aq-reveal rounded-2xl p-5"
+                style={{ "--a": m.color, animationDelay: `${di * 80}ms` } as CSSProperties}
               >
                 <div className="mb-4 flex items-center gap-3">
-                  <span className="aq-badge h-10 w-10" style={{ "--a": m.color } as CSSProperties}>
+                  <span
+                    className="aq-badge aq-badge-bob h-10 w-10"
+                    style={{ "--a": m.color } as CSSProperties}
+                  >
                     <Icon name={m.icon} className="h-5 w-5" />
                   </span>
                   <h3 className="aq-display text-base font-bold text-foreground">
@@ -227,14 +265,18 @@ export default async function ResourcesPage() {
                 </div>
                 <ul className="space-y-2">
                   {sources.map((s, i) => (
-                    <li key={i}>
+                    <li
+                      key={i}
+                      className="aq-reveal"
+                      style={{ animationDelay: `${i * 50}ms` }}
+                    >
                       <a
                         href={s.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-start gap-2 text-sm text-foreground/80 transition-colors hover:text-primary"
+                        className="group inline-flex items-start gap-2 text-sm text-foreground/80 transition-colors hover:text-primary"
                       >
-                        <ExternalLink className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
+                        <ExternalLink className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                         <span>{s.title}</span>
                       </a>
                     </li>
@@ -248,9 +290,9 @@ export default async function ResourcesPage() {
 
       {/* Suggest */}
       <Reveal className="aq-reveal mt-24">
-        <div id="suggest" className="aq-glass scroll-mt-28 rounded-3xl p-6 sm:p-8">
+        <div id="suggest" className="aq-glass aq-sheen scroll-mt-28 rounded-3xl p-6 sm:p-8">
           <div className="mb-4 flex items-center gap-3">
-            <span className="aq-icon flex h-11 w-11 items-center justify-center rounded-2xl">
+            <span className="aq-icon aq-badge-bob flex h-11 w-11 items-center justify-center rounded-2xl">
               <MessageSquarePlus className="h-5 w-5 text-primary" />
             </span>
             <h2 className="aq-display text-xl font-bold sm:text-2xl">

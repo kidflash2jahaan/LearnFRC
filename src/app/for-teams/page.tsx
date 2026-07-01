@@ -13,6 +13,7 @@ import {
 import { getDepartments } from "@/lib/queries";
 import { deptMeta } from "@/lib/departments";
 import { ICONS } from "@/lib/icon-map";
+import { AnimatedCounter } from "@/components/animated-counter";
 
 export const metadata: Metadata = {
   title: "LearnFRC for Teams — free onboarding curriculum for FRC teams",
@@ -56,11 +57,15 @@ const FEATURES = [
   },
 ];
 
-const STATS = [
-  { value: "11", label: "departments" },
-  { value: "100", label: "modules" },
-  { value: "393+", label: "lessons" },
-  { value: "100%", label: "free" },
+const STATS: {
+  value: number;
+  suffix?: string;
+  label: string;
+}[] = [
+  { value: 11, label: "departments" },
+  { value: 100, label: "modules" },
+  { value: 393, suffix: "+", label: "lessons" },
+  { value: 100, suffix: "%", label: "free" },
 ];
 
 const HEADLINE_GRADIENT: CSSProperties = {
@@ -101,8 +106,10 @@ export default async function ForTeamsPage() {
             </p>
             <h1 className="aq-rise aq-rise-2 mt-4 text-balance text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
               Onboard your{" "}
-              <span style={HEADLINE_GRADIENT}>whole team</span> without
-              rebuilding training every season
+              <span className="aq-grad-anim" style={HEADLINE_GRADIENT}>
+                whole team
+              </span>{" "}
+              without rebuilding training every season
             </h1>
             <p className="aq-rise aq-rise-3 mt-5 max-w-xl text-lg leading-relaxed text-foreground/70">
               LearnFRC gives your team a structured curriculum for every
@@ -127,18 +134,22 @@ export default async function ForTeamsPage() {
           </div>
 
           {/* floating glass stat panel */}
-          <div className="aq-glass aq-rise aq-rise-3 rounded-[28px] p-6 sm:p-7 lg:justify-self-end">
+          <div className="aq-glass aq-sheen aq-float aq-rise aq-rise-3 rounded-[28px] p-6 sm:p-7 lg:justify-self-end">
             <p className="aq-eyebrow">The whole program, ready</p>
             <div className="mt-5 grid grid-cols-2 gap-4">
-              {STATS.map((s) => (
-                <div key={s.label} className="aq-card rounded-2xl p-4 text-center">
+              {STATS.map((s, i) => (
+                <div
+                  key={s.label}
+                  className="aq-card aq-card-hover aq-reveal rounded-2xl p-4 text-center"
+                  style={{ animationDelay: `${i * 90}ms` } as CSSProperties}
+                >
                   <div
                     className="aq-display text-4xl font-bold"
                     style={HEADLINE_GRADIENT}
                   >
-                    {s.value}
+                    <AnimatedCounter value={s.value} suffix={s.suffix} />
                   </div>
-                  <div className="mt-1 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+                  <div className="mt-1 text-[11px] uppercase tracking-wider text-muted-foreground">
                     {s.label}
                   </div>
                 </div>
@@ -169,11 +180,12 @@ export default async function ForTeamsPage() {
             <div
               key={s.title}
               className="aq-card aq-card-hover aq-reveal relative h-full rounded-[20px] p-6"
+              style={{ animationDelay: `${i * 120}ms` } as CSSProperties}
             >
-              <span className="pointer-events-none absolute right-6 top-5 font-mono text-3xl font-bold text-primary/15">
+              <span className="pointer-events-none absolute right-6 top-5 text-3xl font-bold text-primary/15">
                 {String(i + 1).padStart(2, "0")}
               </span>
-              <span className="aq-icon flex h-12 w-12 items-center justify-center">
+              <span className="aq-icon aq-badge-bob flex h-12 w-12 items-center justify-center">
                 <s.icon className="h-6 w-6" />
               </span>
               <h3 className="mt-5 text-lg font-semibold">{s.title}</h3>
@@ -194,12 +206,13 @@ export default async function ForTeamsPage() {
           </h2>
         </div>
         <div className="mt-10 grid gap-6 md:grid-cols-3">
-          {FEATURES.map((f) => (
+          {FEATURES.map((f, i) => (
             <div
               key={f.title}
               className="aq-card aq-card-hover aq-reveal h-full rounded-[20px] p-6"
+              style={{ animationDelay: `${i * 120}ms` } as CSSProperties}
             >
-              <span className="aq-icon flex h-12 w-12 items-center justify-center">
+              <span className="aq-icon aq-badge-bob flex h-12 w-12 items-center justify-center">
                 <f.icon className="h-6 w-6" />
               </span>
               <h3 className="mt-5 text-lg font-semibold">{f.title}</h3>
@@ -233,18 +246,20 @@ export default async function ForTeamsPage() {
                   key={d.slug}
                   href={`/guides/${d.slug}`}
                   className="aq-tile aq-reveal group block rounded-[20px] p-[18px]"
-                  style={{ "--a": m.color } as CSSProperties}
+                  style={
+                    { "--a": m.color, animationDelay: `${i * 80}ms` } as CSSProperties
+                  }
                 >
                   <div className="flex items-center gap-4">
                     <span
-                      className="aq-badge flex h-12 w-12 shrink-0 items-center justify-center rounded-[14px]"
+                      className="aq-badge aq-badge-bob flex h-12 w-12 shrink-0 items-center justify-center rounded-[14px]"
                       style={{ "--a": m.color } as CSSProperties}
                     >
                       <DeptIcon className="h-6 w-6" />
                     </span>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="font-mono text-xs font-semibold text-[#182338]/60">
+                        <span className="text-xs font-semibold text-[#182338]/60">
                           {String(i + 1).padStart(2, "0")}
                         </span>
                         <div className="truncate text-[15px] font-semibold text-[#182338]">
@@ -268,8 +283,11 @@ export default async function ForTeamsPage() {
 
       {/* CTA BAND */}
       <section className="relative mx-auto max-w-6xl px-4 pb-20 pt-6 sm:px-6 lg:px-8">
-        <div className="aq-glass aq-reveal rounded-[28px] px-8 py-12 text-center sm:px-16">
-          <p className="aq-eyebrow justify-center">Ready when you are</p>
+        <div className="aq-glass aq-sheen aq-reveal rounded-[28px] px-8 py-12 text-center sm:px-16">
+          <p className="aq-eyebrow justify-center">
+            <span className="aq-pulse inline-block h-2 w-2 rounded-full bg-primary" />{" "}
+            Ready when you are
+          </p>
           <h2 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
             Ready to onboard your team?
           </h2>

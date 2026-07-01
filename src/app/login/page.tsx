@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Bot, GitBranch, Gauge, Trophy, ShieldCheck } from "lucide-react";
 import { AuthForm } from "@/components/auth/auth-form";
+import { AnimatedCounter } from "@/components/animated-counter";
 import { getSession } from "@/lib/auth";
 
 export const metadata = {
@@ -36,6 +37,12 @@ const VALUE_PROPS = [
   },
 ];
 
+const STATS = [
+  { value: 11, suffix: "", label: "departments" },
+  { value: 180, suffix: "+", label: "lessons" },
+  { value: 4200, suffix: "+", label: "learners" },
+];
+
 export default async function LoginPage({
   searchParams,
 }: {
@@ -64,7 +71,10 @@ export default async function LoginPage({
             className="aq-rise aq-rise-1 inline-flex items-center gap-2.5"
             aria-label="LearnFRC home"
           >
-            <span className="aq-badge grid h-9 w-9 place-items-center" style={{ "--a": "#2560e6" } as CSSProperties}>
+            <span
+              className="aq-badge aq-badge-bob grid h-9 w-9 place-items-center"
+              style={{ "--a": "#2560e6" } as CSSProperties}
+            >
               <Bot className="h-5 w-5 text-foreground" />
             </span>
             <span className="aq-display text-lg font-bold tracking-tight text-foreground">
@@ -75,20 +85,35 @@ export default async function LoginPage({
           <p className="aq-eyebrow aq-rise aq-rise-1 mt-8">Welcome back to the pit</p>
           <h1 className="aq-rise aq-rise-2 mt-3 max-w-xl text-4xl font-bold tracking-tight sm:text-5xl">
             Pick up right where{" "}
-            <span style={HEADING_GRADIENT}>you left off</span>
+            <span className="aq-grad-anim" style={HEADING_GRADIENT}>
+              you left off
+            </span>
           </h1>
           <p className="aq-rise aq-rise-3 mt-4 max-w-lg text-lg leading-relaxed text-foreground/70">
             Sign in to keep building. Your lessons, XP, and streak are waiting —
             every seat on the team, from drivetrain to scouting.
           </p>
 
+          {/* Count-up stats */}
+          <dl className="aq-rise aq-rise-3 mt-8 flex flex-wrap gap-x-8 gap-y-4">
+            {STATS.map((s) => (
+              <div key={s.label} className="aq-reveal">
+                <dt className="aq-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+                  <AnimatedCounter value={s.value} suffix={s.suffix} />
+                </dt>
+                <dd className="mt-0.5 text-sm text-muted-foreground">{s.label}</dd>
+              </div>
+            ))}
+          </dl>
+
           <ul className="aq-rise aq-rise-4 mt-10 grid gap-4 sm:grid-cols-2">
-            {VALUE_PROPS.map((p) => (
+            {VALUE_PROPS.map((p, i) => (
               <li
                 key={p.title}
                 className="aq-card aq-card-hover aq-reveal flex items-start gap-3.5 p-5"
+                style={{ animationDelay: `${i * 90}ms` }}
               >
-                <span className="aq-icon grid h-10 w-10 shrink-0 place-items-center">
+                <span className="aq-icon aq-badge-bob grid h-10 w-10 shrink-0 place-items-center">
                   <p.icon className="h-5 w-5" />
                 </span>
                 <div>
@@ -101,21 +126,24 @@ export default async function LoginPage({
             ))}
           </ul>
 
-          <p className="aq-reveal mt-8 text-sm text-muted-foreground">
+          <p className="aq-reveal mt-8 text-sm text-muted-foreground" style={{ animationDelay: "280ms" }}>
             100% free · No experience needed · Built for every seat on the team.
           </p>
         </div>
 
         {/* Right: welcoming glass auth card */}
         <div className="order-1 lg:order-2">
-          <div className="aq-glass aq-rise aq-rise-2 relative mx-auto w-full max-w-md rounded-3xl p-6 sm:p-8">
+          <div className="aq-glass aq-sheen aq-float aq-rise aq-rise-2 relative mx-auto w-full max-w-md rounded-3xl p-6 sm:p-8">
             <span className="aq-chip inline-flex items-center gap-1.5">
-              <ShieldCheck className="h-3.5 w-3.5 text-primary" />
+              <ShieldCheck className="aq-badge-bob h-3.5 w-3.5 text-primary" />
               Secure sign in
             </span>
 
             <h2 className="aq-display mt-5 text-2xl font-bold tracking-tight text-foreground">
-              Sign in to <span style={HEADING_GRADIENT}>LearnFRC</span>
+              Sign in to{" "}
+              <span className="aq-grad-anim" style={HEADING_GRADIENT}>
+                LearnFRC
+              </span>
             </h2>
             <p className="mt-1.5 text-sm text-muted-foreground">
               Enter your details to jump back into build season.

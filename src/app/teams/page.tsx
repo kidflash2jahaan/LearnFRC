@@ -16,6 +16,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { Reveal } from "@/components/motion/reveal";
 import { ShareButton } from "@/components/share-button";
+import { AnimatedCounter } from "@/components/animated-counter";
 import { clampPct, pluralize } from "@/lib/utils";
 
 export const metadata: Metadata = {
@@ -89,7 +90,9 @@ export default async function TeamsPage() {
             </span>
             <h1 className="aq-rise aq-rise-2 mt-4 text-balance text-4xl font-bold tracking-tight sm:text-5xl">
               See your whole{" "}
-              <span style={HEADLINE_GRADIENT}>team&apos;s progress</span>
+              <span className="aq-grad-anim" style={HEADLINE_GRADIENT}>
+                team&apos;s progress
+              </span>
             </h1>
             <p className="aq-rise aq-rise-3 mx-auto mt-4 max-w-xl text-pretty text-base leading-relaxed text-foreground/70 sm:text-lg">
               Add your FRC team number and everyone on your team who uses
@@ -97,7 +100,7 @@ export default async function TeamsPage() {
               You&apos;ll all see each other&apos;s progress and push each other
               to finish before build season.
             </p>
-            <div className="aq-rise aq-rise-4 mt-8 flex justify-center">
+            <div className="aq-rise aq-rise-5 mt-8 flex justify-center">
               <Link href="/settings" className="aq-cta">
                 Add your team number
                 <ArrowRight className="h-4 w-4" aria-hidden />
@@ -122,25 +125,27 @@ export default async function TeamsPage() {
     const stats: {
       icon: ComponentType<{ className?: string }>;
       label: string;
-      value: string;
+      value: number;
+      suffix?: string;
       accent: string;
     }[] = [
       {
         icon: Users,
         label: "Members",
-        value: String(members.length),
+        value: members.length,
         accent: "#2560e6",
       },
       {
         icon: CheckCircle2,
         label: "Lessons completed",
-        value: String(totalCompleted),
+        value: totalCompleted,
         accent: "#1aa9d6",
       },
       {
         icon: Trophy,
         label: "Avg. completion",
-        value: `${avgPct}%`,
+        value: avgPct,
+        suffix: "%",
         accent: "#a855f7",
       },
     ];
@@ -154,7 +159,10 @@ export default async function TeamsPage() {
             Your pit crew
           </span>
           <h1 className="aq-rise aq-rise-2 mt-4 text-4xl font-bold tracking-tight sm:text-5xl">
-            Team <span style={HEADLINE_GRADIENT}>#{teamNumber}</span>
+            Team{" "}
+            <span className="aq-grad-anim" style={HEADLINE_GRADIENT}>
+              #{teamNumber}
+            </span>
           </h1>
           <p className="aq-rise aq-rise-3 mt-3 flex items-start gap-2 text-base leading-relaxed text-foreground/70">
             <Info className="mt-1 h-4 w-4 shrink-0 text-primary" aria-hidden />
@@ -166,36 +174,36 @@ export default async function TeamsPage() {
         </section>
 
         {/* Stat tiles */}
-        <Reveal>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            {stats.map((s) => (
-              <div
-                key={s.label}
-                className="aq-tile flex items-center gap-3 rounded-2xl px-4 py-4"
-                style={{ "--a": s.accent } as CSSProperties}
-              >
-                <span className="aq-badge flex h-11 w-11 shrink-0 items-center justify-center rounded-xl">
-                  <s.icon className="h-5 w-5" />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          {stats.map((s, i) => (
+            <div
+              key={s.label}
+              className="aq-tile aq-reveal flex items-center gap-3 rounded-2xl px-4 py-4"
+              style={
+                { "--a": s.accent, animationDelay: `${i * 90}ms` } as CSSProperties
+              }
+            >
+              <span className="aq-badge aq-badge-bob flex h-11 w-11 shrink-0 items-center justify-center rounded-xl">
+                <s.icon className="h-5 w-5" />
+              </span>
+              <span className="min-w-0">
+                <span className="block text-2xl font-bold leading-none tracking-tight text-foreground tabular-nums">
+                  <AnimatedCounter value={s.value} suffix={s.suffix} />
                 </span>
-                <span className="min-w-0">
-                  <span className="block text-2xl font-bold leading-none tracking-tight text-foreground tabular-nums">
-                    {s.value}
-                  </span>
-                  <span className="mt-1.5 block truncate font-mono text-[11px] font-medium uppercase tracking-wide text-foreground/70">
-                    {s.label}
-                  </span>
+                <span className="mt-1.5 block truncate text-[11px] font-medium uppercase tracking-wide text-foreground/70">
+                  {s.label}
                 </span>
-              </div>
-            ))}
-          </div>
-        </Reveal>
+              </span>
+            </div>
+          ))}
+        </div>
 
         {/* Invite callout */}
         <Reveal>
-          <div className="aq-glass flex flex-col gap-4 rounded-3xl p-6 sm:flex-row sm:items-center sm:justify-between">
+          <div className="aq-glass aq-sheen aq-card-hover flex flex-col gap-4 rounded-3xl p-6 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-start gap-3">
               <span
-                className="aq-badge flex h-11 w-11 shrink-0 items-center justify-center rounded-xl"
+                className="aq-badge aq-float flex h-11 w-11 shrink-0 items-center justify-center rounded-xl"
                 style={{ "--a": "#2560e6" } as CSSProperties}
               >
                 <Sparkles className="h-5 w-5" />
@@ -223,19 +231,25 @@ export default async function TeamsPage() {
 
         {/* Roster */}
         <Reveal>
-          <div className="aq-card overflow-hidden rounded-3xl">
+          <div className="aq-card aq-card-hover overflow-hidden rounded-3xl">
             <div className="flex items-center justify-between gap-3 px-6 pt-5 pb-4">
-              <h2 className="text-lg font-bold tracking-tight">Roster</h2>
-              <span className="aq-chip font-mono text-xs">
+              <h2 className="flex items-center gap-2 text-lg font-bold tracking-tight">
+                <span
+                  className="aq-pulse inline-block h-2 w-2 rounded-full bg-primary"
+                  aria-hidden
+                />
+                Roster
+              </h2>
+              <span className="aq-chip text-xs">
                 {pluralize(members.length, "member")}
               </span>
             </div>
             <hr className="aq-divider" />
 
             {members.length === 0 ? (
-              <div className="px-6 py-14 text-center">
+              <div className="aq-reveal px-6 py-14 text-center">
                 <div
-                  className="aq-badge mx-auto flex h-14 w-14 items-center justify-center rounded-2xl"
+                  className="aq-badge aq-float mx-auto flex h-14 w-14 items-center justify-center rounded-2xl"
                   style={{ "--a": "#2560e6" } as CSSProperties}
                 >
                   <Sparkles className="h-6 w-6" />
@@ -250,7 +264,7 @@ export default async function TeamsPage() {
               </div>
             ) : (
               <ul className="divide-y divide-border">
-                {members.map((m) => {
+                {members.map((m, i) => {
                   const pct =
                     totalLessons > 0
                       ? clampPct((m.completed / totalLessons) * 100)
@@ -259,9 +273,12 @@ export default async function TeamsPage() {
                   return (
                     <li
                       key={m.userId}
-                      className={`flex items-center gap-4 px-6 py-4 transition-colors ${
+                      className={`aq-reveal flex items-center gap-4 px-6 py-4 transition-colors ${
                         isYou ? "bg-primary/[0.06]" : "hover:bg-primary/[0.04]"
                       }`}
+                      style={
+                        { animationDelay: `${Math.min(i, 8) * 60}ms` } as CSSProperties
+                      }
                     >
                       <Avatar
                         name={m.name}
@@ -275,7 +292,7 @@ export default async function TeamsPage() {
                             {m.name}
                           </span>
                           {isYou && (
-                            <span className="shrink-0 rounded-full bg-primary/15 px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wide text-primary">
+                            <span className="shrink-0 rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
                               You
                             </span>
                           )}
@@ -284,17 +301,18 @@ export default async function TeamsPage() {
                           <Progress
                             value={pct}
                             className="h-1.5 max-w-[180px]"
+                            barClassName="aq-bar-anim"
                           />
-                          <span className="shrink-0 font-mono text-xs text-muted-foreground">
+                          <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
                             {m.completed}/{totalLessons}
                           </span>
                         </div>
                       </div>
                       <div className="hidden shrink-0 text-right sm:block">
-                        <div className="text-sm font-bold text-primary">
-                          {m.xp} XP
+                        <div className="text-sm font-bold text-primary tabular-nums">
+                          <AnimatedCounter value={m.xp} suffix=" XP" />
                         </div>
-                        <div className="font-mono text-xs text-muted-foreground">
+                        <div className="text-xs text-muted-foreground">
                           {relTime(m.lastActive)}
                         </div>
                       </div>

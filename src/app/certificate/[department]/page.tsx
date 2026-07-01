@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { PrintButton } from "@/components/certificate/print-button";
 import { ShareButton } from "@/components/share-button";
+import { AnimatedCounter } from "@/components/animated-counter";
 
 export const dynamic = "force-dynamic";
 
@@ -74,25 +75,26 @@ export default async function CertificatePage({
     return (
       <div className="relative mx-auto max-w-2xl px-4 pt-28 pb-20 sm:px-6">
         {ambientGlows}
-        <div className="aq-glass aq-rise aq-rise-1 relative overflow-hidden rounded-3xl p-8 text-center sm:p-12">
+        <div className="aq-glass aq-sheen aq-rise aq-rise-1 relative overflow-hidden rounded-3xl p-8 text-center sm:p-12">
           <div
             aria-hidden
             className="absolute inset-x-0 top-0 h-1.5"
             style={{ backgroundImage: `linear-gradient(90deg, ${meta.color}, ${meta.to})` }}
           />
           <span
-            className="aq-badge mx-auto flex h-16 w-16 items-center justify-center rounded-2xl"
+            className="aq-badge aq-badge-bob aq-rise aq-rise-1 mx-auto flex h-16 w-16 items-center justify-center rounded-2xl"
             style={{ "--a": meta.color } as CSSProperties}
           >
             <Lock className="h-7 w-7" />
           </span>
 
-          <div className="mt-6">
+          <div className="aq-rise aq-rise-2 mt-6">
             <span className="aq-eyebrow">Almost there</span>
           </div>
-          <h1 className="mt-3 font-display text-3xl font-bold tracking-tight sm:text-4xl">
+          <h1 className="aq-rise aq-rise-3 mt-3 font-display text-3xl font-bold tracking-tight sm:text-4xl">
             Certificate{" "}
             <span
+              className="aq-grad-anim"
               style={{
                 background: "linear-gradient(120deg,#2560e6,#1aa9d6)",
                 WebkitBackgroundClip: "text",
@@ -103,29 +105,74 @@ export default async function CertificatePage({
               locked
             </span>
           </h1>
-          <p className="mx-auto mt-3 max-w-md text-pretty text-base leading-relaxed text-foreground/70">
+          <p className="aq-rise aq-rise-4 mx-auto mt-3 max-w-md text-pretty text-base leading-relaxed text-foreground/70">
             Finish all {total} lessons in{" "}
             <strong className="text-foreground">{dept.name}</strong> to earn your
             certificate. You&apos;re {pct}% of the way through build season.
           </p>
 
-          <div className="mx-auto mt-6 flex max-w-sm items-center gap-3">
-            <Progress
-              value={pct}
-              style={{ background: `linear-gradient(90deg, ${meta.color}, ${meta.to})` }}
-            />
-            <span className="font-mono text-sm font-semibold text-primary">{pct}%</span>
+          {/* Animated progress ring — draws itself in on view. */}
+          <div className="aq-reveal mx-auto mt-8 flex items-center justify-center" style={{ animationDelay: "0.05s" } as CSSProperties}>
+            <div className="relative h-32 w-32">
+              <svg viewBox="0 0 120 120" className="h-full w-full -rotate-90">
+                <circle
+                  cx="60"
+                  cy="60"
+                  r="52"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="10"
+                  className="text-border"
+                />
+                <circle
+                  cx="60"
+                  cy="60"
+                  r="52"
+                  fill="none"
+                  stroke={meta.color}
+                  strokeWidth="10"
+                  strokeLinecap="round"
+                  className="aq-ring-anim"
+                  style={{
+                    strokeDasharray: 2 * Math.PI * 52,
+                    strokeDashoffset: 2 * Math.PI * 52 * (1 - pct / 100),
+                  }}
+                />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="font-display text-3xl font-bold text-primary">
+                  <AnimatedCounter value={pct} suffix="%" />
+                </span>
+                <span className="text-xs text-muted-foreground">complete</span>
+              </div>
+            </div>
           </div>
 
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+          {/* Lesson tally with count-ups. */}
+          <div className="aq-reveal mx-auto mt-6 flex max-w-sm items-center justify-center gap-2 text-sm font-semibold text-foreground/80" style={{ animationDelay: "0.12s" } as CSSProperties}>
+            <AnimatedCounter value={done} /> of <AnimatedCounter value={total} /> lessons done
+          </div>
+
+          <div className="mx-auto mt-4 flex max-w-sm items-center gap-3">
+            <Progress
+              value={pct}
+              className="aq-bar-anim"
+              style={{ background: `linear-gradient(90deg, ${meta.color}, ${meta.to})` }}
+            />
+            <span className="font-semibold text-primary">
+              <AnimatedCounter value={pct} suffix="%" />
+            </span>
+          </div>
+
+          <div className="aq-reveal mt-8 flex flex-wrap items-center justify-center gap-3" style={{ animationDelay: "0.2s" } as CSSProperties}>
             {next && (
-              <Button asChild variant="brand">
+              <Button asChild variant="brand" className="aq-cta">
                 <Link href={`/guides/${dept.slug}/${next.moduleSlug}/${next.slug}`}>
                   Keep going <ArrowRight className="h-4 w-4" />
                 </Link>
               </Button>
             )}
-            <Button asChild variant="outline">
+            <Button asChild variant="outline" className="aq-ghost">
               <Link href={`/guides/${dept.slug}`}>Back to {dept.name}</Link>
             </Button>
           </div>
@@ -186,14 +233,15 @@ export default async function CertificatePage({
 
       {/* Achievement banner (screen only — kept out of print). */}
       <div className="aq-rise aq-rise-1 mb-6 flex justify-center print:hidden">
-        <span className="aq-chip gap-2 text-primary">
-          <Sparkles className="h-4 w-4" />
+        <span className="aq-chip aq-float gap-2 text-primary">
+          <span className="aq-pulse h-2 w-2 rounded-full bg-primary" aria-hidden />
+          <Sparkles className="aq-badge-bob h-4 w-4" />
           <span className="font-semibold">Achievement unlocked</span>
         </span>
       </div>
 
       {/* Certificate — the printable artifact, kept distinctive. */}
-      <div className="aq-reveal">
+      <div className="aq-reveal aq-rise aq-rise-2">
         <div
           id="certificate"
           className="relative overflow-hidden rounded-3xl border bg-card p-8 shadow-[0_24px_60px_-24px_rgba(37,96,230,0.35)] sm:p-12 print:shadow-none"
@@ -224,13 +272,14 @@ export default async function CertificatePage({
           />
 
           <div className="relative text-center">
-            <div className="flex items-center justify-center gap-2.5">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#3b78f2] to-[#149fd0] text-white shadow-[0_8px_18px_rgba(37,96,230,0.28)] print:shadow-none">
+            <div className="aq-rise aq-rise-1 flex items-center justify-center gap-2.5 print:animate-none">
+              <span className="aq-badge-bob flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#3b78f2] to-[#149fd0] text-white shadow-[0_8px_18px_rgba(37,96,230,0.28)] print:shadow-none print:animate-none">
                 <Award className="h-5 w-5" />
               </span>
               <span className="font-display text-lg font-bold tracking-tight">
                 Learn
                 <span
+                  className="aq-grad-anim print:animate-none"
                   style={{
                     background: "linear-gradient(120deg,#2560e6,#1aa9d6)",
                     WebkitBackgroundClip: "text",
@@ -243,24 +292,27 @@ export default async function CertificatePage({
               </span>
             </div>
 
-            <p className="mt-8 font-mono text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
+            <p className="aq-rise aq-rise-2 mt-8 font-mono text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground print:animate-none">
               Certificate of Completion
             </p>
-            <p className="mt-6 text-sm text-muted-foreground">This certifies that</p>
-            <h1 className="mt-2 text-balance font-display text-4xl font-bold tracking-tight sm:text-5xl">
+            <p className="aq-rise aq-rise-3 mt-6 text-sm text-muted-foreground print:animate-none">This certifies that</p>
+            <h1 className="aq-rise aq-rise-3 mt-2 text-balance font-display text-4xl font-bold tracking-tight sm:text-5xl print:animate-none">
               {name}
             </h1>
-            <p className="mx-auto mt-6 max-w-xl text-pretty text-base leading-relaxed text-foreground/70">
+            <p className="aq-rise aq-rise-4 mx-auto mt-6 max-w-xl text-pretty text-base leading-relaxed text-foreground/70 print:animate-none">
               has successfully completed all{" "}
-              <strong className="text-foreground">{total} lessons</strong> of the
+              <strong className="text-foreground">
+                <AnimatedCounter value={total} /> lessons
+              </strong>{" "}
+              of the
             </p>
 
             <div
-              className="aq-tile mt-5 inline-flex items-center gap-3 rounded-2xl px-5 py-3"
+              className="aq-tile aq-card-hover aq-rise aq-rise-5 mt-5 inline-flex items-center gap-3 rounded-2xl px-5 py-3 print:animate-none"
               style={{ "--a": meta.color } as CSSProperties}
             >
               <span
-                className="aq-badge flex h-10 w-10 items-center justify-center rounded-xl"
+                className="aq-badge aq-badge-bob flex h-10 w-10 items-center justify-center rounded-xl print:animate-none"
                 style={{ "--a": meta.color } as CSSProperties}
               >
                 <Icon name={meta.icon} className="h-5 w-5" />
@@ -271,7 +323,7 @@ export default async function CertificatePage({
               department on LearnFRC.
             </p>
 
-            <div className="mt-10 flex flex-col items-center justify-between gap-6 border-t border-border pt-6 sm:flex-row">
+            <div className="aq-rise aq-rise-5 mt-10 flex flex-col items-center justify-between gap-6 border-t border-border pt-6 sm:flex-row print:animate-none">
               <div className="text-center sm:text-left">
                 <div className="font-mono text-sm font-semibold text-foreground">{dateStr}</div>
                 <div className="text-xs text-muted-foreground">Date completed</div>
@@ -295,7 +347,7 @@ export default async function CertificatePage({
         </div>
       </div>
 
-      <p className="mt-6 text-center text-sm text-muted-foreground print:hidden">
+      <p className="aq-reveal mt-6 text-center text-sm text-muted-foreground print:hidden" style={{ animationDelay: "0.15s" } as CSSProperties}>
         Tip: use Print → &quot;Save as PDF&quot; to download or share your certificate.
       </p>
     </div>

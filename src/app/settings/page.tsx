@@ -29,19 +29,23 @@ export default async function SettingsPage() {
 
       <div className="mx-auto max-w-2xl px-4 pt-28 pb-24 sm:px-6">
         {/* Hero */}
-        <header className="flex flex-col items-start gap-4">
-          <span className="aq-rise aq-rise-1 aq-eyebrow">Your account</span>
+        <header className="relative flex flex-col items-start gap-4">
+          <span className="aq-rise aq-rise-1 aq-eyebrow inline-flex items-center gap-2">
+            <span className="aq-pulse inline-block h-1.5 w-1.5 rounded-full bg-[#2560e6]" />
+            Your account
+          </span>
           <div className="aq-rise aq-rise-2 flex items-center gap-4">
             <span
-              className="aq-badge shrink-0"
+              className="aq-badge aq-badge-bob shrink-0"
               style={{ "--a": "#2560e6" } as CSSProperties}
             >
               <SettingsIcon className="h-6 w-6" strokeWidth={2.25} />
             </span>
             <h1 className="aq-display text-3xl font-bold tracking-tight sm:text-4xl">
               <span
+                className="aq-grad-anim"
                 style={{
-                  background: "linear-gradient(120deg,#2560e6,#1aa9d6)",
+                  background: "linear-gradient(120deg,#2560e6,#1aa9d6,#8b5cf6,#2560e6)",
                   WebkitBackgroundClip: "text",
                   backgroundClip: "text",
                   color: "transparent",
@@ -77,11 +81,11 @@ export default async function SettingsPage() {
         </header>
 
         {/* Profile form */}
-        <section className="aq-reveal mt-10">
-          <div className="aq-card aq-card-hover p-6 sm:p-7">
+        <section className="aq-reveal mt-10" style={{ animationDelay: "0.05s" } as CSSProperties}>
+          <div className="aq-card aq-card-hover aq-sheen p-6 sm:p-7">
             <div className="flex items-center gap-3">
               <span
-                className="aq-icon shrink-0"
+                className="aq-icon aq-badge-bob shrink-0"
                 style={{ "--a": "#2560e6" } as CSSProperties}
               >
                 <UserRound className="h-5 w-5" />
@@ -101,16 +105,16 @@ export default async function SettingsPage() {
         </section>
 
         {/* Performance card */}
-        <section className="aq-reveal mt-6">
+        <section className="aq-reveal mt-6" style={{ animationDelay: "0.1s" } as CSSProperties}>
           <PerfModeCard />
         </section>
 
         {/* Account / sign out */}
-        <section className="aq-reveal mt-6">
-          <div className="aq-card aq-card-hover p-6 sm:p-7">
+        <section className="aq-reveal mt-6" style={{ animationDelay: "0.15s" } as CSSProperties}>
+          <div className="aq-card aq-card-hover aq-sheen p-6 sm:p-7">
             <div className="flex items-center gap-3">
               <span
-                className="aq-icon shrink-0"
+                className="aq-icon aq-badge-bob shrink-0"
                 style={{ "--a": "#1aa9d6" } as CSSProperties}
               >
                 <LogOut className="h-5 w-5" />

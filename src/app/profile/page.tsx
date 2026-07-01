@@ -17,6 +17,7 @@ import { getCompletedLessonIds } from "@/lib/queries";
 import type { Achievement } from "@/lib/types";
 import { Avatar } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
+import { AnimatedCounter } from "@/components/animated-counter";
 import { Reveal, Stagger, StaggerItem } from "@/components/motion/reveal";
 import { Icon } from "@/lib/icon-map";
 import { cn } from "@/lib/utils";
@@ -132,7 +133,7 @@ export default async function ProfilePage() {
       <div className="mx-auto max-w-4xl px-4 pt-28 pb-24 sm:px-6 lg:px-8">
         {/* ===================== HERO ===================== */}
         <Reveal>
-          <div className="aq-glass relative overflow-hidden rounded-[28px]">
+          <div className="aq-glass aq-sheen relative overflow-hidden rounded-[28px]">
             {/* Banner wash */}
             <div
               aria-hidden
@@ -145,7 +146,7 @@ export default async function ProfilePage() {
             <div className="relative p-6 pt-16 sm:p-8 sm:pt-20">
               <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
                 <div className="flex flex-col gap-5 sm:flex-row sm:items-end">
-                  <div className="aq-rise aq-rise-1">
+                  <div className="aq-rise aq-rise-1 aq-float">
                     <Avatar
                       name={displayName}
                       src={profile?.avatar_url}
@@ -156,7 +157,9 @@ export default async function ProfilePage() {
                   <div className="aq-rise aq-rise-2 pb-1">
                     <span className="aq-eyebrow">Your pit crew profile</span>
                     <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
-                      <span style={GRADIENT_TEXT}>{displayName}</span>
+                      <span className="aq-grad-anim" style={GRADIENT_TEXT}>
+                        {displayName}
+                      </span>
                     </h1>
                     <p className="mt-1 font-mono text-sm text-muted-foreground">
                       @{handle}
@@ -165,7 +168,7 @@ export default async function ProfilePage() {
                       <span className="aq-chip font-medium">
                         <span
                           aria-hidden
-                          className="h-1.5 w-1.5 rounded-full bg-primary"
+                          className="aq-pulse h-1.5 w-1.5 rounded-full bg-primary"
                         />
                         {roleLabel}
                       </span>
@@ -221,13 +224,13 @@ export default async function ProfilePage() {
                 style={{ "--a": s.color } as CSSProperties}
               >
                 <span
-                  className="aq-badge inline-flex h-10 w-10 items-center justify-center rounded-xl"
+                  className="aq-badge aq-badge-bob inline-flex h-10 w-10 items-center justify-center rounded-xl"
                   style={{ "--a": s.color } as CSSProperties}
                 >
                   <s.icon className="h-5 w-5" />
                 </span>
                 <div className="mt-3 aq-display text-3xl font-bold tracking-tight tabular-nums text-foreground">
-                  {s.value.toLocaleString()}
+                  <AnimatedCounter value={s.value} />
                 </div>
                 <div className="mt-0.5 font-mono text-[11px] uppercase tracking-wider text-foreground/60">
                   {s.label}
@@ -242,13 +245,13 @@ export default async function ProfilePage() {
           <div className="aq-card aq-card-hover overflow-hidden p-6 sm:p-7">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="flex items-center gap-3">
-                <span className="aq-icon h-12 w-12">
+                <span className="aq-icon aq-badge-bob h-12 w-12">
                   <Zap className="h-5 w-5" />
                 </span>
                 <div>
                   <div className="aq-eyebrow">Season progress</div>
                   <div className="mt-1 aq-display text-2xl font-bold text-foreground">
-                    {xp.toLocaleString()} XP
+                    <AnimatedCounter value={xp} suffix=" XP" />
                     <span className="ml-2 text-base font-semibold text-muted-foreground">
                       · Level {level}
                     </span>
@@ -267,6 +270,7 @@ export default async function ProfilePage() {
             <Progress
               value={intoLevel}
               className="mt-5 h-2.5"
+              barClassName="aq-bar-anim"
               style={XP_BAR}
               aria-label={`${intoLevel} of 100 XP toward level ${level + 1}`}
             />
@@ -282,8 +286,9 @@ export default async function ProfilePage() {
                 Achievements
               </h2>
             </div>
-            <span className="aq-chip shrink-0 font-mono text-xs">
-              {earnedCount} / {achievements.length} earned
+            <span className="aq-chip shrink-0 text-xs tabular-nums">
+              <AnimatedCounter value={earnedCount} /> / {achievements.length}{" "}
+              earned
             </span>
           </div>
         </Reveal>
@@ -318,7 +323,7 @@ export default async function ProfilePage() {
                       className={cn(
                         "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl",
                         a.earned
-                          ? "aq-badge"
+                          ? "aq-badge aq-badge-bob"
                           : "border border-dashed border-border bg-muted text-muted-foreground"
                       )}
                       style={
@@ -347,7 +352,7 @@ export default async function ProfilePage() {
                       <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
                         <span
                           aria-hidden
-                          className="h-1.5 w-1.5 rounded-full bg-primary"
+                          className="aq-pulse h-1.5 w-1.5 rounded-full bg-primary"
                         />
                         Earned
                       </span>

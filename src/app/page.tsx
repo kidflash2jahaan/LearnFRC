@@ -13,6 +13,7 @@ import { Icon } from "@/lib/icon-map";
 import { deptMeta } from "@/lib/departments";
 import { getDepartments, getOverviewStats } from "@/lib/queries";
 import { DEPT_CATALOG } from "@/lib/dept-catalog";
+import { AnimatedCounter } from "@/components/animated-counter";
 
 const FEATURES = [
   {
@@ -68,10 +69,10 @@ export default async function HomePage() {
   }));
 
   const heroStats = [
-    { n: String(stats.deptCount), l: "departments" },
-    { n: `${stats.lessonCount}+`, l: "guides & lessons" },
-    { n: "100%", l: "free, no login to read" },
-    { n: "$0", l: "forever" },
+    { n: stats.deptCount, suffix: "", l: "departments" },
+    { n: stats.lessonCount, suffix: "+", l: "guides & lessons" },
+    { n: 100, suffix: "%", l: "free, no login to read" },
+    { n: null as number | null, display: "$0", l: "forever" },
   ];
 
   return (
@@ -110,12 +111,13 @@ export default async function HomePage() {
       {/* ============================ HERO ============================ */}
       <section className="mx-auto grid max-w-7xl items-center gap-12 px-4 pb-16 pt-28 sm:px-6 lg:grid-cols-2 lg:gap-10 lg:pb-20 lg:pt-36">
         <div>
-          <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 font-mono text-xs font-semibold uppercase tracking-[0.04em] text-primary">
+          <span className="aq-rise aq-rise-1 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 font-mono text-xs font-semibold uppercase tracking-[0.04em] text-primary">
             <Sparkles className="h-3.5 w-3.5" /> Free · no login to read a guide
           </span>
-          <h1 className="aq-display mt-4 text-balance text-4xl font-extrabold leading-[1.02] sm:text-5xl lg:text-[3.4rem]">
+          <h1 className="aq-display aq-rise aq-rise-2 mt-4 text-balance text-4xl font-extrabold leading-[1.02] sm:text-5xl lg:text-[3.4rem]">
             Master every part of{" "}
             <span
+              className="aq-grad-anim"
               style={{
                 background: "linear-gradient(120deg, #2560e6, #1aa9d6)",
                 WebkitBackgroundClip: "text",
@@ -126,13 +128,13 @@ export default async function HomePage() {
               FIRST Robotics.
             </span>
           </h1>
-          <p className="mt-4 max-w-xl text-pretty text-lg leading-relaxed text-foreground/70">
+          <p className="aq-rise aq-rise-3 mt-4 max-w-xl text-pretty text-lg leading-relaxed text-foreground/70">
             Your whole team is eleven teams in one — build, code, CAD, wiring,
             scouting, business, drive team and more. LearnFRC teaches all of
             them, with written guides, quizzes, and printable certificates. Built
             by students, free for everyone.
           </p>
-          <div className="mt-7 flex flex-wrap items-center gap-3">
+          <div className="aq-rise aq-rise-4 mt-7 flex flex-wrap items-center gap-3">
             <Link
               href="/signup"
               className="aq-cta inline-flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold"
@@ -146,14 +148,16 @@ export default async function HomePage() {
               See how it works
             </Link>
           </div>
-          <div className="mt-6 flex flex-wrap gap-x-5 gap-y-2 text-sm text-muted-foreground">
+          <div className="aq-rise aq-rise-5 mt-6 flex flex-wrap gap-x-5 gap-y-2 text-sm text-muted-foreground">
             <span>
-              <b className="font-semibold text-foreground">{stats.deptCount}</b>{" "}
+              <b className="font-semibold text-foreground">
+                <AnimatedCounter value={stats.deptCount} />
+              </b>{" "}
               departments
             </span>
             <span>
               <b className="font-semibold text-foreground">
-                {stats.lessonCount}+
+                <AnimatedCounter value={stats.lessonCount} suffix="+" />
               </b>{" "}
               guides &amp; lessons
             </span>
@@ -164,13 +168,13 @@ export default async function HomePage() {
         </div>
 
         {/* glass mastery panel (sample) */}
-        <div className="aq-glass rounded-3xl p-6 lg:justify-self-end">
+        <div className="aq-glass aq-float aq-sheen aq-rise aq-rise-3 rounded-3xl p-6 lg:justify-self-end">
           <div className="mb-4 flex items-center gap-2">
             <span className="aq-display text-[17px] font-bold text-foreground">
               Build season ready
             </span>
             <span className="ml-auto inline-flex items-center gap-1.5 font-mono text-[11px] font-semibold text-[#0c8f4f]">
-              <span className="h-2 w-2 rounded-full bg-[#12b565] shadow-[0_0_0_4px_rgba(18,181,101,0.18)]" />
+              <span className="aq-pulse h-2 w-2 rounded-full bg-[#12b565] shadow-[0_0_0_4px_rgba(18,181,101,0.18)]" />
               SAMPLE
             </span>
           </div>
@@ -185,6 +189,7 @@ export default async function HomePage() {
                 strokeWidth="10"
               />
               <circle
+                className="aq-ring-anim"
                 cx="41"
                 cy="41"
                 r="34"
@@ -205,17 +210,21 @@ export default async function HomePage() {
             </svg>
             <div>
               <div className="aq-display text-2xl font-extrabold leading-none text-foreground">
-                78%
+                <AnimatedCounter value={78} suffix="%" />
               </div>
               <div className="mt-1 text-[13px] text-muted-foreground">
                 across your departments
               </div>
             </div>
           </div>
-          {sample.map((s) => (
-            <div key={s.slug} className="flex items-center gap-3 py-2">
+          {sample.map((s, i) => (
+            <div
+              key={s.slug}
+              className="aq-reveal flex items-center gap-3 py-2"
+              style={{ animationDelay: `${0.15 + i * 0.12}s` }}
+            >
               <span
-                className="aq-badge flex h-9 w-9 items-center justify-center rounded-xl"
+                className="aq-badge aq-badge-bob flex h-9 w-9 items-center justify-center rounded-xl"
                 style={{ "--a": s.color } as CSSProperties}
               >
                 <Icon name={s.icon} className="h-[18px] w-[18px]" />
@@ -226,16 +235,17 @@ export default async function HomePage() {
                 </div>
                 <div className="mt-1.5 h-[7px] overflow-hidden rounded-md bg-[rgba(120,145,190,.24)]">
                   <span
-                    className="block h-full rounded-md"
+                    className="aq-bar-anim block h-full rounded-md"
                     style={{
                       width: `${s.pct}%`,
+                      animationDelay: `${0.3 + i * 0.15}s`,
                       background: `color-mix(in srgb, ${s.color} 78%, #000 4%)`,
                     }}
                   />
                 </div>
               </div>
               <span className="font-mono text-xs font-semibold text-foreground/70">
-                {s.pct}%
+                <AnimatedCounter value={s.pct} suffix="%" />
               </span>
             </div>
           ))}
@@ -247,30 +257,35 @@ export default async function HomePage() {
 
       {/* ========================= DEPARTMENTS ======================== */}
       <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-        <span className="font-mono text-xs font-semibold uppercase tracking-[0.08em] text-primary">
+        <span className="aq-reveal font-mono text-xs font-semibold uppercase tracking-[0.08em] text-primary">
           Pick your department
         </span>
-        <h2 className="aq-display mt-2 text-3xl font-bold text-foreground">
+        <h2 className="aq-reveal aq-display mt-2 text-3xl font-bold text-foreground">
           Every role on your robotics team
         </h2>
-        <p className="mt-1 max-w-xl text-[15.5px] text-foreground/70">
+        <p className="aq-reveal mt-1 max-w-xl text-[15.5px] text-foreground/70">
           A full FRC team is a small company. Tap into any department below —
           each has its own guides, quizzes, and a completion certificate.
         </p>
 
         <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {departments.map((d) => {
+          {departments.map((d, i) => {
             const m = deptMeta(d.slug);
             return (
               <Link
                 key={d.slug}
                 href={`/guides/${d.slug}`}
-                className="aq-tile group block rounded-[20px] p-[18px]"
-                style={{ "--a": m.color } as CSSProperties}
+                className="aq-tile aq-reveal group block rounded-[20px] p-[18px]"
+                style={
+                  {
+                    "--a": m.color,
+                    animationDelay: `${(i % 4) * 0.08}s`,
+                  } as CSSProperties
+                }
               >
                 <ArrowUpRight className="absolute right-4 top-4 h-[18px] w-[18px] text-[#2c3752] opacity-50" />
                 <span
-                  className="aq-badge flex h-11 w-11 items-center justify-center rounded-[14px]"
+                  className="aq-badge aq-badge-bob flex h-11 w-11 items-center justify-center rounded-[14px]"
                   style={{ "--a": m.color } as CSSProperties}
                 >
                   <Icon name={m.icon} className="h-[22px] w-[22px]" />
@@ -288,12 +303,17 @@ export default async function HomePage() {
           })}
           <Link
             href="/guides"
-            className="aq-tile group block rounded-[20px] p-[18px]"
-            style={{ "--a": "#8493ad" } as CSSProperties}
+            className="aq-tile aq-reveal group block rounded-[20px] p-[18px]"
+            style={
+              {
+                "--a": "#8493ad",
+                animationDelay: `${(departments.length % 4) * 0.08}s`,
+              } as CSSProperties
+            }
           >
             <ArrowUpRight className="absolute right-4 top-4 h-[18px] w-[18px] text-[#2c3752] opacity-50" />
             <span
-              className="aq-badge flex h-11 w-11 items-center justify-center rounded-[14px]"
+              className="aq-badge aq-badge-bob flex h-11 w-11 items-center justify-center rounded-[14px]"
               style={{ "--a": "#8493ad" } as CSSProperties}
             >
               <LayoutGrid className="h-[22px] w-[22px]" />
@@ -310,16 +330,20 @@ export default async function HomePage() {
 
       {/* ========================== FEATURES ========================== */}
       <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-        <span className="font-mono text-xs font-semibold uppercase tracking-[0.08em] text-primary">
+        <span className="aq-reveal font-mono text-xs font-semibold uppercase tracking-[0.08em] text-primary">
           What you get
         </span>
-        <h2 className="aq-display mt-2 text-3xl font-bold text-foreground">
+        <h2 className="aq-reveal aq-display mt-2 text-3xl font-bold text-foreground">
           Read, quiz, certify, repeat
         </h2>
         <div className="mt-6 grid gap-4 md:grid-cols-3">
-          {FEATURES.map((f) => (
-            <div key={f.title} className="aq-glass rounded-3xl p-5">
-              <span className="flex h-[46px] w-[46px] items-center justify-center rounded-[14px] bg-primary/10 text-primary">
+          {FEATURES.map((f, i) => (
+            <div
+              key={f.title}
+              className="aq-glass aq-card-hover aq-reveal rounded-3xl p-5"
+              style={{ animationDelay: `${i * 0.12}s` }}
+            >
+              <span className="aq-badge-bob flex h-[46px] w-[46px] items-center justify-center rounded-[14px] bg-primary/10 text-primary">
                 <f.icon className="h-[23px] w-[23px]" />
               </span>
               <h3 className="aq-display mt-3 text-[17px] font-bold text-foreground">
@@ -336,13 +360,18 @@ export default async function HomePage() {
       {/* =========================== STATS ============================ */}
       <section className="mx-auto max-w-7xl px-4 pb-6 sm:px-6 lg:px-8">
         <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-          {heroStats.map((s) => (
+          {heroStats.map((s, i) => (
             <div
               key={s.l}
-              className="aq-glass rounded-2xl p-5 text-center"
+              className="aq-glass aq-card-hover aq-reveal rounded-2xl p-5 text-center"
+              style={{ animationDelay: `${i * 0.1}s` }}
             >
               <div className="aq-display text-3xl font-extrabold leading-none text-foreground">
-                {s.n}
+                {s.n === null ? (
+                  s.display
+                ) : (
+                  <AnimatedCounter value={s.n} suffix={s.suffix} />
+                )}
               </div>
               <div className="mt-1.5 text-[13px] text-muted-foreground">
                 {s.l}
@@ -354,10 +383,11 @@ export default async function HomePage() {
 
       {/* ============================= CTA ============================ */}
       <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
-        <div className="aq-glass rounded-[28px] px-8 py-12 text-center sm:px-16">
+        <div className="aq-glass aq-sheen aq-reveal rounded-[28px] px-8 py-12 text-center sm:px-16">
           <h2 className="aq-display text-balance text-3xl font-bold text-foreground sm:text-4xl">
             Start your first lesson —{" "}
             <span
+              className="aq-grad-anim"
               style={{
                 background: "linear-gradient(120deg, #2560e6, #1aa9d6)",
                 WebkitBackgroundClip: "text",

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Bot, BookOpenCheck, Sparkles, Trophy, Rocket } from "lucide-react";
 import { AuthForm } from "@/components/auth/auth-form";
+import { AnimatedCounter } from "@/components/animated-counter";
 import { getSession } from "@/lib/auth";
 
 export const metadata = {
@@ -37,6 +38,12 @@ const VALUE_PROPS = [
   },
 ];
 
+const STATS = [
+  { value: 11, suffix: "", label: "Departments" },
+  { value: 120, suffix: "+", label: "Lessons" },
+  { value: 100, suffix: "%", label: "Free, forever" },
+];
+
 export default async function SignupPage({
   searchParams,
 }: {
@@ -54,7 +61,7 @@ export default async function SignupPage({
     <main className="relative min-h-[100svh] overflow-hidden">
       {/* Ambient glows */}
       <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute left-[-8%] top-[-6%] h-[460px] w-[460px] rounded-full bg-primary/25 blur-3xl" />
+        <div className="aq-float absolute left-[-8%] top-[-6%] h-[460px] w-[460px] rounded-full bg-primary/25 blur-3xl" />
         <div className="absolute right-[-10%] top-[24%] h-[420px] w-[420px] rounded-full bg-accent/20 blur-3xl" />
         <div className="absolute bottom-[-12%] left-[38%] h-[380px] w-[380px] rounded-full bg-violet-400/15 blur-3xl" />
       </div>
@@ -68,7 +75,7 @@ export default async function SignupPage({
             aria-label="LearnFRC home"
           >
             <span
-              className="aq-badge grid h-9 w-9 place-items-center"
+              className="aq-badge aq-badge-bob grid h-9 w-9 place-items-center"
               style={{ "--a": "#2560e6" } as CSSProperties}
             >
               <Bot className="h-5 w-5 text-foreground" />
@@ -83,7 +90,9 @@ export default async function SignupPage({
           </p>
           <h1 className="aq-rise aq-rise-2 mt-3 max-w-xl text-4xl font-bold tracking-tight sm:text-5xl">
             Go from rookie to{" "}
-            <span style={HEADING_GRADIENT}>robot-ready</span>
+            <span className="aq-grad-anim" style={HEADING_GRADIENT}>
+              robot-ready
+            </span>
           </h1>
           <p className="aq-rise aq-rise-3 mt-4 max-w-lg text-lg leading-relaxed text-foreground/70">
             Create your free account and learn every seat on the team — from
@@ -91,13 +100,28 @@ export default async function SignupPage({
             forever.
           </p>
 
+          {/* Count-up stats */}
+          <dl className="aq-rise aq-rise-3 mt-8 flex flex-wrap gap-x-8 gap-y-4">
+            {STATS.map((s) => (
+              <div key={s.label} className="aq-reveal">
+                <dd className="text-3xl font-bold tracking-tight text-foreground">
+                  <AnimatedCounter value={s.value} suffix={s.suffix} />
+                </dd>
+                <dt className="mt-0.5 text-sm text-muted-foreground">
+                  {s.label}
+                </dt>
+              </div>
+            ))}
+          </dl>
+
           <ul className="aq-rise aq-rise-4 mt-10 grid gap-4 sm:grid-cols-2">
-            {VALUE_PROPS.map((p) => (
+            {VALUE_PROPS.map((p, i) => (
               <li
                 key={p.title}
                 className="aq-card aq-card-hover aq-reveal flex items-start gap-3.5 p-5"
+                style={{ animationDelay: `${i * 90}ms` }}
               >
-                <span className="aq-icon grid h-10 w-10 shrink-0 place-items-center">
+                <span className="aq-icon aq-badge-bob grid h-10 w-10 shrink-0 place-items-center">
                   <p.icon className="h-5 w-5" />
                 </span>
                 <div>
@@ -110,7 +134,10 @@ export default async function SignupPage({
             ))}
           </ul>
 
-          <p className="aq-reveal mt-8 text-sm text-muted-foreground">
+          <p
+            className="aq-reveal mt-8 text-sm text-muted-foreground"
+            style={{ animationDelay: "270ms" }}
+          >
             Trusted sources · Real part numbers &amp; code · Built for every seat
             on the team.
           </p>
@@ -118,15 +145,18 @@ export default async function SignupPage({
 
         {/* Right: welcoming glass auth card */}
         <div className="order-1 lg:order-2">
-          <div className="aq-glass aq-rise aq-rise-2 relative mx-auto w-full max-w-md rounded-3xl p-6 sm:p-8">
+          <div className="aq-glass aq-sheen aq-float aq-rise aq-rise-2 relative mx-auto w-full max-w-md rounded-3xl p-6 sm:p-8">
             <span className="aq-chip inline-flex items-center gap-1.5">
+              <span className="aq-pulse inline-block h-1.5 w-1.5 rounded-full bg-primary" />
               <Rocket className="h-3.5 w-3.5 text-primary" />
               Free forever
             </span>
 
             <h2 className="aq-display mt-5 text-2xl font-bold tracking-tight text-foreground">
               Create your free{" "}
-              <span style={HEADING_GRADIENT}>account</span>
+              <span className="aq-grad-anim" style={HEADING_GRADIENT}>
+                account
+              </span>
             </h2>
             <p className="mt-1.5 text-sm text-muted-foreground">
               A few details and you&apos;re into build season.

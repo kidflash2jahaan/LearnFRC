@@ -21,6 +21,7 @@ import { Progress } from "@/components/ui/progress";
 import { DepartmentCard } from "@/components/department-card";
 import { InviteCard } from "@/components/leaderboard/invite-card";
 import { Reveal, Stagger, StaggerItem } from "@/components/motion/reveal";
+import { AnimatedCounter } from "@/components/animated-counter";
 import {
   AchievementBadge,
   type AchievementView,
@@ -281,7 +282,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* ============================ HERO — PROGRESS AT A GLANCE ============================ */}
-      <section className="aq-glass aq-reveal overflow-hidden rounded-[28px] p-6 sm:p-9">
+      <section className="aq-glass aq-sheen aq-rise aq-rise-1 overflow-hidden rounded-[28px] p-6 sm:p-9">
         <div
           aria-hidden
           className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full opacity-30 blur-3xl"
@@ -290,10 +291,10 @@ export default async function DashboardPage() {
         <div className="relative flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
           {/* Greeting */}
           <div className="min-w-0 flex-1">
-            <span className="aq-eyebrow aq-rise aq-rise-1">
-              <Sparkles className="h-3.5 w-3.5" /> Welcome back
+            <span className="aq-eyebrow aq-rise aq-rise-2">
+              <Sparkles className="h-3.5 w-3.5 aq-badge-bob" /> Welcome back
             </span>
-            <div className="aq-rise aq-rise-2 mt-4 flex items-center gap-4">
+            <div className="aq-rise aq-rise-3 mt-4 flex items-center gap-4">
               <Avatar
                 name={displayName}
                 src={profile?.avatar_url}
@@ -302,7 +303,7 @@ export default async function DashboardPage() {
               />
               <div className="min-w-0">
                 <h1 className="aq-display truncate text-3xl font-bold leading-tight sm:text-4xl">
-                  Hey, <span style={blueGradient}>{firstName}</span>
+                  Hey, <span className="aq-grad-anim" style={blueGradient}>{firstName}</span>
                 </h1>
                 <p className="mt-1 text-[15px] text-foreground/70">
                   {completedCount > 0
@@ -314,7 +315,7 @@ export default async function DashboardPage() {
               </div>
             </div>
 
-            <div className="aq-rise aq-rise-3 mt-6 flex flex-wrap items-center gap-3">
+            <div className="aq-rise aq-rise-4 mt-6 flex flex-wrap items-center gap-3">
               {continueLesson && cm ? (
                 <Link
                   href={`/guides/${continueLesson.deptSlug}/${continueLesson.moduleSlug}/${continueLesson.lessonSlug}`}
@@ -343,21 +344,21 @@ export default async function DashboardPage() {
           </div>
 
           {/* Level / XP glass panel */}
-          <div className="aq-rise aq-rise-4 aq-card w-full shrink-0 rounded-[22px] p-6 lg:w-80">
+          <div className="aq-rise aq-rise-5 aq-float aq-card w-full shrink-0 rounded-[22px] p-6 lg:w-80">
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
                   Level {level}
                 </p>
                 <p className="aq-display mt-1 text-4xl font-bold tabular-nums text-foreground">
-                  {xp.toLocaleString()}
+                  <AnimatedCounter value={xp} />
                   <span className="ml-1.5 font-sans text-base font-semibold text-muted-foreground">
                     XP
                   </span>
                 </p>
               </div>
               <span
-                className="aq-badge flex h-14 w-14 items-center justify-center rounded-2xl"
+                className="aq-badge aq-badge-bob flex h-14 w-14 items-center justify-center rounded-2xl"
                 style={{ "--a": "#2560e6" } as CSSProperties}
               >
                 <Zap className="h-7 w-7" />
@@ -368,8 +369,8 @@ export default async function DashboardPage() {
                 <span>Progress to level {level + 1}</span>
                 <span className="font-semibold text-foreground">{levelPct}%</span>
               </div>
-              <Progress value={levelPct} className="h-2.5 bg-white/55" style={xpBar} />
-              <p className="mt-2 font-mono text-[11px] text-muted-foreground">
+              <Progress value={levelPct} className="h-2.5 bg-white/55" barClassName="aq-bar-anim" style={xpBar} />
+              <p className="mt-2 text-[11px] text-muted-foreground">
                 {xpToNext} XP to go
               </p>
             </div>
@@ -385,7 +386,7 @@ export default async function DashboardPage() {
             className="aq-card aq-card-hover group flex items-center justify-between gap-4 rounded-[20px] p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
             <div className="flex items-center gap-3">
-              <span className="aq-icon flex h-11 w-11 shrink-0 rounded-2xl">
+              <span className="aq-icon aq-badge-bob flex h-11 w-11 shrink-0 rounded-2xl">
                 <Sparkles className="h-5 w-5" />
               </span>
               <div>
@@ -423,13 +424,13 @@ export default async function DashboardPage() {
           <StaggerItem key={s.label}>
             <div className="aq-card aq-card-hover h-full rounded-[20px] p-4">
               <span
-                className="aq-badge mb-3 flex h-10 w-10 items-center justify-center rounded-2xl"
+                className="aq-badge aq-badge-bob mb-3 flex h-10 w-10 items-center justify-center rounded-2xl"
                 style={{ "--a": s.accent } as CSSProperties}
               >
                 <s.icon className="h-5 w-5" />
               </span>
               <div className="aq-display text-3xl font-bold tabular-nums text-foreground">
-                {s.value.toLocaleString()}
+                <AnimatedCounter value={s.value} />
               </div>
               <div className="mt-1 text-xs font-medium leading-snug text-muted-foreground">
                 {s.label}
@@ -449,8 +450,8 @@ export default async function DashboardPage() {
           >
             <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0">
-                <span className="inline-flex items-center gap-1.5 font-mono text-xs font-semibold uppercase tracking-wider text-foreground/75">
-                  <Play className="h-3.5 w-3.5 fill-current" />
+                <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-foreground/75">
+                  <Play className="h-3.5 w-3.5 fill-current aq-badge-bob" />
                   {continueLesson.fresh ? "Start learning" : "Continue learning"}
                 </span>
                 <h3 className="aq-display mt-2 text-balance text-2xl font-bold leading-tight text-foreground sm:text-3xl">
@@ -461,14 +462,14 @@ export default async function DashboardPage() {
                 </p>
                 {!continueLesson.fresh && (
                   <div className="mt-4 max-w-sm">
-                    <div className="mb-1.5 flex items-center justify-between font-mono text-[11px] font-semibold text-foreground/75">
+                    <div className="mb-1.5 flex items-center justify-between text-[11px] font-semibold text-foreground/75">
                       <span>{continueLesson.deptName} progress</span>
                       <span className="text-foreground">{continueLesson.pct}%</span>
                     </div>
                     <Progress
                       value={continueLesson.pct}
                       className="h-2 bg-white/45"
-                      barClassName="bg-[color-mix(in_srgb,var(--a)_78%,#141f2c)]"
+                      barClassName="aq-bar-anim bg-[color-mix(in_srgb,var(--a)_78%,#141f2c)]"
                     />
                   </div>
                 )}
@@ -552,7 +553,7 @@ export default async function DashboardPage() {
                     : `Complete lessons to unlock all ${achievements.length} badges.`}
                 </p>
               </div>
-              <span className="aq-chip shrink-0 font-mono text-xs font-semibold">
+              <span className="aq-chip shrink-0 text-xs font-semibold">
                 {achievementsEarned}/{achievements.length} unlocked
               </span>
             </div>
@@ -562,6 +563,7 @@ export default async function DashboardPage() {
             <Progress
               value={clampPct((achievementsEarned / achievements.length) * 100)}
               className="h-2.5 bg-white/55"
+              barClassName="aq-bar-anim"
               style={xpBar}
             />
           </Reveal>
@@ -579,14 +581,14 @@ export default async function DashboardPage() {
       {/* ============================ ZERO STATE ENCOURAGEMENT ============================ */}
       {completedCount === 0 && (
         <Reveal className="mt-14">
-          <div className="aq-glass relative overflow-hidden rounded-[28px] p-8 text-center sm:p-10">
+          <div className="aq-glass aq-sheen relative overflow-hidden rounded-[28px] p-8 text-center sm:p-10">
             <div
               aria-hidden
               className="pointer-events-none absolute left-1/2 top-[-30%] h-56 w-72 -translate-x-1/2 rounded-full opacity-40 blur-3xl"
               style={{ background: "radial-gradient(circle,rgba(37,96,230,0.3),transparent 70%)" }}
             />
             <span
-              className="aq-badge relative mx-auto flex h-16 w-16 items-center justify-center rounded-2xl"
+              className="aq-badge aq-badge-bob relative mx-auto flex h-16 w-16 items-center justify-center rounded-2xl"
               style={{ "--a": "#2560e6" } as CSSProperties}
             >
               <CheckCircle2 className="h-8 w-8" />

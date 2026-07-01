@@ -16,6 +16,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { Reveal } from "@/components/motion/reveal";
+import { AnimatedCounter } from "@/components/animated-counter";
 
 export const metadata: Metadata = {
   title: "Terms of Service",
@@ -32,18 +33,23 @@ function Section({
   icon: SectionIcon,
   a,
   title,
+  index = 0,
   children,
 }: {
   icon: typeof ScrollText;
   a: string;
   title: string;
+  index?: number;
   children: React.ReactNode;
 }) {
   return (
-    <section className="aq-reveal aq-card aq-card-hover scroll-mt-28 p-6 sm:p-8">
+    <section
+      className="aq-reveal aq-card aq-card-hover scroll-mt-28 p-6 sm:p-8"
+      style={{ animationDelay: `${0.06 * index}s` }}
+    >
       <div className="flex items-center gap-3">
         <span
-          className="aq-badge inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl"
+          className="aq-badge aq-badge-bob inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl"
           style={{ "--a": a } as CSSProperties}
           aria-hidden
         >
@@ -95,8 +101,9 @@ export default function TermsPage() {
         <h1 className="aq-rise aq-rise-2 mt-3 font-display text-4xl font-bold tracking-tight sm:text-5xl">
           Terms of{" "}
           <span
+            className="aq-grad-anim"
             style={{
-              background: "linear-gradient(120deg,#2560e6,#1aa9d6)",
+              background: "linear-gradient(120deg,#2560e6,#1aa9d6,#7c5cff,#2560e6)",
               WebkitBackgroundClip: "text",
               backgroundClip: "text",
               color: "transparent",
@@ -123,13 +130,35 @@ export default function TermsPage() {
             Privacy Policy
           </Link>
         </div>
+
+        {/* Stat strip */}
+        <div className="aq-rise aq-rise-5 mt-8 grid grid-cols-3 gap-3">
+          {[
+            { label: "Sections", value: 11, suffix: "" },
+            { label: "Minutes to read", value: 4, suffix: "" },
+            { label: "Free, always", value: 100, suffix: "%" },
+          ].map((stat, i) => (
+            <div
+              key={stat.label}
+              className="aq-reveal aq-card aq-card-hover rounded-2xl p-4 text-center sm:text-left"
+              style={{ animationDelay: `${0.08 * i}s` }}
+            >
+              <div className="font-display text-2xl font-bold tracking-tight sm:text-3xl">
+                <AnimatedCounter value={stat.value} suffix={stat.suffix} />
+              </div>
+              <div className="mt-1 text-xs font-medium text-foreground/60">
+                {stat.label}
+              </div>
+            </div>
+          ))}
+        </div>
       </header>
 
       {/* Intro callout */}
       <Reveal delay={0.1} className="mt-10">
-        <div className="aq-glass rounded-3xl p-6 sm:p-8">
+        <div className="aq-glass aq-sheen aq-float rounded-3xl p-6 sm:p-8">
           <div className="relative z-10 flex items-start gap-4">
-            <span className="aq-icon h-12 w-12 shrink-0">
+            <span className="aq-icon aq-badge-bob h-12 w-12 shrink-0">
               <BookOpen className="h-6 w-6" strokeWidth={2.1} />
             </span>
             <p className="text-[16px] leading-relaxed text-foreground/85">
@@ -144,7 +173,7 @@ export default function TermsPage() {
 
       {/* Sections */}
       <div className="mt-8 space-y-5">
-        <Section icon={UserCheck} a="#2560e6" title="Who can use LearnFRC">
+        <Section icon={UserCheck} a="#2560e6" index={0} title="Who can use LearnFRC">
           <p>
             You should be at least 13 years old to create an account. If
             you&apos;re under 18, you should have a parent or guardian&apos;s
@@ -153,7 +182,7 @@ export default function TermsPage() {
           </p>
         </Section>
 
-        <Section icon={KeyRound} a="#1aa9d6" title="Your account">
+        <Section icon={KeyRound} a="#1aa9d6" index={1} title="Your account">
           <ul className="space-y-2 pl-5 marker:text-primary/60 list-disc">
             <li>
               Keep your password secure; you&apos;re responsible for activity on
@@ -167,7 +196,7 @@ export default function TermsPage() {
           </ul>
         </Section>
 
-        <Section icon={ShieldAlert} a="#7c5cff" title="Acceptable use">
+        <Section icon={ShieldAlert} a="#7c5cff" index={2} title="Acceptable use">
           <p>You agree not to:</p>
           <ul className="space-y-2 pl-5 marker:text-primary/60 list-disc">
             <li>
@@ -183,7 +212,7 @@ export default function TermsPage() {
           <p>We may suspend or remove accounts that violate these terms.</p>
         </Section>
 
-        <Section icon={BookOpen} a="#0f9d8f" title="Educational content">
+        <Section icon={BookOpen} a="#0f9d8f" index={3} title="Educational content">
           <p>
             Our lessons and quizzes are researched from public sources and
             provided for educational purposes. We work hard to keep them
@@ -203,7 +232,7 @@ export default function TermsPage() {
           </p>
         </Section>
 
-        <Section icon={FileText} a="#2560e6" title="Your content">
+        <Section icon={FileText} a="#2560e6" index={4} title="Your content">
           <p>
             Content you submit (such as your profile details or feedback)
             remains yours, but you grant LearnFRC a license to store and display
@@ -212,7 +241,7 @@ export default function TermsPage() {
           </p>
         </Section>
 
-        <Section icon={Award} a="#e8a01c" title="Trademarks">
+        <Section icon={Award} a="#e8a01c" index={5} title="Trademarks">
           <p>
             LearnFRC is an independent project and is{" "}
             <strong className="font-semibold text-foreground">
@@ -223,7 +252,7 @@ export default function TermsPage() {
           </p>
         </Section>
 
-        <Section icon={Scale} a="#7c5cff" title="Limitation of liability">
+        <Section icon={Scale} a="#7c5cff" index={6} title="Limitation of liability">
           <p>
             To the maximum extent permitted by law, LearnFRC and its maintainers
             are not liable for any indirect or consequential damages arising from
@@ -232,21 +261,21 @@ export default function TermsPage() {
           </p>
         </Section>
 
-        <Section icon={LogOut} a="#1aa9d6" title="Termination">
+        <Section icon={LogOut} a="#1aa9d6" index={7} title="Termination">
           <p>
             You may delete your account at any time by contacting us. We may
             suspend or terminate access if these terms are violated.
           </p>
         </Section>
 
-        <Section icon={RefreshCw} a="#2560e6" title="Changes">
+        <Section icon={RefreshCw} a="#2560e6" index={8} title="Changes">
           <p>
             We may update these terms; the date above reflects the latest
             version. Continued use after changes means you accept them.
           </p>
         </Section>
 
-        <Section icon={Mail} a="#0f9d8f" title="Contact">
+        <Section icon={Mail} a="#0f9d8f" index={9} title="Contact">
           <p>
             Questions about these terms? Email{" "}
             <a className={LINK} href={`mailto:${CONTACT}`}>
@@ -261,7 +290,7 @@ export default function TermsPage() {
         </Section>
       </div>
 
-      <p className="mt-10 text-center text-sm leading-relaxed text-muted-foreground sm:text-left">
+      <p className="aq-reveal mt-10 text-center text-sm leading-relaxed text-muted-foreground sm:text-left">
         LearnFRC is an independent educational project and is not affiliated with
         or endorsed by FIRST®. FIRST® and FRC® are trademarks of FIRST.
       </p>

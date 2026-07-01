@@ -5,6 +5,7 @@ import { ArrowRight, Route, Layers, Target, Clock } from "lucide-react";
 import { PATHS } from "@/lib/paths-data";
 import { Icon } from "@/lib/icon-map";
 import { deptMeta } from "@/lib/departments";
+import { AnimatedCounter } from "@/components/animated-counter";
 
 export const metadata: Metadata = {
   title: "Learning Paths",
@@ -52,6 +53,7 @@ export default function PathsPage() {
           <h1 className="aq-display aq-rise aq-rise-2 mt-4 text-balance text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
             Learning{" "}
             <span
+              className="aq-grad-anim"
               style={{
                 background: "linear-gradient(120deg,#2560e6,#1aa9d6)",
                 WebkitBackgroundClip: "text",
@@ -80,10 +82,16 @@ export default function PathsPage() {
 
           {/* stat chips */}
           <div className="aq-rise aq-rise-5 mt-8 flex flex-wrap gap-3">
-            {stats.map((s) => (
-              <span key={s.label} className="aq-chip font-mono">
-                <s.icon className="h-3.5 w-3.5 text-primary" />
-                <span className="font-semibold text-foreground">{s.v}</span>
+            {stats.map((s, i) => (
+              <span
+                key={s.label}
+                className="aq-chip aq-reveal font-mono"
+                style={{ animationDelay: `${i * 90}ms` }}
+              >
+                <s.icon className="aq-badge-bob h-3.5 w-3.5 text-primary" />
+                <span className="font-semibold text-foreground">
+                  <AnimatedCounter value={s.v} />
+                </span>
                 <span className="text-muted-foreground">{s.label}</span>
               </span>
             ))}
@@ -92,10 +100,10 @@ export default function PathsPage() {
 
         {/* floating glass preview of the first path */}
         {PATHS[0] && (
-          <aside className="aq-glass aq-rise aq-rise-3 relative rounded-3xl p-6 sm:p-7">
+          <aside className="aq-glass aq-sheen aq-float aq-rise aq-rise-3 relative rounded-3xl p-6 sm:p-7">
             <div className="flex items-center gap-3">
               <span
-                className="aq-badge flex h-12 w-12 items-center justify-center rounded-2xl"
+                className="aq-badge aq-badge-bob flex h-12 w-12 items-center justify-center rounded-2xl"
                 style={{ "--a": PATHS[0].color } as CSSProperties}
               >
                 <Icon name={PATHS[0].icon} className="h-6 w-6" />
@@ -121,8 +129,8 @@ export default function PathsPage() {
                 return (
                   <div
                     key={i}
-                    className="aq-tile flex items-center gap-3 rounded-2xl px-3.5 py-2.5"
-                    style={{ "--a": m.color } as CSSProperties}
+                    className="aq-tile aq-reveal flex items-center gap-3 rounded-2xl px-3.5 py-2.5"
+                    style={{ "--a": m.color, animationDelay: `${i * 80}ms` } as CSSProperties}
                   >
                     <span className="flex h-8 w-8 flex-none items-center justify-center rounded-xl bg-white/60 text-foreground ring-1 ring-white/70">
                       <Icon name={m.icon} className="h-4 w-4" />
@@ -143,7 +151,7 @@ export default function PathsPage() {
 
       {/* ===== PATH CARDS ===== */}
       <div className="mt-20">
-        <div className="flex items-end justify-between gap-4">
+        <div className="aq-reveal flex items-end justify-between gap-4">
           <div>
             <p className="aq-eyebrow">Every route, decoded</p>
             <h2 className="aq-display mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
@@ -161,6 +169,7 @@ export default function PathsPage() {
               key={p.slug}
               href={`/paths/${p.slug}`}
               className="aq-card aq-card-hover aq-reveal group relative flex h-full flex-col overflow-hidden rounded-3xl p-6 sm:p-7"
+              style={{ animationDelay: `${idx * 90}ms` }}
             >
               {/* soft colored corner wash */}
               <div
@@ -172,7 +181,7 @@ export default function PathsPage() {
               {/* top row */}
               <div className="flex items-center justify-between">
                 <span
-                  className="aq-badge flex h-14 w-14 items-center justify-center rounded-2xl"
+                  className="aq-badge aq-badge-bob flex h-14 w-14 items-center justify-center rounded-2xl"
                   style={{ "--a": p.color } as CSSProperties}
                 >
                   <Icon name={p.icon} className="h-7 w-7" />
@@ -224,10 +233,12 @@ export default function PathsPage() {
               <div className="mt-6 flex items-center justify-between border-t border-border/70 pt-4">
                 <span className="inline-flex items-center gap-3 font-mono text-xs text-muted-foreground">
                   <span className="inline-flex items-center gap-1.5">
-                    <Layers className="h-3.5 w-3.5" /> {p.steps.length} steps
+                    <Layers className="h-3.5 w-3.5" />{" "}
+                    <AnimatedCounter value={p.steps.length} /> steps
                   </span>
                   <span className="inline-flex items-center gap-1.5">
-                    <Target className="h-3.5 w-3.5" /> {p.outcomes.length} outcomes
+                    <Target className="h-3.5 w-3.5" />{" "}
+                    <AnimatedCounter value={p.outcomes.length} /> outcomes
                   </span>
                 </span>
                 <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary">
@@ -240,9 +251,9 @@ export default function PathsPage() {
         </div>
 
         {/* closing note */}
-        <div className="aq-glass aq-reveal mt-12 flex flex-col items-start gap-4 rounded-3xl p-7 sm:flex-row sm:items-center sm:justify-between">
+        <div className="aq-glass aq-sheen aq-reveal mt-12 flex flex-col items-start gap-4 rounded-3xl p-7 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-4">
-            <span className="aq-icon h-12 w-12 flex-none">
+            <span className="aq-icon aq-badge-bob h-12 w-12 flex-none">
               <Clock className="h-6 w-6" />
             </span>
             <div>

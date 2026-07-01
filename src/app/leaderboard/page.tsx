@@ -2,6 +2,7 @@ import type { CSSProperties } from "react";
 import Link from "next/link";
 import { Trophy, ArrowRight, Users, Zap, Sparkles } from "lucide-react";
 import { Reveal } from "@/components/motion/reveal";
+import { AnimatedCounter } from "@/components/animated-counter";
 import { type PodiumEntry } from "@/components/leaderboard/podium";
 import {
   LeaderboardTabs,
@@ -31,8 +32,6 @@ const HEADLINE_GRADIENT: CSSProperties = {
   backgroundClip: "text",
   color: "transparent",
 };
-
-const nf = new Intl.NumberFormat("en-US");
 
 function displayName(p: Profile): string {
   if (p.hide_name) return p.username?.trim() || "Learner";
@@ -130,12 +129,14 @@ export default async function LeaderboardPage() {
         {/* Hero */}
         <section className="text-center">
           <span className="aq-eyebrow aq-rise aq-rise-1 justify-center">
-            <Trophy className="h-3.5 w-3.5" aria-hidden />
+            <Trophy className="h-3.5 w-3.5 aq-badge-bob" aria-hidden />
             Climb the ranks
           </span>
           <h1 className="aq-rise aq-rise-2 mt-4 text-balance text-5xl font-bold tracking-tight sm:text-6xl">
             The{" "}
-            <span style={HEADLINE_GRADIENT}>podium</span>
+            <span className="aq-grad-anim" style={HEADLINE_GRADIENT}>
+              podium
+            </span>
           </h1>
           <p className="aq-rise aq-rise-3 mx-auto mt-4 max-w-xl text-pretty text-base leading-relaxed text-foreground/70 sm:text-lg">
             Every lesson you finish earns XP. Win the weekly sprint, chase the
@@ -147,9 +148,9 @@ export default async function LeaderboardPage() {
         {allTimeEntries.length === 0 ? (
           /* Empty state — no learners at all yet */
           <Reveal className="mt-16">
-            <div className="aq-glass mx-auto max-w-md rounded-3xl p-10 text-center">
+            <div className="aq-glass aq-sheen aq-float mx-auto max-w-md rounded-3xl p-10 text-center">
               <div
-                className="aq-badge mx-auto mb-5 flex h-16 w-16 items-center justify-center"
+                className="aq-badge aq-badge-bob mx-auto mb-5 flex h-16 w-16 items-center justify-center"
                 style={{ "--a": "#2560e6" } as CSSProperties}
               >
                 <Trophy className="h-8 w-8 text-foreground" aria-hidden />
@@ -172,23 +173,26 @@ export default async function LeaderboardPage() {
           <>
             {/* Season stat strip */}
             <Reveal className="mt-10">
-              <div className="aq-card grid grid-cols-2 gap-3 rounded-3xl p-3 sm:grid-cols-3 sm:gap-4 sm:p-4">
+              <div className="aq-card aq-card-hover grid grid-cols-2 gap-3 rounded-3xl p-3 sm:grid-cols-3 sm:gap-4 sm:p-4">
                 <StatTile
                   icon={<Users className="h-4 w-4 text-foreground" aria-hidden />}
                   accent="#2560e6"
-                  value={nf.format(xpTotals.learners)}
+                  delay={0}
+                  value={<AnimatedCounter value={xpTotals.learners} />}
                   label={xpTotals.learners === 1 ? "learner ranked" : "learners ranked"}
                 />
                 <StatTile
                   icon={<Zap className="h-4 w-4 text-foreground" aria-hidden />}
                   accent="#1aa9d6"
-                  value={nf.format(totalXp)}
+                  delay={0.08}
+                  value={<AnimatedCounter value={totalXp} />}
                   label="XP earned"
                 />
                 <div
-                  className="aq-tile col-span-2 flex items-center justify-center gap-2 rounded-2xl px-4 py-3 sm:col-span-1"
-                  style={{ "--a": "#7c3aed" } as CSSProperties}
+                  className="aq-tile aq-reveal col-span-2 flex items-center justify-center gap-2 rounded-2xl px-4 py-3 sm:col-span-1"
+                  style={{ "--a": "#7c3aed", animationDelay: "0.16s" } as CSSProperties}
                 >
+                  <span className="aq-pulse h-2 w-2 shrink-0 rounded-full bg-[#7c3aed]" aria-hidden />
                   <Sparkles className="h-4 w-4 text-foreground/80" aria-hidden />
                   <span className="text-sm font-semibold text-foreground">
                     Weekly race resets Monday
@@ -234,18 +238,20 @@ function StatTile({
   accent,
   value,
   label,
+  delay = 0,
 }: {
   icon: React.ReactNode;
   accent: string;
-  value: string;
+  value: React.ReactNode;
   label: string;
+  delay?: number;
 }) {
   return (
     <div
-      className="aq-tile flex items-center gap-3 rounded-2xl px-4 py-3"
-      style={{ "--a": accent } as CSSProperties}
+      className="aq-tile aq-reveal flex items-center gap-3 rounded-2xl px-4 py-3"
+      style={{ "--a": accent, animationDelay: `${delay}s` } as CSSProperties}
     >
-      <span className="aq-badge flex h-9 w-9 shrink-0 items-center justify-center">
+      <span className="aq-badge aq-badge-bob flex h-9 w-9 shrink-0 items-center justify-center">
         {icon}
       </span>
       <span className="min-w-0">

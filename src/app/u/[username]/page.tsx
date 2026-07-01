@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Icon } from "@/lib/icon-map";
 import { Reveal, Stagger, StaggerItem } from "@/components/motion/reveal";
 import { ShareButton } from "@/components/profile/share-button";
+import { AnimatedCounter } from "@/components/animated-counter";
 import type { Profile } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -89,17 +90,17 @@ export default async function PublicProfilePage({
       <div className="mx-auto max-w-4xl px-4 pt-28 pb-20 sm:px-6 lg:px-8">
         {/* Hero — the learner card, front and center */}
         <Reveal>
-          <div className="aq-glass aq-rise aq-rise-1 relative overflow-hidden rounded-[28px] p-8 sm:p-10">
+          <div className="aq-glass aq-sheen aq-rise aq-rise-1 relative overflow-hidden rounded-[28px] p-8 sm:p-10">
             <div
               aria-hidden
-              className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-primary/15 blur-3xl"
+              className="aq-float pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-primary/15 blur-3xl"
             />
             <div className="relative flex flex-col items-center text-center sm:flex-row sm:items-center sm:text-left sm:gap-7">
               <Avatar
                 name={displayName}
                 src={p.avatar_url}
                 seed={p.id}
-                className="aq-rise aq-rise-1 h-28 w-28 shrink-0 text-3xl shadow-[0_16px_38px_rgba(40,80,150,0.22)] ring-4 ring-white/80"
+                className="aq-badge-bob aq-rise aq-rise-1 h-28 w-28 shrink-0 text-3xl shadow-[0_16px_38px_rgba(40,80,150,0.22)] ring-4 ring-white/80"
               />
               <div className="mt-5 min-w-0 sm:mt-0">
                 <p className="aq-eyebrow aq-rise aq-rise-1 justify-center sm:justify-start">
@@ -107,8 +108,10 @@ export default async function PublicProfilePage({
                 </p>
                 <h1 className="aq-display aq-rise aq-rise-2 mt-2 text-4xl font-extrabold leading-tight sm:text-5xl">
                   <span
+                    className="aq-grad-anim"
                     style={{
-                      background: "linear-gradient(120deg,#2560e6,#1aa9d6)",
+                      background:
+                        "linear-gradient(120deg,#2560e6,#1aa9d6,#12b565,#2560e6)",
                       WebkitBackgroundClip: "text",
                       backgroundClip: "text",
                       color: "transparent",
@@ -149,20 +152,22 @@ export default async function PublicProfilePage({
 
         {/* Stats — a row of clay tiles */}
         <Stagger className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
-          {stats.map((s) => (
+          {stats.map((s, i) => (
             <StaggerItem key={s.label}>
               <div
-                className="aq-tile group flex flex-col items-center rounded-3xl p-5 text-center"
-                style={{ "--a": s.color } as CSSProperties}
+                className="aq-tile aq-reveal group flex flex-col items-center rounded-3xl p-5 text-center"
+                style={
+                  { "--a": s.color, animationDelay: `${i * 90}ms` } as CSSProperties
+                }
               >
                 <span
-                  className="aq-badge flex h-11 w-11 items-center justify-center rounded-2xl"
+                  className="aq-badge aq-badge-bob flex h-11 w-11 items-center justify-center rounded-2xl"
                   style={{ "--a": s.color } as CSSProperties}
                 >
                   <s.icon className="h-5 w-5" />
                 </span>
                 <div className="aq-display mt-3 text-3xl font-extrabold tabular-nums text-foreground">
-                  {s.value.toLocaleString()}
+                  <AnimatedCounter value={s.value} />
                 </div>
                 <div className="font-mono text-[11px] uppercase tracking-wider text-foreground/60">
                   {s.label}
@@ -182,13 +187,15 @@ export default async function PublicProfilePage({
               </h2>
             </div>
             {achievements.length > 0 && (
-              <Badge variant="primary">{achievements.length} earned</Badge>
+              <Badge variant="primary">
+                <AnimatedCounter value={achievements.length} /> earned
+              </Badge>
             )}
           </div>
 
           {achievements.length === 0 ? (
-            <div className="aq-card flex flex-col items-center gap-3 rounded-3xl border-dashed p-10 text-center">
-              <span className="aq-icon flex h-12 w-12 items-center justify-center">
+            <div className="aq-card aq-reveal flex flex-col items-center gap-3 rounded-3xl border-dashed p-10 text-center">
+              <span className="aq-icon aq-badge-bob flex h-12 w-12 items-center justify-center">
                 <Trophy className="h-6 w-6" />
               </span>
               <p className="text-base text-foreground/70">
@@ -197,11 +204,14 @@ export default async function PublicProfilePage({
             </div>
           ) : (
             <Stagger className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              {achievements.map((a) => (
+              {achievements.map((a, i) => (
                 <StaggerItem key={a.slug}>
-                  <div className="aq-card aq-card-hover flex items-center gap-4 rounded-3xl p-5">
+                  <div
+                    className="aq-card aq-card-hover aq-reveal flex items-center gap-4 rounded-3xl p-5"
+                    style={{ animationDelay: `${i * 70}ms` } as CSSProperties}
+                  >
                     <span
-                      className="aq-badge flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl"
+                      className="aq-badge aq-badge-bob flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl"
                       style={{ "--a": "#2560e6" } as CSSProperties}
                     >
                       <Icon name={a.icon} className="h-6 w-6" />

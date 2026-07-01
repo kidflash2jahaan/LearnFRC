@@ -9,6 +9,7 @@ import { JsonLd } from "@/components/json-ld";
 import { Button } from "@/components/ui/button";
 import { ShareButton } from "@/components/share-button";
 import { Reveal } from "@/components/motion/reveal";
+import { AnimatedCounter } from "@/components/animated-counter";
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.systemerr.com";
 
@@ -91,16 +92,16 @@ export default async function ArticlePage({
       {/* Ambient glows */}
       <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
         <div
-          className="absolute -top-24 -left-20 h-72 w-72 rounded-full opacity-60 blur-3xl"
+          className="aq-float absolute -top-24 -left-20 h-72 w-72 rounded-full opacity-60 blur-3xl"
           style={{ background: "radial-gradient(circle, rgba(37,96,230,0.20), transparent 70%)" }}
         />
         <div
-          className="absolute top-40 -right-24 h-80 w-80 rounded-full opacity-50 blur-3xl"
-          style={{ background: "radial-gradient(circle, rgba(26,169,214,0.18), transparent 70%)" }}
+          className="aq-float absolute top-40 -right-24 h-80 w-80 rounded-full opacity-50 blur-3xl"
+          style={{ background: "radial-gradient(circle, rgba(26,169,214,0.18), transparent 70%)", animationDelay: "1.2s" }}
         />
         <div
-          className="absolute bottom-10 left-1/3 h-72 w-72 rounded-full opacity-40 blur-3xl"
-          style={{ background: "radial-gradient(circle, rgba(124,92,246,0.14), transparent 70%)" }}
+          className="aq-float absolute bottom-10 left-1/3 h-72 w-72 rounded-full opacity-40 blur-3xl"
+          style={{ background: "radial-gradient(circle, rgba(124,92,246,0.14), transparent 70%)", animationDelay: "2.4s" }}
         />
       </div>
 
@@ -127,7 +128,7 @@ export default async function ArticlePage({
         </Link>
 
         <div className="aq-rise aq-rise-2 mt-6 flex flex-wrap items-center gap-2.5">
-          <span className="aq-chip inline-flex items-center gap-1.5">
+          <span className="aq-chip aq-badge-bob inline-flex items-center gap-1.5">
             <BookOpen className="h-3.5 w-3.5" /> Guide
           </span>
           <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
@@ -143,7 +144,7 @@ export default async function ArticlePage({
         </div>
 
         <h1 className="aq-rise aq-rise-3 aq-display mt-5 text-balance text-3xl font-bold leading-[1.1] tracking-tight sm:text-4xl md:text-5xl">
-          <span style={GRADIENT_TEXT}>{a.title}</span>
+          <span className="aq-grad-anim" style={GRADIENT_TEXT}>{a.title}</span>
         </h1>
 
         {a.description && (
@@ -162,7 +163,7 @@ export default async function ArticlePage({
         </div>
       </header>
 
-      <hr aria-hidden className="aq-divider mt-8" />
+      <hr aria-hidden className="aq-rise aq-rise-5 aq-divider mt-8" />
 
       {/* Article body */}
       <Reveal delay={0.1}>
@@ -179,11 +180,12 @@ export default async function ArticlePage({
             More from the pit
           </h2>
           <div className="mt-5 grid gap-4 sm:grid-cols-3">
-            {related.map((r) => (
+            {related.map((r, i) => (
               <Link
                 key={r.slug}
                 href={`/blog/${r.slug}`}
-                className="aq-card aq-card-hover group flex flex-col gap-3 p-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                className="aq-reveal aq-card aq-card-hover group flex flex-col gap-3 p-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                style={{ animationDelay: `${i * 90}ms` } as CSSProperties}
               >
                 <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
                   <Clock className="h-3 w-3" /> {r.readMins} min read
@@ -203,20 +205,40 @@ export default async function ArticlePage({
       {/* CTA */}
       <Reveal className="aq-reveal">
         <div
-          className="aq-glass relative mt-14 overflow-hidden p-8 text-center"
+          className="aq-glass aq-sheen aq-float relative mt-14 overflow-hidden p-8 text-center"
           style={{ "--a": "#2560e6" } as CSSProperties}
         >
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl aq-icon">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl aq-icon aq-badge-bob">
             <BookOpen className="h-6 w-6 text-primary" />
           </div>
           <h2 className="aq-display text-2xl font-bold tracking-tight">
             Learn every department of FRC —{" "}
-            <span style={GRADIENT_TEXT}>free</span>
+            <span className="aq-grad-anim" style={GRADIENT_TEXT}>free</span>
           </h2>
           <p className="mx-auto mt-2 max-w-md text-base leading-relaxed text-foreground/70">
-            393+ structured lessons, quizzes, and team tools. Built by an FRC student,
+            Structured lessons, quizzes, and team tools. Built by an FRC student,
             for the community.
           </p>
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-6">
+            <div className="aq-reveal flex flex-col items-center" style={{ animationDelay: "60ms" } as CSSProperties}>
+              <span className="aq-display text-2xl font-bold text-primary">
+                <AnimatedCounter value={393} suffix="+" />
+              </span>
+              <span className="text-xs font-medium text-muted-foreground">lessons</span>
+            </div>
+            <div className="aq-reveal flex flex-col items-center" style={{ animationDelay: "150ms" } as CSSProperties}>
+              <span className="aq-display text-2xl font-bold text-primary">
+                <AnimatedCounter value={12} />
+              </span>
+              <span className="text-xs font-medium text-muted-foreground">departments</span>
+            </div>
+            <div className="aq-reveal flex flex-col items-center" style={{ animationDelay: "240ms" } as CSSProperties}>
+              <span className="aq-display text-2xl font-bold text-primary">
+                <AnimatedCounter value={100} suffix="%" />
+              </span>
+              <span className="text-xs font-medium text-muted-foreground">free</span>
+            </div>
+          </div>
           <Button asChild variant="brand" className="mt-6">
             <Link href="/guides">
               Browse the guides <ArrowRight className="h-4 w-4" />

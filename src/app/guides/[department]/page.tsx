@@ -19,6 +19,7 @@ import { getSession } from "@/lib/auth";
 import { deptMeta } from "@/lib/departments";
 import { Icon } from "@/lib/icon-map";
 import { DepartmentModules } from "@/components/guides/department-modules";
+import { AnimatedCounter } from "@/components/animated-counter";
 import { JsonLd } from "@/components/json-ld";
 import type { Resource } from "@/lib/types";
 
@@ -147,8 +148,9 @@ export default async function DepartmentPage({
               </span>
               <h1 className="aq-display text-balance text-4xl font-extrabold leading-[1.05] sm:text-5xl">
                 <span
+                  className="aq-grad-anim"
                   style={{
-                    background: `linear-gradient(120deg, ${accent}, #1aa9d6)`,
+                    background: `linear-gradient(120deg, ${accent}, #1aa9d6, ${accent})`,
                     WebkitBackgroundClip: "text",
                     backgroundClip: "text",
                     color: "transparent",
@@ -174,15 +176,15 @@ export default async function DepartmentPage({
             <div className="aq-rise aq-rise-3 mt-6 flex flex-wrap items-center gap-2.5">
               <span className="aq-chip">
                 <Layers className="h-4 w-4" style={{ color: accent }} />
-                {totalModules} modules
+                <AnimatedCounter value={totalModules} /> modules
               </span>
               <span className="aq-chip">
                 <BookOpen className="h-4 w-4" style={{ color: accent }} />
-                {totalLessons} lessons
+                <AnimatedCounter value={totalLessons} /> lessons
               </span>
               {user && doneCount > 0 && (
                 <span className="aq-chip font-semibold text-primary">
-                  {pct}% complete
+                  <AnimatedCounter value={pct} suffix="% complete" />
                 </span>
               )}
             </div>
@@ -207,22 +209,56 @@ export default async function DepartmentPage({
           </div>
 
           {/* progress panel */}
-          <aside className="aq-rise aq-rise-4 lg:pt-1">
+          <aside className="aq-rise aq-rise-4 aq-float lg:pt-1">
             <div
               className="aq-glass aq-sheen relative overflow-hidden rounded-3xl p-6"
               style={{ "--a": accent } as CSSProperties}
             >
-              <p className="aq-eyebrow">Your progress</p>
-              <div className="mt-4 flex items-end gap-2">
-                <span
-                  className="aq-display text-5xl font-extrabold leading-none"
-                  style={{ color: accent }}
-                >
-                  {pct}%
-                </span>
-                <span className="mb-1 text-sm font-medium text-foreground/70">
-                  {doneCount} of {totalLessons} lessons
-                </span>
+              <p className="aq-eyebrow flex items-center gap-2">
+                <span className="aq-pulse inline-block h-2 w-2 rounded-full" style={{ background: accent }} />
+                Your progress
+              </p>
+              <div className="mt-4 flex items-center gap-4">
+                <div className="relative h-24 w-24 shrink-0">
+                  <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90">
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r="42"
+                      fill="none"
+                      strokeWidth="9"
+                      className="stroke-primary/10"
+                    />
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r="42"
+                      fill="none"
+                      strokeWidth="9"
+                      strokeLinecap="round"
+                      stroke={accent}
+                      className="aq-ring-anim"
+                      style={{
+                        strokeDasharray: 2 * Math.PI * 42,
+                        strokeDashoffset: 2 * Math.PI * 42 * (1 - pct / 100),
+                      }}
+                    />
+                  </svg>
+                  <span
+                    className="aq-display absolute inset-0 flex items-center justify-center text-xl font-extrabold leading-none"
+                    style={{ color: accent }}
+                  >
+                    <AnimatedCounter value={pct} suffix="%" />
+                  </span>
+                </div>
+                <div>
+                  <span className="aq-display block text-3xl font-extrabold leading-none" style={{ color: accent }}>
+                    <AnimatedCounter value={doneCount} />
+                  </span>
+                  <span className="mt-1 block text-sm font-medium text-foreground/70">
+                    of {totalLessons} lessons done
+                  </span>
+                </div>
               </div>
               <div className="mt-4 h-2.5 w-full overflow-hidden rounded-full bg-primary/10">
                 <div
@@ -259,7 +295,7 @@ export default async function DepartmentPage({
               <h2 className="aq-display mt-1 text-2xl font-bold">Modules &amp; lessons</h2>
             </div>
             <span className="hidden shrink-0 text-sm text-muted-foreground sm:block">
-              {totalModules} modules · {totalLessons} lessons
+              <AnimatedCounter value={totalModules} /> modules · <AnimatedCounter value={totalLessons} /> lessons
             </span>
           </div>
           <DepartmentModules
@@ -273,10 +309,10 @@ export default async function DepartmentPage({
         {/* sidebar */}
         <aside className="space-y-5 lg:sticky lg:top-24 lg:self-start">
           {learn.length > 0 && (
-            <div className="aq-reveal aq-card aq-card-hover p-5">
+            <div className="aq-reveal aq-card aq-card-hover p-5" style={{ animationDelay: "60ms" } as CSSProperties}>
               <h3 className="mb-3 flex items-center gap-2 text-base font-bold">
                 <span
-                  className="aq-icon flex h-8 w-8 items-center justify-center"
+                  className="aq-icon aq-badge-bob flex h-8 w-8 items-center justify-center"
                   style={{
                     background: `color-mix(in srgb, ${accent} 14%, transparent)`,
                     color: accent,
@@ -288,7 +324,11 @@ export default async function DepartmentPage({
               </h3>
               <ul className="space-y-2.5">
                 {learn.map((item, i) => (
-                  <li key={i} className="flex gap-2.5 text-[15px] leading-relaxed text-foreground/85">
+                  <li
+                    key={i}
+                    className="aq-reveal flex gap-2.5 text-[15px] leading-relaxed text-foreground/85"
+                    style={{ animationDelay: `${120 + i * 55}ms` } as CSSProperties}
+                  >
                     <Check className="mt-0.5 h-4 w-4 shrink-0" style={{ color: accent }} />
                     <span>{item}</span>
                   </li>
@@ -298,16 +338,20 @@ export default async function DepartmentPage({
           )}
 
           {tools.length > 0 && (
-            <div className="aq-reveal aq-card aq-card-hover p-5">
+            <div className="aq-reveal aq-card aq-card-hover p-5" style={{ animationDelay: "120ms" } as CSSProperties}>
               <h3 className="mb-3 flex items-center gap-2 text-base font-bold">
-                <span className="aq-icon flex h-8 w-8 items-center justify-center text-accent">
+                <span className="aq-icon aq-badge-bob flex h-8 w-8 items-center justify-center text-accent">
                   <Wrench className="h-4 w-4" />
                 </span>
                 Tools &amp; tech
               </h3>
               <div className="flex flex-wrap gap-2">
                 {tools.map((t, i) => (
-                  <span key={i} className="aq-chip">
+                  <span
+                    key={i}
+                    className="aq-chip aq-reveal aq-tile"
+                    style={{ animationDelay: `${180 + i * 45}ms` } as CSSProperties}
+                  >
                     {t}
                   </span>
                 ))}
@@ -316,16 +360,20 @@ export default async function DepartmentPage({
           )}
 
           {prereqs.length > 0 && (
-            <div className="aq-reveal aq-card aq-card-hover p-5">
+            <div className="aq-reveal aq-card aq-card-hover p-5" style={{ animationDelay: "180ms" } as CSSProperties}>
               <h3 className="mb-3 flex items-center gap-2 text-base font-bold">
-                <span className="aq-icon flex h-8 w-8 items-center justify-center">
+                <span className="aq-icon aq-badge-bob flex h-8 w-8 items-center justify-center">
                   <ListChecks className="h-4 w-4" />
                 </span>
                 Before you start
               </h3>
               <ul className="space-y-2 text-[15px] leading-relaxed text-foreground/85">
                 {prereqs.map((p, i) => (
-                  <li key={i} className="flex gap-2.5">
+                  <li
+                    key={i}
+                    className="aq-reveal flex gap-2.5"
+                    style={{ animationDelay: `${240 + i * 55}ms` } as CSSProperties}
+                  >
                     <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                     <span>{p}</span>
                   </li>
@@ -335,11 +383,11 @@ export default async function DepartmentPage({
           )}
 
           {sources.length > 0 && (
-            <div className="aq-reveal aq-card aq-card-hover p-5">
+            <div className="aq-reveal aq-card aq-card-hover p-5" style={{ animationDelay: "240ms" } as CSSProperties}>
               <h3 className="mb-3 text-base font-bold">Sources</h3>
               <ul className="space-y-1">
                 {sources.slice(0, 8).map((s, i) => (
-                  <li key={i}>
+                  <li key={i} className="aq-reveal" style={{ animationDelay: `${300 + i * 45}ms` } as CSSProperties}>
                     <a
                       href={s.url}
                       target="_blank"

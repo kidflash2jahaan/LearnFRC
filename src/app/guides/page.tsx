@@ -5,6 +5,7 @@ import { getDepartments, getCompletedLessonIds } from "@/lib/queries";
 import { getSession } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { DepartmentCard } from "@/components/department-card";
+import { AnimatedCounter } from "@/components/animated-counter";
 import { Icon } from "@/lib/icon-map";
 import { deptMeta } from "@/lib/departments";
 import { GraduationCap, Layers, BookOpen, ArrowRight, Compass } from "lucide-react";
@@ -117,7 +118,9 @@ export default async function GuidesPage() {
 
             <h1 className="aq-rise aq-rise-2 mt-4 text-balance text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
               Master FRC,{" "}
-              <span style={HEADLINE_GRADIENT}>department by department</span>
+              <span className="aq-grad-anim" style={HEADLINE_GRADIENT}>
+                department by department
+              </span>
             </h1>
 
             <p className="aq-rise aq-rise-3 mt-5 max-w-xl text-pretty text-lg leading-relaxed text-foreground/70">
@@ -144,10 +147,10 @@ export default async function GuidesPage() {
           </div>
 
           {/* clean glass stat panel — no terminal frame */}
-          <div className="aq-glass aq-rise aq-rise-4 relative rounded-3xl p-6 sm:p-8">
+          <div className="aq-glass aq-sheen aq-float aq-rise aq-rise-4 relative rounded-3xl p-6 sm:p-8">
             <div className="flex items-center gap-2">
               <span
-                className="aq-badge flex h-9 w-9 items-center justify-center rounded-xl"
+                className="aq-badge aq-badge-bob flex h-9 w-9 items-center justify-center rounded-xl"
                 style={{ "--a": "#2560e6" } as CSSProperties}
               >
                 <Compass className="h-5 w-5" />
@@ -155,27 +158,39 @@ export default async function GuidesPage() {
               <div className="font-display text-lg font-semibold text-foreground">
                 The department map
               </div>
+              <span className="ml-auto inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-foreground/60">
+                <span
+                  className="aq-pulse inline-block h-2 w-2 rounded-full"
+                  style={{ "--a": "#2560e6", background: "#2560e6" } as CSSProperties}
+                />
+                Live
+              </span>
             </div>
 
             <div className="mt-6 grid grid-cols-3 gap-3 sm:gap-4">
-              {stats.map((s) => {
+              {stats.map((s, i) => {
                 const StatIcon = s.icon;
                 return (
                   <div
                     key={s.label}
-                    className="aq-tile rounded-2xl p-4 text-center"
-                    style={{ "--a": s.accent } as CSSProperties}
+                    className="aq-tile aq-reveal rounded-2xl p-4 text-center"
+                    style={
+                      {
+                        "--a": s.accent,
+                        animationDelay: `${0.15 + i * 0.1}s`,
+                      } as CSSProperties
+                    }
                   >
                     <span
-                      className="aq-badge mx-auto flex h-9 w-9 items-center justify-center rounded-xl"
+                      className="aq-badge aq-badge-bob mx-auto flex h-9 w-9 items-center justify-center rounded-xl"
                       style={{ "--a": s.accent } as CSSProperties}
                     >
                       <StatIcon className="h-5 w-5" />
                     </span>
                     <div className="mt-3 font-display text-3xl font-bold text-foreground">
-                      {s.value}
+                      <AnimatedCounter value={s.value} />
                     </div>
-                    <div className="mt-1 font-mono text-[11px] uppercase tracking-wider text-foreground/70">
+                    <div className="mt-1 text-[11px] font-semibold uppercase tracking-wider text-foreground/70">
                       {s.label}
                     </div>
                   </div>
@@ -194,18 +209,21 @@ export default async function GuidesPage() {
         {/* departments grid */}
         <div className="mt-20">
           <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
-            <div>
+            <div className="aq-reveal">
               <p className="aq-eyebrow">
                 <Layers className="h-4 w-4" />
                 Every track, mapped
               </p>
               <h2 className="mt-2 font-display text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-                Explore the {departments.length} departments
+                Explore the{" "}
+                <AnimatedCounter value={departments.length} /> departments
               </h2>
             </div>
             <span
-              className="aq-chip"
-              style={{ "--a": "#2560e6" } as CSSProperties}
+              className="aq-chip aq-reveal"
+              style={
+                { "--a": "#2560e6", animationDelay: "0.12s" } as CSSProperties
+              }
             >
               <Icon name="Rocket" className="h-4 w-4 text-primary" />
               Fundamentals → advanced
@@ -216,11 +234,11 @@ export default async function GuidesPage() {
             {departments.map((d, i) => (
               <div
                 key={d.slug}
-                className="aq-reveal h-full"
+                className="aq-reveal aq-card-hover h-full"
                 style={
                   {
                     "--a": deptMeta(d.slug).color,
-                    animationDelay: `${(i % 3) * 0.06}s`,
+                    animationDelay: `${Math.min(i * 0.05, 0.5)}s`,
                   } as CSSProperties
                 }
               >

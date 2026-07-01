@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
+import type { CSSProperties } from "react";
 import Link from "next/link";
 import { ArrowRight, BookOpen, Clock, Sparkles } from "lucide-react";
 import { ARTICLES } from "@/lib/blog-data";
 import { Reveal, Stagger, StaggerItem } from "@/components/motion/reveal";
+import { AnimatedCounter } from "@/components/animated-counter";
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.systemerr.com";
 
@@ -54,12 +56,13 @@ export default function BlogPage() {
       {/* Hero */}
       <header className="grid items-center gap-10 lg:grid-cols-[1.15fr_0.85fr]">
         <div>
-          <span className="aq-eyebrow aq-rise aq-rise-1">
+          <span className="aq-eyebrow aq-rise aq-rise-1 aq-badge-bob">
             <BookOpen className="h-3.5 w-3.5" /> Read between build seasons
           </span>
           <h1 className="aq-display aq-rise aq-rise-2 mt-4 text-4xl font-bold leading-[1.05] tracking-tight sm:text-5xl">
             FRC guides,{" "}
             <span
+              className="aq-grad-anim"
               style={{
                 background: "linear-gradient(120deg,#2560e6,#1aa9d6)",
                 WebkitBackgroundClip: "text",
@@ -84,8 +87,31 @@ export default function BlogPage() {
             )}
             <span className="aq-chip">
               <Sparkles className="h-3.5 w-3.5 text-primary" />
-              {articles.length} guides · {totalMins} min of reading
+              <AnimatedCounter value={articles.length} /> guides ·{" "}
+              <AnimatedCounter value={totalMins} /> min of reading
             </span>
+          </div>
+
+          {/* Quick stats */}
+          <div className="aq-rise aq-rise-5 mt-8 grid max-w-xl grid-cols-3 gap-4">
+            <div className="aq-glass rounded-2xl p-4 text-center">
+              <div className="aq-display text-2xl font-bold text-primary">
+                <AnimatedCounter value={articles.length} />
+              </div>
+              <div className="mt-1 text-xs text-foreground/70">Guides published</div>
+            </div>
+            <div className="aq-glass rounded-2xl p-4 text-center">
+              <div className="aq-display text-2xl font-bold text-primary">
+                <AnimatedCounter value={totalMins} suffix=" min" />
+              </div>
+              <div className="mt-1 text-xs text-foreground/70">Total reading</div>
+            </div>
+            <div className="aq-glass rounded-2xl p-4 text-center">
+              <div className="aq-display text-2xl font-bold text-primary">
+                <AnimatedCounter value={100} suffix="%" />
+              </div>
+              <div className="mt-1 text-xs text-foreground/70">Free, always</div>
+            </div>
           </div>
         </div>
 
@@ -93,10 +119,10 @@ export default function BlogPage() {
         {featured && (
           <Link
             href={`/blog/${featured.slug}`}
-            className="aq-glass aq-card-hover aq-rise aq-rise-4 group block rounded-3xl p-6"
+            className="aq-glass aq-sheen aq-float aq-card-hover aq-rise aq-rise-4 group block rounded-3xl p-6"
           >
-            <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
-              Latest guide
+            <span className="aq-eyebrow aq-badge-bob">
+              <Sparkles className="h-3.5 w-3.5 text-primary" /> Latest guide
             </span>
             <h2 className="aq-display mt-3 text-xl font-bold leading-snug tracking-tight text-foreground transition-colors group-hover:text-primary">
               {featured.title}
@@ -105,7 +131,7 @@ export default function BlogPage() {
               {featured.description}
             </p>
             <div className="mt-5 flex items-center justify-between border-t border-border/70 pt-4">
-              <span className="inline-flex items-center gap-1.5 font-mono text-xs text-muted-foreground">
+              <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
                 <Clock className="h-3.5 w-3.5" /> {featured.readMins} min ·{" "}
                 {fmtDate(featured.date)}
               </span>
@@ -122,29 +148,31 @@ export default function BlogPage() {
       <Reveal className="mt-20">
         <div className="flex items-end justify-between gap-4">
           <div>
-            <span className="aq-eyebrow">Every guide, sorted by newest</span>
-            <h2 className="aq-display mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
+            <span className="aq-eyebrow aq-reveal">Every guide, sorted by newest</span>
+            <h2 className="aq-display aq-reveal mt-2 text-2xl font-bold tracking-tight sm:text-3xl" style={{ animationDelay: "80ms" } as CSSProperties}>
               The full library
             </h2>
           </div>
-          <span className="hidden font-mono text-xs text-muted-foreground sm:inline">
-            {articles.length} total
+          <span className="hidden items-center gap-1.5 text-xs text-muted-foreground sm:inline-flex">
+            <span className="aq-pulse inline-block h-2 w-2 rounded-full bg-primary" />
+            <AnimatedCounter value={articles.length} /> total
           </span>
         </div>
       </Reveal>
 
       <Stagger className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {rest.map((a) => (
+        {rest.map((a, i) => (
           <StaggerItem key={a.slug} className="h-full">
             <Link
               href={`/blog/${a.slug}`}
-              className="aq-card aq-card-hover group flex h-full flex-col p-6"
+              className="aq-card aq-card-hover aq-reveal group flex h-full flex-col p-6"
+              style={{ animationDelay: `${Math.min(i * 60, 360)}ms` } as CSSProperties}
             >
               <div className="flex items-center gap-2">
-                <span className="aq-icon h-9 w-9">
+                <span className="aq-icon aq-badge-bob h-9 w-9">
                   <BookOpen className="h-4 w-4" />
                 </span>
-                <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
+                <span className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
                   Guide
                 </span>
               </div>
@@ -155,7 +183,7 @@ export default function BlogPage() {
                 {a.description}
               </p>
               <div className="mt-5 flex items-center justify-between border-t border-border/70 pt-4">
-                <span className="inline-flex items-center gap-1.5 font-mono text-xs text-muted-foreground">
+                <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
                   <Clock className="h-3.5 w-3.5" /> {a.readMins} min ·{" "}
                   {fmtDate(a.date)}
                 </span>
