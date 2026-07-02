@@ -85,8 +85,8 @@ export default async function AdminPage() {
 
   return (
     <div className="relative overflow-x-clip">
-    <div className="relative mx-auto max-w-6xl px-4 pt-28 pb-20 sm:px-6 lg:px-8">
-      {/* Ambient drifting glows */}
+      {/* Ambient drifting glows — on the FULL-WIDTH wrapper so their clipping
+          happens at the viewport edge, never mid-page at the container edge. */}
       <div className="aq-glow" aria-hidden>
         <span
           className="h-[520px] w-[520px] opacity-60"
@@ -113,6 +113,7 @@ export default async function AdminPage() {
           }}
         />
       </div>
+    <div className="relative mx-auto max-w-6xl px-4 pt-28 pb-20 sm:px-6 lg:px-8">
 
       {/* ===================== HERO: control-room header ===================== */}
       <section className="grid items-center gap-8 lg:grid-cols-[1.15fr_1fr] lg:gap-10">
