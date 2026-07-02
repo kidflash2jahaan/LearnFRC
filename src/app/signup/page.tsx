@@ -50,7 +50,7 @@ export default async function SignupPage({
     (ref || "").toLowerCase().replace(/[^a-z0-9_]/g, "") || undefined;
 
   return (
-    <main className="relative min-h-[100svh] overflow-hidden">
+    <main className="relative min-h-[100svh] overflow-x-clip">
       {/* Ambient drifting glows */}
       <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
         <div className="aq-float absolute left-[-8%] top-[-6%] h-[460px] w-[460px] rounded-full bg-primary/25 blur-3xl" />

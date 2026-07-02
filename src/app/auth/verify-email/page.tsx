@@ -39,7 +39,7 @@ export default async function VerifyEmailPage({
   return (
     <div
       data-theme="arena"
-      className="aq-root relative isolate flex min-h-[100svh] flex-col items-center justify-center overflow-hidden px-4 py-20 text-foreground sm:py-24"
+      className="aq-root relative isolate flex min-h-[100svh] flex-col items-center justify-center overflow-x-clip px-4 py-20 text-foreground sm:py-24"
     >
       {/* ambient light the glass refracts */}
       <div className="aq-glow" aria-hidden>

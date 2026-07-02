@@ -70,7 +70,7 @@ export default async function TeamsPage() {
   return (
     <div
       data-theme="arena"
-      className="aq-root relative isolate overflow-hidden text-foreground"
+      className="aq-root relative isolate overflow-x-clip text-foreground"
     >
       <AmbientGlows />
 

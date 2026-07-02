@@ -126,7 +126,7 @@ export default async function ArticlePage({
   };
 
   return (
-    <article className="relative isolate overflow-hidden text-foreground">
+    <article className="relative isolate overflow-x-clip text-foreground">
       <JsonLd data={jsonLd} />
       <JsonLd
         data={{

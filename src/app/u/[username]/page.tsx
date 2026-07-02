@@ -99,7 +99,7 @@ export default async function PublicProfilePage({
   ];
 
   return (
-    <main className="relative overflow-hidden">
+    <main className="relative overflow-x-clip">
       {/* Ambient light the trophy-card glass refracts */}
       <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
         <div className="aq-float absolute left-1/2 top-[-8%] h-[440px] w-[720px] -translate-x-1/2 rounded-full bg-primary/25 opacity-60 blur-3xl" />

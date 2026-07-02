@@ -1,7 +1,7 @@
 import type { CSSProperties } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Bot, ShieldCheck, ArrowLeft, KeyRound, Sparkles } from "lucide-react";
+import { ShieldCheck, KeyRound, Sparkles } from "lucide-react";
 import { AuthForm } from "@/components/auth/auth-form";
 import { AnimatedCounter } from "@/components/animated-counter";
 import { Icon } from "@/lib/icon-map";
@@ -33,8 +33,8 @@ const ORBIT = [
 
 const STATS = [
   { value: 11, suffix: "", label: "departments" },
-  { value: 180, suffix: "+", label: "lessons" },
-  { value: 4200, suffix: "+", label: "learners" },
+  { value: 394, suffix: "", label: "lessons" },
+  { value: 100, suffix: "%", label: "free, forever" },
 ];
 
 export default async function LoginPage({
@@ -51,7 +51,7 @@ export default async function LoginPage({
   return (
     <main
       data-theme="arena"
-      className="aq-root relative isolate min-h-[100svh] overflow-hidden text-foreground"
+      className="aq-root relative isolate min-h-[100svh] overflow-x-clip text-foreground"
     >
       {/* Ambient light the glass refracts */}
       <div className="aq-glow" aria-hidden>

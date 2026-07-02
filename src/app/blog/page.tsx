@@ -8,7 +8,6 @@ import {
   Clock,
   Newspaper,
   Sparkles,
-  Star,
 } from "lucide-react";
 import { ARTICLES, type Article } from "@/lib/blog-data";
 import { Reveal, Stagger, StaggerItem } from "@/components/motion/reveal";
@@ -59,15 +58,13 @@ function deskFor(a: Article) {
 
 export default function BlogPage() {
   const articles = [...ARTICLES].sort((a, b) => b.date.localeCompare(a.date));
-  const [featured, ...rest] = articles;
   const totalMins = articles.reduce((sum, a) => sum + a.readMins, 0);
   const deskCount = new Set(articles.map((a) => deskFor(a).label)).size;
-  const featuredDesk = featured ? deskFor(featured) : null;
 
   return (
     <div
       data-theme="arena"
-      className="aq-root relative isolate overflow-hidden text-foreground"
+      className="aq-root relative isolate overflow-x-clip text-foreground"
     >
       {/* ambient light the glass refracts */}
       <div className="aq-glow" aria-hidden>
@@ -156,78 +153,6 @@ export default function BlogPage() {
         </div>
       </section>
 
-      {/* ===================== SIGNATURE: LEAD STORY ===================== */}
-      {featured && featuredDesk && (
-        <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-          <Link
-            href={`/blog/${featured.slug}`}
-            className="aq-glass aq-sheen aq-rise aq-rise-4 group relative block overflow-hidden rounded-[28px] p-6 sm:p-8"
-          >
-            {/* colored desk wash keyed to the lead article's topic */}
-            <div
-              aria-hidden
-              className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full opacity-60 blur-3xl transition-opacity duration-500 group-hover:opacity-90"
-              style={{
-                background: `radial-gradient(circle, ${featuredDesk.color}, transparent 70%)`,
-              }}
-            />
-            <div className="relative grid gap-8 lg:grid-cols-[1fr_1.5fr] lg:items-center">
-              {/* giant issue number — the memorable device */}
-              <div className="flex flex-col justify-between gap-6">
-                <div className="flex items-center gap-2">
-                  <span className="aq-eyebrow aq-badge-bob inline-flex items-center gap-1.5">
-                    <Star
-                      className="h-3.5 w-3.5"
-                      style={{ color: featuredDesk.color }}
-                      aria-hidden="true"
-                    />
-                    Lead story
-                  </span>
-                  <span
-                    className="aq-chip"
-                    style={{ "--a": featuredDesk.color } as CSSProperties}
-                  >
-                    {featuredDesk.label}
-                  </span>
-                </div>
-                <div>
-                  <div
-                    className="aq-display font-mono text-7xl font-extrabold leading-none tracking-tighter opacity-90 sm:text-8xl"
-                    style={{
-                      background: `linear-gradient(140deg, ${featuredDesk.color}, #1aa9d6)`,
-                      WebkitBackgroundClip: "text",
-                      backgroundClip: "text",
-                      color: "transparent",
-                    }}
-                    aria-hidden="true"
-                  >
-                    №{String(articles.length).padStart(2, "0")}
-                  </div>
-                  <div className="mt-2 inline-flex items-center gap-1.5 text-sm text-muted-foreground">
-                    <Clock className="h-4 w-4" aria-hidden="true" />{" "}
-                    {featured.readMins} min read · {fmtDate(featured.date)}
-                  </div>
-                </div>
-              </div>
-
-              {/* headline + dek */}
-              <div>
-                <h2 className="aq-display text-3xl font-bold leading-[1.08] tracking-tight text-foreground transition-colors group-hover:text-primary sm:text-4xl">
-                  {featured.title}
-                </h2>
-                <p className="mt-4 max-w-2xl text-lg leading-relaxed text-foreground/70">
-                  {featured.description}
-                </p>
-                <span className="mt-6 inline-flex items-center gap-2 text-base font-semibold text-primary">
-                  Read the lead story
-                  <ArrowRight className="h-5 w-5 transition-transform duration-300 group-hover:translate-x-1.5" aria-hidden="true" />
-                </span>
-              </div>
-            </div>
-          </Link>
-        </section>
-      )}
-
       {/* ========================= THE FULL LIBRARY ======================== */}
       <section className="mx-auto max-w-7xl px-4 pb-24 sm:px-6 lg:px-8">
         <Reveal>
@@ -240,13 +165,13 @@ export default function BlogPage() {
             </div>
             <span className="hidden items-center gap-1.5 text-xs text-muted-foreground sm:inline-flex">
               <Sparkles className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
-              <AnimatedCounter value={rest.length} /> more guides
+              <AnimatedCounter value={articles.length} /> guides
             </span>
           </div>
         </Reveal>
 
         <Stagger className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {rest.map((a, i) => {
+          {articles.map((a, i) => {
             const desk = deskFor(a);
             return (
               <StaggerItem key={a.slug} className="h-full">

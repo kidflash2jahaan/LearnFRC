@@ -33,7 +33,7 @@ export default function GlossaryPage() {
   ];
 
   return (
-    <div className="relative isolate overflow-hidden">
+    <div className="relative isolate overflow-x-clip">
       {/* ambient glows the glass refracts */}
       <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
         <span

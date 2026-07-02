@@ -95,7 +95,7 @@ export default async function ForTeamsPage() {
   const track = departments.slice(0, 6);
 
   return (
-    <div className="relative overflow-hidden">
+    <div className="relative overflow-x-clip">
       {/* ambient light the glass refracts */}
       <div className="aq-glow" aria-hidden>
         <span

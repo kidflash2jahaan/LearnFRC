@@ -64,7 +64,7 @@ export default async function PathPage({
   return (
     <div
       data-theme="arena"
-      className="aq-root relative mx-auto max-w-5xl overflow-hidden px-4 pb-24 pt-28 text-foreground sm:px-6 lg:px-8"
+      className="aq-root relative mx-auto max-w-5xl overflow-x-clip px-4 pb-24 pt-28 text-foreground sm:px-6 lg:px-8"
     >
       {/* ===== ambient glows (decorative) ===== */}
       <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">

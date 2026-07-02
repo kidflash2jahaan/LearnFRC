@@ -106,7 +106,7 @@ export default async function DepartmentPage({
   return (
     <div
       data-theme="arena"
-      className="aq-root relative isolate overflow-hidden text-foreground"
+      className="aq-root relative isolate overflow-x-clip text-foreground"
     >
       <JsonLd
         data={{

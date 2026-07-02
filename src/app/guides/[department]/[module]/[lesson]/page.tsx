@@ -227,7 +227,7 @@ export default async function LessonPage({
                   </div>
                   <div className="hidden sm:block">
                     <dt className="aq-eyebrow">Module</dt>
-                    <dd className="mt-1 max-w-[10rem] truncate font-display text-base font-semibold text-foreground" title={mod.title}>
+                    <dd className="mt-1 font-display text-base font-semibold text-foreground" title={mod.title}>
                       {mod.title}
                     </dd>
                   </div>

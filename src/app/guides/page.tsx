@@ -71,7 +71,7 @@ export default async function GuidesPage() {
   const mapPreview = departments.slice(0, 6);
 
   return (
-    <div className="relative overflow-hidden">
+    <div className="relative overflow-x-clip">
       {/* ambient glows the glass refracts */}
       <div aria-hidden className="aq-glow -z-10">
         <span

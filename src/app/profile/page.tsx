@@ -124,7 +124,7 @@ export default async function ProfilePage() {
   ];
 
   return (
-    <main className="relative overflow-hidden">
+    <main className="relative overflow-x-clip">
       {/* Ambient drifting glows */}
       <div aria-hidden className="aq-glow -z-10">
         <span

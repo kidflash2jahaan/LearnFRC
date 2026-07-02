@@ -114,7 +114,7 @@ export default async function BookmarksPage() {
   return (
     <div
       data-theme="arena"
-      className="aq-root relative isolate min-h-screen overflow-hidden text-foreground"
+      className="aq-root relative isolate min-h-screen overflow-x-clip text-foreground"
     >
       {/* ambient light the glass refracts */}
       <div className="aq-glow" aria-hidden>

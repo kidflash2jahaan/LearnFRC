@@ -103,7 +103,14 @@ export function LeaderboardTabs({
             {tab === t.key && (
               <motion.span
                 layoutId="lb-tab"
-                className="aq-cta absolute inset-0 rounded-xl bg-primary"
+                // NOTE: no aq-cta here — its global `position: relative` would
+                // override `absolute` and shrink the pill to content size.
+                className="absolute inset-0 rounded-xl"
+                style={{
+                  background: "linear-gradient(160deg, #3b78f2, #0f7fb8)",
+                  boxShadow:
+                    "0 6px 16px rgba(37,96,230,0.30), inset 0 1px 0 rgba(255,255,255,0.45)",
+                }}
                 transition={{ type: "spring", stiffness: 380, damping: 30 }}
               />
             )}

@@ -32,7 +32,7 @@ export default function NotFound() {
   return (
     <div
       data-theme="arena"
-      className="aq-root relative isolate flex min-h-[86svh] flex-col items-center justify-center overflow-hidden px-4 py-20 text-center text-foreground"
+      className="aq-root relative isolate flex min-h-[86svh] flex-col items-center justify-center overflow-x-clip px-4 py-20 text-center text-foreground"
     >
       {/* ambient glows the glass refracts */}
       <div className="aq-glow" aria-hidden>
