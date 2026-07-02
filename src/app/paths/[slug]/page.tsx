@@ -108,7 +108,7 @@ export default async function PathPage({
             className="aq-display aq-grad-anim aq-rise aq-rise-2 min-w-0 text-balance break-words text-3xl font-extrabold leading-[1.04] sm:text-4xl md:text-[3.1rem]"
             style={{
               background:
-                "linear-gradient(120deg,#2560e6,#1478a6,#5b4fd6,#2560e6)",
+                "linear-gradient(120deg,#2560e6,#1aa9d6,#7c5cff,#2560e6)",
               WebkitBackgroundClip: "text",
               backgroundClip: "text",
               WebkitTextFillColor: "transparent",

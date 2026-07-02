@@ -2,7 +2,16 @@ import type { CSSProperties } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ArrowRight, BookOpen, Clock, Calendar } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  BookOpen,
+  Clock,
+  Calendar,
+  FileText,
+  Hash,
+  Sparkles,
+} from "lucide-react";
 import { ARTICLES, getArticle, getRelated } from "@/lib/blog-data";
 import { Markdown } from "@/components/markdown";
 import { JsonLd } from "@/components/json-ld";
@@ -10,15 +19,42 @@ import { Button } from "@/components/ui/button";
 import { ShareButton } from "@/components/share-button";
 import { Reveal } from "@/components/motion/reveal";
 import { AnimatedCounter } from "@/components/animated-counter";
+import { ReadingRail, type TocItem } from "./_reading-rail";
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.systemerr.com";
 
 const GRADIENT_TEXT: CSSProperties = {
-  background: "linear-gradient(120deg,#2560e6,#0d7ea3)",
+  background: "linear-gradient(120deg,#2560e6,#1aa9d6)",
   WebkitBackgroundClip: "text",
   backgroundClip: "text",
   color: "transparent",
 };
+
+/** Turn a heading string into a URL-safe anchor id. */
+function slugify(s: string): string {
+  return s
+    .toLowerCase()
+    .replace(/[^\w\s-]/g, "")
+    .trim()
+    .replace(/\s+/g, "-");
+}
+
+/** Pull the "## " headings out of the markdown, in order, for the TOC. */
+function buildToc(markdown: string): TocItem[] {
+  const items: TocItem[] = [];
+  const seen = new Map<string, number>();
+  for (const line of markdown.split("\n")) {
+    const m = /^##\s+(.+?)\s*$/.exec(line);
+    if (!m) continue;
+    const text = m[1].replace(/\*\*|\*|`/g, "").trim();
+    let id = slugify(text) || "section";
+    const n = seen.get(id) ?? 0;
+    seen.set(id, n + 1);
+    if (n > 0) id = `${id}-${n}`;
+    items.push({ id, text });
+  }
+  return items;
+}
 
 export function generateStaticParams() {
   return ARTICLES.map((a) => ({ slug: a.slug }));
@@ -66,6 +102,8 @@ export default async function ArticlePage({
   if (!a) notFound();
   const url = `${SITE}/blog/${a.slug}`;
   const related = getRelated(a.slug, 3);
+  const toc = buildToc(a.content);
+  const wordCount = a.content.trim().split(/\s+/).length;
 
   const formattedDate = new Date(`${a.date}T12:00:00`).toLocaleDateString("en-US", {
     year: "numeric",
@@ -88,23 +126,7 @@ export default async function ArticlePage({
   };
 
   return (
-    <article className="relative mx-auto max-w-3xl px-4 pt-28 pb-20 sm:px-6 lg:px-8">
-      {/* Ambient glows */}
-      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
-        <div
-          className="aq-float absolute -top-24 -left-20 h-72 w-72 rounded-full opacity-60 blur-3xl"
-          style={{ background: "radial-gradient(circle, rgba(37,96,230,0.20), transparent 70%)" }}
-        />
-        <div
-          className="aq-float absolute top-40 -right-24 h-80 w-80 rounded-full opacity-50 blur-3xl"
-          style={{ background: "radial-gradient(circle, rgba(26,169,214,0.18), transparent 70%)", animationDelay: "1.2s" }}
-        />
-        <div
-          className="aq-float absolute bottom-10 left-1/3 h-72 w-72 rounded-full opacity-40 blur-3xl"
-          style={{ background: "radial-gradient(circle, rgba(124,92,246,0.14), transparent 70%)", animationDelay: "2.4s" }}
-        />
-      </div>
-
+    <article className="relative isolate overflow-hidden text-foreground">
       <JsonLd data={jsonLd} />
       <JsonLd
         data={{
@@ -118,23 +140,57 @@ export default async function ArticlePage({
         }}
       />
 
-      {/* Hero */}
-      <header>
+      {/* ambient light the glass refracts */}
+      <div className="aq-glow" aria-hidden>
+        <span
+          className="h-[620px] w-[620px] opacity-70"
+          style={{
+            left: "-180px",
+            top: "-240px",
+            background: "radial-gradient(circle, #8bbcff, transparent 70%)",
+          }}
+        />
+        <span
+          className="h-[560px] w-[560px] opacity-55"
+          style={{
+            right: "-160px",
+            top: "-120px",
+            background: "radial-gradient(circle, #6ff0ea, transparent 70%)",
+          }}
+        />
+        <span
+          className="h-[520px] w-[520px] opacity-40"
+          style={{
+            left: "38%",
+            top: "560px",
+            background: "radial-gradient(circle, #c8b6ff, transparent 70%)",
+          }}
+        />
+      </div>
+
+      {/* ============================ HERO ============================ */}
+      <header className="mx-auto max-w-3xl px-4 pb-8 pt-28 sm:px-6 sm:pt-28 lg:px-8">
         <Link
           href="/blog"
-          className="aq-rise aq-rise-1 inline-flex min-h-11 items-center gap-1.5 rounded-full py-2 -my-2 text-sm font-medium text-muted-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+          className="aq-rise aq-rise-1 group inline-flex min-h-11 items-center gap-1.5 rounded-full -my-2 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
         >
-          <ArrowLeft aria-hidden className="h-4 w-4" /> Back to all articles
+          <ArrowLeft
+            aria-hidden
+            className="h-4 w-4 transition-transform group-hover:-translate-x-0.5"
+          />{" "}
+          Back to all articles
         </Link>
 
         <div className="aq-rise aq-rise-2 mt-6 flex flex-wrap items-center gap-2.5">
-          <span className="aq-chip aq-badge-bob inline-flex items-center gap-1.5">
-            <BookOpen aria-hidden className="h-3.5 w-3.5" /> Guide
+          <span className="aq-chip aq-eyebrow inline-flex items-center gap-1.5">
+            <BookOpen aria-hidden className="h-3.5 w-3.5" /> FRC Guide
           </span>
           <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
             <Clock aria-hidden className="h-3.5 w-3.5" /> {a.readMins} min read
           </span>
-          <span aria-hidden className="text-border">•</span>
+          <span aria-hidden className="text-border">
+            •
+          </span>
           <time
             dateTime={a.date}
             className="inline-flex items-center gap-1.5 text-sm text-muted-foreground"
@@ -143,48 +199,92 @@ export default async function ArticlePage({
           </time>
         </div>
 
-        <h1 className="aq-rise aq-rise-3 aq-display mt-5 text-balance text-3xl font-bold leading-[1.1] tracking-tight sm:text-4xl md:text-5xl">
-          <span className="aq-grad-anim" style={GRADIENT_TEXT}>{a.title}</span>
+        <h1 className="aq-rise aq-rise-3 aq-display mt-5 text-balance text-3xl font-bold leading-[1.08] tracking-tight sm:text-4xl md:text-5xl">
+          <span className="aq-grad-anim" style={GRADIENT_TEXT}>
+            {a.title}
+          </span>
         </h1>
 
         {a.description && (
-          <p className="aq-rise aq-rise-3 mt-4 max-w-2xl text-lg leading-relaxed text-foreground/70">
+          <p className="aq-rise aq-rise-4 mt-5 max-w-2xl text-lg leading-relaxed text-foreground/70">
             {a.description}
           </p>
         )}
 
-        <div className="aq-rise aq-rise-4 mt-6">
+        <div className="aq-rise aq-rise-5 mt-7 flex flex-wrap items-center gap-3">
           <ShareButton
-            variant="ghost"
+            variant="brand"
             label="Share this guide"
             text={`${a.title} — a free FRC guide on LearnFRC`}
             url={url}
           />
+          <Button asChild variant="ghost">
+            <Link href="/guides">Browse the guides</Link>
+          </Button>
         </div>
+
+        {/* article-at-a-glance stats strip */}
+        <dl className="aq-rise aq-rise-5 mt-8 grid grid-cols-3 gap-3">
+          {[
+            { icon: Clock, value: a.readMins, suffix: " min", label: "to read" },
+            { icon: FileText, value: wordCount, suffix: "", label: "words" },
+            { icon: Hash, value: toc.length, suffix: "", label: "sections" },
+          ].map((s) => (
+            <div
+              key={s.label}
+              className="aq-card aq-card-hover rounded-2xl px-4 py-3 text-center"
+            >
+              <dt className="sr-only">{s.label}</dt>
+              <s.icon
+                aria-hidden
+                className="mx-auto mb-1 h-4 w-4 text-primary"
+              />
+              <dd className="aq-display text-xl font-extrabold leading-none text-foreground">
+                <AnimatedCounter value={s.value} suffix={s.suffix} />
+              </dd>
+              <p className="mt-1 text-xs text-muted-foreground">{s.label}</p>
+            </div>
+          ))}
+        </dl>
       </header>
 
-      <hr aria-hidden className="aq-rise aq-rise-5 aq-divider mt-8" />
+      <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
+        <hr aria-hidden className="aq-rise aq-rise-5 aq-divider" />
+      </div>
 
-      {/* Article body */}
-      <Reveal delay={0.1}>
-        <div className="mt-8">
-          <Markdown content={a.content} />
+      {/* ===================== BODY + READING RAIL ==================== */}
+      <div className="mx-auto grid max-w-6xl grid-cols-1 gap-10 px-4 pt-8 sm:px-6 lg:px-8 xl:grid-cols-[minmax(0,1fr)_16rem]">
+        {/* Article body */}
+        <div className="mx-auto w-full max-w-3xl xl:mx-0" data-article-body>
+          <Reveal delay={0.1}>
+            <Markdown content={a.content} />
+          </Reveal>
         </div>
-      </Reveal>
 
-      {/* Keep reading */}
+        {/* Signature: fixed reading-progress bar (all sizes) + sticky TOC
+            scroll-spy (xl+). Rendered once; the nav self-hides below xl. */}
+        <aside className="xl:order-none">
+          <ReadingRail items={toc} />
+        </aside>
+      </div>
+
+      {/* ======================== KEEP READING ======================= */}
       {related.length > 0 && (
-        <Reveal as="section" className="mt-16 aq-reveal">
-          <p className="aq-eyebrow">Keep reading</p>
-          <h2 className="aq-display mt-2 text-2xl font-bold tracking-tight">
-            More from the pit
-          </h2>
-          <div className="mt-5 grid gap-4 sm:grid-cols-3">
+        <section className="mx-auto max-w-6xl px-4 pt-16 sm:px-6 lg:px-8">
+          <Reveal>
+            <p className="aq-eyebrow flex items-center gap-1.5">
+              <Sparkles aria-hidden className="h-3.5 w-3.5" /> Keep reading
+            </p>
+            <h2 className="aq-display mt-2 text-2xl font-bold tracking-tight">
+              More from the pit
+            </h2>
+          </Reveal>
+          <div className="mt-6 grid gap-4 sm:grid-cols-3">
             {related.map((r, i) => (
               <Link
                 key={r.slug}
                 href={`/blog/${r.slug}`}
-                className="aq-reveal aq-card aq-card-hover group flex flex-col gap-3 p-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                className="aq-reveal aq-card aq-card-hover group flex flex-col gap-3 rounded-2xl p-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
                 style={{ animationDelay: `${i * 90}ms` } as CSSProperties}
               >
                 <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
@@ -194,58 +294,67 @@ export default async function ArticlePage({
                   {r.title}
                 </h3>
                 <span className="mt-auto inline-flex items-center gap-1 text-sm font-medium text-primary">
-                  Read <ArrowRight aria-hidden className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+                  Read{" "}
+                  <ArrowRight
+                    aria-hidden
+                    className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5"
+                  />
                 </span>
               </Link>
             ))}
           </div>
-        </Reveal>
+        </section>
       )}
 
-      {/* CTA */}
-      <Reveal className="aq-reveal">
-        <div
-          className="aq-glass aq-sheen aq-float relative mt-14 overflow-hidden p-8 text-center"
-          style={{ "--a": "#2560e6" } as CSSProperties}
-        >
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl aq-icon aq-badge-bob">
-            <BookOpen aria-hidden className="h-6 w-6 text-primary" />
+      {/* ============================= CTA =========================== */}
+      <section className="mx-auto max-w-6xl px-4 pb-20 pt-14 sm:px-6 lg:px-8">
+        <Reveal>
+          <div
+            className="aq-glass aq-sheen aq-float relative overflow-hidden rounded-[28px] p-8 text-center sm:px-16 sm:py-12"
+            style={{ "--a": "#2560e6" } as CSSProperties}
+          >
+            <div className="aq-icon aq-badge-bob mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl">
+              <BookOpen aria-hidden className="h-6 w-6 text-primary" />
+            </div>
+            <h2 className="aq-display text-balance text-2xl font-bold tracking-tight sm:text-3xl">
+              Learn every department of FRC —{" "}
+              <span className="aq-grad-anim" style={GRADIENT_TEXT}>
+                free
+              </span>
+            </h2>
+            <p className="mx-auto mt-3 max-w-md text-base leading-relaxed text-foreground/70">
+              Structured lessons, quizzes, and team tools. Built by an FRC
+              student, for the community.
+            </p>
+            <div className="mt-7 flex flex-wrap items-center justify-center gap-6">
+              {[
+                { value: 394, suffix: "+", label: "lessons", delay: 60 },
+                { value: 12, suffix: "", label: "departments", delay: 150 },
+                { value: 100, suffix: "%", label: "free", delay: 240 },
+              ].map((s) => (
+                <div
+                  key={s.label}
+                  className="aq-reveal flex flex-col items-center"
+                  style={{ animationDelay: `${s.delay}ms` } as CSSProperties}
+                >
+                  <span className="aq-display text-2xl font-bold text-primary">
+                    <AnimatedCounter value={s.value} suffix={s.suffix} />
+                  </span>
+                  <span className="text-xs font-medium text-muted-foreground">
+                    {s.label}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <Button asChild variant="brand" className="mt-7">
+              <Link href="/guides">
+                Browse the guides{" "}
+                <ArrowRight aria-hidden className="h-4 w-4" />
+              </Link>
+            </Button>
           </div>
-          <h2 className="aq-display text-2xl font-bold tracking-tight">
-            Learn every department of FRC —{" "}
-            <span className="aq-grad-anim" style={GRADIENT_TEXT}>free</span>
-          </h2>
-          <p className="mx-auto mt-2 max-w-md text-base leading-relaxed text-foreground/70">
-            Structured lessons, quizzes, and team tools. Built by an FRC student,
-            for the community.
-          </p>
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-6">
-            <div className="aq-reveal flex flex-col items-center" style={{ animationDelay: "60ms" } as CSSProperties}>
-              <span className="aq-display text-2xl font-bold text-primary">
-                <AnimatedCounter value={394} suffix="+" />
-              </span>
-              <span className="text-xs font-medium text-muted-foreground">lessons</span>
-            </div>
-            <div className="aq-reveal flex flex-col items-center" style={{ animationDelay: "150ms" } as CSSProperties}>
-              <span className="aq-display text-2xl font-bold text-primary">
-                <AnimatedCounter value={12} />
-              </span>
-              <span className="text-xs font-medium text-muted-foreground">departments</span>
-            </div>
-            <div className="aq-reveal flex flex-col items-center" style={{ animationDelay: "240ms" } as CSSProperties}>
-              <span className="aq-display text-2xl font-bold text-primary">
-                <AnimatedCounter value={100} suffix="%" />
-              </span>
-              <span className="text-xs font-medium text-muted-foreground">free</span>
-            </div>
-          </div>
-          <Button asChild variant="brand" className="mt-6">
-            <Link href="/guides">
-              Browse the guides <ArrowRight aria-hidden className="h-4 w-4" />
-            </Link>
-          </Button>
-        </div>
-      </Reveal>
+        </Reveal>
+      </section>
     </article>
   );
 }

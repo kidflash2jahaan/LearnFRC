@@ -3,8 +3,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import {
   Users,
-  Hash,
-  Eye,
   GraduationCap,
   Award,
   ArrowRight,
@@ -25,22 +23,24 @@ export const metadata: Metadata = {
     "Onboard your whole FRC team with a ready-made curriculum across every department. Everyone who signs up with your team number is grouped automatically — and you can all see each other's progress. Free.",
 };
 
+// Icons are referenced by NAME and resolved inside the client rail —
+// component functions can't cross the server -> client boundary.
 const STEPS = [
   {
     n: "01",
-    Icon: Hash,
+    icon: "hash" as const,
     title: "Everyone adds your team number",
     body: "When your members sign up, they enter the same FRC team number. That's the only step — no codes, no invites, nothing to set up.",
   },
   {
     n: "02",
-    Icon: Users,
+    icon: "users" as const,
     title: "Your team groups automatically",
     body: "Anyone with your team number is instantly grouped together, and new members show up the moment they join.",
   },
   {
     n: "03",
-    Icon: Eye,
+    icon: "eye" as const,
     title: "See each other's progress",
     body: "You and your teammates can all see who's completed which lessons, their XP, and recent activity — so you can push each other and spot who needs help.",
   },
@@ -125,7 +125,7 @@ export default async function ForTeamsPage() {
       </div>
 
       {/* ============================ HERO ============================ */}
-      <section className="relative mx-auto max-w-6xl px-4 pt-24 pb-14 sm:px-6 sm:pt-28 lg:px-8">
+      <section className="relative mx-auto max-w-6xl px-4 pt-28 pb-14 sm:px-6 sm:pt-28 lg:px-8">
         <div className="grid items-center gap-12 lg:grid-cols-[1.02fr_0.98fr]">
           <div>
             <span className="aq-chip aq-eyebrow aq-rise aq-rise-1 inline-flex items-center gap-2">

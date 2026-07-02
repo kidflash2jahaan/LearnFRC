@@ -74,7 +74,7 @@ export default async function TeamsPage() {
     >
       <AmbientGlows />
 
-      <div className="mx-auto max-w-6xl px-4 pt-24 pb-24 sm:px-6 sm:pt-28 lg:px-8">
+      <div className="mx-auto max-w-6xl px-4 pt-28 pb-24 sm:px-6 sm:pt-28 lg:px-8">
         {!profile?.team_number ? (
           <EmptyState />
         ) : (

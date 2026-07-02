@@ -25,7 +25,7 @@ export const metadata: Metadata = {
 };
 
 const HEADLINE_GRADIENT: CSSProperties = {
-  background: "linear-gradient(120deg,#2560e6,#1487b0)",
+  background: "linear-gradient(120deg,#2560e6,#1aa9d6)",
   WebkitBackgroundClip: "text",
   backgroundClip: "text",
   color: "transparent",

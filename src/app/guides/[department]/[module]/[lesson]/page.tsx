@@ -139,7 +139,7 @@ export default async function LessonPage({
         }}
       />
 
-      <div className="relative mx-auto max-w-6xl px-4 pt-24 pb-20 sm:px-6 lg:px-8">
+      <div className="relative mx-auto max-w-6xl px-4 pt-28 pb-20 sm:px-6 lg:px-8">
         {/* breadcrumb */}
         <nav
           className="aq-rise aq-rise-1 flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground"

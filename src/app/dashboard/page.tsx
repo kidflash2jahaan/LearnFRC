@@ -254,7 +254,7 @@ export default async function DashboardPage() {
   const cm = continueLesson ? deptMeta(continueLesson.deptSlug) : null;
 
   const blueGradient = {
-    background: "linear-gradient(120deg,#2560e6,#0e7fa3)",
+    background: "linear-gradient(120deg,#2560e6,#1aa9d6)",
     WebkitBackgroundClip: "text",
     backgroundClip: "text",
     color: "transparent",

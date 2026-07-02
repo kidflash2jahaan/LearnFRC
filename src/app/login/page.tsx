@@ -81,31 +81,8 @@ export default async function LoginPage({
         />
       </div>
 
-      <div className="mx-auto flex min-h-[100svh] max-w-2xl flex-col px-4 pb-16 pt-6 sm:px-6 sm:pt-8">
-        {/* Slim top bar: brand + back */}
-        <div className="aq-rise aq-rise-1 flex items-center justify-between">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2.5 rounded-2xl"
-            aria-label="LearnFRC home"
-          >
-            <span
-              className="aq-badge aq-badge-bob grid h-9 w-9 place-items-center"
-              style={{ "--a": "var(--primary)" } as CSSProperties}
-            >
-              <Bot className="h-5 w-5 text-foreground" aria-hidden />
-            </span>
-            <span className="aq-display text-lg font-bold tracking-tight text-foreground">
-              Learn<span className="text-primary">FRC</span>
-            </span>
-          </Link>
-          <Link
-            href="/"
-            className="aq-ghost inline-flex items-center gap-1.5 rounded-2xl px-3.5 py-2 text-sm font-semibold"
-          >
-            <ArrowLeft className="h-4 w-4" aria-hidden /> Home
-          </Link>
-        </div>
+      <div className="mx-auto flex min-h-[100svh] max-w-2xl flex-col px-4 pb-16 pt-20 sm:px-6">
+        {/* Global navbar provides branding + navigation — no page-level header. */}
 
         {/* Signature: the auth card center-stage, ringed by a department orbit */}
         <div className="relative flex flex-1 flex-col items-center justify-center py-10">

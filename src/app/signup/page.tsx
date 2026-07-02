@@ -26,13 +26,13 @@ const HEADING_GRADIENT: CSSProperties = {
 /** What a free account unlocks — spoken in one glance. */
 const PERKS = [
   "Free forever — no card, no paywalls",
-  "390+ lessons across all 11 departments",
+  "394 lessons across all 11 departments",
   "Save progress, earn XP, climb the leaderboard",
 ];
 
 const STATS = [
   { value: 11, suffix: "", label: "departments" },
-  { value: 390, suffix: "+", label: "lessons" },
+  { value: 394, suffix: "+", label: "lessons" },
   { value: 100, suffix: "%", label: "free, forever" },
 ];
 
@@ -61,22 +61,7 @@ export default async function SignupPage({
       <div className="mx-auto grid min-h-[100svh] w-full max-w-6xl items-center gap-10 px-4 py-12 sm:gap-12 sm:px-6 sm:py-16 lg:grid-cols-[0.95fr_1.05fr] lg:gap-16 lg:py-24">
         {/* ============ LEFT: the welcoming glass auth card ============ */}
         <div className="order-1">
-          <Link
-            href="/"
-            className="aq-rise aq-rise-1 mb-8 inline-flex items-center gap-2.5"
-            aria-label="LearnFRC home"
-          >
-            <span
-              className="aq-badge aq-badge-bob grid h-9 w-9 place-items-center"
-              style={{ "--a": "var(--primary)" } as CSSProperties}
-            >
-              <Bot className="h-5 w-5 text-foreground" aria-hidden />
-            </span>
-            <span className="aq-display text-lg font-bold tracking-tight text-foreground">
-              Learn<span className="text-primary">FRC</span>
-            </span>
-          </Link>
-
+          {/* Global navbar provides branding — no page-level logo. */}
           <div className="aq-glass aq-float aq-rise aq-rise-2 relative w-full max-w-md rounded-3xl p-6 sm:p-8">
             <span className="aq-chip inline-flex items-center gap-1.5">
               <span className="aq-pulse inline-block h-1.5 w-1.5 rounded-full bg-primary" />

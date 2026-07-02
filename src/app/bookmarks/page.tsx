@@ -46,7 +46,7 @@ type BookmarkRow = {
 };
 
 const HEADING_GRADIENT: CSSProperties = {
-  background: "linear-gradient(120deg,#2560e6,#1aa9d6,#8b5cf6,#2560e6)",
+  background: "linear-gradient(120deg,#2560e6,#1aa9d6,#7c5cff,#2560e6)",
   backgroundSize: "200% auto",
   WebkitBackgroundClip: "text",
   backgroundClip: "text",
@@ -145,7 +145,7 @@ export default async function BookmarksPage() {
       </div>
 
       {/* ============================ HERO ============================ */}
-      <section className="mx-auto grid max-w-6xl items-center gap-10 px-4 pb-14 pt-24 sm:px-6 sm:pt-28 lg:grid-cols-[1.05fr_.95fr] lg:gap-12 lg:pb-16 lg:pt-32">
+      <section className="mx-auto grid max-w-6xl items-center gap-10 px-4 pb-14 pt-28 sm:px-6 sm:pt-28 lg:grid-cols-[1.05fr_.95fr] lg:gap-12 lg:pb-16 lg:pt-32">
         <div>
           <span className="aq-chip aq-eyebrow aq-rise aq-rise-1 inline-flex items-center gap-2">
             <Library aria-hidden className="h-3.5 w-3.5" />

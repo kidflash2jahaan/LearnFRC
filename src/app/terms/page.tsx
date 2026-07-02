@@ -261,7 +261,7 @@ export default function TermsPage() {
               className="aq-grad-anim"
               style={{
                 background:
-                  "linear-gradient(120deg,#2560e6,#1aa9d6,#8b7fff,#2560e6)",
+                  "linear-gradient(120deg,#2560e6,#1aa9d6,#7c5cff,#2560e6)",
                 WebkitBackgroundClip: "text",
                 backgroundClip: "text",
                 color: "transparent",

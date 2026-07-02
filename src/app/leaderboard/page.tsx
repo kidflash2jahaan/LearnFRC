@@ -160,7 +160,7 @@ export default async function LeaderboardPage() {
       </div>
 
       {/* ============================ HERO ============================ */}
-      <section className="mx-auto grid max-w-7xl items-center gap-12 px-4 pb-12 pt-24 sm:px-6 sm:pt-28 lg:grid-cols-2 lg:gap-10 lg:pt-32">
+      <section className="mx-auto grid max-w-7xl items-center gap-12 px-4 pb-12 pt-28 sm:px-6 sm:pt-28 lg:grid-cols-2 lg:gap-10 lg:pt-32">
         <div>
           <span className="aq-chip aq-eyebrow aq-rise aq-rise-1 inline-flex flex-wrap items-center gap-2">
             <Trophy className="h-3.5 w-3.5" aria-hidden="true" /> Climb the ranks

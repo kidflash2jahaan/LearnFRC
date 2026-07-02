@@ -1,14 +1,19 @@
 "use client";
 
 import * as React from "react";
-import type { CSSProperties, ComponentType } from "react";
+import type { CSSProperties } from "react";
 import { motion, useInView, useReducedMotion } from "framer-motion";
+import { Hash, Users, Eye } from "lucide-react";
+
+// Icons resolved here by name — server pages can't pass component functions
+// across the client boundary.
+const STEP_ICONS = { hash: Hash, users: Users, eye: Eye } as const;
 
 type Step = {
   n: string;
   title: string;
   body: string;
-  Icon: ComponentType<{ className?: string; "aria-hidden"?: boolean | "true" | "false" }>;
+  icon: keyof typeof STEP_ICONS;
 };
 
 const EASE = [0.21, 0.47, 0.32, 0.98] as const;
@@ -33,7 +38,7 @@ export function OnboardingRail({ steps }: { steps: Step[] }) {
         className="pointer-events-none absolute left-[27px] top-6 bottom-6 w-[3px] origin-top rounded-full sm:left-[31px]"
         style={
           {
-            background: "linear-gradient(180deg,#2560e6,#1aa9d6,#8b7fff)",
+            background: "linear-gradient(180deg,#2560e6,#1aa9d6,#7c5cff)",
             transform: play || reduce ? "scaleY(1)" : "scaleY(0)",
             transition: reduce ? "none" : "transform 1.4s cubic-bezier(.35,0,.15,1)",
           } as CSSProperties
@@ -57,7 +62,7 @@ export function OnboardingRail({ steps }: { steps: Step[] }) {
               animate={play ? { scale: 1, opacity: 1 } : undefined}
               transition={{ type: "spring", stiffness: 320, damping: 18, delay: 0.3 + i * 0.28 }}
             >
-              <s.Icon aria-hidden="true" className="h-6 w-6" />
+              {React.createElement(STEP_ICONS[s.icon], { "aria-hidden": true, className: "h-6 w-6" })}
             </motion.span>
             <span
               aria-hidden="true"

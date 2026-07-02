@@ -1,9 +1,35 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { LucideIcon } from "lucide-react";
+import {
+  Database,
+  Activity,
+  Eye,
+  Cookie,
+  Cog,
+  Baby,
+  Trash2,
+  Lock,
+  RefreshCw,
+  MessageCircle,
+  type LucideIcon,
+} from "lucide-react";
 
-export type TocItem = { id: string; title: string; icon: LucideIcon };
+/** Icon registry — client-owned so no component functions cross the RSC boundary. */
+const ICONS: Record<string, LucideIcon> = {
+  collect: Database,
+  use: Activity,
+  public: Eye,
+  cookies: Cookie,
+  providers: Cog,
+  children: Baby,
+  retention: Trash2,
+  security: Lock,
+  changes: RefreshCw,
+  contact: MessageCircle,
+};
+
+export type TocItem = { id: string; title: string };
 
 /**
  * Sticky scroll-spy table of contents for the privacy policy.
@@ -37,7 +63,7 @@ export function PrivacyToc({ items }: { items: TocItem[] }) {
     <nav aria-label="Sections of this policy" className="flex flex-col gap-1">
       {items.map((item, i) => {
         const isActive = active === item.id;
-        const Ico = item.icon;
+        const Ico = ICONS[item.id] ?? Database;
         return (
           <a
             key={item.id}
@@ -61,7 +87,9 @@ export function PrivacyToc({ items }: { items: TocItem[] }) {
             <Ico
               className={[
                 "h-4 w-4 shrink-0 transition-colors",
-                isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground",
+                isActive
+                  ? "text-primary"
+                  : "text-muted-foreground group-hover:text-foreground",
               ].join(" ")}
               aria-hidden
             />
