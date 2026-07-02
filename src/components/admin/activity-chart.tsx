@@ -82,7 +82,7 @@ export function ActivityChart({ data }: { data: DailyPoint[] }) {
         {/* Hover tooltip */}
         {hp && hover !== null && (
           <div
-            className="aq-card pointer-events-none absolute z-10 -translate-x-1/2 whitespace-nowrap px-3 py-2 text-xs"
+            className="ac-card pointer-events-none absolute z-10 -translate-x-1/2 whitespace-nowrap px-3 py-2 text-xs"
             style={{
               left: `clamp(70px, ${(x(hover) / W) * 100}%, calc(100% - 70px))`,
               top: 0,
@@ -145,9 +145,11 @@ export function ActivityChart({ data }: { data: DailyPoint[] }) {
                 strokeWidth={2.5}
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                initial={reduce ? { pathLength: 1 } : { pathLength: 0 }}
+                // Identical initial on server + client (hydration-safe);
+                // reduced motion just makes the draw instantaneous.
+                initial={{ pathLength: 0 }}
                 animate={{ pathLength: 1 }}
-                transition={{ duration: 1.1, ease: "easeOut" }}
+                transition={reduce ? { duration: 0 } : { duration: 1.1, ease: "easeOut" }}
               />
             </g>
           ))}
@@ -185,8 +187,8 @@ export function ActivityChart({ data }: { data: DailyPoint[] }) {
                 x={x(i)}
                 y={H - 8}
                 textAnchor="middle"
-                className="fill-muted-foreground font-mono"
-                style={{ fontSize: 10 }}
+                className="fill-muted-foreground"
+                style={{ fontSize: 10, fontWeight: 600 }}
               >
                 {d.day.slice(5)}
               </text>

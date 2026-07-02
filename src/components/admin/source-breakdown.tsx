@@ -20,7 +20,7 @@ export function SourceBreakdown({
 
   return (
     <div>
-      <div className="mb-5 inline-flex rounded-2xl border border-border bg-card p-1 text-sm">
+      <div className="ac-chip mb-5 inline-flex items-center gap-1 p-1 text-sm">
         {(
           [
             ["7d", "Last 7 days"],
@@ -29,12 +29,13 @@ export function SourceBreakdown({
         ).map(([key, label]) => (
           <button
             key={key}
+            type="button"
             onClick={() => setRange(key)}
             aria-pressed={range === key}
             className={cn(
-              "cursor-pointer rounded-xl px-4 py-1.5 font-medium transition-colors",
+              "min-h-11 cursor-pointer rounded-full px-4 py-1.5 font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
               range === key
-                ? "bg-primary/10 text-primary"
+                ? "bg-primary/15 text-primary"
                 : "text-muted-foreground hover:text-foreground"
             )}
           >

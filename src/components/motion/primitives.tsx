@@ -185,11 +185,13 @@ export function Hover({
   scale?: number;
 }) {
   const reduce = useReducedMotion();
+  // NOTE: no whileTap here — framer adds tabindex="0" to tap-enabled elements,
+  // which (a) hydration-mismatches when reduced-motion clients skip it and
+  // (b) creates phantom tab stops. The inner link/button is the focus target.
   return (
     <motion.div
       className={className}
       whileHover={reduce ? undefined : { y: lift, scale }}
-      whileTap={reduce ? undefined : { scale: 0.985 }}
       transition={{ type: "spring", stiffness: 320, damping: 22 }}
     >
       {children}

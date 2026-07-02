@@ -98,13 +98,13 @@ export function LessonActions({
         size="lg"
       >
         {pending ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
+          <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
         ) : completed ? (
-          <Check className="h-4 w-4" />
+          <Check className="h-4 w-4" aria-hidden />
         ) : quizRequired ? (
-          <ListChecks className="h-4 w-4" />
+          <ListChecks className="h-4 w-4" aria-hidden />
         ) : (
-          <Circle className="h-4 w-4" />
+          <Circle className="h-4 w-4" aria-hidden />
         )}
         {completed ? "Completed" : quizRequired ? "Take the quiz" : "Mark complete"}
       </Button>
@@ -114,16 +114,16 @@ export function LessonActions({
         aria-busy={pending}
         aria-label={bookmarked ? "Remove bookmark" : "Bookmark lesson"}
         className={cn(
-          "inline-flex h-12 w-12 items-center justify-center rounded-2xl border transition-all cursor-pointer hover:-translate-y-0.5",
+          "inline-flex h-12 w-12 items-center justify-center rounded-2xl border bg-card transition-all cursor-pointer hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-55",
           bookmarked
             ? "border-primary/40 bg-primary/10 text-primary shadow-[0_6px_16px_rgba(60,95,160,0.12)]"
             : "border-border text-muted-foreground hover:border-[#0e7490]/40 hover:text-[#0e7490] hover:shadow-[0_6px_16px_rgba(60,95,160,0.10)]"
         )}
       >
         {bookmarked ? (
-          <BookmarkCheck className="h-5 w-5" />
+          <BookmarkCheck className="h-5 w-5" aria-hidden />
         ) : (
-          <Bookmark className="h-5 w-5" />
+          <Bookmark className="h-5 w-5" aria-hidden />
         )}
       </button>
     </div>

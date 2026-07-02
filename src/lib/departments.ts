@@ -39,11 +39,11 @@ export function deptMeta(slug: string): DeptMeta {
  * Use inkFor()/deptInk() for accent-colored text, numbers, and small icons.
  */
 const ACCENT_INK: Record<string, string> = {
-  "#c6ff3d": "#4d7c0f", // lime
+  "#c6ff3d": "#3f6212", // lime
   "#ff8a3d": "#c2410c", // orange
   "#b16bff": "#7c3aed", // violet
   "#22d3ee": "#0e7490", // cyan
-  "#ffe53d": "#a16207", // yellow (electrical)
+  "#ffe53d": "#854d0e", // yellow (electrical)
   "#ff5db1": "#be185d", // pink
   "#ff3dcb": "#a21caf", // magenta
   "#ffd23d": "#a16207", // gold

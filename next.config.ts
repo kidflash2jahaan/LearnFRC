@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // hide the floating dev-tools indicator so local review matches production
+  devIndicators: false,
 };
 
 export default nextConfig;

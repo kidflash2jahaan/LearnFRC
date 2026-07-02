@@ -65,17 +65,17 @@ export function SourcePie({
               strokeWidth="20"
               strokeLinecap="butt"
               strokeDashoffset={-s.offset * C}
-              initial={
-                stat
-                  ? { strokeDasharray: `${s.frac * C} ${C - s.frac * C}` }
-                  : { strokeDasharray: `0 ${C}` }
-              }
+              initial={{ strokeDasharray: `0 ${C}` }}
               animate={{ strokeDasharray: `${s.frac * C} ${C - s.frac * C}` }}
-              transition={{ duration: 0.9, delay: 0.15 + i * 0.12, ease: "easeOut" }}
+              transition={
+                stat
+                  ? { duration: 0 }
+                  : { duration: 0.9, delay: 0.15 + i * 0.12, ease: "easeOut" }
+              }
             />
           ))}
         </g>
-        <text x="80" y="77" textAnchor="middle" className="fill-foreground aq-display" fontSize="24" fontWeight="700">
+        <text x="80" y="77" textAnchor="middle" className="fill-foreground font-display" fontSize="24" fontWeight="700">
           {total}
         </text>
         <text x="80" y="95" textAnchor="middle" className="fill-muted-foreground" fontSize="10">

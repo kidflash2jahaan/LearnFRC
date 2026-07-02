@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { motion, useReducedMotion } from "framer-motion";
 import { List } from "lucide-react";
 
 export interface TocItem {
@@ -11,27 +12,26 @@ export interface TocItem {
 /**
  * Reading rail — the article page's signature device.
  *
- * 1. A thin top reading-progress bar tracking scroll through the <article>.
+ * 1. A thin top reading-progress bar tracking scroll through the article.
  * 2. A sticky table of contents (desktop) built from the article's H2s, with
  *    scroll-spy highlighting the section you're currently reading.
  *
  * The TOC is derived server-side from the markdown; on mount we tag the
  * rendered <h2> headings (in order) with the matching ids so the anchors and
  * IntersectionObserver work without touching the Markdown renderer.
- * Fully reduced-motion safe (smooth scroll is opt-out via media query below).
+ * No ancestor of the sticky nav uses overflow-hidden, so it tracks correctly.
  */
 export function ReadingRail({ items }: { items: TocItem[] }) {
   const [progress, setProgress] = React.useState(0);
   const [activeId, setActiveId] = React.useState<string>(items[0]?.id ?? "");
+  const reduce = useReducedMotion();
 
   // Tag the rendered headings with stable ids (once, on mount).
   React.useEffect(() => {
     if (items.length === 0) return;
-    const article = document.querySelector("article");
-    if (!article) return;
-    const headings = Array.from(article.querySelectorAll("h2")).filter((h) =>
-      h.closest("[data-article-body]"),
-    );
+    const body = document.querySelector("[data-article-body]");
+    if (!body) return;
+    const headings = Array.from(body.querySelectorAll("h2"));
     items.forEach((it, i) => {
       const el = headings[i];
       if (el && !el.id) el.id = it.id;
@@ -75,9 +75,6 @@ export function ReadingRail({ items }: { items: TocItem[] }) {
     const el = document.getElementById(id);
     if (!el) return;
     e.preventDefault();
-    const reduce =
-      typeof window !== "undefined" &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const top = el.getBoundingClientRect().top + window.scrollY - 88;
     window.scrollTo({ top, behavior: reduce ? "auto" : "smooth" });
     setActiveId(id);
@@ -88,28 +85,21 @@ export function ReadingRail({ items }: { items: TocItem[] }) {
   return (
     <>
       {/* Top reading-progress bar */}
-      <div
-        className="fixed inset-x-0 top-0 z-40 h-1 bg-transparent"
-        aria-hidden
-      >
-        <div
-          className="h-full origin-left rounded-r-full transition-[width] duration-150 ease-out"
-          style={{
-            width: `${progress}%`,
-            background: "linear-gradient(90deg,#2560e6,#1aa9d6)",
-          }}
+      <div className="fixed inset-x-0 top-16 z-40 h-1 bg-transparent" aria-hidden>
+        <motion.div
+          className="h-full origin-left rounded-r-full"
+          style={{ background: "linear-gradient(90deg,#2560e6,#1aa9d6)" }}
+          animate={{ width: `${progress}%` }}
+          transition={reduce ? { duration: 0 } : { duration: 0.15, ease: "easeOut" }}
         />
       </div>
 
       {/* Sticky table of contents (desktop only) */}
       {items.length > 1 && (
-        <nav
-          aria-label="On this page"
-          className="hidden xl:block"
-        >
+        <nav aria-label="On this page" className="hidden xl:block">
           <div className="sticky top-28">
-            <div className="aq-card rounded-2xl p-4">
-              <p className="aq-eyebrow mb-3 flex items-center gap-1.5">
+            <div className="ac-card rounded-2xl p-4">
+              <p className="ac-eyebrow mb-3 flex items-center gap-1.5">
                 <List aria-hidden className="h-3.5 w-3.5" /> On this page
               </p>
               <ul className="space-y-0.5">
@@ -122,7 +112,7 @@ export function ReadingRail({ items }: { items: TocItem[] }) {
                         onClick={(e) => onJump(e, it.id)}
                         aria-current={active ? "location" : undefined}
                         className={[
-                          "group flex items-start gap-2.5 rounded-lg py-1.5 pl-2.5 pr-2 text-sm leading-snug transition-colors",
+                          "group flex min-h-[28px] items-start gap-2.5 rounded-lg py-1.5 pl-2.5 pr-2 text-sm leading-snug transition-colors",
                           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
                           active
                             ? "font-semibold text-primary"

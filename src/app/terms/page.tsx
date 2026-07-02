@@ -15,9 +15,19 @@ import {
   Mail,
   ExternalLink,
   Handshake,
-  Clock,
+  ArrowRight,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { AnimatedCounter } from "@/components/animated-counter";
+import {
+  RiseGroup,
+  RiseItem,
+  Reveal,
+  RevealGroup,
+  RevealItem,
+  Hover,
+  Glow,
+} from "@/components/motion/primitives";
 import { ContentsRail, type RailItem } from "./_contents-rail";
 
 export const metadata: Metadata = {
@@ -30,18 +40,35 @@ const CONTACT = "29pardhananij@sagehillschool.org";
 
 const LINK =
   "font-medium text-primary underline decoration-primary/40 underline-offset-2 transition-colors hover:text-accent hover:decoration-accent break-words";
-
 const strong = "font-semibold text-foreground";
 
-type Rule = {
-  id: string;
-  icon: typeof ScrollText;
-  a: string;
-  title: string;
-  body: ReactNode;
+const BRAND_GRADIENT: CSSProperties = {
+  background: "linear-gradient(120deg, #2560e6, #1aa9d6)",
+  WebkitBackgroundClip: "text",
+  backgroundClip: "text",
+  color: "transparent",
 };
 
-/** The eleven house rules, in reading order — content preserved verbatim. */
+/* ---------- small text primitives (local to this page) ---------- */
+
+function P({ children }: { children: ReactNode }) {
+  return <p className="mt-3 text-[16px] leading-[1.7] text-foreground/80 first:mt-0">{children}</p>;
+}
+
+function Bullets({ items }: { items: ReactNode[] }) {
+  return (
+    <ul className="mt-3 list-disc space-y-2 pl-5 text-[16px] leading-[1.7] text-foreground/80 marker:text-primary/60">
+      {items.map((it, i) => (
+        <li key={i}>{it}</li>
+      ))}
+    </ul>
+  );
+}
+
+/* ---------- rule registry — content preserved verbatim ---------- */
+
+type Rule = { id: string; icon: LucideIcon; a: string; title: string; body: ReactNode };
+
 const RULES: Rule[] = [
   {
     id: "eligibility",
@@ -49,12 +76,11 @@ const RULES: Rule[] = [
     a: "#2560e6",
     title: "Who can use LearnFRC",
     body: (
-      <p>
-        You should be at least 13 years old to create an account. If
-        you&apos;re under 18, you should have a parent or guardian&apos;s
-        permission. By signing up you confirm the information you provide is
-        accurate.
-      </p>
+      <P>
+        You should be at least 13 years old to create an account. If you&apos;re under 18, you
+        should have a parent or guardian&apos;s permission. By signing up you confirm the
+        information you provide is accurate.
+      </P>
     ),
   },
   {
@@ -63,17 +89,13 @@ const RULES: Rule[] = [
     a: "#1aa9d6",
     title: "Your account",
     body: (
-      <ul className="space-y-2 pl-5 list-disc marker:text-primary/60">
-        <li>
-          Keep your password secure; you&apos;re responsible for activity on
-          your account.
-        </li>
-        <li>
-          Choose a username and display name that aren&apos;t offensive or
-          impersonating.
-        </li>
-        <li>Verify your email address to activate your account.</li>
-      </ul>
+      <Bullets
+        items={[
+          "Keep your password secure; you're responsible for activity on your account.",
+          "Choose a username and display name that aren't offensive or impersonating.",
+          "Verify your email address to activate your account.",
+        ]}
+      />
     ),
   },
   {
@@ -83,21 +105,16 @@ const RULES: Rule[] = [
     title: "Acceptable use",
     body: (
       <>
-        <p>You agree not to:</p>
-        <ul className="mt-3 space-y-2 pl-5 list-disc marker:text-primary/60">
-          <li>
-            Abuse, scrape, overload, or attempt to break the service or its
-            security.
-          </li>
-          <li>Cheat or manipulate XP, quizzes, or the leaderboard.</li>
-          <li>
-            Harass others or post unlawful, harmful, or infringing content.
-          </li>
-          <li>Use LearnFRC for anything illegal.</li>
-        </ul>
-        <p className="mt-3">
-          We may suspend or remove accounts that violate these terms.
-        </p>
+        <P>You agree not to:</P>
+        <Bullets
+          items={[
+            "Abuse, scrape, overload, or attempt to break the service or its security.",
+            "Cheat or manipulate XP, quizzes, or the leaderboard.",
+            "Harass others or post unlawful, harmful, or infringing content.",
+            "Use LearnFRC for anything illegal.",
+          ]}
+        />
+        <P>We may suspend or remove accounts that violate these terms.</P>
       </>
     ),
   },
@@ -107,11 +124,10 @@ const RULES: Rule[] = [
     a: "#0f9d8f",
     title: "Educational content",
     body: (
-      <p>
-        Our lessons and quizzes are researched from public sources and provided
-        for educational purposes. We work hard to keep them accurate, but for
-        official competition decisions you should always confirm details against
-        the current{" "}
+      <P>
+        Our lessons and quizzes are researched from public sources and provided for educational
+        purposes. We work hard to keep them accurate, but for official competition decisions you
+        should always confirm details against the current{" "}
         <a
           className={LINK}
           href="https://www.firstinspires.org/robotics/frc/game-and-season"
@@ -119,15 +135,10 @@ const RULES: Rule[] = [
           rel="noopener noreferrer"
         >
           FRC Game Manual
-          <ExternalLink
-            className="mb-0.5 ml-0.5 inline h-3.5 w-3.5"
-            aria-hidden="true"
-            focusable="false"
-          />
+          <ExternalLink className="mb-0.5 ml-0.5 inline h-3.5 w-3.5" aria-hidden="true" focusable="false" />
         </a>{" "}
-        and official documentation. Content is provided &quot;as is&quot;
-        without warranties.
-      </p>
+        and official documentation. Content is provided &quot;as is&quot; without warranties.
+      </P>
     ),
   },
   {
@@ -136,27 +147,25 @@ const RULES: Rule[] = [
     a: "#2560e6",
     title: "Your content",
     body: (
-      <p>
-        Content you submit (such as your profile details or feedback) remains
-        yours, but you grant LearnFRC a license to store and display it as needed
-        to operate the service (for example, showing your public profile).
-      </p>
+      <P>
+        Content you submit (such as your profile details or feedback) remains yours, but you
+        grant LearnFRC a license to store and display it as needed to operate the service (for
+        example, showing your public profile).
+      </P>
     ),
   },
   {
     id: "trademarks",
     icon: Award,
-    a: "#e8a01c",
+    a: "#c2740f",
     title: "Trademarks",
     body: (
-      <p>
+      <P>
         LearnFRC is an independent project and is{" "}
-        <strong className={strong}>
-          not affiliated with or endorsed by FIRST®
-        </strong>
-        . FIRST®, FRC®, and related marks belong to FIRST. References are for
-        identification and educational purposes only.
-      </p>
+        <strong className={strong}>not affiliated with or endorsed by FIRST®</strong>. FIRST®,
+        FRC®, and related marks belong to FIRST. References are for identification and
+        educational purposes only.
+      </P>
     ),
   },
   {
@@ -165,12 +174,11 @@ const RULES: Rule[] = [
     a: "#7c5cff",
     title: "Limitation of liability",
     body: (
-      <p>
-        To the maximum extent permitted by law, LearnFRC and its maintainers are
-        not liable for any indirect or consequential damages arising from your
-        use of the service. The service is provided without warranty of any
-        kind.
-      </p>
+      <P>
+        To the maximum extent permitted by law, LearnFRC and its maintainers are not liable for
+        any indirect or consequential damages arising from your use of the service. The service
+        is provided without warranty of any kind.
+      </P>
     ),
   },
   {
@@ -179,10 +187,10 @@ const RULES: Rule[] = [
     a: "#1aa9d6",
     title: "Termination",
     body: (
-      <p>
-        You may delete your account at any time by contacting us. We may suspend
-        or terminate access if these terms are violated.
-      </p>
+      <P>
+        You may delete your account at any time by contacting us. We may suspend or terminate
+        access if these terms are violated.
+      </P>
     ),
   },
   {
@@ -191,10 +199,10 @@ const RULES: Rule[] = [
     a: "#2560e6",
     title: "Changes",
     body: (
-      <p>
-        We may update these terms; the date above reflects the latest version.
-        Continued use after changes means you accept them.
-      </p>
+      <P>
+        We may update these terms; the date above reflects the latest version. Continued use
+        after changes means you accept them.
+      </P>
     ),
   },
   {
@@ -203,9 +211,9 @@ const RULES: Rule[] = [
     a: "#0f9d8f",
     title: "Contact",
     body: (
-      <p>
+      <P>
         Questions about these terms? Email{" "}
-        <a className={`${LINK} break-words`} href={`mailto:${CONTACT}`}>
+        <a className={LINK} href={`mailto:${CONTACT}`}>
           {CONTACT}
         </a>
         . See also our{" "}
@@ -213,7 +221,7 @@ const RULES: Rule[] = [
           Privacy Policy
         </Link>
         .
-      </p>
+      </P>
     ),
   },
 ];
@@ -222,255 +230,198 @@ const RAIL_ITEMS: RailItem[] = RULES.map((r) => ({ id: r.id, title: r.title }));
 
 export default function TermsPage() {
   return (
-    <div className="relative mx-auto max-w-6xl overflow-x-clip px-4 pt-28 pb-24 sm:px-6 lg:px-8">
-      {/* ambient glows */}
-      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
-        <div
-          className="absolute -top-16 -left-24 h-72 w-72 rounded-full blur-3xl"
-          style={{
-            background:
-              "radial-gradient(circle,rgba(37,96,230,0.16),transparent 70%)",
-          }}
-        />
-        <div
-          className="absolute top-40 -right-24 h-80 w-80 rounded-full blur-3xl"
-          style={{
-            background:
-              "radial-gradient(circle,rgba(26,169,214,0.14),transparent 70%)",
-          }}
-        />
-        <div
-          className="absolute bottom-24 left-1/3 h-72 w-72 rounded-full blur-3xl"
-          style={{
-            background:
-              "radial-gradient(circle,rgba(139,127,255,0.12),transparent 70%)",
-          }}
-        />
-      </div>
+    <div className="relative overflow-x-clip">
+      <Glow
+        blobs={[
+          { size: "560px", pos: { left: "-170px", top: "-160px" }, color: "#8bbcff", opacity: 0.5 },
+          { size: "520px", pos: { right: "-180px", top: "60px" }, color: "#6ff0ea", opacity: 0.4, delay: 2 },
+          { size: "480px", pos: { left: "20%", top: "760px" }, color: "#c8b6ff", opacity: 0.35, delay: 4 },
+        ]}
+      />
 
-      {/* ============================ HERO ============================ */}
-      <header className="grid gap-8 lg:grid-cols-[1fr_auto] lg:items-start">
-        <div>
-          <span className="aq-eyebrow aq-rise aq-rise-1">
-            <ScrollText className="h-3.5 w-3.5" aria-hidden />
-            The house rules
-          </span>
-          <h1 className="aq-rise aq-rise-2 mt-4 text-4xl font-bold tracking-tight sm:text-5xl">
-            Terms of{" "}
-            <span
-              className="aq-grad-anim"
-              style={{
-                background:
-                  "linear-gradient(120deg,#2560e6,#1aa9d6,#7c5cff,#2560e6)",
-                WebkitBackgroundClip: "text",
-                backgroundClip: "text",
-                color: "transparent",
-              }}
-            >
-              Service
-            </span>
-          </h1>
-          <p className="aq-rise aq-rise-3 mt-4 max-w-2xl text-lg leading-relaxed text-foreground/70">
-            LearnFRC is a free, independent place to learn the FIRST Robotics
-            Competition. These are the plain-language terms for using it — read
-            them like you&apos;d read the game manual before a match.
-          </p>
-          <div className="aq-rise aq-rise-4 mt-6 flex flex-wrap items-center gap-3">
-            <span className="aq-chip">
-              <RefreshCw className="h-3.5 w-3.5 text-primary" aria-hidden />
-              Last updated {UPDATED}
-            </span>
-            <Link href="/privacy" className="aq-chip">
-              <FileText className="h-3.5 w-3.5 text-primary" aria-hidden />
-              Privacy Policy
-            </Link>
-          </div>
-        </div>
+      <div className="mx-auto max-w-6xl px-4 pt-28 pb-24 sm:px-6 lg:px-8">
+        {/* ============================ HERO ============================ */}
+        <header className="max-w-2xl">
+          <RiseGroup>
+            <RiseItem>
+              <span className="ac-chip inline-flex items-center gap-2">
+                <ScrollText className="h-3.5 w-3.5 text-primary" aria-hidden />
+                <span className="ac-eyebrow">The house rules</span>
+              </span>
+            </RiseItem>
+            <RiseItem>
+              <h1 className="mt-4 text-balance font-display text-4xl font-extrabold leading-[1.05] tracking-tight sm:text-5xl">
+                Terms of <span style={BRAND_GRADIENT}>Service.</span>
+              </h1>
+            </RiseItem>
+            <RiseItem>
+              <p className="mt-4 max-w-xl text-pretty text-lg leading-relaxed text-foreground/70">
+                LearnFRC is a free, independent place to learn the FIRST Robotics Competition.
+                These are the plain-language terms for using it — read them like you&apos;d read
+                the game manual before a match.
+              </p>
+            </RiseItem>
+            <RiseItem>
+              <div className="mt-6 flex flex-wrap items-center gap-3">
+                <a href="#eligibility" className="ac-btn text-sm">
+                  Read the rules <ArrowRight className="h-4 w-4" aria-hidden />
+                </a>
+                <span className="ac-chip inline-flex items-center gap-2 text-xs font-medium text-foreground/75">
+                  <RefreshCw className="h-3.5 w-3.5 text-primary" aria-hidden />
+                  Last updated {UPDATED}
+                </span>
+                <Link
+                  href="/privacy"
+                  className="ac-chip inline-flex min-h-11 items-center gap-2 text-xs font-medium text-foreground/75 transition-colors hover:text-primary"
+                >
+                  <FileText className="h-3.5 w-3.5 text-primary" aria-hidden />
+                  Privacy Policy
+                </Link>
+              </div>
+            </RiseItem>
+            <RiseItem>
+              <div className="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground">
+                <span>
+                  <b className="font-semibold text-foreground">
+                    <AnimatedCounter value={RULES.length} />
+                  </b>{" "}
+                  short rules
+                </span>
+                <span>
+                  <b className="font-semibold text-foreground">
+                    <AnimatedCounter value={4} />
+                  </b>
+                  -minute read
+                </span>
+                <span>
+                  <b className="font-semibold text-foreground">$0</b> — always
+                </span>
+              </div>
+            </RiseItem>
+          </RiseGroup>
+        </header>
 
-        {/* floating pre-match briefing panel (signature-adjacent) */}
-        <aside
-          aria-hidden
-          className="aq-glass aq-float aq-sheen aq-rise aq-rise-5 hidden w-64 rounded-3xl p-5 lg:block"
-        >
-          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.1em] text-foreground/70">
-            <span
-              className="aq-pulse inline-block h-2 w-2 rounded-full"
-              style={{ background: "var(--success)" }}
+        {/* intro callout */}
+        <Reveal>
+          <div className="ac-glass relative mt-10 flex items-start gap-4 overflow-hidden p-6 sm:p-8">
+            <div
+              aria-hidden
+              className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-[radial-gradient(circle,rgba(26,169,214,0.22),transparent_70%)] blur-2xl"
             />
-            Pre-match briefing
-          </div>
-
-          {/* reading-time ring */}
-          <div className="mt-5 flex items-center gap-4">
-            <div className="relative h-16 w-16 shrink-0">
-              <svg viewBox="0 0 36 36" className="h-16 w-16 -rotate-90">
-                <circle
-                  cx="18"
-                  cy="18"
-                  r="15.5"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="3"
-                  className="text-border"
-                />
-                <circle
-                  cx="18"
-                  cy="18"
-                  r="15.5"
-                  fill="none"
-                  stroke="url(#terms-ring)"
-                  strokeWidth="3"
-                  strokeLinecap="round"
-                  className="aq-ring-anim"
-                  style={
-                    { strokeDasharray: 97.4, strokeDashoffset: 20 } as CSSProperties
-                  }
-                />
-                <defs>
-                  <linearGradient id="terms-ring" x1="0" y1="0" x2="1" y2="1">
-                    <stop offset="0" stopColor="#2560e6" />
-                    <stop offset="1" stopColor="#1aa9d6" />
-                  </linearGradient>
-                </defs>
-              </svg>
-              <span className="absolute inset-0 grid place-items-center text-sm font-bold text-foreground">
-                <Clock className="h-5 w-5 text-primary" aria-hidden />
-              </span>
-            </div>
-            <p className="text-xs leading-snug text-foreground/70">
-              A{" "}
-              <span className="font-semibold text-foreground">
-                <AnimatedCounter value={4} />
-              </span>
-              -minute read across{" "}
-              <span className="font-semibold text-foreground">
-                <AnimatedCounter value={RULES.length} />
-              </span>{" "}
-              short sections.
+            <span
+              className="ac-badge grid h-12 w-12 shrink-0 place-items-center"
+              style={{ "--a": "#2560e6" } as CSSProperties}
+            >
+              <Handshake className="h-6 w-6" strokeWidth={2.1} aria-hidden />
+            </span>
+            <p className="relative text-[16px] leading-relaxed text-foreground/85">
+              Welcome to LearnFRC. By creating an account or using the service you agree to these
+              terms. If you don&apos;t agree, that&apos;s okay — just don&apos;t use the service.
+              We&apos;ll keep this short and gracious.
             </p>
           </div>
+        </Reveal>
 
-          {/* stat count-ups */}
-          <div className="mt-5 grid grid-cols-2 gap-3">
-            <div className="rounded-2xl border border-border bg-card/60 p-3">
-              <div className="text-lg font-bold text-foreground">
-                <AnimatedCounter value={RULES.length} />
+        {/* ==================== RAIL + RULEBOOK BODY ==================== */}
+        <div className="mt-10 gap-10 lg:grid lg:grid-cols-[15rem_1fr]">
+          {/* signature: sticky rulebook navigator (scroll-spy + progress ring) */}
+          <div className="hidden lg:block">
+            <div className="sticky top-28">
+              <div className="ac-card p-5">
+                <ContentsRail items={RAIL_ITEMS} contact={CONTACT} />
               </div>
-              <div className="text-[11px] text-foreground/70">house rules</div>
-            </div>
-            <div className="rounded-2xl border border-border bg-card/60 p-3">
-              <div className="text-lg font-bold text-foreground">
-                <AnimatedCounter value={100} suffix="%" />
-              </div>
-              <div className="text-[11px] text-foreground/70">free, always</div>
             </div>
           </div>
 
-          {/* plain-language bar */}
-          <div className="mt-4">
-            <div className="mb-1 flex items-center justify-between text-[11px] text-foreground/70">
-              <span>Plain language</span>
-              <span className="font-semibold text-foreground">
-                <AnimatedCounter value={100} suffix="%" />
+          {/* mobile jump menu — native disclosure, no JS required */}
+          <details className="ac-card group mb-6 p-4 lg:hidden">
+            <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 text-sm font-semibold text-foreground marker:content-none [&::-webkit-details-marker]:hidden">
+              <span className="inline-flex items-center gap-2">
+                <ScrollText className="h-4 w-4 text-primary" aria-hidden />
+                Jump to a section
               </span>
-            </div>
-            <div className="h-2 w-full overflow-hidden rounded-full bg-border">
-              <div
-                className="aq-bar-anim h-full rounded-full"
-                style={{
-                  width: "100%",
-                  background: "linear-gradient(90deg,#2560e6,#1aa9d6)",
-                }}
-              />
-            </div>
-          </div>
-        </aside>
-      </header>
+              <ArrowRight className="h-4 w-4 text-primary transition-transform group-open:rotate-90" aria-hidden />
+            </summary>
+            <ol className="mt-3 space-y-1 border-t border-border pt-3">
+              {RAIL_ITEMS.map((it, i) => (
+                <li key={it.id}>
+                  <a
+                    href={`#${it.id}`}
+                    className="flex min-h-11 items-center gap-3 rounded-xl px-2 text-sm text-foreground/75 transition-colors hover:bg-primary/5 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                  >
+                    <span className="grid h-6 w-6 shrink-0 place-items-center rounded-lg bg-primary/10 text-[11px] font-bold text-primary">
+                      {i + 1}
+                    </span>
+                    {it.title}
+                  </a>
+                </li>
+              ))}
+            </ol>
+          </details>
 
-      {/* intro callout */}
-      <div className="aq-reveal aq-glass aq-sheen mt-12 flex items-start gap-4 rounded-3xl p-6 sm:p-8">
-        <span className="aq-icon aq-badge-bob grid h-12 w-12 shrink-0 place-items-center">
-          <Handshake className="h-6 w-6" strokeWidth={2.1} aria-hidden />
-        </span>
-        <p className="text-[16px] leading-relaxed text-foreground/85">
-          Welcome to LearnFRC. By creating an account or using the service you
-          agree to these terms. If you don&apos;t agree, that&apos;s okay — just
-          don&apos;t use the service. We&apos;ll keep this short and gracious.
-        </p>
-      </div>
+          {/* numbered rulebook sections */}
+          <RevealGroup className="space-y-5">
+            {RULES.map((rule, i) => {
+              const RuleIcon = rule.icon;
+              return (
+                <RevealItem key={rule.id}>
+                  <Hover lift={-3} scale={1.005}>
+                    <section id={rule.id} className="ac-card group scroll-mt-28 p-6 sm:p-8">
+                      <div className="flex items-center gap-4">
+                        <span
+                          className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-primary/10 font-display text-[15px] font-extrabold tabular-nums text-primary"
+                          aria-hidden
+                        >
+                          {i + 1}
+                        </span>
+                        <span
+                          className="ac-badge inline-flex h-11 w-11 shrink-0 items-center justify-center transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6"
+                          style={{ "--a": rule.a } as CSSProperties}
+                          aria-hidden
+                        >
+                          <RuleIcon className="h-5 w-5" strokeWidth={2.2} />
+                        </span>
+                        <h2 className="font-display text-xl font-bold tracking-tight sm:text-2xl">
+                          {rule.title}
+                        </h2>
+                      </div>
+                      <div className="mt-4">{rule.body}</div>
+                    </section>
+                  </Hover>
+                </RevealItem>
+              );
+            })}
 
-      {/* ==================== RAIL + MANUAL BODY ==================== */}
-      <div className="mt-10 gap-10 lg:grid lg:grid-cols-[15rem_1fr]">
-        {/* signature: sticky "match plan" contents rail (scroll-spy) */}
-        <div className="hidden lg:block">
-          <div className="sticky top-28">
-            <div className="aq-card rounded-3xl p-5">
-              <ContentsRail items={RAIL_ITEMS} />
-            </div>
-          </div>
+            {/* closing contact CTA */}
+            <RevealItem>
+              <div className="ac-card flex flex-col items-start gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-3">
+                  <span
+                    className="ac-badge grid h-11 w-11 shrink-0 place-items-center"
+                    style={{ "--a": "#0f9d8f" } as CSSProperties}
+                  >
+                    <Mail className="h-5 w-5" aria-hidden />
+                  </span>
+                  <p className="text-[15px] text-foreground/80">
+                    Still have a question about the rules? We&apos;re one email away.
+                  </p>
+                </div>
+                <a href={`mailto:${CONTACT}`} className="ac-btn text-sm">
+                  <Mail className="h-4 w-4" aria-hidden />
+                  Email us
+                </a>
+              </div>
+            </RevealItem>
+          </RevealGroup>
         </div>
 
-        {/* numbered manual sections */}
-        <div className="space-y-5">
-          {RULES.map((rule, i) => {
-            const RuleIcon = rule.icon;
-            return (
-              <section
-                key={rule.id}
-                id={rule.id}
-                className="aq-reveal aq-card aq-card-hover group scroll-mt-28 p-6 sm:p-8"
-                style={{ animationDelay: `${0.05 * i}s` } as CSSProperties}
-              >
-                <div className="flex items-center gap-4">
-                  <span
-                    className="aq-display grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-primary/10 text-[15px] font-extrabold tabular-nums text-primary"
-                    aria-hidden
-                  >
-                    {i + 1}
-                  </span>
-                  <span
-                    className="aq-badge aq-badge-bob inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6"
-                    style={{ "--a": rule.a } as CSSProperties}
-                    aria-hidden
-                  >
-                    <RuleIcon className="h-5 w-5" strokeWidth={2.2} />
-                  </span>
-                  <h2 className="font-display text-xl font-bold tracking-tight sm:text-2xl">
-                    {rule.title}
-                  </h2>
-                </div>
-                <div className="mt-4 space-y-3 text-[16px] leading-relaxed text-foreground/80">
-                  {rule.body}
-                </div>
-              </section>
-            );
-          })}
-
-          {/* closing contact CTA */}
-          <div className="aq-reveal aq-card-hover flex flex-col items-start gap-4 rounded-2xl border border-border bg-card/60 p-6 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-3">
-              <span className="aq-icon aq-badge-bob grid h-11 w-11 shrink-0 place-items-center">
-                <Mail className="h-5 w-5" aria-hidden />
-              </span>
-              <p className="text-[15px] text-foreground/80">
-                Still have a question about the rules? We&apos;re one email away.
-              </p>
-            </div>
-            <a
-              href={`mailto:${CONTACT}`}
-              className="aq-cta inline-flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold"
-            >
-              <Mail className="h-4 w-4" aria-hidden />
-              Email us
-            </a>
-          </div>
-        </div>
+        <Reveal>
+          <p className="mx-auto mt-10 max-w-3xl text-center text-sm leading-relaxed text-muted-foreground">
+            LearnFRC is an independent educational project and is not affiliated with or endorsed
+            by FIRST®. FIRST® and FRC® are trademarks of FIRST.
+          </p>
+        </Reveal>
       </div>
-
-      <p className="aq-reveal mx-auto mt-10 max-w-3xl text-sm leading-relaxed text-muted-foreground">
-        LearnFRC is an independent educational project and is not affiliated with
-        or endorsed by FIRST®. FIRST® and FRC® are trademarks of FIRST.
-      </p>
     </div>
   );
 }

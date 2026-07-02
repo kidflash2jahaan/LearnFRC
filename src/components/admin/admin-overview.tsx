@@ -20,7 +20,7 @@ import { cn } from "@/lib/utils";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { AnimatedCounter } from "@/components/animated-counter";
-import { Stagger, StaggerItem } from "@/components/motion/reveal";
+import { RevealGroup, RevealItem } from "@/components/motion/primitives";
 import { useStaticMotion } from "@/components/perf-mode";
 import type { AdminUser, AdminTeam } from "@/lib/admin";
 
@@ -54,9 +54,9 @@ function PanelShell({
 }) {
   const stat = useStaticMotion();
   const inner = (
-    <div className="aq-card p-5 sm:p-6">
+    <div className="ac-card p-5 sm:p-6">
       <div className="mb-4 flex items-center justify-between gap-3">
-        <h2 className="aq-display text-lg font-semibold text-foreground">
+        <h2 className="font-display text-lg font-semibold text-foreground">
           {title}
         </h2>
         {count != null && <Badge variant="outline">{count}</Badge>}
@@ -156,27 +156,25 @@ export function AdminOverview({
 
   return (
     <>
-      <Stagger className="mt-8 grid grid-cols-2 gap-4 lg:grid-cols-3">
+      <RevealGroup className="mt-8 grid grid-cols-2 gap-4 lg:grid-cols-3" stagger={0.05}>
         {cards.map((c) => {
           const clickable = !!c.panel;
           const active = clickable && open === c.panel;
           const card = (
             <div
               className={cn(
-                "aq-card group relative h-full overflow-hidden p-5 transition-transform",
-                clickable && "aq-card-hover cursor-pointer",
+                "ac-card group relative h-full overflow-hidden p-5 transition-transform duration-200",
+                clickable && "cursor-pointer hover:-translate-y-0.5",
                 active && "ring-2 ring-primary/50"
               )}
             >
               <div className="flex items-center justify-between">
-                <span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                   {c.label}
                 </span>
                 <span
-                  className={cn(
-                    "aq-icon flex h-8 w-8 items-center justify-center",
-                    active && "bg-primary/20"
-                  )}
+                  className="ac-badge flex h-8 w-8 items-center justify-center"
+                  style={{ "--a": "var(--primary)" } as CSSProperties}
                 >
                   {clickable ? (
                     <ChevronDown
@@ -184,13 +182,14 @@ export function AdminOverview({
                         "h-4 w-4 transition-transform",
                         active && "rotate-180"
                       )}
+                      aria-hidden="true"
                     />
                   ) : (
-                    <c.icon className="h-4 w-4" />
+                    <c.icon className="h-4 w-4" aria-hidden="true" />
                   )}
                 </span>
               </div>
-              <div className="aq-display mt-3 text-3xl font-bold tracking-tight text-foreground">
+              <div className="mt-3 font-display text-3xl font-bold tracking-tight text-foreground">
                 <AnimatedCounter value={c.value} />
               </div>
               <div className="mt-1 text-[13px] text-muted-foreground">
@@ -204,23 +203,24 @@ export function AdminOverview({
             </div>
           );
           return (
-            <StaggerItem key={c.label}>
+            <RevealItem key={c.label}>
               {clickable ? (
                 <button
                   type="button"
                   onClick={() => toggle(c.panel)}
                   aria-expanded={active}
-                  className="block w-full rounded-[20px] text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  aria-label={`${c.label}: ${c.value}. ${active ? "Hide" : "View"} details`}
+                  className="block w-full rounded-[20px] text-left outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                 >
                   {card}
                 </button>
               ) : (
                 card
               )}
-            </StaggerItem>
+            </RevealItem>
           );
         })}
-      </Stagger>
+      </RevealGroup>
 
       {open === "online" && (
         <PanelShell
@@ -251,13 +251,13 @@ export function AdminOverview({
                     <div className="min-w-0">
                       <div className="truncate font-medium">{u.name}</div>
                       {u.username && (
-                        <div className="truncate font-mono text-xs text-muted-foreground">
+                        <div className="truncate text-xs text-muted-foreground">
                           @{u.username}
                         </div>
                       )}
                     </div>
                   </div>
-                  <span className="shrink-0 font-mono text-xs text-muted-foreground">
+                  <span className="shrink-0 tabular-nums text-xs text-muted-foreground">
                     {relTime(u.lastSeen)}
                   </span>
                 </li>
@@ -292,17 +292,17 @@ export function AdminOverview({
                     <div className="min-w-0">
                       <div className="truncate font-medium">{r.name}</div>
                       {r.username && (
-                        <div className="truncate font-mono text-xs text-muted-foreground">
+                        <div className="truncate text-xs text-muted-foreground">
                           @{r.username}
                         </div>
                       )}
                     </div>
                   </div>
                   <span className="shrink-0 text-right">
-                    <span className="font-mono text-sm font-bold tabular-nums text-accent">
+                    <span className="text-sm font-bold tabular-nums text-primary">
                       {r.referrals}
                     </span>
-                    <span className="ml-1 font-mono text-[10px] font-medium uppercase text-muted-foreground">
+                    <span className="ml-1 text-[10px] font-medium uppercase text-muted-foreground">
                       referred
                     </span>
                   </span>
@@ -321,7 +321,7 @@ export function AdminOverview({
             <div className="max-h-[32rem] overflow-auto">
               <table className="w-full text-sm [&_th]:px-3 [&_td]:px-3 [&_th:first-child]:pl-0 [&_td:first-child]:pl-0 [&_th:last-child]:pr-0 [&_td:last-child]:pr-0">
                 <thead className="sticky top-0 bg-card">
-                  <tr className="border-b border-border text-left font-mono text-xs uppercase tracking-wider text-muted-foreground">
+                  <tr className="border-b border-border text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     <th className="pb-2 font-medium">Member</th>
                     <th className="pb-2 font-medium">Team</th>
                     <th className="pb-2 text-right font-medium">XP</th>
@@ -340,12 +340,12 @@ export function AdminOverview({
                           <Avatar name={u.full_name || u.username || u.email} seed={u.id} className="h-8 w-8" />
                           <div className="min-w-0">
                             <div className="truncate font-medium">{u.full_name || u.username || "Learner"}</div>
-                            <div className="truncate font-mono text-xs text-muted-foreground">{u.email}</div>
+                            <div className="truncate text-xs text-muted-foreground">{u.email}</div>
                           </div>
                         </div>
                       </td>
-                      <td className="py-3 font-mono text-muted-foreground">{u.team_number ? `#${u.team_number}` : "—"}</td>
-                      <td className="py-3 text-right font-mono text-accent">{u.xp}</td>
+                      <td className="py-3 tabular-nums text-muted-foreground">{u.team_number ? `#${u.team_number}` : "—"}</td>
+                      <td className="py-3 text-right tabular-nums font-semibold text-primary">{u.xp}</td>
                       <td className="py-3">
                         {u.confirmed ? (
                           <Badge variant="success">Verified</Badge>
@@ -353,7 +353,7 @@ export function AdminOverview({
                           <Badge variant="warning">Unverified</Badge>
                         )}
                       </td>
-                      <td className="py-3 text-right font-mono text-muted-foreground">
+                      <td className="py-3 text-right tabular-nums text-muted-foreground">
                         {new Date(u.created_at).toLocaleDateString()}
                       </td>
                     </tr>
@@ -373,7 +373,7 @@ export function AdminOverview({
             <div className="max-h-[32rem] overflow-auto">
               <table className="w-full text-sm [&_th]:px-3 [&_td]:px-3 [&_th:first-child]:pl-0 [&_td:first-child]:pl-0 [&_th:last-child]:pr-0 [&_td:last-child]:pr-0">
                 <thead className="sticky top-0 bg-card">
-                  <tr className="border-b border-border text-left font-mono text-xs uppercase tracking-wider text-muted-foreground">
+                  <tr className="border-b border-border text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     <th className="pb-2 font-medium">Team</th>
                     <th className="pb-2 text-right font-medium">Members</th>
                     <th className="pb-2 text-right font-medium">Lessons done</th>
@@ -385,9 +385,9 @@ export function AdminOverview({
                       key={t.teamNumber}
                       className="border-b border-border/60 transition-colors last:border-0 hover:bg-primary/[0.04]"
                     >
-                      <td className="py-3 font-mono font-medium text-foreground">#{t.teamNumber}</td>
-                      <td className="py-3 text-right font-mono">{t.members}</td>
-                      <td className="py-3 text-right font-mono text-accent">{t.completed}</td>
+                      <td className="py-3 tabular-nums font-medium text-foreground">#{t.teamNumber}</td>
+                      <td className="py-3 text-right tabular-nums">{t.members}</td>
+                      <td className="py-3 text-right tabular-nums font-semibold text-primary">{t.completed}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -408,7 +408,7 @@ export function AdminOverview({
             <div className="max-h-[32rem] overflow-auto">
               <table className="w-full text-sm [&_th]:px-3 [&_td]:px-3 [&_th:first-child]:pl-0 [&_td:first-child]:pl-0 [&_th:last-child]:pr-0 [&_td:last-child]:pr-0">
                 <thead className="sticky top-0 bg-card">
-                  <tr className="border-b border-border text-left font-mono text-xs uppercase tracking-wider text-muted-foreground">
+                  <tr className="border-b border-border text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     <th className="pb-2 font-medium">Member</th>
                     <th className="pb-2 font-medium">Lesson</th>
                     <th className="pb-2 font-medium">Department</th>
@@ -424,7 +424,7 @@ export function AdminOverview({
                       <td className="py-3 font-medium">{c.user}</td>
                       <td className="py-3">{c.lesson}</td>
                       <td className="py-3 text-muted-foreground">{c.dept}</td>
-                      <td className="py-3 text-right font-mono text-muted-foreground">
+                      <td className="py-3 text-right tabular-nums text-muted-foreground">
                         {new Date(c.at).toLocaleString()}
                       </td>
                     </tr>
@@ -447,7 +447,7 @@ export function AdminOverview({
             <div className="max-h-[32rem] overflow-auto">
               <table className="w-full text-sm [&_th]:px-3 [&_td]:px-3 [&_th:first-child]:pl-0 [&_td:first-child]:pl-0 [&_th:last-child]:pr-0 [&_td:last-child]:pr-0">
                 <thead className="sticky top-0 bg-card">
-                  <tr className="border-b border-border text-left font-mono text-xs uppercase tracking-wider text-muted-foreground">
+                  <tr className="border-b border-border text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     <th className="pb-2 font-medium">Email</th>
                     <th className="pb-2 text-right font-medium">Subscribed</th>
                   </tr>
@@ -458,8 +458,8 @@ export function AdminOverview({
                       key={i}
                       className="border-b border-border/60 transition-colors last:border-0 hover:bg-primary/[0.04]"
                     >
-                      <td className="py-3 font-mono">{s.email}</td>
-                      <td className="py-3 text-right font-mono text-muted-foreground">
+                      <td className="py-3">{s.email}</td>
+                      <td className="py-3 text-right tabular-nums text-muted-foreground">
                         {new Date(s.created_at).toLocaleDateString()}
                       </td>
                     </tr>
@@ -484,7 +484,7 @@ export function AdminOverview({
                 <div key={a.name}>
                   <div className="mb-1 flex items-center justify-between text-sm">
                     <span className="truncate">{a.name}</span>
-                    <span className="font-mono text-xs text-accent">
+                    <span className="tabular-nums text-xs font-semibold text-primary">
                       {a.earned}
                     </span>
                   </div>

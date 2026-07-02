@@ -12,6 +12,7 @@ import {
   ArrowRight,
   RotateCcw,
   Lock,
+  XCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { setLessonComplete } from "@/app/actions/progress";
@@ -108,13 +109,13 @@ export function LessonComplete({
     return (
       <div
         ref={completedRef}
-        className="aq-card relative mt-10 scroll-mt-24 overflow-hidden border-success/40 p-6 text-center"
+        className="ac-card relative mt-10 scroll-mt-24 overflow-hidden border-success/40 p-6 text-center"
       >
         <Confetti trigger={burst} />
-        <p className="aq-eyebrow mb-3 text-success">
+        <p className="ac-eyebrow mb-3 text-success">
           Complete
         </p>
-        <CheckCircle2 className="mx-auto h-10 w-10 text-success" />
+        <CheckCircle2 className="mx-auto h-10 w-10 text-success" aria-hidden />
         <h2 className="mt-3 font-display text-xl font-bold">Lesson complete</h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Nice work — your progress is saved.
@@ -123,12 +124,16 @@ export function LessonComplete({
           {nextHref && (
             <Button asChild variant="brand">
               <Link href={nextHref}>
-                Next lesson <ArrowRight className="h-4 w-4" />
+                Next lesson <ArrowRight className="h-4 w-4" aria-hidden />
               </Link>
             </Button>
           )}
           <Button variant="ghost" onClick={() => persist(false)} disabled={pending}>
-            {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Circle className="h-4 w-4" />}
+            {pending ? (
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+            ) : (
+              <Circle className="h-4 w-4" aria-hidden />
+            )}
             Mark as incomplete
           </Button>
         </div>
@@ -141,15 +146,15 @@ export function LessonComplete({
     return (
       <div
         id="lesson-quiz"
-        className="aq-card relative mt-10 scroll-mt-24 overflow-hidden"
+        className="ac-card relative mt-10 scroll-mt-24 overflow-hidden"
       >
         <Confetti trigger={burst} />
         <div className="p-6">
         <div className="flex items-center gap-2">
-          <ListChecks className="h-5 w-5 text-foreground" />
+          <ListChecks className="h-5 w-5 text-foreground" aria-hidden />
           <h2 className="font-display text-xl font-bold">Lesson quiz</h2>
-          <span className="aq-badge inline-flex items-center gap-1 border-magenta/40 bg-magenta/10 text-xs text-[#a21caf]">
-            <Lock className="h-3 w-3" /> Required
+          <span className="ac-badge inline-flex items-center gap-1 rounded-full text-xs" style={{ "--a": "#d64b8a" } as React.CSSProperties}>
+            <Lock className="h-3 w-3" aria-hidden /> Required
           </span>
         </div>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -161,20 +166,32 @@ export function LessonComplete({
             const selected = answers[qi];
             return (
               <div key={qi}>
-                <p id={`quiz-q-${qi}`} className="font-medium">
-                  <span className="mr-2 text-sm font-semibold tabular-nums text-foreground">
+                <p id={`quiz-q-${qi}`} className="flex flex-wrap items-center gap-2 font-medium">
+                  <span className="mr-0.5 text-sm font-semibold tabular-nums text-foreground">
                     {String(qi + 1).padStart(2, "0")}.
                   </span>
-                  {q.question}
+                  <span className="min-w-0 flex-1">{q.question}</span>
+                  {/* After grading, flag the QUESTION result only — the correct
+                      option is never revealed so retries stay a real test. */}
+                  {graded && selected !== q.answer && (
+                    <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-destructive/30 bg-destructive/10 px-2 py-0.5 text-xs font-semibold text-destructive">
+                      <XCircle className="h-3.5 w-3.5" aria-hidden /> Wrong
+                    </span>
+                  )}
+                  {graded && selected === q.answer && (
+                    <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-[#12b565]/30 bg-[#12b565]/10 px-2 py-0.5 text-xs font-semibold text-success">
+                      <CheckCircle2 className="h-3.5 w-3.5" aria-hidden /> Correct
+                    </span>
+                  )}
                 </p>
                 <div className="mt-3 grid gap-2" role="radiogroup" aria-labelledby={`quiz-q-${qi}`}>
                   {q.options.map((opt, oi) => {
                     const isSelected = selected === oi;
-                    const isCorrect = oi === q.answer;
+                    // Grade only the learner's OWN pick. Unselected options stay
+                    // neutral — including the correct one (never revealed).
                     let state = "idle";
                     if (graded) {
-                      if (isCorrect) state = "correct";
-                      else if (isSelected) state = "wrong";
+                      if (isSelected) state = oi === q.answer ? "correct" : "wrong";
                     } else if (isSelected) state = "selected";
                     return (
                       <button
@@ -183,15 +200,15 @@ export function LessonComplete({
                         role="radio"
                         aria-checked={isSelected}
                         aria-label={
-                          graded
-                            ? `${opt}${state === "correct" ? " — correct answer" : state === "wrong" ? " — incorrect" : ""}`
+                          graded && isSelected
+                            ? `${opt} — your answer, ${state === "correct" ? "correct" : "incorrect"}`
                             : opt
                         }
                         disabled={graded}
                         onClick={() => setAnswers((a) => ({ ...a, [qi]: oi }))}
                         className={cn(
-                          "flex items-center gap-3 rounded-xl border px-4 py-3 text-left text-sm transition-all",
-                          state === "idle" && "border-border hover:-translate-y-0.5 hover:border-accent/40 hover:bg-muted cursor-pointer",
+                          "flex min-h-[44px] items-center gap-3 rounded-2xl border px-4 py-3 text-left text-sm transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+                          state === "idle" && "border-border bg-card hover:-translate-y-0.5 hover:border-accent/40 hover:bg-muted cursor-pointer",
                           state === "selected" && "border-primary/60 bg-primary/10 cursor-pointer",
                           state === "correct" && "border-success/60 bg-success/10",
                           state === "wrong" && "border-destructive/60 bg-destructive/10"
@@ -213,9 +230,6 @@ export function LessonComplete({
                     );
                   })}
                 </div>
-                {graded && selected !== q.answer && q.explanation && (
-                  <p className="mt-2 text-sm text-muted-foreground">{q.explanation}</p>
-                )}
               </div>
             );
           })}
@@ -234,7 +248,7 @@ export function LessonComplete({
                 You got {correctCount}/{quiz.length}. Review the highlights and try again.
               </span>
               <Button variant="brand" onClick={retry}>
-                <RotateCcw className="h-4 w-4" /> Try again
+                <RotateCcw className="h-4 w-4" aria-hidden /> Try again
               </Button>
             </motion.div>
           ) : !graded ? (
@@ -245,7 +259,11 @@ export function LessonComplete({
                 disabled={!allAnswered || pending}
                 onClick={onSubmitQuiz}
               >
-                {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                {pending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                ) : (
+                  <CheckCircle2 className="h-4 w-4" aria-hidden />
+                )}
                 Submit &amp; complete
               </Button>
               {!allAnswered && (
@@ -263,9 +281,9 @@ export function LessonComplete({
 
   // ---- Fallback: lesson has no quiz yet → allow direct completion ----
   return (
-    <div className="aq-card relative mt-10 overflow-hidden p-6 text-center">
+    <div className="ac-card relative mt-10 overflow-hidden p-6 text-center">
       <Confetti trigger={burst} />
-      <p className="aq-eyebrow mb-2 text-foreground">
+      <p className="ac-eyebrow mb-2">
         Ready to finish
       </p>
       <h2 className="font-display text-lg font-semibold">Finished this lesson?</h2>
@@ -279,7 +297,11 @@ export function LessonComplete({
         onClick={() => persist(true)}
         disabled={pending}
       >
-        {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+        {pending ? (
+          <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+        ) : (
+          <CheckCircle2 className="h-4 w-4" aria-hidden />
+        )}
         Mark as complete
       </Button>
     </div>

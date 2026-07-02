@@ -25,10 +25,19 @@ import {
 import { getSession } from "@/lib/auth";
 import { deptMeta, inkFor } from "@/lib/departments";
 import { Icon } from "@/lib/icon-map";
-import { Markdown } from "@/components/markdown";
+import { Markdown, extractHeadings } from "@/components/markdown";
 import { LessonActions } from "@/components/lesson/lesson-actions";
 import { LessonComplete } from "@/components/lesson/lesson-complete";
-import { Reveal, Stagger, StaggerItem } from "@/components/motion/reveal";
+import {
+  Rise,
+  RiseGroup,
+  RiseItem,
+  Reveal,
+  RevealGroup,
+  RevealItem,
+  Hover,
+  Glow,
+} from "@/components/motion/primitives";
 import { AnimatedCounter } from "@/components/animated-counter";
 import { JsonLd } from "@/components/json-ld";
 import { cn } from "@/lib/utils";
@@ -36,6 +45,13 @@ import type { Resource, QuizQuestion } from "@/lib/types";
 import { ReadingRail } from "./_reading-rail";
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.systemerr.com";
+
+const BRAND_GRADIENT: CSSProperties = {
+  background: "linear-gradient(120deg, #2560e6, #1aa9d6)",
+  WebkitBackgroundClip: "text",
+  backgroundClip: "text",
+  color: "transparent",
+};
 
 export const dynamic = "force-dynamic";
 
@@ -103,28 +119,24 @@ export default async function LessonPage({
   const readMins = Math.max(1, Math.round((les.content?.split(/\s+/).length ?? 0) / 200));
   const deptGradient = `linear-gradient(135deg, ${meta.color}, ${meta.to})`;
   // --a: bright accent (fills/badges); --ai: darker same-hue tone for text.
-  const accentStyle = { "--a": meta.color, "--ai": inkFor(meta.color) } as CSSProperties;
+  const ink = inkFor(meta.color);
+  const accentStyle = { "--a": meta.color } as CSSProperties;
+
+  // Same extraction the Markdown renderer uses, so the rail's ids match the
+  // article's rendered heading ids exactly.
+  const headings = extractHeadings(les.content ?? "");
 
   const ARTICLE_ID = "lesson-body";
 
   return (
     <div className="relative overflow-x-clip">
-      {/* Full-width wrapper owns the glows so any clipping lands at the
-          viewport edge (invisible), not the max-w container edge (seam). */}
-      <div aria-hidden className="aq-glow -z-10">
-        <span
-          className="aq-float left-[7%] top-[6%] h-72 w-72 opacity-50"
-          style={{ background: "radial-gradient(circle, var(--primary), transparent 70%)" }}
-        />
-        <span
-          className="aq-float right-[6%] top-[26%] h-80 w-80 opacity-40"
-          style={{ background: `radial-gradient(circle, ${meta.color}, transparent 70%)`, animationDelay: "1.4s" }}
-        />
-        <span
-          className="aq-float bottom-[8%] left-[24%] h-72 w-72 opacity-30"
-          style={{ background: "radial-gradient(circle, var(--accent), transparent 70%)", animationDelay: "2.6s" }}
-        />
-      </div>
+      <Glow
+        blobs={[
+          { size: "620px", pos: { left: "5%", top: "-220px" }, color: "#2560e6", opacity: 0.4 },
+          { size: "560px", pos: { right: "0%", top: "10%" }, color: meta.color, opacity: 0.35, delay: 1.4 },
+          { size: "520px", pos: { left: "22%", top: "700px" }, color: "#1aa9d6", opacity: 0.25, delay: 2.6 },
+        ]}
+      />
 
       <JsonLd
         data={{
@@ -141,139 +153,160 @@ export default async function LessonPage({
 
       <div className="relative mx-auto max-w-6xl px-4 pt-28 pb-20 sm:px-6 lg:px-8">
         {/* breadcrumb */}
-        <nav
-          className="aq-rise aq-rise-1 flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground"
-          aria-label="Breadcrumb"
-        >
-          <Link href="/guides" className="transition-colors hover:text-primary">
-            Guides
-          </Link>
-          <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50" aria-hidden />
-          <Link
-            href={`/guides/${dept.slug}`}
-            className="transition-colors hover:text-primary"
+        <Rise>
+          <nav
+            className="flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground"
+            aria-label="Breadcrumb"
           >
-            {dept.name}
-          </Link>
-          <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50" aria-hidden />
-          <span className="truncate font-medium text-foreground">{les.title}</span>
-        </nav>
+            <Link href="/guides" className="transition-colors hover:text-primary">
+              Guides
+            </Link>
+            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50" aria-hidden />
+            <Link href={`/guides/${dept.slug}`} className="transition-colors hover:text-primary">
+              {dept.name}
+            </Link>
+            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50" aria-hidden />
+            <span className="truncate font-medium text-foreground">{les.title}</span>
+          </nav>
+        </Rise>
 
         {/* ============================ HERO ============================ */}
         <header className="mt-6">
-          <Stagger className="flex flex-wrap items-center gap-2.5" stagger={0.06}>
-            <StaggerItem>
+          <RiseGroup className="flex flex-wrap items-center gap-2.5">
+            <RiseItem>
               <Link
                 href={`/guides/${dept.slug}`}
-                className="aq-chip aq-card-hover gap-2 !py-1 !pl-1.5 !pr-3.5"
+                className="ac-chip inline-flex items-center gap-2 !py-1 !pl-1.5 !pr-3.5 transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                 style={accentStyle}
               >
-                <span className="aq-badge aq-badge-bob flex h-7 w-7 items-center justify-center rounded-full" style={accentStyle}>
+                <span className="ac-badge flex h-7 w-7 items-center justify-center rounded-full" style={accentStyle}>
                   <Icon name={meta.icon} className="h-4 w-4" aria-hidden />
                 </span>
-                <span className="font-medium">{dept.name}</span>
+                <span className="text-sm font-medium">{dept.name}</span>
               </Link>
-            </StaggerItem>
-            <StaggerItem className="aq-chip gap-1.5 text-xs">
-              <BookOpen className="h-3.5 w-3.5 text-primary" aria-hidden />
-              <span className="tabular-nums">{readMins} min read</span>
-            </StaggerItem>
-            <StaggerItem
-              className={cn(
-                "aq-chip gap-1.5 text-xs",
-                isCompleted ? "text-primary" : "text-[color:var(--ai)]"
-              )}
-              style={accentStyle}
-            >
-              {isCompleted ? (
-                <CheckCircle2 className="h-3.5 w-3.5" aria-hidden />
-              ) : (
-                <span className="aq-pulse inline-block h-2 w-2 rounded-full bg-accent" aria-hidden />
-              )}
-              {isCompleted ? "Completed" : "In progress"}
-            </StaggerItem>
-          </Stagger>
+            </RiseItem>
+            <RiseItem>
+              <span className="ac-chip inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                <BookOpen className="h-3.5 w-3.5 text-primary" aria-hidden />
+                <span className="tabular-nums">{readMins} min read</span>
+              </span>
+            </RiseItem>
+            <RiseItem>
+              <span
+                className="ac-chip inline-flex items-center gap-1.5 text-xs font-semibold"
+                style={{ color: isCompleted ? "var(--success)" : ink }}
+              >
+                {isCompleted ? (
+                  <CheckCircle2 className="h-3.5 w-3.5" aria-hidden />
+                ) : (
+                  <span
+                    className="inline-block h-2 w-2 animate-pulse rounded-full"
+                    style={{ background: meta.color }}
+                    aria-hidden
+                  />
+                )}
+                {isCompleted ? "Completed" : "In progress"}
+              </span>
+            </RiseItem>
+          </RiseGroup>
 
-          <h1 className="aq-rise aq-rise-2 mt-5 text-balance font-display text-3xl font-bold tracking-tight sm:text-4xl lg:text-[2.9rem] lg:leading-[1.06]">
-            <span className="aq-grad-anim bg-gradient-to-r from-[color:var(--primary)] to-[color:var(--accent)] bg-clip-text text-transparent">
-              {les.title}
-            </span>
-          </h1>
+          <Rise delay={0.05}>
+            <h1 className="mt-5 text-balance font-display text-3xl font-bold leading-[1.06] tracking-tight sm:text-4xl lg:text-[2.9rem]">
+              <span style={BRAND_GRADIENT}>{les.title}</span>
+            </h1>
+          </Rise>
           {les.summary && (
-            <p className="aq-rise aq-rise-3 mt-4 max-w-2xl text-pretty text-lg leading-relaxed text-foreground/70">
-              {les.summary}
-            </p>
+            <Rise delay={0.1}>
+              <p className="mt-4 max-w-2xl text-pretty text-lg leading-relaxed text-foreground/70">
+                {les.summary}
+              </p>
+            </Rise>
           )}
 
           {/* lesson meta + actions — the glass "control deck" for this lesson */}
-          <div className="aq-rise aq-rise-4 mt-7">
-            <div className="aq-glass aq-sheen rounded-3xl p-5 sm:p-6">
-              <div className="grid gap-5 sm:grid-cols-[auto_1fr] sm:items-center">
-                {/* animated stat cluster */}
-                <dl className="flex flex-wrap gap-x-7 gap-y-4">
-                  <div>
-                    <dt className="aq-eyebrow">Lesson</dt>
-                    <dd className="mt-1 font-display text-2xl font-bold text-foreground tabular-nums">
-                      <AnimatedCounter value={idx + 1} />
-                      <span className="text-lg text-muted-foreground"> / {flat.length}</span>
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="aq-eyebrow">Reward</dt>
-                    <dd className="mt-1 flex items-center gap-1.5 font-display text-2xl font-bold text-foreground">
-                      <Zap className="h-5 w-5 text-primary" aria-hidden />
-                      +10<span className="text-lg text-muted-foreground">XP</span>
-                    </dd>
-                  </div>
-                  <div className="hidden sm:block">
-                    <dt className="aq-eyebrow">Module</dt>
-                    <dd className="mt-1 font-display text-base font-semibold text-foreground" title={mod.title}>
-                      {mod.title}
-                    </dd>
-                  </div>
-                </dl>
+          <Rise delay={0.15}>
+            <div className="mt-7">
+              <div className="ac-glass relative overflow-hidden rounded-3xl p-5 sm:p-6">
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full opacity-30 blur-2xl"
+                  style={{ background: `radial-gradient(circle, ${meta.color}, transparent 70%)` }}
+                />
+                <div className="relative grid gap-5 sm:grid-cols-[auto_1fr] sm:items-center">
+                  {/* stat cluster */}
+                  <dl className="flex flex-wrap gap-x-7 gap-y-4">
+                    <div>
+                      <dt className="ac-eyebrow">Lesson</dt>
+                      <dd className="mt-1 font-display text-2xl font-bold tabular-nums text-foreground">
+                        <AnimatedCounter value={idx + 1} />
+                        <span className="text-lg text-muted-foreground"> / {flat.length}</span>
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="ac-eyebrow">Reward</dt>
+                      <dd className="mt-1 flex items-center gap-1.5 font-display text-2xl font-bold text-foreground">
+                        <Zap className="h-5 w-5 text-primary" aria-hidden />
+                        +10<span className="text-lg text-muted-foreground">XP</span>
+                      </dd>
+                    </div>
+                    <div className="hidden sm:block">
+                      <dt className="ac-eyebrow">Module</dt>
+                      <dd
+                        className="mt-1 max-w-[16rem] truncate font-display text-base font-semibold text-foreground"
+                        title={mod.title}
+                      >
+                        {mod.title}
+                      </dd>
+                    </div>
+                  </dl>
 
-                {/* actions */}
-                <div className="sm:justify-self-end">
-                  <LessonActions
-                    lessonId={les.id}
-                    deptSlug={dept.slug}
-                    lessonPath={lessonPath}
-                    authed={!!user}
-                    initialCompleted={isCompleted}
-                    initialBookmarked={bookmarks.has(les.id)}
-                    quizRequired={quiz.length > 0}
-                  />
+                  {/* actions */}
+                  <div className="sm:justify-self-end">
+                    <LessonActions
+                      lessonId={les.id}
+                      deptSlug={dept.slug}
+                      lessonPath={lessonPath}
+                      authed={!!user}
+                      initialCompleted={isCompleted}
+                      initialBookmarked={bookmarks.has(les.id)}
+                      quizRequired={quiz.length > 0}
+                    />
+                  </div>
                 </div>
+                {!user && (
+                  <p className="relative mt-4 flex items-center gap-1.5 border-t border-white/40 pt-4 text-sm text-muted-foreground">
+                    <Info className="h-4 w-4 shrink-0 text-primary" aria-hidden />
+                    <span>
+                      <Link
+                        href={`/login?next=${encodeURIComponent(lessonPath)}`}
+                        className="font-medium text-primary hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                      >
+                        Sign in
+                      </Link>{" "}
+                      to track progress, earn XP, and save lessons.
+                    </span>
+                  </p>
+                )}
               </div>
-              {!user && (
-                <p className="mt-4 flex items-center gap-1.5 border-t border-white/40 pt-4 text-sm text-muted-foreground">
-                  <Info className="h-4 w-4 shrink-0 text-primary" aria-hidden />
-                  <span>
-                    <Link
-                      href={`/login?next=${encodeURIComponent(lessonPath)}`}
-                      className="font-medium text-primary hover:underline"
-                    >
-                      Sign in
-                    </Link>{" "}
-                    to track progress, earn XP, and save lessons.
-                  </span>
-                </p>
-              )}
             </div>
-          </div>
+          </Rise>
         </header>
 
         {/* ===================== BODY: rail + article ==================== */}
         <div className="mt-10 grid gap-10 lg:grid-cols-[300px_minmax(0,1fr)] lg:gap-12">
-          {/* signature: sticky live reading rail (desktop) */}
+          {/* signature: sticky live contents/progress rail (desktop) */}
           <aside className="hidden lg:block">
             <div className="sticky top-24">
               <ReadingRail
-                articleId={ARTICLE_ID}
                 deptName={dept.name}
-                pct={user ? pct : 0}
+                deptIcon={meta.icon}
                 accent={meta.color}
+                headings={headings}
+                authed={!!user}
+                pct={pct}
+                doneInDept={doneInDept}
+                totalInDept={total}
+                lessonPath={lessonPath}
               />
             </div>
           </aside>
@@ -287,20 +320,16 @@ export default async function LessonPage({
             {/* key takeaways */}
             {takeaways.length > 0 && (
               <Reveal>
-                <section className="aq-card aq-card-hover aq-reveal mt-10 p-6">
+                <section className="ac-card mt-10 p-6">
                   <h2 className="flex items-center gap-2.5 font-display text-xl font-semibold">
-                    <span className="aq-icon aq-badge-bob h-9 w-9">
+                    <span className="ac-badge flex h-9 w-9 items-center justify-center" style={accentStyle}>
                       <Lightbulb className="h-5 w-5" aria-hidden />
                     </span>
                     Key takeaways
                   </h2>
                   <ul className="mt-4 space-y-3">
                     {takeaways.map((t, i) => (
-                      <li
-                        key={i}
-                        className="aq-reveal flex gap-3 text-foreground/85"
-                        style={{ animationDelay: `${i * 0.07}s` }}
-                      >
+                      <li key={i} className="flex gap-3 text-foreground/85">
                         <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden />
                         <span className="leading-relaxed">{t}</span>
                       </li>
@@ -313,11 +342,11 @@ export default async function LessonPage({
             {/* resources */}
             {resources.length > 0 && (
               <Reveal>
-                <section className="aq-card aq-card-hover aq-reveal mt-8 p-6">
+                <section className="ac-card mt-8 p-6">
                   <h2 className="flex items-center gap-2.5 font-display text-xl font-semibold">
                     <span
-                      className="aq-icon aq-badge-bob h-9 w-9"
-                      style={{ background: "color-mix(in srgb, var(--accent) 12%, transparent)", color: "var(--accent)" }}
+                      className="ac-badge flex h-9 w-9 items-center justify-center"
+                      style={{ "--a": "#1aa9d6" } as CSSProperties}
                     >
                       <ExternalLink className="h-5 w-5" aria-hidden />
                     </span>
@@ -325,15 +354,18 @@ export default async function LessonPage({
                   </h2>
                   <ul className="mt-4 space-y-2.5">
                     {resources.map((r, i) => (
-                      <li key={i} className="aq-reveal" style={{ animationDelay: `${i * 0.06}s` }}>
+                      <li key={i}>
                         <a
                           href={r.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="group inline-flex items-start gap-2 text-foreground/85 transition-colors hover:text-[color:var(--ai)]"
-                          style={accentStyle}
+                          className="group inline-flex min-h-9 items-start gap-2 text-foreground/85 transition-colors hover:text-[color:var(--ai)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                          style={{ "--ai": ink } as CSSProperties}
                         >
-                          <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-accent/70 transition-transform group-hover:translate-x-0.5" aria-hidden />
+                          <ChevronRight
+                            className="mt-1 h-4 w-4 shrink-0 text-accent transition-transform group-hover:translate-x-0.5"
+                            aria-hidden
+                          />
                           <span className="underline decoration-border underline-offset-2 group-hover:decoration-accent">
                             {r.title}
                           </span>
@@ -358,107 +390,113 @@ export default async function LessonPage({
 
             {/* mobile: reading progress + dept progress card */}
             {user && (
-              <div className="mt-10 lg:hidden">
-                <div className="aq-card aq-sheen p-5">
-                  <div className="aq-eyebrow">Your progress</div>
-                  <div className="mt-3 flex items-baseline gap-2">
-                    <span className="font-display text-3xl font-bold text-foreground tabular-nums">
-                      {pct}%
-                    </span>
-                    <span className="text-sm text-muted-foreground">through {dept.name}</span>
-                  </div>
-                  <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
-                    <div
-                      className="h-full rounded-full"
-                      style={{ width: `${pct}%`, backgroundImage: deptGradient }}
-                    />
-                  </div>
-                  <div className="mt-2 text-xs text-muted-foreground tabular-nums">
-                    {doneInDept} / {total} lessons complete
+              <Reveal>
+                <div className="mt-10 lg:hidden">
+                  <div className="ac-card p-5">
+                    <div className="ac-eyebrow">Your progress</div>
+                    <div className="mt-3 flex items-baseline gap-2">
+                      <span className="font-display text-3xl font-bold tabular-nums text-foreground">{pct}%</span>
+                      <span className="text-sm text-muted-foreground">through {dept.name}</span>
+                    </div>
+                    <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
+                      <div
+                        className="h-full rounded-full"
+                        style={{ width: `${pct}%`, backgroundImage: deptGradient }}
+                      />
+                    </div>
+                    <div className="mt-2 text-xs tabular-nums text-muted-foreground">
+                      {doneInDept} / {total} lessons complete
+                    </div>
                   </div>
                 </div>
-              </div>
+              </Reveal>
             )}
 
             {/* prev / next */}
-            <Stagger className="mt-10 grid gap-4 sm:grid-cols-2" stagger={0.08}>
+            <RevealGroup className="mt-10 grid gap-4 sm:grid-cols-2">
               {prev ? (
-                <StaggerItem>
-                  <Link
-                    href={`/guides/${dept.slug}/${prev.moduleSlug}/${prev.slug}`}
-                    className="aq-card aq-card-hover group flex h-full items-center gap-3 p-5"
-                  >
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground transition-colors group-hover:border-primary/50 group-hover:text-primary">
-                      <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" aria-hidden />
-                    </span>
-                    <span className="min-w-0">
-                      <small className="aq-eyebrow block">Previous</small>
-                      <span className="line-clamp-1 font-display font-semibold group-hover:text-primary">
-                        {prev.title}
+                <RevealItem>
+                  <Hover className="h-full" lift={-3}>
+                    <Link
+                      href={`/guides/${dept.slug}/${prev.moduleSlug}/${prev.slug}`}
+                      className="ac-card group flex h-full items-center gap-3 p-5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                    >
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground transition-colors group-hover:border-primary/50 group-hover:text-primary">
+                        <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" aria-hidden />
                       </span>
-                    </span>
-                  </Link>
-                </StaggerItem>
+                      <span className="min-w-0">
+                        <small className="ac-eyebrow block">Previous</small>
+                        <span className="line-clamp-1 font-display font-semibold group-hover:text-primary">
+                          {prev.title}
+                        </span>
+                      </span>
+                    </Link>
+                  </Hover>
+                </RevealItem>
               ) : (
                 <span />
               )}
               {next ? (
-                <StaggerItem>
-                  <Link
-                    href={`/guides/${dept.slug}/${next.moduleSlug}/${next.slug}`}
-                    className="aq-card aq-card-hover group flex h-full flex-row-reverse items-center gap-3 p-5 text-right"
-                  >
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground transition-colors group-hover:border-primary/50 group-hover:text-primary">
-                      <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" aria-hidden />
-                    </span>
-                    <span className="min-w-0">
-                      <small className="aq-eyebrow block">Next up</small>
-                      <span className="line-clamp-1 font-display font-semibold group-hover:text-primary">
-                        {next.title}
+                <RevealItem>
+                  <Hover className="h-full" lift={-3}>
+                    <Link
+                      href={`/guides/${dept.slug}/${next.moduleSlug}/${next.slug}`}
+                      className="ac-card group flex h-full flex-row-reverse items-center gap-3 p-5 text-right focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                    >
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground transition-colors group-hover:border-primary/50 group-hover:text-primary">
+                        <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" aria-hidden />
                       </span>
-                    </span>
-                  </Link>
-                </StaggerItem>
+                      <span className="min-w-0">
+                        <small className="ac-eyebrow block">Next up</small>
+                        <span className="line-clamp-1 font-display font-semibold group-hover:text-primary">
+                          {next.title}
+                        </span>
+                      </span>
+                    </Link>
+                  </Hover>
+                </RevealItem>
               ) : (
-                <StaggerItem>
-                  <Link
-                    href={`/guides/${dept.slug}`}
-                    className="aq-card aq-card-hover group flex h-full flex-row-reverse items-center gap-3 p-5 text-right"
-                  >
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground transition-colors group-hover:border-primary/50 group-hover:text-primary">
-                      <Trophy className="h-4 w-4" aria-hidden />
-                    </span>
-                    <span className="min-w-0">
-                      <small className="aq-eyebrow block">Finish</small>
-                      <span className="line-clamp-1 font-display font-semibold group-hover:text-primary">
-                        Back to {dept.name}
+                <RevealItem>
+                  <Hover className="h-full" lift={-3}>
+                    <Link
+                      href={`/guides/${dept.slug}`}
+                      className="ac-card group flex h-full flex-row-reverse items-center gap-3 p-5 text-right focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                    >
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground transition-colors group-hover:border-primary/50 group-hover:text-primary">
+                        <Trophy className="h-4 w-4" aria-hidden />
                       </span>
-                    </span>
-                  </Link>
-                </StaggerItem>
+                      <span className="min-w-0">
+                        <small className="ac-eyebrow block">Finish</small>
+                        <span className="line-clamp-1 font-display font-semibold group-hover:text-primary">
+                          Back to {dept.name}
+                        </span>
+                      </span>
+                    </Link>
+                  </Hover>
+                </RevealItem>
               )}
-            </Stagger>
+            </RevealGroup>
 
             {/* full department contents — collapsible, all breakpoints */}
             <Reveal>
-              <details className="aq-card aq-reveal mt-10 overflow-hidden">
-                <summary className="flex cursor-pointer list-none items-center gap-2.5 p-5 font-display text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
-                  <span
-                    className="aq-badge flex h-9 w-9 items-center justify-center rounded-xl"
-                    style={accentStyle}
-                  >
+              <details className="ac-card mt-10 overflow-hidden">
+                <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2.5 p-5 font-display text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+                  <span className="ac-badge flex h-9 w-9 items-center justify-center" style={accentStyle}>
                     <ListTree className="h-4 w-4" aria-hidden />
                   </span>
                   <span className="min-w-0 flex-1 truncate">
                     All {flat.length} lessons in {dept.name}
                   </span>
-                  <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform [details[open]_&]:rotate-90" aria-hidden />
+                  <ChevronRight
+                    className="h-4 w-4 shrink-0 text-muted-foreground transition-transform [details[open]_&]:rotate-90"
+                    aria-hidden
+                  />
                 </summary>
                 <div className="space-y-4 border-t border-border p-4 sm:columns-2 sm:gap-6 sm:[&>div]:break-inside-avoid">
                   {dept.modules.map((m, mi) => (
                     <div key={m.id} className="mb-4">
-                      <div className="aq-eyebrow px-1">
-                        {String(mi + 1).padStart(2, "0")} · {m.title}
+                      <div className="ac-eyebrow px-1">
+                        {String(mi + 1).padStart(2, "0")} &middot; {m.title}
                       </div>
                       <ul className="mt-1 space-y-0.5">
                         {m.lessons.map((l) => {
@@ -470,7 +508,7 @@ export default async function LessonPage({
                                 href={`/guides/${dept.slug}/${m.slug}/${l.slug}`}
                                 aria-current={active ? "page" : undefined}
                                 className={cn(
-                                  "flex min-h-[44px] items-center gap-2 rounded-xl px-2.5 py-2 text-sm transition-colors",
+                                  "flex min-h-11 items-center gap-2 rounded-xl px-2.5 py-2 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
                                   active
                                     ? "bg-primary/10 font-medium text-primary"
                                     : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"

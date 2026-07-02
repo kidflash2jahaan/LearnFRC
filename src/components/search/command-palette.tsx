@@ -139,13 +139,12 @@ export function CommandPalette() {
   return (
     <DialogPrimitive.Root open={open} onOpenChange={setOpen}>
       <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className="fixed inset-0 z-[60] bg-[#182338]/25 backdrop-blur-sm data-[state=open]:animate-in data-[state=open]:fade-in-0" />
+        <DialogPrimitive.Overlay className="fixed inset-0 z-[60] bg-[#e6eefb]/60 backdrop-blur-md data-[state=open]:animate-in data-[state=open]:fade-in-0" />
         <DialogPrimitive.Content
           onKeyDown={onKeyDown}
           className={cn(
-            "fixed left-1/2 top-[12vh] z-[61] w-[92vw] max-w-xl -translate-x-1/2",
-            "overflow-hidden rounded-[20px] border border-[rgba(255,255,255,.85)] bg-popover shadow-[0_28px_64px_rgba(38,78,150,.2)]",
-            "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95"
+            "ac-glass fixed left-1/2 top-[12vh] z-[61] w-[92vw] max-w-xl -translate-x-1/2 overflow-hidden p-0",
+            "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=open]:slide-in-from-top-2"
           )}
         >
           <DialogPrimitive.Title className="sr-only">Search LearnFRC</DialogPrimitive.Title>

@@ -62,14 +62,20 @@ export function AuthForm({
 
   const container = {
     hidden: {},
-    show: { transition: { staggerChildren: 0.06, delayChildren: 0.04 } },
+    show: {
+      transition: reduce
+        ? { staggerChildren: 0, delayChildren: 0 }
+        : { staggerChildren: 0.06, delayChildren: 0.04 },
+    },
   };
-  const item = reduce
-    ? { hidden: { opacity: 0 }, show: { opacity: 1 } }
-    : {
-        hidden: { opacity: 0, y: 12 },
-        show: { opacity: 1, y: 0, transition: { duration: 0.45, ease: EASE } },
-      };
+  const item = {
+    hidden: { opacity: 0, y: 12 },
+    show: {
+      opacity: 1,
+      y: 0,
+      transition: reduce ? { duration: 0 } : { duration: 0.45, ease: EASE },
+    },
+  };
 
   return (
     <motion.form

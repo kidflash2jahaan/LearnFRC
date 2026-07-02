@@ -30,12 +30,15 @@ export function AutoRefresh({ seconds = 30 }: { seconds?: number }) {
   }, [router, seconds]);
 
   return (
-    <span className="aq-chip inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-wider text-primary">
-      <span className="relative flex h-2 w-2">
+    <span
+      role="status"
+      className="ac-chip inline-flex min-h-11 items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-primary"
+    >
+      <span className="relative flex h-2 w-2" aria-hidden="true">
         <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
         <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
       </span>
-      Live · auto-updating
+      Live &middot; auto-updating
     </span>
   );
 }

@@ -4,7 +4,7 @@ import * as React from "react";
 import { motion } from "framer-motion";
 import { Users2 } from "lucide-react";
 import { AnimatedCounter } from "@/components/animated-counter";
-import { Podium, LeaderList, type PodiumEntry } from "./podium";
+import { Podium, LeaderList, ROW_COLS, type PodiumEntry } from "./podium";
 import { cn } from "@/lib/utils";
 
 export type TeamRow = {
@@ -74,11 +74,11 @@ export function LeaderboardTabs({
 
   return (
     <div>
-      {/* Tab switcher — Arena Clay clay-glass segmented control */}
+      {/* Tab switcher — clay-glass segmented control */}
       <div
         role="tablist"
         aria-label="Leaderboard views"
-        className="aq-glass mx-auto mt-10 flex w-full max-w-md items-center gap-1 rounded-2xl p-1.5"
+        className="ac-glass mx-auto mt-10 flex w-full max-w-md items-center gap-1 rounded-2xl p-1.5"
       >
         {TABS.map((t, i) => (
           <button
@@ -94,17 +94,15 @@ export function LeaderboardTabs({
             onClick={() => setTab(t.key)}
             onKeyDown={(e) => onTabKeyDown(e, i)}
             className={cn(
-              "relative flex-1 min-h-[44px] cursor-pointer rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-              tab === t.key
-                ? "text-primary-foreground"
-                : "text-muted-foreground hover:text-foreground"
+              "relative min-h-[44px] flex-1 cursor-pointer rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+              tab === t.key ? "text-white" : "text-muted-foreground hover:text-foreground"
             )}
           >
             {tab === t.key && (
               <motion.span
                 layoutId="lb-tab"
-                // NOTE: no aq-cta here — its global `position: relative` would
-                // override `absolute` and shrink the pill to content size.
+                // NOTE: no ac-btn here — its `display: inline-flex` would
+                // override this element's `absolute` positioning.
                 className="absolute inset-0 rounded-xl"
                 style={{
                   background: "linear-gradient(160deg, #3b78f2, #0f7fb8)",
@@ -178,20 +176,21 @@ function IndividualBoard({
         </section>
       )}
       {rest.length > 0 && (
-        <div className="aq-card mt-12 overflow-hidden">
+        <div className="ac-card mt-12 overflow-hidden">
           <div className="border-b border-border px-5 py-3">
-            <h3 className="aq-display text-base font-semibold text-foreground">{title}</h3>
+            <h3 className="font-display text-base font-semibold text-foreground">
+              {title}
+            </h3>
           </div>
-          {/* Header mirrors LeaderRow's exact flex geometry (same gaps, paddings,
-              fixed widths). NOTE: no aq-eyebrow here — it's display:inline-flex
-              globally, which shrinks the header to content width. */}
+          {/* Header mirrors LeaderRow's exact geometry — both import ROW_COLS
+              from podium.tsx, so the widths can never drift apart. */}
           <div className="hidden items-center gap-3 border-b border-border px-4 py-2.5 text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-muted-foreground sm:flex sm:gap-4 sm:px-5">
-            <span className="w-9 shrink-0 text-center">Rank</span>
-            <span className="w-10 shrink-0" aria-hidden />
-            <span className="min-w-0 flex-1">Learner</span>
-            <span className="w-[4.5rem] shrink-0 text-center">Level</span>
-            <span className="hidden w-20 shrink-0 text-right md:block">Lessons</span>
-            <span className="w-24 shrink-0 text-right">XP</span>
+            <span className={ROW_COLS.rank}>Rank</span>
+            <span className={ROW_COLS.avatar} aria-hidden />
+            <span className={ROW_COLS.name}>Learner</span>
+            <span className={cn(ROW_COLS.level, "justify-center text-center")}>Level</span>
+            <span className={ROW_COLS.lessons}>Lessons</span>
+            <span className={ROW_COLS.xp}>XP</span>
           </div>
           <LeaderList entries={rest} />
         </div>
@@ -199,6 +198,14 @@ function IndividualBoard({
     </>
   );
 }
+
+const TEAM_COLS = {
+  rank: "w-7 shrink-0 text-center sm:w-9",
+  icon: "w-10 shrink-0",
+  name: "min-w-0 flex-1",
+  members: "w-14 shrink-0 text-right sm:w-24",
+  xp: "w-16 shrink-0 text-right sm:w-24",
+} as const;
 
 function TeamBoard({
   teams,
@@ -212,19 +219,19 @@ function TeamBoard({
       <Empty label="No teams on the board yet — add your team number in settings." />
     );
   return (
-    <div className="aq-card mt-12 overflow-hidden">
+    <div className="ac-card mt-12 overflow-hidden">
       <div className="border-b border-border px-5 py-3">
-        <h3 className="aq-display text-base font-semibold text-foreground">
+        <h3 className="font-display text-base font-semibold text-foreground">
           {BOARD_TITLE.team}
         </h3>
       </div>
-      {/* Header mirrors the team-row flex geometry; no aq-eyebrow (inline-flex). */}
+      {/* Header mirrors the team-row geometry via the shared TEAM_COLS map. */}
       <div className="hidden items-center gap-3 border-b border-border px-4 py-2.5 text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-muted-foreground sm:flex sm:gap-4 sm:px-5">
-        <span className="w-9 shrink-0 text-center">Rank</span>
-        <span className="w-10 shrink-0" aria-hidden />
-        <span className="min-w-0 flex-1">Team</span>
-        <span className="w-24 shrink-0 text-right">Members</span>
-        <span className="w-24 shrink-0 text-right">XP</span>
+        <span className={TEAM_COLS.rank}>Rank</span>
+        <span className={TEAM_COLS.icon} aria-hidden />
+        <span className={TEAM_COLS.name}>Team</span>
+        <span className={TEAM_COLS.members}>Members</span>
+        <span className={TEAM_COLS.xp}>XP</span>
       </div>
       <motion.ul
         initial="hidden"
@@ -260,33 +267,36 @@ function TeamBoard({
               )}
               <span
                 className={cn(
-                  "w-7 shrink-0 text-center text-sm font-bold tabular-nums sm:w-9 sm:text-base",
+                  TEAM_COLS.rank,
+                  "text-sm font-bold tabular-nums sm:text-base",
                   mine ? "text-primary" : "text-muted-foreground"
                 )}
               >
                 {t.rank}
               </span>
-              <span
-                className={cn(
-                  "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border text-primary",
-                  mine
-                    ? "border-primary/50 bg-primary/15"
-                    : "border-border bg-primary/10"
-                )}
-              >
-                <Users2 className="h-5 w-5" aria-hidden="true" />
+              <span className={TEAM_COLS.icon}>
+                <span
+                  className={cn(
+                    "flex h-10 w-10 items-center justify-center rounded-xl border text-primary",
+                    mine
+                      ? "border-primary/50 bg-primary/15"
+                      : "border-border bg-primary/10"
+                  )}
+                >
+                  <Users2 className="h-5 w-5" aria-hidden="true" />
+                </span>
               </span>
-              <div className="min-w-0 flex-1">
+              <div className={cn(TEAM_COLS.name, "min-w-0")}>
                 <div className="font-display font-semibold tracking-tight">
                   Team {t.team_number}
                   {mine && (
-                    <span className="aq-badge ml-2 bg-primary text-[0.7rem] font-bold uppercase tracking-[0.08em] text-primary-foreground">
+                    <span className="ac-badge ml-2 px-1.5 py-0.5 text-[0.7rem] font-bold uppercase tracking-[0.08em]" style={{ ["--a" as string]: "var(--primary)" }}>
                       Your team
                     </span>
                   )}
                 </div>
               </div>
-              <span className="w-14 shrink-0 text-right text-sm tabular-nums text-muted-foreground sm:w-24">
+              <span className={cn(TEAM_COLS.members, "text-sm tabular-nums text-muted-foreground")}>
                 {t.members}
                 <span className="ml-1 hidden sm:inline">
                   {t.members === 1 ? "member" : "members"}
@@ -294,7 +304,8 @@ function TeamBoard({
               </span>
               <span
                 className={cn(
-                  "w-16 shrink-0 text-right text-sm font-bold tabular-nums sm:w-24 sm:text-base",
+                  TEAM_COLS.xp,
+                  "text-sm font-bold tabular-nums sm:text-base",
                   mine ? "text-primary" : "text-foreground"
                 )}
               >
@@ -313,7 +324,7 @@ function TeamBoard({
 
 function Empty({ label }: { label: string }) {
   return (
-    <div className="aq-card mx-auto mt-12 max-w-md p-10 text-center text-sm text-muted-foreground">
+    <div className="ac-card mx-auto mt-12 max-w-md p-10 text-center text-sm text-muted-foreground">
       {label}
     </div>
   );

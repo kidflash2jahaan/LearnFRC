@@ -16,8 +16,17 @@ import {
   MessageCircle,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { AnimatedCounter } from "@/components/animated-counter";
+import {
+  RiseGroup,
+  RiseItem,
+  Reveal,
+  RevealGroup,
+  RevealItem,
+  Hover,
+  Glow,
+} from "@/components/motion/primitives";
 import { PrivacyToc, type TocItem } from "./_toc";
+import { PrivacyGlass } from "./_privacy-glass";
 
 export const metadata: Metadata = {
   title: "Privacy Policy",
@@ -27,17 +36,22 @@ export const metadata: Metadata = {
 const UPDATED = "June 22, 2026";
 const CONTACT = "29pardhananij@sagehillschool.org";
 
+const BRAND_GRADIENT: CSSProperties = {
+  background: "linear-gradient(120deg, #2560e6, #1aa9d6, #7c5cff)",
+  WebkitBackgroundClip: "text",
+  backgroundClip: "text",
+  color: "transparent",
+};
+
 const LINK =
   "font-medium text-primary underline decoration-primary/40 underline-offset-2 transition-colors hover:text-accent hover:decoration-accent break-words";
 const strong = "font-semibold text-foreground";
 
-/* ---------- primitives ---------- */
+/* ---------- copy primitives ---------- */
 
 function P({ children }: { children: ReactNode }) {
   return (
-    <p className="mt-3 text-[16px] leading-[1.7] text-foreground/80 first:mt-0">
-      {children}
-    </p>
+    <p className="mt-3 text-[16px] leading-[1.7] text-foreground/80 first:mt-0">{children}</p>
   );
 }
 
@@ -105,7 +119,7 @@ const SECTIONS: Section[] = [
     id: "public",
     title: "What's public",
     icon: Eye,
-    accent: "#8b7fff",
+    accent: "#7c5cff",
     body: (
       <>
         <P>
@@ -144,7 +158,7 @@ const SECTIONS: Section[] = [
     id: "providers",
     title: "Service providers",
     icon: Cog,
-    accent: "#0c8f4f",
+    accent: "#0a7a43",
     body: (
       <>
         <P>We rely on a few trusted providers to run LearnFRC:</P>
@@ -192,7 +206,7 @@ const SECTIONS: Section[] = [
     id: "children",
     title: "Children's privacy",
     icon: Baby,
-    accent: "#c53b6b",
+    accent: "#c2367a",
     body: (
       <P>
         LearnFRC is intended for FRC participants, who are generally high-school students. It
@@ -236,7 +250,7 @@ const SECTIONS: Section[] = [
     id: "changes",
     title: "Changes",
     icon: RefreshCw,
-    accent: "#8b7fff",
+    accent: "#7c5cff",
     body: (
       <P>
         We may update this policy; we&apos;ll revise the date above when we do. Significant
@@ -248,7 +262,7 @@ const SECTIONS: Section[] = [
     id: "contact",
     title: "Contact",
     icon: MessageCircle,
-    accent: "#0c8f4f",
+    accent: "#0a7a43",
     body: (
       <P>
         Questions? Email{" "}
@@ -271,237 +285,144 @@ const TOC_ITEMS: TocItem[] = SECTIONS.map(({ id, title }) => ({ id, title }));
 
 export default function PrivacyPage() {
   return (
-    <div className="relative mx-auto max-w-6xl px-4 pt-28 pb-24 sm:px-6 lg:px-8">
-      {/* ambient glows */}
-      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-        <div
-          className="aq-float absolute -top-16 -left-24 h-72 w-72 rounded-full blur-3xl"
-          style={{
-            background: "radial-gradient(circle,rgba(37,96,230,0.16),transparent 70%)",
-          }}
-        />
-        <div
-          className="aq-float absolute top-40 -right-24 h-80 w-80 rounded-full blur-3xl"
-          style={{
-            background: "radial-gradient(circle,rgba(26,169,214,0.14),transparent 70%)",
-            animationDelay: "1.2s",
-          }}
-        />
-        <div
-          className="aq-float absolute bottom-24 left-1/3 h-72 w-72 rounded-full blur-3xl"
-          style={{
-            background: "radial-gradient(circle,rgba(139,127,255,0.12),transparent 70%)",
-            animationDelay: "2.4s",
-          }}
-        />
-      </div>
+    <div className="relative overflow-x-clip">
+      <Glow
+        blobs={[
+          { size: "560px", pos: { left: "-160px", top: "-180px" }, color: "#8bbcff", opacity: 0.55 },
+          { size: "500px", pos: { right: "-150px", top: "60px" }, color: "#6ff0ea", opacity: 0.4, delay: 2 },
+          { size: "480px", pos: { left: "35%", top: "900px" }, color: "#c8b6ff", opacity: 0.32, delay: 4 },
+        ]}
+      />
 
       {/* ============================ HERO ============================ */}
-      <header className="grid gap-10 lg:grid-cols-[1.15fr_0.85fr] lg:items-center">
-        <div>
-          <span className="aq-eyebrow aq-rise aq-rise-1">
-            <ShieldCheck className="h-3.5 w-3.5" aria-hidden />
-            Your data, decoded
-          </span>
-          <h1 className="aq-display aq-rise aq-rise-2 mt-4 text-4xl font-extrabold leading-[1.05] tracking-tight sm:text-5xl">
-            Privacy{" "}
-            <span
-              className="aq-grad-anim"
-              style={{
-                background: "linear-gradient(120deg,#2560e6,#1aa9d6,#7c5cff,#2560e6)",
-                WebkitBackgroundClip: "text",
-                backgroundClip: "text",
-                color: "transparent",
-              }}
-            >
-              you can read.
+      <header className="mx-auto grid max-w-6xl gap-10 px-4 pb-14 pt-28 sm:px-6 lg:grid-cols-[1.15fr_0.85fr] lg:items-center lg:px-8">
+        <RiseGroup>
+          <RiseItem>
+            <span className="ac-chip inline-flex items-center gap-2">
+              <ShieldCheck className="h-3.5 w-3.5 text-primary" aria-hidden />
+              <span className="ac-eyebrow">Your data, decoded</span>
             </span>
-          </h1>
-          <p className="aq-rise aq-rise-3 mt-4 max-w-xl text-lg leading-relaxed text-foreground/70">
-            LearnFRC is a free platform for learning the FIRST Robotics Competition. We
-            collect as little as we can — this page lays out exactly what, why, and the
-            choices you have. Plain language, no fine print.
-          </p>
-          <div className="aq-rise aq-rise-4 mt-6 flex flex-wrap items-center gap-3">
-            <span className="aq-chip">
-              <RefreshCw className="h-3.5 w-3.5 text-primary" aria-hidden />
-              Last updated {UPDATED}
-            </span>
-            <span className="aq-chip">
-              <Lock className="h-3.5 w-3.5 text-primary" aria-hidden />
-              We never sell your data
-            </span>
-            <a
-              href="#collect"
-              className="aq-cta rounded-2xl px-5 py-3 text-sm font-semibold"
-            >
-              Read the policy
-            </a>
-          </div>
-        </div>
-
-        {/* signature-adjacent: privacy-at-a-glance glass panel */}
-        <aside className="aq-glass aq-float aq-rise aq-rise-5 rounded-3xl p-6 lg:justify-self-end lg:max-w-sm">
-          <div className="flex items-center gap-2 text-xs font-semibold text-foreground/70">
-            <span
-              className="aq-pulse inline-block h-2 w-2 rounded-full"
-              style={{ background: "var(--success)" }}
-            />
-            Privacy at a glance
-          </div>
-
-          {/* data-minimization ring */}
-          <div className="mt-5 flex items-center gap-4">
-            <div className="relative h-[74px] w-[74px] shrink-0">
-              <svg viewBox="0 0 82 82" className="h-[74px] w-[74px]" aria-hidden>
-                <circle
-                  cx="41"
-                  cy="41"
-                  r="34"
-                  fill="none"
-                  stroke="rgba(120,145,190,.28)"
-                  strokeWidth="9"
-                />
-                <circle
-                  className="aq-ring-anim"
-                  cx="41"
-                  cy="41"
-                  r="34"
-                  fill="none"
-                  stroke="url(#privRing)"
-                  strokeWidth="9"
-                  strokeLinecap="round"
-                  strokeDasharray="213.6"
-                  strokeDashoffset="26"
-                  transform="rotate(-90 41 41)"
-                />
-                <defs>
-                  <linearGradient id="privRing" x1="0" y1="0" x2="1" y2="1">
-                    <stop offset="0" stopColor="#2560e6" />
-                    <stop offset="1" stopColor="#1aa9d6" />
-                  </linearGradient>
-                </defs>
-              </svg>
-              <span className="absolute inset-0 grid place-items-center text-base font-bold text-foreground">
-                <AnimatedCounter value={88} suffix="%" />
-              </span>
-            </div>
-            <p className="text-sm leading-snug text-foreground/70">
-              of what we store is just your learning progress — not personal data.
+          </RiseItem>
+          <RiseItem>
+            <h1 className="mt-5 text-balance font-display text-4xl font-extrabold leading-[1.05] tracking-tight sm:text-5xl">
+              Privacy <span style={BRAND_GRADIENT}>you can read.</span>
+            </h1>
+          </RiseItem>
+          <RiseItem>
+            <p className="mt-4 max-w-xl text-pretty text-lg leading-relaxed text-foreground/70">
+              LearnFRC is a free platform for learning the FIRST Robotics Competition. We
+              collect as little as we can — this page lays out exactly what, why, and the
+              choices you have. Plain language, no fine print.
             </p>
-          </div>
-
-          {/* stat count-ups */}
-          <div className="mt-5 grid grid-cols-2 gap-3">
-            <div className="rounded-2xl border border-border bg-card/60 p-3">
-              <div className="aq-display text-xl font-extrabold leading-none text-foreground">
-                <AnimatedCounter value={1} />
-              </div>
-              <div className="mt-1 text-[12px] text-foreground/70">essential cookie</div>
-            </div>
-            <div className="rounded-2xl border border-border bg-card/60 p-3">
-              <div className="aq-display text-xl font-extrabold leading-none text-foreground">
-                <AnimatedCounter value={0} />
-              </div>
-              <div className="mt-1 text-[12px] text-foreground/70">trackers sold</div>
-            </div>
-          </div>
-
-          {/* encryption bar */}
-          <div className="mt-4">
-            <div className="mb-1 flex items-center justify-between text-[12px] text-foreground/70">
-              <span>Encrypted in transit</span>
-              <span className="font-semibold text-foreground">
-                <AnimatedCounter value={100} suffix="%" />
+          </RiseItem>
+          <RiseItem>
+            <div className="mt-6 flex flex-wrap items-center gap-3">
+              <a href="#collect" className="ac-btn text-sm">
+                Read the policy
+              </a>
+              <span className="ac-chip inline-flex items-center gap-2 text-sm text-foreground/75">
+                <RefreshCw className="h-3.5 w-3.5 text-primary" aria-hidden />
+                Last updated {UPDATED}
+              </span>
+              <span className="ac-chip inline-flex items-center gap-2 text-sm text-foreground/75">
+                <Lock className="h-3.5 w-3.5 text-primary" aria-hidden />
+                We never sell your data
               </span>
             </div>
-            <div className="h-2 w-full overflow-hidden rounded-full bg-border">
-              <div
-                className="aq-bar-anim h-full rounded-full"
-                style={{
-                  width: "100%",
-                  background: "linear-gradient(90deg,#2560e6,#1aa9d6)",
-                }}
-              />
-            </div>
-          </div>
-        </aside>
+          </RiseItem>
+        </RiseGroup>
+
+        <PrivacyGlass />
       </header>
 
-      {/* intro line */}
-      <p className="aq-reveal mt-12 max-w-2xl text-[16px] leading-[1.7] text-foreground/80">
-        LearnFRC (&quot;we,&quot; &quot;us&quot;) is a free educational platform for learning
-        the FIRST Robotics Competition. This policy explains what we collect, why, and the
-        choices you have. We aim to collect as little as possible.
-      </p>
-
       {/* ================= SIGNATURE: sticky TOC + readable body ================= */}
-      <div className="mt-10 grid gap-10 lg:grid-cols-[240px_1fr]">
-        {/* sticky scroll-spy rail */}
-        <div className="lg:sticky lg:top-28 lg:self-start">
-          <div className="aq-card aq-reveal p-3">
-            <p className="aq-eyebrow px-3 pb-2 pt-1">On this page</p>
-            <PrivacyToc items={TOC_ITEMS} />
-          </div>
-        </div>
+      <div className="mx-auto max-w-6xl px-4 pb-24 sm:px-6 lg:px-8">
+        <Reveal>
+          <p className="max-w-2xl text-[16px] leading-[1.7] text-foreground/80">
+            LearnFRC (&quot;we,&quot; &quot;us&quot;) is a free educational platform for
+            learning the FIRST Robotics Competition. This policy explains what we collect,
+            why, and the choices you have. We aim to collect as little as possible.
+          </p>
+        </Reveal>
 
-        {/* article body */}
-        <article className="max-w-3xl">
-          <div className="space-y-4">
-            {SECTIONS.map((s, i) => {
-              const Ico = s.icon;
-              return (
-                <section
-                  key={s.id}
-                  id={s.id}
-                  className="aq-reveal aq-card aq-card-hover scroll-mt-28 p-6 sm:p-8"
-                  style={{ animationDelay: `${(i % 4) * 70}ms` } as CSSProperties}
-                >
-                  <h2 className="flex items-center gap-3 text-xl font-bold tracking-tight sm:text-2xl">
+        <div className="mt-10 grid gap-10 lg:grid-cols-[240px_1fr]">
+          {/* sticky scroll-spy rail — no transform on the sticky element itself
+              (would risk breaking position:sticky), so the reveal fades only
+              the card content inside it. */}
+          <div className="lg:sticky lg:top-28 lg:self-start">
+            <Reveal>
+              <div className="ac-card p-3">
+                <p className="ac-eyebrow px-3 pb-2 pt-1">On this page</p>
+                <PrivacyToc items={TOC_ITEMS} />
+              </div>
+            </Reveal>
+          </div>
+
+          {/* article body */}
+          <article className="max-w-3xl">
+            <RevealGroup className="space-y-4">
+              {SECTIONS.map((s, i) => {
+                const Ico = s.icon;
+                return (
+                  <RevealItem key={s.id}>
+                    <Hover lift={-3} scale={1.005}>
+                      <section id={s.id} className="ac-card scroll-mt-28 p-6 sm:p-8">
+                        <h2 className="flex items-center gap-3 text-xl font-bold tracking-tight sm:text-2xl">
+                          <span
+                            aria-hidden
+                            className="ac-badge grid h-10 w-10 shrink-0 place-items-center rounded-xl"
+                            style={{ "--a": s.accent } as CSSProperties}
+                          >
+                            <Ico className="h-5 w-5" aria-hidden />
+                          </span>
+                          <span className="min-w-0">
+                            <span className="mr-2 align-middle font-mono text-sm font-semibold text-muted-foreground/70">
+                              {String(i + 1).padStart(2, "0")}
+                            </span>
+                            {s.title}
+                          </span>
+                        </h2>
+                        <div className="mt-4">{s.body}</div>
+                      </section>
+                    </Hover>
+                  </RevealItem>
+                );
+              })}
+            </RevealGroup>
+
+            {/* contact CTA */}
+            <Reveal>
+              <Hover lift={-3} scale={1.005}>
+                <div className="mt-6 flex flex-col items-start gap-4 rounded-2xl border border-border bg-card/60 p-6 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-center gap-3">
                     <span
                       aria-hidden
-                      className="aq-badge aq-badge-bob grid h-10 w-10 shrink-0 place-items-center rounded-xl"
-                      style={{ "--a": s.accent } as CSSProperties}
+                      className="ac-badge grid h-11 w-11 shrink-0 place-items-center"
+                      style={{ "--a": "#2560e6" } as CSSProperties}
                     >
-                      <Ico className="h-5 w-5" aria-hidden />
+                      <Mail className="h-5 w-5" aria-hidden />
                     </span>
-                    <span className="min-w-0">
-                      <span className="mr-2 align-middle font-mono text-sm font-semibold text-muted-foreground/70">
-                        {String(i + 1).padStart(2, "0")}
-                      </span>
-                      {s.title}
-                    </span>
-                  </h2>
-                  <div className="mt-4">{s.body}</div>
-                </section>
-              );
-            })}
-          </div>
+                    <p className="text-[15px] text-foreground/80">
+                      Want your data corrected or deleted? We&apos;re one email away.
+                    </p>
+                  </div>
+                  <a
+                    href={`mailto:${CONTACT}`}
+                    className="ac-btn shrink-0 text-sm"
+                  >
+                    <Mail className="h-4 w-4" aria-hidden />
+                    Email us
+                  </a>
+                </div>
+              </Hover>
+            </Reveal>
 
-          {/* contact CTA */}
-          <div className="aq-reveal aq-card-hover mt-6 flex flex-col items-start gap-4 rounded-2xl border border-border bg-card/60 p-6 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-3">
-              <span className="aq-icon aq-badge-bob grid h-11 w-11 place-items-center">
-                <Mail className="h-5 w-5" aria-hidden />
-              </span>
-              <p className="text-[15px] text-foreground/80">
-                Want your data corrected or deleted? We&apos;re one email away.
-              </p>
-            </div>
-            <a
-              href={`mailto:${CONTACT}`}
-              className="aq-cta shrink-0 rounded-2xl px-5 py-3 text-sm font-semibold"
-            >
-              <Mail className="h-4 w-4" aria-hidden />
-              Email us
-            </a>
-          </div>
-
-          <p className="mt-8 text-xs leading-relaxed text-muted-foreground">
-            LearnFRC is an independent educational project and is not affiliated with or
-            endorsed by FIRST®. FIRST® and FRC® are trademarks of FIRST.
-          </p>
-        </article>
+            <p className="mt-8 text-xs leading-relaxed text-muted-foreground">
+              LearnFRC is an independent educational project and is not affiliated with or
+              endorsed by FIRST®. FIRST® and FRC® are trademarks of FIRST.
+            </p>
+          </article>
+        </div>
       </div>
     </div>
   );

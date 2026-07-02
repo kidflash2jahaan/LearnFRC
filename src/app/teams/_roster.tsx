@@ -40,9 +40,9 @@ function relTime(iso: string | null): string {
 }
 
 /**
- * The pit-crew roster — the signature of this page. Members ranked by lessons
- * done, the leader crowned, each row an animated progress lane. Spring stagger
- * on entrance, hover lift; fully reduced-motion safe.
+ * The pit-crew roster. Members ranked by lessons done, the leader crowned,
+ * each row an animated progress lane. Spring stagger on scroll-in, hover
+ * lift; fully reduced-motion safe.
  */
 export function Roster({
   members,
@@ -63,12 +63,12 @@ export function Roster({
         return (
           <motion.li
             key={m.userId}
-            initial={reduce ? false : { opacity: 0, y: 16, scale: 0.98 }}
-            whileInView={reduce ? undefined : { opacity: 1, y: 0, scale: 1 }}
+            initial={{ opacity: 0, y: 16, scale: 0.98 }}
+            whileInView={{ opacity: 1, y: 0, scale: 1 }}
             viewport={{ once: true, margin: "-40px" }}
-            transition={{ duration: 0.5, delay: Math.min(i, 10) * 0.05, ease: EASE }}
+            transition={reduce ? { duration: 0 } : { duration: 0.5, delay: Math.min(i, 10) * 0.05, ease: EASE }}
             whileHover={reduce ? undefined : { y: -3 }}
-            className={`aq-card group relative flex items-center gap-4 rounded-2xl px-4 py-4 sm:px-5 ${
+            className={`ac-card group relative flex items-center gap-4 px-4 py-4 sm:px-5 ${
               m.isYou ? "ring-2 ring-primary/45" : ""
             }`}
           >
@@ -113,9 +113,7 @@ export function Roster({
             {/* name + progress lane */}
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="truncate text-base font-semibold text-foreground">
-                  {m.name}
-                </span>
+                <span className="truncate text-base font-semibold text-foreground">{m.name}</span>
                 {m.isYou && (
                   <span className="shrink-0 rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary">
                     You
@@ -137,14 +135,18 @@ export function Roster({
                     style={{
                       background: "linear-gradient(90deg, #2560e6, #1aa9d6)",
                     }}
-                    initial={reduce ? false : { transform: "scaleX(0)" }}
-                    whileInView={reduce ? undefined : { transform: `scaleX(${pct / 100})` }}
+                    initial={{ transform: "scaleX(0)" }}
+                    whileInView={{ transform: `scaleX(${pct / 100})` }}
                     viewport={{ once: true, margin: "-40px" }}
-                    transition={{
-                      duration: 0.9,
-                      delay: 0.15 + Math.min(i, 10) * 0.05,
-                      ease: EASE,
-                    }}
+                    transition={
+                      reduce
+                        ? { duration: 0 }
+                        : {
+                            duration: 0.9,
+                            delay: 0.15 + Math.min(i, 10) * 0.05,
+                            ease: EASE,
+                          }
+                    }
                   />
                 </div>
                 <span className="shrink-0 text-xs font-medium tabular-nums text-muted-foreground">
@@ -159,9 +161,7 @@ export function Roster({
                 <Flame className="h-3.5 w-3.5" aria-hidden />
                 <AnimatedCounter value={m.xp} suffix=" XP" />
               </span>
-              <span className="mt-0.5 text-xs text-muted-foreground">
-                {relTime(m.lastActive)}
-              </span>
+              <span className="mt-0.5 text-xs text-muted-foreground">{relTime(m.lastActive)}</span>
             </div>
           </motion.li>
         );

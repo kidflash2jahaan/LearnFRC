@@ -51,10 +51,10 @@ export default function Error({
         }}
       />
 
-      <div className="aq-glass aq-rise aq-rise-1 max-w-md rounded-3xl px-8 py-10">
-        <p className="aq-eyebrow">Something broke</p>
+      <div className="ac-glass max-w-md px-8 py-10">
+        <p className="ac-eyebrow">Something broke</p>
         <div
-          className="aq-display mt-2 text-6xl font-bold"
+          className="mt-2 font-display text-6xl font-bold"
           style={
             {
               background: "linear-gradient(120deg,#2560e6,#1aa9d6)",
@@ -66,18 +66,18 @@ export default function Error({
         >
           Oops
         </div>
-        <h1 className="aq-display mt-4 text-2xl font-bold tracking-tight text-foreground">
+        <h1 className="mt-4 font-display text-2xl font-bold tracking-tight text-foreground">
           Something went wrong
         </h1>
         <p className="mt-3 text-base leading-relaxed text-foreground/70">
           An unexpected error occurred. You can try again, or head back home.
         </p>
         <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
-          <button type="button" className="aq-cta" onClick={reset}>
-            <RotateCcw className="h-4 w-4" /> Try again
+          <button type="button" className="ac-btn text-sm" onClick={reset}>
+            <RotateCcw className="h-4 w-4" aria-hidden /> Try again
           </button>
-          <Link href="/" className="aq-ghost">
-            <Home className="h-4 w-4" /> Home
+          <Link href="/" className="ac-btn-ghost text-sm">
+            <Home className="h-4 w-4" aria-hidden /> Home
           </Link>
         </div>
       </div>

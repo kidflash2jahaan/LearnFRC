@@ -45,8 +45,8 @@ export function AchievementBadge({
         tabIndex={0}
         aria-label={`${name}${earned ? " — earned" : " — locked"}. ${description}`}
         whileHover={reduce ? undefined : { y: -4, scale: 1.03 }}
-        whileTap={reduce ? undefined : { scale: 0.97 }}
-        transition={{ type: "spring", stiffness: 320, damping: 20 }}
+        whileTap={{ scale: 0.97 }}
+        transition={reduce ? { duration: 0 } : { type: "spring", stiffness: 320, damping: 20 }}
         className={cn(
           "group flex w-full cursor-pointer flex-col items-center gap-2 rounded-2xl border p-4 text-center transition-colors duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
           earned

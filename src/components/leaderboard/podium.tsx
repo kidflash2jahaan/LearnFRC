@@ -80,15 +80,15 @@ function PodiumColumn({ entry }: { entry: PodiumEntry }) {
 
   return (
     <motion.div
-      initial={reduce ? { opacity: 0 } : { opacity: 0, y: 28, scale: 0.96 }}
+      initial={{ opacity: 0, y: 28, scale: 0.96 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ duration: 0.55, delay: s.delay, ease: ROW_EASE }}
+      transition={reduce ? { duration: 0 } : { duration: 0.55, delay: s.delay, ease: ROW_EASE }}
       whileHover={reduce ? undefined : { y: -6 }}
       className={cn("flex w-full flex-col", s.order, s.lift)}
     >
       <div
         className={cn(
-          "aq-card group relative overflow-hidden px-5 pb-6 pt-7 text-center",
+          "ac-card group relative overflow-hidden px-5 pb-6 pt-7 text-center",
           isFirst ? "sm:px-6 sm:pb-8 sm:pt-9" : ""
         )}
         style={{
@@ -97,7 +97,7 @@ function PodiumColumn({ entry }: { entry: PodiumEntry }) {
       >
         {/* rank tag */}
         <span
-          className="aq-eyebrow absolute right-4 top-4 text-[0.68rem] tracking-[0.16em]"
+          className="absolute right-4 top-4 text-[0.68rem] font-bold uppercase tracking-[0.16em]"
           style={{ color: ink }}
           aria-hidden
         >
@@ -107,9 +107,9 @@ function PodiumColumn({ entry }: { entry: PodiumEntry }) {
         {/* crown on the champion */}
         {isFirst && (
           <motion.div
-            initial={reduce ? { opacity: 0 } : { opacity: 0, y: 8, rotate: -12 }}
+            initial={{ opacity: 0, y: 8, rotate: -12 }}
             animate={{ opacity: 1, y: 0, rotate: 0 }}
-            transition={{ delay: s.delay + 0.3, type: "spring", stiffness: 260, damping: 16 }}
+            transition={reduce ? { duration: 0 } : { delay: s.delay + 0.3, type: "spring", stiffness: 260, damping: 16 }}
             className="mb-2 flex justify-center"
             aria-hidden
           >
@@ -136,7 +136,7 @@ function PodiumColumn({ entry }: { entry: PodiumEntry }) {
           <span
             aria-hidden
             className="absolute -bottom-2.5 left-1/2 flex h-7 w-7 -translate-x-1/2 items-center justify-center rounded-full border-2 border-background font-display text-xs font-bold"
-            style={{ background: accent, color: "var(--foreground)" }}
+            style={{ background: accent, color: ink }}
           >
             {entry.rank}
           </span>
@@ -147,7 +147,7 @@ function PodiumColumn({ entry }: { entry: PodiumEntry }) {
           {entry.username ? (
             <Link
               href={`/u/${entry.username}`}
-              className="-my-2 inline-flex min-h-[44px] items-center justify-center rounded-md px-2 py-2 outline-none transition-colors hover:text-primary focus-visible:ring-2 focus-visible:ring-ring"
+              className="-my-2 inline-flex min-h-[44px] items-center justify-center rounded-md px-2 py-2 outline-none transition-colors hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             >
               {NameTag}
             </Link>
@@ -156,12 +156,12 @@ function PodiumColumn({ entry }: { entry: PodiumEntry }) {
           )}
           <div className="mt-1.5 flex flex-wrap items-center justify-center gap-1.5 text-sm text-muted-foreground">
             {entry.isYou && (
-              <span className="aq-chip px-1.5 py-0.5 font-semibold text-primary">
+              <span className="ac-chip px-1.5 py-0.5 text-xs font-semibold text-primary">
                 You
               </span>
             )}
-            {entry.teamNumber != null && <span>Team {entry.teamNumber}</span>}
-            <span className="capitalize">· {entry.role}</span>
+            {entry.teamNumber != null && <span>Team {entry.teamNumber} ·</span>}
+            <span className="capitalize">{entry.role}</span>
           </div>
         </div>
 
@@ -173,13 +173,13 @@ function PodiumColumn({ entry }: { entry: PodiumEntry }) {
           >
             <AnimatedCounter value={entry.xp} />
           </span>
-          <span className="ml-1 text-[0.68rem] uppercase tracking-[0.12em] text-muted-foreground">
+          <span className="ml-1 text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
             XP
           </span>
         </div>
 
         {/* plinth */}
-        <div className="mt-5 border-t border-border pt-3 text-xs tracking-wide text-muted-foreground">
+        <div className="mt-5 border-t border-border pt-3 text-xs font-medium tracking-wide text-muted-foreground">
           Lvl {entry.level} · {entry.lessons} lessons
         </div>
       </div>
@@ -203,7 +203,19 @@ export function Podium({ entries }: { entries: PodiumEntry[] }) {
 /*  Ranked rows (rank 4+)                                              */
 /*  CRITICAL: animate on MOUNT (initial -> animate), never            */
 /*  whileInView+once, so rows are always visible after a tab switch.  */
+/*                                                                      */
+/*  Column geometry lives in ROW_COLS so the header (leaderboard-tabs) */
+/*  and these rows can never drift apart — both files import it.      */
 /* ------------------------------------------------------------------ */
+
+export const ROW_COLS = {
+  rank: "w-7 shrink-0 text-center sm:w-9",
+  avatar: "w-10 shrink-0",
+  name: "min-w-0 flex-1",
+  level: "hidden w-[4.5rem] shrink-0 sm:flex sm:items-center sm:justify-center",
+  lessons: "hidden w-20 shrink-0 text-right md:block",
+  xp: "w-16 shrink-0 text-right sm:w-24",
+} as const;
 
 const rowContainer = {
   hidden: {},
@@ -262,7 +274,8 @@ function LeaderRow({ entry }: { entry: PodiumEntry }) {
       {/* rank */}
       <span
         className={cn(
-          "w-7 shrink-0 text-center font-display text-sm font-bold tabular-nums sm:w-9 sm:text-base",
+          ROW_COLS.rank,
+          "font-display text-sm font-bold tabular-nums sm:text-base",
           entry.isYou ? "text-primary" : "text-muted-foreground"
         )}
       >
@@ -270,23 +283,25 @@ function LeaderRow({ entry }: { entry: PodiumEntry }) {
       </span>
 
       {/* avatar */}
-      <Avatar
-        name={entry.name}
-        src={entry.avatarUrl}
-        seed={entry.username ?? entry.id}
-        className={cn(
-          "h-10 w-10 shrink-0 rounded-xl ring-1",
-          entry.isYou ? "ring-primary/50" : "ring-border"
-        )}
-      />
+      <span className={ROW_COLS.avatar}>
+        <Avatar
+          name={entry.name}
+          src={entry.avatarUrl}
+          seed={entry.username ?? entry.id}
+          className={cn(
+            "h-10 w-10 rounded-xl ring-1",
+            entry.isYou ? "ring-primary/50" : "ring-border"
+          )}
+        />
+      </span>
 
       {/* identity */}
-      <div className="min-w-0 flex-1">
+      <div className={cn(ROW_COLS.name, "min-w-0")}>
         <div className="flex items-center gap-2">
           {entry.username ? (
             <Link
               href={`/u/${entry.username}`}
-              className="-my-2 inline-flex min-h-[44px] min-w-0 items-center rounded-md py-2 outline-none transition-colors hover:text-primary focus-visible:ring-2 focus-visible:ring-ring"
+              className="-my-2 inline-flex min-h-[44px] min-w-0 items-center rounded-md py-2 outline-none transition-colors hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             >
               {NameTag}
             </Link>
@@ -295,7 +310,7 @@ function LeaderRow({ entry }: { entry: PodiumEntry }) {
           )}
           {entry.isYou && (
             <span
-              className="aq-badge shrink-0 px-1.5 py-0.5 text-[0.58rem] font-bold uppercase tracking-[0.1em]"
+              className="ac-badge shrink-0 px-1.5 py-0.5 text-[0.58rem] font-bold uppercase tracking-[0.1em]"
               style={{ ["--a" as string]: "var(--primary)" }}
             >
               You
@@ -304,29 +319,32 @@ function LeaderRow({ entry }: { entry: PodiumEntry }) {
         </div>
         <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
           {entry.teamNumber != null && (
-            <span className="text-foreground/70">Team {entry.teamNumber}</span>
+            <span className="text-foreground/70">Team {entry.teamNumber} ·</span>
           )}
-          <span className="capitalize">· {entry.role}</span>
+          <span className="capitalize">{entry.role}</span>
         </div>
       </div>
 
       {/* level badge */}
       <span
-        className="hidden w-[4.5rem] shrink-0 items-center justify-center gap-1 rounded-full border border-primary/25 bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary sm:inline-flex"
+        className={cn(ROW_COLS.level, "justify-center")}
         aria-label={`Level ${entry.level}`}
       >
-        Lvl {entry.level}
+        <span className="inline-flex items-center gap-1 rounded-full border border-primary/25 bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
+          Lvl {entry.level}
+        </span>
       </span>
 
       {/* lessons */}
-      <span className="hidden w-20 shrink-0 text-right text-xs text-muted-foreground md:block">
+      <span className={cn(ROW_COLS.lessons, "text-xs text-muted-foreground")}>
         <span className="font-semibold text-foreground/80">{entry.lessons}</span> done
       </span>
 
       {/* XP */}
       <span
         className={cn(
-          "w-16 shrink-0 text-right font-display text-sm font-bold tabular-nums sm:w-24 sm:text-base",
+          ROW_COLS.xp,
+          "font-display text-sm font-bold tabular-nums sm:text-base",
           entry.isYou ? "text-primary" : "text-foreground"
         )}
       >

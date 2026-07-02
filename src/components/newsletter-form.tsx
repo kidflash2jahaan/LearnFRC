@@ -15,7 +15,7 @@ export function NewsletterForm({ className }: { className?: string }) {
         role="status"
         aria-live="polite"
         className={cn(
-          "aq-chip inline-flex items-center gap-2 text-sm font-medium text-success",
+          "ac-chip inline-flex items-center gap-2 text-sm font-medium text-success",
           className
         )}
       >
@@ -26,20 +26,20 @@ export function NewsletterForm({ className }: { className?: string }) {
 
   return (
     <form action={action} className={cn("w-full max-w-sm", className)}>
-      <div className="group flex items-center gap-2 rounded-2xl border border-border bg-background/80 p-1.5 shadow-[0_1px_2px_rgba(24,35,56,0.06)] transition-shadow focus-within:border-primary focus-within:shadow-[0_0_0_3px_rgba(37,96,230,0.18)]">
+      <div className="ac-input group flex items-center gap-2 !p-1.5 transition-shadow focus-within:border-primary focus-within:shadow-[0_0_0_3px_rgba(37,96,230,0.18)]">
         <input
           type="email"
           name="email"
           required
           placeholder="you@team.org"
           aria-label="Email address"
-          className="h-11 flex-1 bg-transparent px-2.5 text-base outline-none placeholder:text-muted-foreground sm:h-9 sm:text-sm"
+          className="h-11 flex-1 bg-transparent px-2.5 text-base outline-none placeholder:text-muted-foreground sm:text-sm"
         />
         <button
           type="submit"
           disabled={pending}
           aria-busy={pending}
-          className="aq-cta inline-flex h-11 items-center gap-1.5 px-3.5 text-sm font-semibold disabled:opacity-60 sm:h-9"
+          className="ac-btn shrink-0 !px-3.5 text-sm disabled:opacity-60"
         >
           {pending ? (
             <>

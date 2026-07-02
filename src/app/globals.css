@@ -142,7 +142,11 @@
 
 /* ------------------------------------------------------------------ */
 /*  ac-* kit — SKIN ONLY (see header rules)                             */
+/*  Lives in @layer components so Tailwind utilities (a later layer)    */
+/*  win when a call site overrides kit properties (e.g. `ac-input       */
+/*  pl-14`). Un-layered rules would silently beat every utility.        */
 /* ------------------------------------------------------------------ */
+@layer components {
 
 /* White clay card */
 .ac-card {
@@ -277,6 +281,8 @@
   height: 1px;
   background: linear-gradient(90deg, transparent, var(--border), transparent);
 }
+
+} /* end @layer components */
 
 /* ------------------------------------------------------------------ */
 /*  Route transition (mounted from app/template.tsx per navigation).   */

@@ -17,8 +17,8 @@ export function FeedbackForm({ page = "/" }: { page?: string }) {
 
   if (state?.success) {
     return (
-      <div className="flex items-center gap-3 rounded-xl border border-success/30 bg-success/10 p-4 text-sm">
-        <CheckCircle2 className="h-5 w-5 shrink-0 text-success" />
+      <div className="ac-card flex items-center gap-3 rounded-2xl border-success/30 bg-success/10 p-4 text-[15px]">
+        <CheckCircle2 className="h-5 w-5 shrink-0 text-success" aria-hidden />
         <span>Thanks! Your suggestion was sent — we read every one.</span>
       </div>
     );
@@ -27,7 +27,11 @@ export function FeedbackForm({ page = "/" }: { page?: string }) {
   return (
     <form action={action} className="space-y-3">
       <input type="hidden" name="page" value={page} />
+      <label htmlFor="feedback-message" className="sr-only">
+        Your suggestion
+      </label>
       <Textarea
+        id="feedback-message"
         name="message"
         required
         minLength={5}
@@ -36,9 +40,9 @@ export function FeedbackForm({ page = "/" }: { page?: string }) {
       />
       <Button type="submit" variant="brand" disabled={pending}>
         {pending ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
+          <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
         ) : (
-          <Send className="h-4 w-4" />
+          <Send className="h-4 w-4" aria-hidden />
         )}
         Send suggestion
       </Button>

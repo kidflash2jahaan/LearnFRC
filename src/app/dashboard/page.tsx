@@ -15,12 +15,19 @@ import {
   Trophy,
   Zap,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { DepartmentCard } from "@/components/department-card";
 import { InviteCard } from "@/components/leaderboard/invite-card";
-import { Reveal, Stagger, StaggerItem } from "@/components/motion/reveal";
+import {
+  Reveal,
+  RevealGroup,
+  RevealItem,
+  RiseGroup,
+  RiseItem,
+  Hover,
+  Glow,
+} from "@/components/motion/primitives";
 import { AnimatedCounter } from "@/components/animated-counter";
 import {
   AchievementBadge,
@@ -32,7 +39,7 @@ import { createClient } from "@/lib/supabase/server";
 import { deptMeta, inkFor } from "@/lib/departments";
 import { clampPct, pluralize } from "@/lib/utils";
 import type { Achievement } from "@/lib/types";
-import { GaugeCluster } from "./_gauge-cluster";
+import { InstrumentPanel } from "./_instrument-panel";
 
 export const metadata: Metadata = {
   title: "Dashboard · LearnFRC",
@@ -76,6 +83,18 @@ function streakFromDates(timestamps: string[]): number {
   return streak;
 }
 
+const BRAND_GRADIENT: CSSProperties = {
+  background: "linear-gradient(120deg,#2560e6,#1aa9d6)",
+  WebkitBackgroundClip: "text",
+  backgroundClip: "text",
+  color: "transparent",
+};
+
+// shared blue→cyan progress fill
+const XP_BAR_STYLE = {
+  background: "linear-gradient(90deg,var(--primary),var(--accent))",
+} as const;
+
 export default async function DashboardPage() {
   const { user, profile } = await getSession();
   if (!user) redirect("/login?next=/dashboard");
@@ -109,9 +128,7 @@ export default async function DashboardPage() {
   const completedCount = completedIds.size;
   const streak = streakFromDates(progressRows.map((r) => r.completed_at));
   // Lesson XP = 10 + 1 per streak-day, capped at 20 (max 2x). Show the multiplier.
-  const xpMultiplier = (
-    1 + Math.min(10, Math.max(0, streak - 1)) / 10
-  ).toFixed(1);
+  const xpMultiplier = (1 + Math.min(10, Math.max(0, streak - 1)) / 10).toFixed(1);
 
   // lesson -> department id
   const lessonRows = (lessonMapRes.data ?? []) as {
@@ -167,6 +184,7 @@ export default async function DashboardPage() {
   const xpIntoLevel = xp % XP_PER_LEVEL;
   const levelPct = clampPct((xpIntoLevel / XP_PER_LEVEL) * 100);
   const xpToNext = XP_PER_LEVEL - xpIntoLevel;
+  const nextLevel = level + 1;
 
   const displayName =
     profile?.full_name || profile?.username || user.email?.split("@")[0] || "there";
@@ -200,7 +218,7 @@ export default async function DashboardPage() {
   if (target) {
     const full = await getDepartmentBySlug(target.slug).catch(() => null);
     if (full) {
-      const fresh = !(inProgressSorted[0]?.dept);
+      const fresh = !inProgressSorted[0]?.dept;
       // first lesson (in order) that isn't completed
       let pick:
         | { moduleSlug: string; moduleTitle: string; lessonSlug: string; lessonTitle: string }
@@ -248,398 +266,362 @@ export default async function DashboardPage() {
     { icon: GraduationCap, label: "Departments completed", value: departmentsCompleted, accent: "#12b565" },
     { icon: Trophy, label: "Achievements earned", value: achievementsEarned, accent: "#f5a623" },
     { icon: Flame, label: "Day streak", value: streak, accent: "#ff8a3d" },
-    { icon: Zap, label: "Total XP", value: xp, accent: "#8b7fff" },
+    { icon: Zap, label: "Total XP", value: xp, accent: "#7c5cff" },
   ];
 
   const cm = continueLesson ? deptMeta(continueLesson.deptSlug) : null;
 
-  const blueGradient = {
-    background: "linear-gradient(120deg,#2560e6,#1aa9d6)",
-    WebkitBackgroundClip: "text",
-    backgroundClip: "text",
-    color: "transparent",
-  } as CSSProperties;
-  // shared blue→cyan progress fill
-  const xpBar = {
-    background: "linear-gradient(90deg,var(--primary),var(--accent))",
-  } as const;
-
-  const nextLevel = level + 1;
-
   return (
-    <div className="relative mx-auto max-w-7xl px-4 pt-28 pb-20 sm:px-6 lg:px-8">
-      {/* ambient glows */}
-      <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
-        <div
-          className="absolute left-[-10%] top-[-6%] h-[440px] w-[560px] rounded-full opacity-60 blur-3xl"
-          style={{ background: "radial-gradient(circle,rgba(37,96,230,0.18),transparent 68%)" }}
-        />
-        <div
-          className="absolute right-[-8%] top-[8%] h-[400px] w-[520px] rounded-full opacity-55 blur-3xl"
-          style={{ background: "radial-gradient(circle,rgba(26,169,214,0.16),transparent 68%)" }}
-        />
-        <div
-          className="absolute left-1/2 top-[36%] h-[420px] w-[620px] -translate-x-1/2 rounded-full opacity-40 blur-3xl"
-          style={{ background: "radial-gradient(circle,rgba(139,127,255,0.14),transparent 70%)" }}
-        />
-      </div>
+    <div className="relative overflow-x-clip">
+      <Glow
+        blobs={[
+          { size: "560px", pos: { left: "-160px", top: "-180px" }, color: "#8bbcff", opacity: 0.55 },
+          { size: "520px", pos: { right: "-170px", top: "40px" }, color: "#6ff0ea", opacity: 0.4, delay: 2.5 },
+          { size: "480px", pos: { left: "38%", top: "620px" }, color: "#c8b6ff", opacity: 0.32, delay: 5 },
+        ]}
+      />
 
-      {/* ============================ HERO — THE INSTRUMENT CLUSTER ============================ */}
-      {/* Signature: a telemetry gauge cluster reads out the learner's progress
-          like a robot's dashboard — streak, level, and XP-to-next as spring-fill dials. */}
-      <section className="aq-glass aq-sheen aq-rise aq-rise-1 overflow-hidden rounded-[30px] p-6 sm:p-9">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full opacity-30 blur-3xl"
-          style={{ background: "radial-gradient(circle,rgba(37,96,230,0.35),transparent 70%)" }}
-        />
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -bottom-28 left-1/3 h-64 w-72 rounded-full opacity-25 blur-3xl"
-          style={{ background: "radial-gradient(circle,rgba(139,127,255,0.32),transparent 70%)" }}
-        />
-        <div className="relative grid gap-8 lg:grid-cols-[1.05fr_1.2fr] lg:items-center">
-          {/* Greeting + actions */}
-          <div className="min-w-0">
-            <span className="aq-eyebrow aq-rise aq-rise-2">
-              <Sparkles aria-hidden className="h-3.5 w-3.5 aq-badge-bob" /> Your telemetry
-            </span>
-            <div className="aq-rise aq-rise-3 mt-4 flex items-center gap-4">
-              <Avatar
-                name={displayName}
-                src={profile?.avatar_url}
-                seed={user.id}
-                className="h-16 w-16 shrink-0 shadow-[0_10px_26px_rgba(38,78,150,0.22),inset_0_1px_0_rgba(255,255,255,0.9)] ring-2 ring-white/80"
-              />
-              <div className="min-w-0">
-                <h1 className="aq-display truncate text-3xl font-bold leading-tight sm:text-4xl">
-                  Hey, <span className="aq-grad-anim" style={blueGradient}>{firstName}</span>
-                </h1>
-                <p className="mt-1 text-[15px] text-foreground/70">
-                  {completedCount > 0
-                    ? `${pluralize(completedCount, "lesson")} cleared${
-                        streak > 1 ? ` · ${streak}-day streak (${xpMultiplier}× XP)` : ""
-                      }`
-                    : "Fresh start — pick a department and begin your build season."}
-                </p>
+      <div className="mx-auto max-w-7xl px-4 pt-28 pb-20 sm:px-6 lg:px-8">
+        {/* ============================ HERO — SIGNATURE INSTRUMENT ============================ */}
+        <section className="grid items-center gap-10 lg:grid-cols-[1.05fr_1fr] lg:gap-14">
+          <RiseGroup>
+            <RiseItem>
+              <span className="ac-chip inline-flex items-center gap-2">
+                <Sparkles className="h-3.5 w-3.5 text-primary" aria-hidden />
+                <span className="ac-eyebrow">Your telemetry</span>
+              </span>
+            </RiseItem>
+
+            <RiseItem>
+              <div className="mt-5 flex items-center gap-4">
+                <Avatar
+                  name={displayName}
+                  src={profile?.avatar_url}
+                  seed={user.id}
+                  className="h-16 w-16 shrink-0 shadow-[0_10px_26px_rgba(38,78,150,0.22),inset_0_1px_0_rgba(255,255,255,0.9)] ring-2 ring-white/80"
+                />
+                <div className="min-w-0">
+                  <h1 className="truncate text-balance font-display text-4xl font-extrabold leading-tight sm:text-5xl">
+                    Hey, <span style={BRAND_GRADIENT}>{firstName}</span>
+                  </h1>
+                  <p className="mt-1 text-[15px] leading-relaxed text-foreground/70">
+                    {completedCount > 0
+                      ? `${pluralize(completedCount, "lesson")} cleared${
+                          streak > 1 ? ` · ${streak}-day streak (${xpMultiplier}× XP)` : ""
+                        }`
+                      : "Fresh start — pick a department and begin your build season."}
+                  </p>
+                </div>
               </div>
-            </div>
+            </RiseItem>
 
-            {/* Level chip + XP-to-next line */}
-            <div className="aq-rise aq-rise-4 mt-6 flex flex-wrap items-center gap-2.5 text-sm">
-              <span className="aq-chip font-semibold">
-                <Zap aria-hidden className="h-3.5 w-3.5 text-primary" />
-                Level {level}
-              </span>
-              <span className="aq-chip font-semibold">
-                <AnimatedCounter value={xp} /> XP total
-              </span>
-              {streak > 0 && (
-                <span className="aq-chip font-semibold">
-                  <Flame aria-hidden className="h-3.5 w-3.5" style={{ color: "#e0721f" }} />
-                  {streak}-day streak
+            <RiseItem>
+              <div className="mt-6 flex flex-wrap items-center gap-2.5 text-sm">
+                <span className="ac-chip inline-flex items-center gap-1.5 font-semibold">
+                  <Zap className="h-3.5 w-3.5 text-primary" aria-hidden />
+                  Level {level}
                 </span>
-              )}
-            </div>
-
-            <div className="aq-rise aq-rise-4 mt-6 flex flex-wrap items-center gap-3">
-              {continueLesson && cm ? (
-                <Link
-                  href={`/guides/${continueLesson.deptSlug}/${continueLesson.moduleSlug}/${continueLesson.lessonSlug}`}
-                  className="aq-cta inline-flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                >
-                  <Play aria-hidden className="h-4 w-4 fill-current" />
-                  {continueLesson.fresh ? "Start learning" : "Continue learning"}
-                </Link>
-              ) : (
-                <Link
-                  href="/guides"
-                  className="aq-cta inline-flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                >
-                  <Play aria-hidden className="h-4 w-4 fill-current" />
-                  Browse the guides
-                </Link>
-              )}
-              <Link
-                href="/leaderboard"
-                className="aq-ghost inline-flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-              >
-                <Trophy aria-hidden className="h-4 w-4" />
-                Leaderboard
-              </Link>
-            </div>
-          </div>
-
-          {/* Instrument cluster — three spring-fill gauges */}
-          <div className="aq-rise aq-rise-5 aq-float aq-card rounded-[24px] p-5 sm:p-6">
-            <div className="mb-4 flex items-center justify-between">
-              <span className="aq-display text-[15px] font-bold text-foreground">
-                Progress at a glance
-              </span>
-              <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-[#0a7a43]">
-                <span className="aq-pulse h-2 w-2 rounded-full bg-[#12b565]" />
-                Live
-              </span>
-            </div>
-            <GaugeCluster
-              level={level}
-              levelPct={levelPct}
-              xpToNext={xpToNext}
-              xp={xp}
-              xpIntoLevel={xpIntoLevel}
-              streak={streak}
-              xpMultiplier={xpMultiplier}
-              nextLevel={nextLevel}
-            />
-            <div className="mt-5">
-              <div className="mb-1.5 flex items-center justify-between text-xs font-medium text-foreground/70">
-                <span>Level {level} → {nextLevel}</span>
-                <span className="font-semibold text-foreground">
-                  {xpToNext} XP to go
+                <span className="ac-chip inline-flex items-center gap-1.5 font-semibold">
+                  <AnimatedCounter value={xp} /> XP total
                 </span>
-              </div>
-              <Progress value={levelPct} className="h-2.5 bg-white/55" barClassName="aq-bar-anim" style={xpBar} />
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ============================ PROFILE NUDGE ============================ */}
-      {(!profile?.username || !profile?.team_number) && (
-        <Reveal className="mt-6">
-          <Link
-            href="/settings"
-            className="aq-card aq-card-hover group flex items-center justify-between gap-4 rounded-[20px] p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-          >
-            <div className="flex items-center gap-3">
-              <span className="aq-icon aq-badge-bob flex h-11 w-11 shrink-0 rounded-2xl">
-                <Sparkles aria-hidden className="h-5 w-5" />
-              </span>
-              <div>
-                <p className="text-[15px] font-semibold text-foreground">
-                  Complete your profile
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  Add a username
-                  {!profile?.team_number ? " and your FRC team number" : ""} to show up
-                  on the leaderboard.
-                </p>
-              </div>
-            </div>
-            <ArrowRight aria-hidden className="h-4 w-4 shrink-0 text-primary transition-transform group-hover:translate-x-1" />
-          </Link>
-        </Reveal>
-      )}
-
-      {/* ============================ INVITE / REFERRALS ============================ */}
-      {profile?.username && (
-        <Reveal>
-          <InviteCard username={profile.username} count={referralCount} />
-        </Reveal>
-      )}
-
-      {/* ============================ MISSION READOUT — STAT CARDS ============================ */}
-      <Reveal className="mt-10" delay={0.04}>
-        <span className="aq-eyebrow">Mission readout</span>
-        <h2 className="aq-display mt-2 text-2xl font-bold text-foreground">
-          Every gauge on the board
-        </h2>
-      </Reveal>
-      <Stagger className="mt-5 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-6">
-        {stats.map((s) => (
-          <StaggerItem key={s.label}>
-            <div className="aq-card aq-card-hover group h-full rounded-[20px] p-4">
-              <span
-                className="aq-badge aq-badge-bob mb-3 flex h-10 w-10 items-center justify-center rounded-2xl transition-transform duration-300 group-hover:scale-110"
-                style={{ "--a": s.accent } as CSSProperties}
-              >
-                <s.icon aria-hidden className="h-5 w-5" />
-              </span>
-              <div
-                className="aq-display text-3xl font-bold tabular-nums"
-                style={{ color: inkFor(s.accent) }}
-              >
-                <AnimatedCounter value={s.value} />
-              </div>
-              <div className="mt-1 text-[13px] font-medium leading-snug text-muted-foreground">
-                {s.label}
-              </div>
-            </div>
-          </StaggerItem>
-        ))}
-      </Stagger>
-
-      {/* ============================ CONTINUE LEARNING ============================ */}
-      {continueLesson && cm && (
-        <Reveal className="mt-10">
-          <Link
-            href={`/guides/${continueLesson.deptSlug}/${continueLesson.moduleSlug}/${continueLesson.lessonSlug}`}
-            className="aq-tile group block rounded-[24px] p-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:p-8"
-            style={{ "--a": cm.color } as CSSProperties}
-          >
-            <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-              <div className="min-w-0">
-                <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-foreground/75">
-                  <Play aria-hidden className="h-3.5 w-3.5 fill-current aq-badge-bob" />
-                  {continueLesson.fresh ? "Start learning" : "Continue learning"}
-                </span>
-                <h2 className="aq-display mt-2 text-balance text-2xl font-bold leading-tight text-foreground sm:text-3xl">
-                  {continueLesson.lessonTitle}
-                </h2>
-                <p className="mt-1.5 text-[15px] font-medium text-foreground/75">
-                  {continueLesson.deptName} · {continueLesson.moduleTitle}
-                </p>
-                {!continueLesson.fresh && (
-                  <div className="mt-4 max-w-sm">
-                    <div className="mb-1.5 flex items-center justify-between text-xs font-semibold text-foreground/75">
-                      <span>{continueLesson.deptName} progress</span>
-                      <span className="text-foreground">{continueLesson.pct}%</span>
-                    </div>
-                    <Progress
-                      value={continueLesson.pct}
-                      className="h-2 bg-white/45"
-                      barClassName="aq-bar-anim bg-[color-mix(in_srgb,var(--a)_78%,#141f2c)]"
-                    />
-                  </div>
+                {streak > 0 && (
+                  <span className="ac-chip inline-flex items-center gap-1.5 font-semibold">
+                    <Flame className="h-3.5 w-3.5" style={{ color: "#c2410c" }} aria-hidden />
+                    {streak}-day streak
+                  </span>
                 )}
               </div>
-              <span className="aq-cta inline-flex shrink-0 items-center gap-2 self-start rounded-2xl px-5 py-3 text-sm font-semibold sm:self-center">
-                {continueLesson.fresh ? "Begin" : "Resume"}
-                <ArrowRight aria-hidden className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
-              </span>
-            </div>
-          </Link>
-        </Reveal>
-      )}
+            </RiseItem>
 
-      {/* ============================ YOUR DEPARTMENTS ============================ */}
-      <section className="mt-12">
-        <Reveal>
-          <div className="flex items-end justify-between gap-4">
-            <div>
-              <span className="aq-eyebrow">
-                {departments.length} departments
-              </span>
-              <h2 className="aq-display mt-2 text-2xl font-bold text-foreground sm:text-3xl">
-                Your departments
-              </h2>
-              <p className="mt-1.5 text-[15px] text-muted-foreground">
-                Pick up where you left off across every track.
-              </p>
-            </div>
-            <Button asChild variant="secondary" size="sm" className="min-h-11 shrink-0">
-              <Link href="/guides">
-                All guides <ArrowUpRight aria-hidden className="h-4 w-4" />
-              </Link>
-            </Button>
-          </div>
-        </Reveal>
+            <RiseItem>
+              <div className="mt-7 flex flex-wrap items-center gap-3">
+                {continueLesson && cm ? (
+                  <Link
+                    href={`/guides/${continueLesson.deptSlug}/${continueLesson.moduleSlug}/${continueLesson.lessonSlug}`}
+                    className="ac-btn text-sm"
+                  >
+                    <Play className="h-4 w-4 fill-current" aria-hidden />
+                    {continueLesson.fresh ? "Start learning" : "Continue learning"}
+                  </Link>
+                ) : (
+                  <Link href="/guides" className="ac-btn text-sm">
+                    <Play className="h-4 w-4 fill-current" aria-hidden />
+                    Browse the guides
+                  </Link>
+                )}
+                <Link href="/leaderboard" className="ac-btn-ghost text-sm">
+                  <Trophy className="h-4 w-4" aria-hidden />
+                  Leaderboard
+                </Link>
+              </div>
+            </RiseItem>
+          </RiseGroup>
 
-        {deptProgress.length > 0 ? (
-          <Stagger className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {deptProgress.map(({ dept, pct }) => (
-              <StaggerItem key={dept.slug}>
-                <DepartmentCard
-                  slug={dept.slug}
-                  name={dept.name}
-                  tagline={dept.tagline}
-                  moduleCount={dept.moduleCount}
-                  lessonCount={dept.lessonCount}
-                  progressPct={pct}
-                />
-              </StaggerItem>
-            ))}
-          </Stagger>
-        ) : (
-          <Reveal className="mt-6">
-            <div className="aq-card rounded-[20px] p-10 text-center text-[15px] text-muted-foreground">
-              Departments are loading — check back in a moment, or{" "}
+          <InstrumentPanel
+            level={level}
+            levelPct={levelPct}
+            xpToNext={xpToNext}
+            xp={xp}
+            xpIntoLevel={xpIntoLevel}
+            streak={streak}
+            xpMultiplier={xpMultiplier}
+            nextLevel={nextLevel}
+          />
+        </section>
+
+        {/* ============================ PROFILE NUDGE ============================ */}
+        {(!profile?.username || !profile?.team_number) && (
+          <Reveal className="mt-8">
+            <Hover lift={-3}>
               <Link
-                href="/guides"
-                className="font-semibold text-primary underline-offset-4 hover:underline"
+                href="/settings"
+                className="ac-card group flex items-center justify-between gap-4 p-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
               >
-                browse the guides
+                <div className="flex min-w-0 items-center gap-3">
+                  <span
+                    className="ac-badge flex h-11 w-11 shrink-0 items-center justify-center"
+                    style={{ "--a": "#2560e6" } as CSSProperties}
+                  >
+                    <Sparkles className="h-5 w-5" aria-hidden />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-[15px] font-semibold text-foreground">
+                      Complete your profile
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Add a username
+                      {!profile?.team_number ? " and your FRC team number" : ""} to show
+                      up on the leaderboard.
+                    </p>
+                  </div>
+                </div>
+                <ArrowRight
+                  className="h-4 w-4 shrink-0 text-primary transition-transform group-hover:translate-x-1"
+                  aria-hidden
+                />
               </Link>
-              .
-            </div>
+            </Hover>
           </Reveal>
         )}
-      </section>
 
-      {/* ============================ ACHIEVEMENTS ============================ */}
-      {achievements.length > 0 && (
+        {/* ============================ INVITE / REFERRALS ============================ */}
+        {profile?.username && (
+          <Reveal className="mt-8">
+            <InviteCard username={profile.username} count={referralCount} />
+          </Reveal>
+        )}
+
+        {/* ============================ MISSION READOUT — STAT CARDS ============================ */}
+        <Reveal className="mt-12" delay={0.04}>
+          <p className="ac-eyebrow">Mission readout</p>
+          <h2 className="mt-2 font-display text-2xl font-bold text-foreground">
+            Every gauge on the board
+          </h2>
+        </Reveal>
+        <RevealGroup className="mt-5 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-6">
+          {stats.map((s) => (
+            <RevealItem key={s.label}>
+              <Hover lift={-4} className="h-full">
+                <div className="ac-card group h-full p-4">
+                  <span
+                    className="ac-badge mb-3 flex h-10 w-10 items-center justify-center transition-transform duration-300 group-hover:scale-110"
+                    style={{ "--a": s.accent } as CSSProperties}
+                  >
+                    <s.icon className="h-5 w-5" aria-hidden />
+                  </span>
+                  <div
+                    className="font-display text-3xl font-bold tabular-nums"
+                    style={{ color: inkFor(s.accent) }}
+                  >
+                    <AnimatedCounter value={s.value} />
+                  </div>
+                  <div className="mt-1 text-[13px] font-medium leading-snug text-muted-foreground">
+                    {s.label}
+                  </div>
+                </div>
+              </Hover>
+            </RevealItem>
+          ))}
+        </RevealGroup>
+
+        {/* ============================ CONTINUE LEARNING ============================ */}
+        {continueLesson && cm && (
+          <Reveal className="mt-12">
+            <Hover lift={-3} className="block">
+              <Link
+                href={`/guides/${continueLesson.deptSlug}/${continueLesson.moduleSlug}/${continueLesson.lessonSlug}`}
+                className="ac-tile group block p-6 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:p-8"
+                style={{ "--a": cm.color } as CSSProperties}
+              >
+                <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
+                    <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-foreground/75">
+                      <Play className="h-3.5 w-3.5 fill-current" aria-hidden />
+                      {continueLesson.fresh ? "Start learning" : "Continue learning"}
+                    </span>
+                    <h2 className="mt-2 text-balance font-display text-2xl font-bold leading-tight text-foreground sm:text-3xl">
+                      {continueLesson.lessonTitle}
+                    </h2>
+                    <p className="mt-1.5 text-[15px] font-medium text-foreground/75">
+                      {continueLesson.deptName} · {continueLesson.moduleTitle}
+                    </p>
+                    {!continueLesson.fresh && (
+                      <div className="mt-4 max-w-sm">
+                        <div className="mb-1.5 flex items-center justify-between text-xs font-semibold text-foreground/75">
+                          <span>{continueLesson.deptName} progress</span>
+                          <span className="text-foreground">{continueLesson.pct}%</span>
+                        </div>
+                        <Progress
+                          value={continueLesson.pct}
+                          className="h-2 bg-white/45"
+                          barClassName="bg-[color-mix(in_srgb,var(--a)_78%,#141f2c)]"
+                        />
+                      </div>
+                    )}
+                  </div>
+                  <span className="ac-btn inline-flex shrink-0 self-start text-sm sm:self-center">
+                    {continueLesson.fresh ? "Begin" : "Resume"}
+                    <ArrowRight
+                      className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1"
+                      aria-hidden
+                    />
+                  </span>
+                </div>
+              </Link>
+            </Hover>
+          </Reveal>
+        )}
+
+        {/* ============================ YOUR DEPARTMENTS ============================ */}
         <section className="mt-14">
           <Reveal>
             <div className="flex items-end justify-between gap-4">
               <div>
-                <span className="aq-eyebrow">Unlocks</span>
-                <h2 className="aq-display mt-2 text-2xl font-bold text-foreground sm:text-3xl">
-                  Achievements
+                <p className="ac-eyebrow">{departments.length} departments</p>
+                <h2 className="mt-2 font-display text-2xl font-bold text-foreground sm:text-3xl">
+                  Your departments
                 </h2>
                 <p className="mt-1.5 text-[15px] text-muted-foreground">
-                  {achievementsEarned > 0
-                    ? `${achievementsEarned} of ${achievements.length} unlocked — keep going.`
-                    : `Complete lessons to unlock all ${achievements.length} badges.`}
+                  Pick up where you left off across every track.
                 </p>
               </div>
-              <span className="aq-chip shrink-0 text-xs font-semibold">
-                {achievementsEarned}/{achievements.length} unlocked
-              </span>
-            </div>
-          </Reveal>
-
-          <Reveal delay={0.05} className="mt-4">
-            <Progress
-              value={clampPct((achievementsEarned / achievements.length) * 100)}
-              className="h-2.5 bg-white/55"
-              barClassName="aq-bar-anim"
-              style={xpBar}
-            />
-          </Reveal>
-
-          <Stagger className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-            {achievements.map((a) => (
-              <StaggerItem key={a.slug}>
-                <AchievementBadge achievement={a} />
-              </StaggerItem>
-            ))}
-          </Stagger>
-        </section>
-      )}
-
-      {/* ============================ ZERO STATE ENCOURAGEMENT ============================ */}
-      {completedCount === 0 && (
-        <Reveal className="mt-14">
-          <div className="aq-glass aq-sheen relative overflow-hidden rounded-[28px] p-8 text-center sm:p-10">
-            <div
-              aria-hidden
-              className="pointer-events-none absolute left-1/2 top-[-30%] h-56 w-72 -translate-x-1/2 rounded-full opacity-40 blur-3xl"
-              style={{ background: "radial-gradient(circle,rgba(37,96,230,0.3),transparent 70%)" }}
-            />
-            <span
-              className="aq-badge aq-badge-bob relative mx-auto flex h-16 w-16 items-center justify-center rounded-2xl"
-              style={{ "--a": "#2560e6" } as CSSProperties}
-            >
-              <CheckCircle2 aria-hidden className="h-8 w-8" />
-            </span>
-            <h2 className="aq-display mt-5 text-2xl font-bold text-foreground">
-              Complete your first lesson
-            </h2>
-            <p className="mx-auto mt-2 max-w-md text-[15px] text-foreground/70">
-              Mark a lesson complete to earn XP, start your streak, and unlock your first
-              achievement. Gracious professionalism starts with rep one.
-            </p>
-            <div className="mt-6 flex justify-center">
               <Link
-                href="/guides/getting-started"
-                className="aq-cta inline-flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                href="/guides"
+                className="group inline-flex min-h-11 shrink-0 items-center gap-1.5 text-sm font-semibold text-primary"
               >
-                Start with the basics <ArrowRight aria-hidden className="h-4 w-4" />
+                All guides
+                <ArrowUpRight
+                  className="h-4 w-4 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
+                  aria-hidden
+                />
               </Link>
             </div>
-          </div>
-        </Reveal>
-      )}
+          </Reveal>
+
+          {deptProgress.length > 0 ? (
+            <RevealGroup className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {deptProgress.map(({ dept, pct }, i) => (
+                <RevealItem key={dept.slug}>
+                  <DepartmentCard
+                    slug={dept.slug}
+                    name={dept.name}
+                    tagline={dept.tagline}
+                    moduleCount={dept.moduleCount}
+                    lessonCount={dept.lessonCount}
+                    progressPct={pct}
+                    index={i + 1}
+                  />
+                </RevealItem>
+              ))}
+            </RevealGroup>
+          ) : (
+            <Reveal className="mt-6">
+              <div className="ac-card p-10 text-center text-[15px] text-muted-foreground">
+                Departments are loading — check back in a moment, or{" "}
+                <Link
+                  href="/guides"
+                  className="font-semibold text-primary underline-offset-4 hover:underline"
+                >
+                  browse the guides
+                </Link>
+                .
+              </div>
+            </Reveal>
+          )}
+        </section>
+
+        {/* ============================ ACHIEVEMENTS ============================ */}
+        {achievements.length > 0 && (
+          <section className="mt-14">
+            <Reveal>
+              <div className="flex items-end justify-between gap-4">
+                <div>
+                  <p className="ac-eyebrow">Unlocks</p>
+                  <h2 className="mt-2 font-display text-2xl font-bold text-foreground sm:text-3xl">
+                    Achievements
+                  </h2>
+                  <p className="mt-1.5 text-[15px] text-muted-foreground">
+                    {achievementsEarned > 0
+                      ? `${achievementsEarned} of ${achievements.length} unlocked — keep going.`
+                      : `Complete lessons to unlock all ${achievements.length} badges.`}
+                  </p>
+                </div>
+                <span className="ac-chip shrink-0 text-xs font-semibold">
+                  {achievementsEarned}/{achievements.length} unlocked
+                </span>
+              </div>
+            </Reveal>
+
+            <Reveal delay={0.05} className="mt-4">
+              <Progress
+                value={clampPct((achievementsEarned / achievements.length) * 100)}
+                className="h-2.5 bg-white/55"
+                barClassName="bg-[linear-gradient(90deg,var(--primary),var(--accent))]"
+                style={XP_BAR_STYLE}
+              />
+            </Reveal>
+
+            <RevealGroup className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+              {achievements.map((a) => (
+                <RevealItem key={a.slug}>
+                  <AchievementBadge achievement={a} />
+                </RevealItem>
+              ))}
+            </RevealGroup>
+          </section>
+        )}
+
+        {/* ============================ ZERO STATE ENCOURAGEMENT ============================ */}
+        {completedCount === 0 && (
+          <Reveal className="mt-14">
+            <div className="ac-glass relative overflow-hidden p-8 text-center sm:p-10">
+              <div
+                aria-hidden
+                className="pointer-events-none absolute left-1/2 top-[-30%] h-56 w-72 -translate-x-1/2 rounded-full opacity-40 blur-3xl"
+                style={{ background: "radial-gradient(circle,rgba(37,96,230,0.3),transparent 70%)" }}
+              />
+              <span
+                className="ac-badge relative mx-auto flex h-16 w-16 items-center justify-center"
+                style={{ "--a": "#2560e6" } as CSSProperties}
+              >
+                <CheckCircle2 className="h-8 w-8" aria-hidden />
+              </span>
+              <h2 className="mt-5 font-display text-2xl font-bold text-foreground">
+                Complete your first lesson
+              </h2>
+              <p className="mx-auto mt-2 max-w-md text-[15px] leading-relaxed text-foreground/70">
+                Mark a lesson complete to earn XP, start your streak, and unlock your
+                first achievement. Gracious professionalism starts with rep one.
+              </p>
+              <div className="mt-6 flex justify-center">
+                <Link href="/guides/getting-started" className="ac-btn text-sm">
+                  Start with the basics <ArrowRight className="h-4 w-4" aria-hidden />
+                </Link>
+              </div>
+            </div>
+          </Reveal>
+        )}
+      </div>
     </div>
   );
 }

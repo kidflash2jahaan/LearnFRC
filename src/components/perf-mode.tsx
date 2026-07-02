@@ -56,7 +56,7 @@ export function PerfModeCard() {
     <Card className="border-border/80">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Gauge className="h-4.5 w-4.5 text-primary" /> Performance
+          <Gauge className="h-4.5 w-4.5 text-primary" /> Motion & effects
         </CardTitle>
         <CardDescription>
           Animations look great but can lag on older devices or some browsers. Turn

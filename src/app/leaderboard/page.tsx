@@ -1,4 +1,4 @@
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import Link from "next/link";
 import {
   Trophy,
@@ -9,7 +9,7 @@ import {
   Flame,
   CalendarClock,
 } from "lucide-react";
-import { Reveal } from "@/components/motion/reveal";
+import { Rise, RiseGroup, RiseItem, Reveal, Glow } from "@/components/motion/primitives";
 import { AnimatedCounter } from "@/components/animated-counter";
 import { type PodiumEntry } from "@/components/leaderboard/podium";
 import {
@@ -27,10 +27,7 @@ import {
 } from "@/lib/queries";
 import { getSession } from "@/lib/auth";
 import type { Profile } from "@/lib/types";
-import {
-  ChampionSpotlight,
-  type ChampionData,
-} from "./_champion-spotlight";
+import { ChampionPanel } from "./_champion-panel";
 
 export const metadata = {
   title: "Leaderboard · LearnFRC",
@@ -110,156 +107,109 @@ export default async function LeaderboardPage() {
   const totalXp = xpTotals.totalXp;
 
   const hasBoard = allTimeEntries.length > 0;
-  const champTop = allTimeEntries[0];
-  const champion: ChampionData | null = champTop
-    ? {
-        id: champTop.id,
-        name: champTop.name,
-        username: champTop.username,
-        avatarUrl: champTop.avatarUrl,
-        teamNumber: champTop.teamNumber,
-        role: champTop.role,
-        xp: champTop.xp,
-        level: champTop.level,
-        lessons: champTop.lessons,
-        isYou: champTop.isYou,
-      }
-    : null;
+  const top3 = allTimeEntries.slice(0, 3);
 
   return (
-    <div
-      data-theme="arena"
-      className="aq-root relative isolate overflow-x-clip text-foreground"
-    >
-      {/* ambient light the glass refracts */}
-      <div className="aq-glow" aria-hidden>
-        <span
-          className="h-[640px] w-[640px] opacity-70"
-          style={{
-            left: "-160px",
-            top: "-200px",
-            background: "radial-gradient(circle, #8bbcff, transparent 70%)",
-          }}
-        />
-        <span
-          className="h-[560px] w-[560px] opacity-55"
-          style={{
-            right: "-160px",
-            top: "-120px",
-            background: "radial-gradient(circle, #ffe08a, transparent 70%)",
-          }}
-        />
-        <span
-          className="h-[520px] w-[520px] opacity-50"
-          style={{
-            left: "34%",
-            top: "440px",
-            background: "radial-gradient(circle, #6ff0ea, transparent 70%)",
-          }}
-        />
-      </div>
+    <div className="relative overflow-x-clip">
+      <Glow
+        blobs={[
+          { size: "640px", pos: { left: "-160px", top: "-200px" }, color: "#8bbcff", opacity: 0.65 },
+          { size: "560px", pos: { right: "-160px", top: "-120px" }, color: "#9bd0ff", opacity: 0.55, delay: 2 },
+          { size: "520px", pos: { left: "34%", top: "440px" }, color: "#6ff0ea", opacity: 0.4, delay: 4 },
+        ]}
+      />
 
       {/* ============================ HERO ============================ */}
-      <section className="mx-auto grid max-w-7xl items-center gap-12 px-4 pb-12 pt-28 sm:px-6 sm:pt-28 lg:grid-cols-2 lg:gap-10 lg:pt-32">
-        <div>
-          <span className="aq-chip aq-eyebrow aq-rise aq-rise-1 inline-flex flex-wrap items-center gap-2">
-            <Trophy className="h-3.5 w-3.5" aria-hidden="true" /> Climb the ranks
-          </span>
-          <h1 className="aq-display aq-rise aq-rise-2 mt-4 text-balance text-4xl font-extrabold leading-[1.03] sm:text-5xl lg:text-[3.4rem]">
-            The{" "}
-            <span className="aq-grad-anim" style={HEADLINE_GRADIENT}>
-              podium
-            </span>{" "}
-            is earned, one lesson at a time.
-          </h1>
-          <p className="aq-rise aq-rise-3 mt-4 max-w-xl text-pretty text-lg leading-relaxed text-foreground/70">
-            Every guide you finish earns XP. Win the weekly sprint, chase the
-            all-time greats, and put your team on the map — the same gracious
-            grind that wins build season.
-          </p>
-          <div className="aq-rise aq-rise-4 mt-7 flex flex-wrap items-center gap-3">
-            <Link
-              href="/guides"
-              className="aq-cta inline-flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold"
-            >
-              Start climbing{" "}
-              <ArrowRight className="h-4 w-4" aria-hidden="true" />
-            </Link>
-            {!user && (
-              <Link
-                href="/signup"
-                className="aq-ghost inline-flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold"
-              >
-                Create free account
+      <section className="mx-auto grid max-w-7xl items-center gap-12 px-4 pb-12 pt-28 sm:px-6 lg:grid-cols-2 lg:gap-10 lg:pb-16 lg:pt-32 lg:px-8">
+        <RiseGroup>
+          <RiseItem>
+            <span className="ac-chip inline-flex items-center gap-2">
+              <Trophy className="h-3.5 w-3.5 text-primary" aria-hidden />
+              <span className="ac-eyebrow">Climb the ranks</span>
+            </span>
+          </RiseItem>
+          <RiseItem>
+            <h1 className="mt-5 text-balance font-display text-4xl font-extrabold leading-[1.02] sm:text-5xl lg:text-[3.4rem]">
+              The <span style={HEADLINE_GRADIENT}>podium</span> is earned, one
+              lesson at a time.
+            </h1>
+          </RiseItem>
+          <RiseItem>
+            <p className="mt-5 max-w-xl text-pretty text-lg leading-relaxed text-foreground/70">
+              Every guide you finish earns XP. Win the weekly sprint, chase
+              the all-time greats, and put your team on the map — the same
+              gracious grind that wins build season.
+            </p>
+          </RiseItem>
+          <RiseItem>
+            <div className="mt-7 flex flex-wrap items-center gap-3">
+              <Link href="/guides" className="ac-btn text-sm">
+                Start climbing <ArrowRight className="h-4 w-4" aria-hidden />
               </Link>
-            )}
-          </div>
+              {!user && (
+                <Link href="/signup" className="ac-btn-ghost text-sm">
+                  Create free account
+                </Link>
+              )}
+            </div>
+          </RiseItem>
 
-          {/* season stat strip — mono data labels */}
           {hasBoard && (
-            <div className="aq-rise aq-rise-5 mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3">
-              <StatTile
-                icon={<Users className="h-4 w-4 text-foreground" aria-hidden />}
-                accent="#2560e6"
-                value={<AnimatedCounter value={xpTotals.learners} />}
-                label={
-                  xpTotals.learners === 1 ? "learner ranked" : "learners ranked"
-                }
-              />
-              <StatTile
-                icon={<Zap className="h-4 w-4 text-foreground" aria-hidden />}
-                accent="#1aa9d6"
-                value={<AnimatedCounter value={totalXp} />}
-                label="XP earned"
-              />
-              <div
-                className="aq-tile col-span-2 flex items-center justify-center gap-2 rounded-2xl px-4 py-3 sm:col-span-1"
-                style={{ "--a": "var(--accent)" } as CSSProperties}
+            <RiseItem>
+              <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                <StatTile
+                  icon={<Users className="h-4 w-4 text-foreground" aria-hidden />}
+                  accent="#2560e6"
+                  value={<AnimatedCounter value={xpTotals.learners} />}
+                  label={xpTotals.learners === 1 ? "learner ranked" : "learners ranked"}
+                />
+                <StatTile
+                  icon={<Zap className="h-4 w-4 text-foreground" aria-hidden />}
+                  accent="#1aa9d6"
+                  value={<AnimatedCounter value={totalXp} />}
+                  label="XP earned"
+                />
+                <div
+                  className="ac-tile col-span-2 flex items-center justify-center gap-2 px-4 py-3 sm:col-span-1"
+                  style={{ "--a": "#1aa9d6" } as CSSProperties}
+                >
+                  <span className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-accent" aria-hidden />
+                  <CalendarClock className="h-4 w-4 text-foreground/80" aria-hidden />
+                  <span className="text-sm font-semibold text-foreground">
+                    Weekly race resets Monday
+                  </span>
+                </div>
+              </div>
+            </RiseItem>
+          )}
+        </RiseGroup>
+
+        {/* SIGNATURE: the podium moment — current champion, live */}
+        {top3.length > 0 ? (
+          <ChampionPanel top3={top3} />
+        ) : (
+          <Rise delay={0.2} className="w-full lg:justify-self-end">
+            <div className="ac-glass relative max-w-md rounded-[28px] p-10 text-center">
+              <span
+                className="ac-badge mx-auto mb-5 flex h-16 w-16 items-center justify-center"
+                style={{ "--a": "#ffd23d" } as CSSProperties}
               >
-                <span
-                  className="aq-pulse h-2 w-2 shrink-0 rounded-full bg-[var(--accent)]"
-                  aria-hidden
-                />
-                <CalendarClock
-                  className="h-4 w-4 text-foreground/80"
-                  aria-hidden
-                />
-                <span className="text-sm font-semibold text-foreground">
-                  Weekly race resets Monday
-                </span>
+                <Trophy className="h-8 w-8" aria-hidden />
+              </span>
+              <h2 className="font-display text-2xl font-bold tracking-tight">
+                The podium is empty
+              </h2>
+              <p className="mt-2 text-base leading-relaxed text-foreground/70">
+                No learners on the board yet. Be the first — start learning,
+                earn XP, and claim the crown.
+              </p>
+              <div className="mt-6 flex justify-center">
+                <Link href="/guides" className="ac-btn text-sm">
+                  Start learning <ArrowRight className="h-4 w-4" aria-hidden />
+                </Link>
               </div>
             </div>
-          )}
-        </div>
-
-        {/* SIGNATURE: champion spotlight (or invite to be first) */}
-        {champion ? (
-          <ChampionSpotlight champion={champion} />
-        ) : (
-          <div className="aq-glass aq-sheen aq-float aq-rise aq-rise-3 rounded-[28px] p-10 text-center lg:justify-self-end">
-            <div
-              className="aq-badge aq-badge-bob mx-auto mb-5 flex h-16 w-16 items-center justify-center"
-              style={{ "--a": "#ffd23d" } as CSSProperties}
-            >
-              <Trophy className="h-8 w-8 text-foreground" aria-hidden />
-            </div>
-            <h2 className="aq-display text-2xl font-bold tracking-tight">
-              The podium is empty
-            </h2>
-            <p className="mt-2 text-base leading-relaxed text-foreground/70">
-              No learners on the board yet. Be the first — start learning, earn
-              XP, and claim the crown.
-            </p>
-            <div className="mt-6 flex justify-center">
-              <Link
-                href="/guides"
-                className="aq-cta inline-flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold"
-              >
-                Start learning
-                <ArrowRight className="h-4 w-4" aria-hidden />
-              </Link>
-            </div>
-          </div>
+          </Rise>
         )}
       </section>
 
@@ -273,16 +223,16 @@ export default async function LeaderboardPage() {
 
           {/* Board section header */}
           <Reveal className="mt-14 text-center">
-            <span className="aq-eyebrow inline-flex items-center justify-center gap-2">
+            <span className="ac-eyebrow inline-flex items-center justify-center gap-2">
               <Flame className="h-3.5 w-3.5" aria-hidden />
               The full board
             </span>
-            <h2 className="aq-display mt-2 text-3xl font-bold text-foreground">
+            <h2 className="mt-2 text-balance font-display text-3xl font-bold text-foreground">
               Every rank, every week
             </h2>
             <p className="mx-auto mt-1 max-w-lg text-base text-foreground/70">
-              Weekly sprints, the all-time greats, and how your team stacks up —
-              switch the view below.
+              Weekly sprints, the all-time greats, and how your team stacks
+              up — switch the view below.
             </p>
           </Reveal>
 
@@ -294,27 +244,27 @@ export default async function LeaderboardPage() {
           />
 
           <Reveal className="mt-14 text-center">
-            <div className="aq-glass aq-sheen mx-auto max-w-2xl rounded-[28px] px-8 py-10">
+            <div className="ac-glass relative mx-auto max-w-2xl overflow-hidden rounded-[28px] px-8 py-10">
               <div
-                className="aq-badge aq-badge-bob mx-auto mb-4 flex h-12 w-12 items-center justify-center"
+                aria-hidden
+                className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-[radial-gradient(circle,rgba(37,96,230,0.22),transparent_70%)] blur-2xl"
+              />
+              <span
+                className="ac-badge relative mx-auto mb-4 flex h-12 w-12 items-center justify-center"
                 style={{ "--a": "#2560e6" } as CSSProperties}
               >
-                <Sparkles className="h-6 w-6 text-foreground" aria-hidden />
-              </div>
-              <h2 className="aq-display text-balance text-2xl font-bold text-foreground sm:text-3xl">
+                <Sparkles className="h-6 w-6" aria-hidden />
+              </span>
+              <h2 className="relative text-balance font-display text-2xl font-bold text-foreground sm:text-3xl">
                 Not on the board yet?
               </h2>
-              <p className="mx-auto mt-2 max-w-md text-base text-foreground/70">
-                Finish a lesson, earn your first XP, and start the climb toward
-                the crown.
+              <p className="relative mx-auto mt-2 max-w-md text-base text-foreground/70">
+                Finish a lesson, earn your first XP, and start the climb
+                toward the crown.
               </p>
-              <div className="mt-6 flex justify-center">
-                <Link
-                  href="/guides"
-                  className="aq-cta inline-flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold"
-                >
-                  Start a lesson
-                  <ArrowRight className="h-4 w-4" aria-hidden />
+              <div className="relative mt-6 flex justify-center">
+                <Link href="/guides" className="ac-btn text-sm">
+                  Start a lesson <ArrowRight className="h-4 w-4" aria-hidden />
                 </Link>
               </div>
             </div>
@@ -331,17 +281,20 @@ function StatTile({
   value,
   label,
 }: {
-  icon: React.ReactNode;
+  icon: ReactNode;
   accent: string;
-  value: React.ReactNode;
+  value: ReactNode;
   label: string;
 }) {
   return (
     <div
-      className="aq-tile flex items-center gap-3 rounded-2xl px-4 py-3"
+      className="ac-tile flex items-center gap-3 px-4 py-3"
       style={{ "--a": accent } as CSSProperties}
     >
-      <span className="aq-badge aq-badge-bob flex h-9 w-9 shrink-0 items-center justify-center">
+      <span
+        className="ac-badge flex h-9 w-9 shrink-0 items-center justify-center"
+        style={{ "--a": accent } as CSSProperties}
+      >
         {icon}
       </span>
       <span className="min-w-0">
