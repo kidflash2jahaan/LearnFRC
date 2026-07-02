@@ -168,6 +168,9 @@
     font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
+    /* Ambient glow blobs may extend past the viewport; clip at the body so
+       they fade naturally (no mid-page container seams, no sideways scroll). */
+    overflow-x: clip;
   }
   ::selection {
     background-color: color-mix(in srgb, var(--primary) 30%, transparent);

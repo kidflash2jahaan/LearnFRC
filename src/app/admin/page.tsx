@@ -49,7 +49,7 @@ export default async function AdminPage() {
   return (
     <div className="relative mx-auto max-w-6xl px-4 pt-28 pb-20 sm:px-6 lg:px-8">
       {/* Ambient glows */}
-      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
         <span className="absolute -top-24 left-[8%] h-72 w-72 rounded-full bg-[radial-gradient(circle,color-mix(in_srgb,var(--primary)_16%,transparent),transparent_70%)] blur-2xl" />
         <span className="absolute top-40 right-[4%] h-80 w-80 rounded-full bg-[radial-gradient(circle,color-mix(in_srgb,var(--accent)_14%,transparent),transparent_70%)] blur-2xl" />
         <span className="absolute bottom-10 left-[30%] h-64 w-64 rounded-full bg-[radial-gradient(circle,color-mix(in_srgb,var(--primary)_12%,transparent),transparent_70%)] blur-2xl" />

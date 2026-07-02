@@ -28,7 +28,7 @@ export default function GlossaryPage() {
   return (
     <div className="relative mx-auto max-w-6xl px-4 pt-28 pb-20 sm:px-6 lg:px-8">
       {/* ambient glows */}
-      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
         <div
           className="absolute -top-24 left-1/2 h-[26rem] w-[26rem] -translate-x-1/2 rounded-full blur-3xl"
           style={{ background: "radial-gradient(circle,rgba(37,96,230,0.22),transparent 70%)" }}

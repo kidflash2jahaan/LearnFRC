@@ -85,7 +85,10 @@ export default async function ResourcesPage() {
   );
 
   return (
-    <div className="relative mx-auto max-w-6xl overflow-x-clip px-4 pt-28 pb-24 sm:px-6 lg:px-8">
+    <div className="relative overflow-x-clip">
+    {/* Full-width wrapper owns the glows so any clipping lands at the viewport
+        edge (invisible), not the max-w container edge (visible seam). */}
+    <div className="relative mx-auto max-w-6xl px-4 pt-28 pb-24 sm:px-6 lg:px-8">
       {/* ambient glows */}
       <div
         aria-hidden
@@ -334,6 +337,7 @@ export default async function ResourcesPage() {
           </div>
         </div>
       </Reveal>
+    </div>
     </div>
   );
 }

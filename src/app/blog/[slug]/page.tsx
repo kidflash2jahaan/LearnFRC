@@ -90,7 +90,7 @@ export default async function ArticlePage({
   return (
     <article className="relative mx-auto max-w-3xl px-4 pt-28 pb-20 sm:px-6 lg:px-8">
       {/* Ambient glows */}
-      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
         <div
           className="aq-float absolute -top-24 -left-20 h-72 w-72 rounded-full opacity-60 blur-3xl"
           style={{ background: "radial-gradient(circle, rgba(37,96,230,0.20), transparent 70%)" }}

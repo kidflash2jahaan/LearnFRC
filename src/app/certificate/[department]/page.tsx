@@ -53,7 +53,7 @@ export default async function CertificatePage({
 
   // Soft ambient glows shared by both states.
   const ambientGlows = (
-    <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+    <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
       <div
         className="absolute -top-24 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full blur-3xl"
         style={{ background: "radial-gradient(circle, rgba(37,96,230,0.16), transparent 70%)" }}

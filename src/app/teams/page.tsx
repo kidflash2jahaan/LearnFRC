@@ -47,7 +47,7 @@ function relTime(iso: string | null): string {
 /* Soft ambient light blobs behind the hero — the glass refracts them. */
 function AmbientGlows() {
   return (
-    <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+    <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
       <div
         className="absolute -top-32 left-1/2 h-[540px] w-[820px] -translate-x-1/2 rounded-full opacity-70 blur-3xl"
         style={{

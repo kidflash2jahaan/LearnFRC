@@ -42,7 +42,7 @@ export default async function PathPage({
   return (
     <div className="relative mx-auto max-w-3xl px-4 pt-28 pb-24 sm:px-6 lg:px-8">
       {/* ambient glows */}
-      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
         <span
           className="aq-float absolute -top-10 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full blur-3xl"
           style={{ background: `radial-gradient(closest-side, ${path.color}33, transparent)` }}

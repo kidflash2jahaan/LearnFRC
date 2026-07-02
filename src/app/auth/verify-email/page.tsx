@@ -20,7 +20,7 @@ export default async function VerifyEmailPage({
   return (
     <div className="relative flex min-h-[100svh] flex-col items-center justify-center px-4 py-24">
       {/* Ambient glows */}
-      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
         <div
           className="absolute -top-24 left-1/2 h-[32rem] w-[32rem] -translate-x-1/2 rounded-full blur-3xl"
           style={{ background: "radial-gradient(circle, color-mix(in srgb, var(--primary) 18%, transparent), transparent 70%)" }}

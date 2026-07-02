@@ -101,7 +101,9 @@ export default async function LessonPage({
   const accentStyle = { "--a": meta.color, "--ai": inkFor(meta.color) } as CSSProperties;
 
   return (
-    <div className="relative mx-auto max-w-7xl px-4 pt-24 pb-20 sm:px-6 lg:px-8">
+    <div className="relative overflow-x-clip">
+      {/* Full-width wrapper owns the glows so any clipping lands at the
+          viewport edge (invisible), not the max-w container edge (seam). */}
       {/* ambient glows */}
       <div aria-hidden className="aq-glow -z-10">
         <span
@@ -131,6 +133,7 @@ export default async function LessonPage({
         }}
       />
 
+      <div className="relative mx-auto max-w-7xl px-4 pt-24 pb-20 sm:px-6 lg:px-8">
       {/* breadcrumb */}
       <nav
         className="aq-rise aq-rise-1 flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground"
@@ -531,6 +534,7 @@ export default async function LessonPage({
             </Reveal>
           </div>
         </aside>
+      </div>
       </div>
     </div>
   );

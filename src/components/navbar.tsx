@@ -52,7 +52,6 @@ type Me = {
 
 export function Navbar() {
   const pathname = usePathname();
-  const isHome = pathname === "/";
   const [scrolled, setScrolled] = React.useState(false);
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const [me, setMe] = React.useState<Me>({
@@ -105,9 +104,7 @@ export function Navbar() {
         "fixed inset-x-0 top-0 z-40 transition-all duration-300",
         scrolled
           ? "aq-glass border-b border-primary/15 shadow-[var(--shadow-sm)]"
-          : isHome
-            ? "aq-glass border-b border-primary/10"
-            : "border-b border-transparent bg-transparent"
+          : "border-b border-transparent bg-transparent"
       )}
     >
       <nav

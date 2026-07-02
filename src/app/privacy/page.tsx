@@ -76,7 +76,7 @@ export default function PrivacyPage() {
   return (
     <div className="relative mx-auto max-w-5xl px-4 pt-28 pb-24 sm:px-6 lg:px-8">
       {/* ambient glows */}
-      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
         <div
           className="absolute -top-16 -left-24 h-72 w-72 rounded-full blur-3xl"
           style={{ background: "radial-gradient(circle,rgba(37,96,230,0.16),transparent 70%)" }}
