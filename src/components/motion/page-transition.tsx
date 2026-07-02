@@ -9,5 +9,5 @@
  * global prefers-reduced-motion block.
  */
 export function PageTransition({ children }: { children: React.ReactNode }) {
-  return <div className="aq-route">{children}</div>;
+  return <div className="ac-route">{children}</div>;
 }
