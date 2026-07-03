@@ -11,10 +11,11 @@ import {
   Sparkles,
   ArrowUpRight,
   Award,
+  UserPlus,
 } from "lucide-react";
 import { getSession } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { getCompletedLessonIds } from "@/lib/queries";
+import { getCompletedLessonIds, getReferralCount } from "@/lib/queries";
 import type { Achievement } from "@/lib/types";
 import { AnimatedCounter } from "@/components/animated-counter";
 import {
@@ -90,6 +91,9 @@ export default async function ProfilePage() {
   const roleLabel = ROLE_LABEL[profile?.role ?? "student"] ?? "Member";
   const handle = profile?.username || "you";
 
+  // How many teammates this member has recruited (shown only when > 0).
+  const referralCount = await getReferralCount(user.id);
+
   // Level ring geometry (r=34 → circumference ≈ 213.6).
   const RING_C = 213.6;
   const ringOffset = RING_C - (intoLevel / 100) * RING_C;
@@ -113,10 +117,18 @@ export default async function ProfilePage() {
 
       <div className="mx-auto max-w-6xl px-4 pb-24 pt-28 sm:px-6 lg:px-8">
         <Rise>
-          <span className="ac-chip inline-flex items-center gap-2">
-            <Sparkles className="h-3.5 w-3.5 text-primary" aria-hidden />
-            <span className="ac-eyebrow">Your pit crew profile</span>
-          </span>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="ac-chip inline-flex items-center gap-2">
+              <Sparkles className="h-3.5 w-3.5 text-primary" aria-hidden />
+              <span className="ac-eyebrow">Your pit crew profile</span>
+            </span>
+            {referralCount > 0 && (
+              <span className="ac-chip inline-flex items-center gap-1.5 text-sm font-semibold">
+                <UserPlus className="h-3.5 w-3.5 text-primary" aria-hidden />
+                {referralCount} {referralCount === 1 ? "teammate" : "teammates"} recruited
+              </span>
+            )}
+          </div>
         </Rise>
 
         {/* ===================== HERO: ID CARD + SEASON PROGRESS ===================== */}

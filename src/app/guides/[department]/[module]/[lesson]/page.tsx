@@ -99,7 +99,7 @@ export default async function LessonPage({
   const prev = idx > 0 ? flat[idx - 1] : null;
   const next = idx < flat.length - 1 ? flat[idx + 1] : null;
 
-  const { user } = await getSession();
+  const { user, profile } = await getSession();
   const completed = user ? await getCompletedLessonIds(user.id) : new Set<string>();
   const bookmarks = user ? await getBookmarkedLessonIds(user.id) : new Set<string>();
   const isCompleted = completed.has(les.id);
@@ -386,6 +386,7 @@ export default async function LessonPage({
               initialCompleted={isCompleted}
               quiz={quiz}
               nextHref={nextHref}
+              referrerUsername={profile?.username ?? null}
             />
 
             {/* mobile: reading progress + dept progress card */}

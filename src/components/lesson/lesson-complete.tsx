@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { setLessonComplete } from "@/app/actions/progress";
 import { Button } from "@/components/ui/button";
 import { Confetti } from "@/components/lesson/confetti";
+import { TeamChallenge } from "@/components/team-challenge";
 import { cn } from "@/lib/utils";
 import type { QuizQuestion } from "@/lib/types";
 
@@ -29,6 +30,7 @@ export function LessonComplete({
   initialCompleted,
   quiz,
   nextHref,
+  referrerUsername,
 }: {
   lessonId: string;
   deptSlug: string;
@@ -37,6 +39,7 @@ export function LessonComplete({
   initialCompleted: boolean;
   quiz: QuizQuestion[];
   nextHref?: string | null;
+  referrerUsername?: string | null;
 }) {
   const router = useRouter();
   const [completed, setCompleted] = React.useState(initialCompleted);
@@ -137,6 +140,13 @@ export function LessonComplete({
             Mark as incomplete
           </Button>
         </div>
+
+        {referrerUsername && (
+          <div className="mt-6">
+            <hr className="ac-divider mb-5" />
+            <TeamChallenge username={referrerUsername} />
+          </div>
+        )}
       </div>
     );
   }

@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { PrintButton } from "@/components/certificate/print-button";
 import { ShareButton } from "@/components/share-button";
+import { TeamChallenge } from "@/components/team-challenge";
 import { AnimatedCounter } from "@/components/animated-counter";
 import {
   Rise,
@@ -388,6 +389,12 @@ export default async function CertificatePage({
             </RevealItem>
           ))}
         </RevealGroup>
+
+        {profile?.username && (
+          <Reveal delay={0.12} className="mt-6 print:hidden">
+            <TeamChallenge username={profile.username} />
+          </Reveal>
+        )}
 
         <Reveal delay={0.15}>
           <p className="mt-6 text-center text-sm text-muted-foreground print:hidden">
