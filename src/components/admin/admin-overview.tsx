@@ -15,6 +15,7 @@ import {
   ChevronDown,
   Radio,
   UserPlus,
+  Newspaper,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar } from "@/components/ui/avatar";
@@ -32,6 +33,7 @@ type Panel =
   | "completions"
   | "subscribers"
   | "achievements"
+  | "articles"
   | null;
 
 const EASE = [0.21, 0.47, 0.32, 0.98] as const;
@@ -92,6 +94,8 @@ type OverviewData = {
   completions7d: number;
   totalTeams: number;
   referralUsers: number;
+  articleViewsTotal: number;
+  articleViews7d: number;
 };
 
 export function AdminOverview({
@@ -103,6 +107,7 @@ export function AdminOverview({
   achievements,
   onlineUsers,
   recruiters,
+  articleViews,
 }: {
   data: OverviewData;
   users: AdminUser[];
@@ -112,10 +117,12 @@ export function AdminOverview({
   achievements: { name: string; icon: string; earned: number }[];
   onlineUsers: { name: string; username: string | null; lastSeen: string }[];
   recruiters: { name: string; username: string | null; referrals: number }[];
+  articleViews: { slug: string; title: string; views: number }[];
 }) {
   const [open, setOpen] = React.useState<Panel>(null);
   const toggle = (p: Panel) => setOpen((cur) => (cur === p ? null : p));
   const maxAch = Math.max(1, ...achievements.map((a) => a.earned));
+  const maxViews = Math.max(1, ...articleViews.map((a) => a.views));
 
   const cards = [
     {
@@ -144,6 +151,13 @@ export function AdminOverview({
     { label: "Achievements earned", value: data.achievementsEarned, icon: Award, sub: "badges unlocked", panel: "achievements" as Panel },
     { label: "Lessons", value: data.lessons, icon: BookOpen, sub: `${data.departments} departments` },
     { label: "Bookmarks", value: data.bookmarks, icon: Layers, sub: "saved lessons" },
+    {
+      label: "Article views",
+      value: data.articleViewsTotal,
+      icon: Newspaper,
+      sub: `+${data.articleViews7d.toLocaleString()} this week`,
+      panel: "articles" as Panel,
+    },
     { label: "Email subscribers", value: data.subscribers, icon: Mail, sub: "early-access list", panel: "subscribers" as Panel },
     {
       label: "Teams",
@@ -503,6 +517,56 @@ export function AdminOverview({
                 </div>
               ))}
             </div>
+          )}
+        </PanelShell>
+      )}
+
+      {open === "articles" && (
+        <PanelShell
+          title="Article views"
+          count={`${articleViews.length} articles`}
+        >
+          <p className="mb-4 text-sm text-muted-foreground">
+            {data.articleViewsTotal.toLocaleString()} all-time reads ·{" "}
+            {data.articleViews7d.toLocaleString()} in the last 7 days.
+          </p>
+          {articleViews.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No articles yet.</p>
+          ) : (
+            <ul className="max-h-[32rem] divide-y divide-border overflow-auto">
+              {articleViews.map((a) => (
+                <li
+                  key={a.slug}
+                  className="flex items-center justify-between gap-4 py-3 transition-colors hover:bg-primary/[0.04]"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-medium text-foreground">
+                      {a.title}
+                    </div>
+                    <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                      <div
+                        className="h-full rounded-full"
+                        style={
+                          {
+                            width: `${Math.round((a.views / maxViews) * 100)}%`,
+                            background:
+                              "linear-gradient(90deg, var(--accent), var(--primary))",
+                          } as CSSProperties
+                        }
+                      />
+                    </div>
+                  </div>
+                  <span className="shrink-0 text-right tabular-nums">
+                    <span className="text-sm font-bold text-primary">
+                      {a.views.toLocaleString()}
+                    </span>
+                    <span className="ml-1 text-[10px] font-medium uppercase text-muted-foreground">
+                      views
+                    </span>
+                  </span>
+                </li>
+              ))}
+            </ul>
           )}
         </PanelShell>
       )}

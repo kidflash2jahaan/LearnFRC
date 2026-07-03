@@ -10,7 +10,6 @@ import {
   Users,
   UserPlus,
   CheckCircle2,
-  Newspaper,
 } from "lucide-react";
 import { getSession } from "@/lib/auth";
 import { getAdminStats } from "@/lib/admin";
@@ -19,7 +18,6 @@ import { ActivityChart } from "@/components/admin/activity-chart";
 import { AdminOverview } from "@/components/admin/admin-overview";
 import { AutoRefresh } from "@/components/admin/auto-refresh";
 import { SourceBreakdown } from "@/components/admin/source-breakdown";
-import { ArticleViews } from "@/components/admin/article-views";
 import { AnimatedCounter } from "@/components/animated-counter";
 import {
   Rise,
@@ -206,6 +204,8 @@ export default async function AdminPage() {
               completions7d: stats.completions7d,
               totalTeams: stats.totalUniqueTeams,
               referralUsers: stats.referralUsers,
+              articleViewsTotal: stats.articleViewsTotal,
+              articleViews7d: stats.articleViews7d,
             }}
             users={stats.users}
             teams={stats.teams}
@@ -214,6 +214,7 @@ export default async function AdminPage() {
             achievements={stats.achievementBreakdown}
             onlineUsers={stats.onlineUsers}
             recruiters={stats.recruiters}
+            articleViews={stats.articleViews}
           />
         </Reveal>
 
@@ -308,30 +309,6 @@ export default async function AdminPage() {
               users show as &ldquo;Unknown / Direct.&rdquo;
             </p>
             <SourceBreakdown week={stats.sources7d} allTime={stats.sources} />
-          </section>
-        </Reveal>
-
-        {/* ===================== ARTICLE VIEWS ===================== */}
-        <Reveal className="mt-6">
-          <section className="ac-card p-5 sm:p-6">
-            <h2 className="mb-1.5 flex items-center gap-2 text-lg font-semibold">
-              <span
-                className="ac-badge flex h-9 w-9 items-center justify-center"
-                style={{ "--a": "var(--primary)" } as CSSProperties}
-              >
-                <Newspaper className="h-[18px] w-[18px]" aria-hidden="true" />
-              </span>
-              Article views
-            </h2>
-            <p className="mb-5 max-w-md text-sm leading-relaxed text-foreground/70">
-              Anonymous reads of the blog guides, counted once per browser
-              session per article. Expand for a per-article breakdown.
-            </p>
-            <ArticleViews
-              total={stats.articleViewsTotal}
-              last7d={stats.articleViews7d}
-              articles={stats.articleViews}
-            />
           </section>
         </Reveal>
 
