@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import {
   getDepartmentBySlug,
+  getLessonContent,
   getCompletedLessonIds,
   getBookmarkedLessonIds,
   flattenLessons,
@@ -99,15 +100,21 @@ export default async function LessonPage({
   const prev = idx > 0 ? flat[idx - 1] : null;
   const next = idx < flat.length - 1 ? flat[idx + 1] : null;
 
-  const { user, profile } = await getSession();
+  // The heavy lesson body (markdown, takeaways, resources, quiz) is fetched and
+  // cached separately so list/nav queries never carry lesson content.
+  const [body, { user, profile }] = await Promise.all([
+    getLessonContent(les.id),
+    getSession(),
+  ]);
   const completed = user ? await getCompletedLessonIds(user.id) : new Set<string>();
   const bookmarks = user ? await getBookmarkedLessonIds(user.id) : new Set<string>();
   const isCompleted = completed.has(les.id);
   const lessonPath = `/guides/${dept.slug}/${mod.slug}/${les.slug}`;
 
-  const takeaways = (les.key_takeaways ?? []) as string[];
-  const resources = (les.resources ?? []) as Resource[];
-  const quiz = (les.quiz ?? []) as QuizQuestion[];
+  const content = body?.content ?? "";
+  const takeaways = (body?.key_takeaways ?? []) as string[];
+  const resources = (body?.resources ?? []) as Resource[];
+  const quiz = (body?.quiz ?? []) as QuizQuestion[];
   const nextHref = next
     ? `/guides/${dept.slug}/${next.moduleSlug}/${next.slug}`
     : `/guides/${dept.slug}`;
@@ -116,7 +123,7 @@ export default async function LessonPage({
   const doneInDept = flat.filter((l) => completed.has(l.id)).length;
   const total = flat.length;
   const pct = total ? Math.round((doneInDept / total) * 100) : 0;
-  const readMins = Math.max(1, Math.round((les.content?.split(/\s+/).length ?? 0) / 200));
+  const readMins = Math.max(1, Math.round((content?.split(/\s+/).length ?? 0) / 200));
   const deptGradient = `linear-gradient(135deg, ${meta.color}, ${meta.to})`;
   // --a: bright accent (fills/badges); --ai: darker same-hue tone for text.
   const ink = inkFor(meta.color);
@@ -124,7 +131,7 @@ export default async function LessonPage({
 
   // Same extraction the Markdown renderer uses, so the rail's ids match the
   // article's rendered heading ids exactly.
-  const headings = extractHeadings(les.content ?? "");
+  const headings = extractHeadings(content);
 
   const ARTICLE_ID = "lesson-body";
 
@@ -314,7 +321,7 @@ export default async function LessonPage({
           {/* article */}
           <article id={ARTICLE_ID} className="min-w-0">
             <Reveal>
-              <Markdown content={les.content} />
+              <Markdown content={content} />
             </Reveal>
 
             {/* key takeaways */}

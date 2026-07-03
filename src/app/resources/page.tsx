@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import type { CSSProperties } from "react";
 import { Library, MessageSquarePlus, ArrowUpRight } from "lucide-react";
-import { createClient } from "@/lib/supabase/server";
+import { getDepartmentSources } from "@/lib/queries";
 import { deptMeta, inkFor } from "@/lib/departments";
 import { Icon } from "@/lib/icon-map";
 import { FeedbackForm } from "@/components/feedback-form";
@@ -123,11 +123,7 @@ function hostLabel(url: string): string {
 }
 
 export default async function ResourcesPage() {
-  const supabase = await createClient();
-  const { data: departments } = await supabase
-    .from("departments")
-    .select("name, slug, sources")
-    .order("sort_order");
+  const departments = await getDepartmentSources();
 
   const totalLinks = CURATED.reduce((s, g) => s + g.links.length, 0);
   const withSources = (departments ?? []).filter(
