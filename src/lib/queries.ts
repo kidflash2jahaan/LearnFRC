@@ -446,6 +446,20 @@ export async function getReferralCount(userId: string): Promise<number> {
 }
 
 /**
+ * Is this email already on the newsletter list? Uncached, head/count-only
+ * (no rows fetched) so egress stays tiny — used to skip the post-lesson
+ * newsletter prompt for people who already subscribed.
+ */
+export async function isEmailSubscribed(email: string): Promise<boolean> {
+  const supabase = await createClient();
+  const { count } = await supabase
+    .from("subscribers")
+    .select("email", { count: "exact", head: true })
+    .eq("email", email.trim().toLowerCase());
+  return (count ?? 0) > 0;
+}
+
+/**
  * Site-wide XP totals for the leaderboard header — counts ALL learners, not
  * just the top 50 shown, so the numbers match the admin panel exactly. Same for
  * every viewer, so cached on the short leaderboard window.

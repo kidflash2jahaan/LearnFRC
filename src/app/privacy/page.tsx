@@ -33,7 +33,7 @@ export const metadata: Metadata = {
   description: "How LearnFRC collects, uses, and protects your information.",
 };
 
-const UPDATED = "June 22, 2026";
+const UPDATED = "July 3, 2026";
 const CONTACT = "29pardhananij@sagehillschool.org";
 
 const BRAND_GRADIENT: CSSProperties = {
@@ -147,11 +147,34 @@ const SECTIONS: Section[] = [
     icon: Cookie,
     accent: "#c2740f",
     body: (
-      <P>
-        We use a single essential cookie to keep you signed in. We use privacy-friendly
-        product analytics to understand usage; we do not use advertising or cross-site
-        tracking cookies, and we do not sell your data.
-      </P>
+      <>
+        <P>We keep cookies to a minimum and use them only for the essentials:</P>
+        <Bullets
+          items={[
+            <>
+              <strong className={strong}>Staying signed in.</strong> One essential
+              cookie keeps you logged in as you move around the site.
+            </>,
+            <>
+              <strong className={strong}>Where you came from.</strong> A first-party
+              cookie remembers how you first found LearnFRC — say, a forum link or a
+              teammate&apos;s invite — so we can see which channels actually help people
+              discover us. It records the source, not who you are, and never follows you
+              across other sites.
+            </>,
+            <>
+              <strong className={strong}>Article views.</strong> We tally anonymous,
+              aggregate view counts on guides to see what&apos;s useful. These counts
+              aren&apos;t linked to your account, and your browser&apos;s sessionStorage
+              is used only to avoid double-counting the same visit.
+            </>,
+          ]}
+        />
+        <P>
+          We do <strong className={strong}>not</strong> use advertising cookies or
+          cross-site tracking, and we never sell your data.
+        </P>
+      </>
     ),
   },
   {

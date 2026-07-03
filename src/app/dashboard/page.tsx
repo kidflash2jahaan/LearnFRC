@@ -40,6 +40,7 @@ import { deptMeta, inkFor } from "@/lib/departments";
 import { clampPct, pluralize } from "@/lib/utils";
 import type { Achievement } from "@/lib/types";
 import { InstrumentPanel } from "./_instrument-panel";
+import { WhatsNew } from "./_whats-new";
 
 export const metadata: Metadata = {
   title: "Dashboard · LearnFRC",
@@ -369,6 +370,12 @@ export default async function DashboardPage() {
           />
         </section>
 
+        {/* ============================ WHAT'S NEW ============================ */}
+        <WhatsNew
+          inviteHref={profile?.username ? "#invite-card" : "/settings"}
+          className="mt-8"
+        />
+
         {/* ============================ PROFILE NUDGE ============================ */}
         {(!profile?.username || !profile?.team_number) && (
           <Reveal className="mt-8">
@@ -407,7 +414,9 @@ export default async function DashboardPage() {
         {/* ============================ INVITE / REFERRALS ============================ */}
         {profile?.username && (
           <Reveal className="mt-8">
-            <InviteCard username={profile.username} count={referralCount} />
+            <div id="invite-card" className="scroll-mt-28">
+              <InviteCard username={profile.username} count={referralCount} />
+            </div>
           </Reveal>
         )}
 

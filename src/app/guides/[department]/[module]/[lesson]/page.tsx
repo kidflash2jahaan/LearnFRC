@@ -22,6 +22,7 @@ import {
   getCompletedLessonIds,
   getBookmarkedLessonIds,
   flattenLessons,
+  isEmailSubscribed,
 } from "@/lib/queries";
 import { getSession } from "@/lib/auth";
 import { deptMeta, inkFor } from "@/lib/departments";
@@ -108,6 +109,10 @@ export default async function LessonPage({
   ]);
   const completed = user ? await getCompletedLessonIds(user.id) : new Set<string>();
   const bookmarks = user ? await getBookmarkedLessonIds(user.id) : new Set<string>();
+  // Skip the post-lesson newsletter prompt for people already on the list.
+  const alreadySubscribed = user?.email
+    ? await isEmailSubscribed(user.email)
+    : false;
   const isCompleted = completed.has(les.id);
   const lessonPath = `/guides/${dept.slug}/${mod.slug}/${les.slug}`;
 
@@ -394,6 +399,7 @@ export default async function LessonPage({
               quiz={quiz}
               nextHref={nextHref}
               referrerUsername={profile?.username ?? null}
+              alreadySubscribed={alreadySubscribed}
             />
 
             {/* mobile: reading progress + dept progress card */}

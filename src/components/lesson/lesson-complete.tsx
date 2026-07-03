@@ -19,6 +19,7 @@ import { setLessonComplete } from "@/app/actions/progress";
 import { Button } from "@/components/ui/button";
 import { Confetti } from "@/components/lesson/confetti";
 import { TeamChallenge } from "@/components/team-challenge";
+import { LessonNewsletter } from "@/components/lesson/lesson-newsletter";
 import { cn } from "@/lib/utils";
 import type { QuizQuestion } from "@/lib/types";
 
@@ -31,6 +32,7 @@ export function LessonComplete({
   quiz,
   nextHref,
   referrerUsername,
+  alreadySubscribed = false,
 }: {
   lessonId: string;
   deptSlug: string;
@@ -40,6 +42,7 @@ export function LessonComplete({
   quiz: QuizQuestion[];
   nextHref?: string | null;
   referrerUsername?: string | null;
+  alreadySubscribed?: boolean;
 }) {
   const router = useRouter();
   const [completed, setCompleted] = React.useState(initialCompleted);
@@ -147,6 +150,9 @@ export function LessonComplete({
             <TeamChallenge username={referrerUsername} />
           </div>
         )}
+
+        {/* Quietest ask, below the primary actions + team challenge. */}
+        <LessonNewsletter alreadySubscribed={alreadySubscribed} />
       </div>
     );
   }

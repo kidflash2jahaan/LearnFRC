@@ -6,8 +6,27 @@ import { Loader2, ArrowRight, CheckCircle2 } from "lucide-react";
 import { subscribe } from "@/app/actions/subscribe";
 import { cn } from "@/lib/utils";
 
-export function NewsletterForm({ className }: { className?: string }) {
+export function NewsletterForm({
+  className,
+  compact = false,
+  onSuccess,
+}: {
+  className?: string;
+  /** Slim variant for tight rows (e.g. the post-lesson prompt). */
+  compact?: boolean;
+  /** Fired exactly once when a subscribe succeeds — lets callers persist a
+   *  "don't nag again" flag without owning the form's action state. */
+  onSuccess?: () => void;
+}) {
   const [state, action, pending] = useActionState(subscribe, undefined);
+
+  const firedRef = React.useRef(false);
+  React.useEffect(() => {
+    if (state?.success && !firedRef.current) {
+      firedRef.current = true;
+      onSuccess?.();
+    }
+  }, [state?.success, onSuccess]);
 
   if (state?.success) {
     return (
@@ -25,8 +44,16 @@ export function NewsletterForm({ className }: { className?: string }) {
   }
 
   return (
-    <form action={action} className={cn("w-full max-w-sm", className)}>
-      <div className="ac-input group flex items-center gap-2 !p-1.5 transition-shadow focus-within:border-primary focus-within:shadow-[0_0_0_3px_rgba(37,96,230,0.18)]">
+    <form
+      action={action}
+      className={cn(compact ? "w-full sm:w-auto" : "w-full max-w-sm", className)}
+    >
+      <div
+        className={cn(
+          "ac-input group flex items-center gap-2 !p-1.5 transition-shadow focus-within:border-primary focus-within:shadow-[0_0_0_3px_rgba(37,96,230,0.18)]",
+          compact && "sm:min-w-[264px]"
+        )}
+      >
         <input
           type="email"
           name="email"
