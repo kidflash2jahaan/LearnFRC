@@ -2306,6 +2306,1101 @@ Look back at the list and one theme repeats: do the simple, reliable thing early
 
 Ready to dig into the details? Start with the [LearnFRC guides hub](https://learnfrc.systemerr.com/guides) and pick the track that matches whatever part of your robot needs the most help right now.`,
   },
+  {
+    slug: "frc-vs-ftc-vs-vex",
+    title: "FRC vs FTC vs VEX: Which Robotics Program Is Right for You?",
+    description:
+      "FRC vs FTC vs VEX compared: robot size, cost, age range, season length, and programming, plus how to choose the right robotics competition for you.",
+    keywords: [
+      "FRC vs FTC",
+      "FRC vs VEX",
+      "difference between FRC and FTC",
+      "which robotics competition",
+      "FTC vs VEX",
+      "best robotics program for beginners",
+    ],
+    date: "2026-07-03",
+    readMins: 7,
+    content: `Short answer: FRC, FTC, and VEX are all competitive robotics programs, but they differ in robot size, cost, and age range. FRC builds the biggest robots (roughly 115 pounds) for the most money, FTC sits in the middle with fridge-sized-down-to-desktop robots at a fraction of the cost, and VEX is the cheapest and most accessible with the most matches per season. Which one is "right" depends almost entirely on your budget, your available mentors, and how much time you can commit.
+
+Here's the honest breakdown, from someone inside the FRC ecosystem.
+
+## The one-paragraph version of each
+
+**FRC (FIRST Robotics Competition)** is the flagship high-school program of *FIRST*. Every January, teams worldwide get the same new game and about six weeks to design, build, and program a roughly 115-pound robot to play it. It is the biggest, most expensive, most "real engineering" of the three.
+
+**FTC (FIRST Tech Challenge)** is FIRST's middle-and-high-school program (grades 7–12). Robots start each match inside an 18-inch cube and can expand from there. It runs on the same season rhythm as a sport but costs far less than FRC and needs a fraction of the space.
+
+**VEX** is run by the REC Foundation, *not* FIRST. It comes in tiers: VEX IQ (plastic, snap-together, elementary and middle school) and the VEX V5 Robotics Competition, or V5RC (metal parts, middle and high school). VEX is the most affordable, has the longest season, and runs the most tournaments.
+
+If you only remember one thing: **FRC is the varsity-sport version, VEX is the year-round club version, and FTC lands in between.**
+
+## Robot size and what you actually build
+
+The size gap is the most visible difference, and it drives almost everything else.
+
+An FRC robot is an industrial machine. It's built from aluminum extrusion, powered by big brushless motors, and plays on a field roughly 27 by 54 feet in three-robot alliances. When people say FRC robots are "the size of a washing machine," they're not exaggerating. That scale is thrilling, but it means real safety considerations, real machining, and a real shop.
+
+An FTC robot fits in an 18-inch cube at the start of a match. You can build a competitive one on a folding table in a classroom. Parts come from ecosystems like REV Robotics, goBILDA, and Tetrix, and much of it is bolt-together rather than machined from raw stock. Matches are two robots versus two robots on a 12-by-12-foot field.
+
+A VEX V5 robot is smaller still and built almost entirely from a standardized metal-and-plastic kit with square holes on a half-inch grid. That standardization is the point: nearly everyone uses the same parts, so the competition is more about clever design and driver skill than about who can afford custom fabrication. V5RC also runs two-versus-two.
+
+Across all three, the *skills* overlap more than the hardware suggests. Drivetrains, intakes, arms, and scoring mechanisms show up everywhere. If you learn how a good drivetrain works in one program, that knowledge transfers. Our [mechanical build guides](/guides/mechanical-build) are FRC-flavored, but the mechanical intuition carries over to FTC and VEX just fine.
+
+## Cost, honestly
+
+This is usually the deciding factor for a new program, so let's be blunt.
+
+**FRC is expensive.** All-in, a typical Regional team's season lands in the low-to-mid five figures once you add up registration, events, parts, and travel — far and away the priciest of the three. Rookie grants soften year one (the NASA-sponsored [rookie grant](/guides/business-operations/first-grants-and-programs/nasa-frc-sponsorship-grant) can cover a first event), but FRC is a serious fundraising commitment every season after. Before you commit, read the honest, line-by-line numbers in our [cost of an FRC team](/guides/business-operations/understanding-the-cost/what-frc-actually-costs) lesson.
+
+**FTC is dramatically cheaper.** Team registration with FIRST is in the low hundreds, and a competitive robot's parts run in the low thousands. A brand-new FTC team can realistically get on the field for well under what a single FRC event costs.
+
+**VEX is the most budget-friendly of all.** Team registration with the REC Foundation is modest, the base kit is reusable across seasons, and because parts are standardized you're not constantly buying custom hardware. For a school testing the waters on competitive robotics, VEX is the lowest-risk financial entry point.
+
+Exact fees change year to year, so always confirm current numbers on each program's official site rather than trusting a blog (including this one). But the *relative* ranking, VEX cheapest, FTC in the middle, FRC most expensive, has held steady for years.
+
+## Age range and season length
+
+**FTC and VEX IQ** reach down into middle school, which matters if you're building a pipeline. A common feeder path is VEX IQ or FTC in middle school, then FRC in high school.
+
+**FRC** is strictly high school (grades 9–12, roughly ages 14–18).
+
+**VEX V5RC** spans middle and high school, and VEX even has a college division (VEX U).
+
+Season length is a real lifestyle difference. FRC's build season is a famously intense six-week sprint after the January [kickoff](/guides/getting-started/the-season-and-the-game/annual-season-kickoff-to-championship), then events run into spring. It's a burst of enormous effort. VEX, by contrast, releases its game in the spring and runs tournaments through the following spring, so teams iterate on the same game for the better part of a year across many events. FTC sits in between, kicking off in the fall with events running into the following spring. If your students thrive on a short, all-in crunch, FRC's rhythm is a feature. If they'd rather iterate slowly and compete often, VEX's long season fits better.
+
+## Programming and the software stack
+
+If you or your students care about code, the differences here are worth knowing.
+
+**FRC** uses **WPILib**, the official software library, in Java, C++, or Python. Code runs on the **roboRIO** controller, and motor controllers from REV and CTRE talk over a CAN bus. This is the most professional stack of the three, with version control, command-based architecture, simulation, and vision processing all in normal use. Rather than re-explain the electronics and toolchain here, our lessons on [the FRC control system](/guides/electrical-wiring/control-system-components/what-is-the-frc-control-system) and [choosing a language](/guides/programming-software/foundations-tools-and-first-program/choosing-a-language) walk through the real thing.
+
+**FTC** runs on the **REV Control Hub**, an Android-based controller. You can program in Blocks (visual), OnBot Java (in a browser), or full Android Studio with Java. The on-ramp is gentle: a student can start in Blocks and graduate to text-based Java on the same robot.
+
+**VEX** uses **VEXcode**, which supports Blocks, C++, and Python, and advanced teams often move to **PROS**, a more professional C++ toolchain. Code runs on the V5 Brain. Like FTC, VEX is designed so a beginner can start visual and grow into real text code.
+
+All three teach genuine programming. FRC's stack is the closest to what you'd see in an actual engineering job, which is part of why FRC alumni so often cite it in college and internship applications.
+
+## Which one is right for you?
+
+Rather than declaring a winner, match the program to your situation.
+
+**Choose FRC if:** you're in high school, you have (or can raise) a real budget, you can find dedicated mentors and shop space, and you want the deepest, most industry-like engineering experience. The scale, the alliances, and the six-week crucible are unmatched. It asks the most and gives the most back.
+
+**Choose FTC if:** you want a genuine FIRST competition experience without FRC's cost and space demands, you're serving middle *or* high schoolers, or you're a new program that wants to prove the concept before scaling up to FRC later. Many strong FRC programs started as FTC teams.
+
+**Choose VEX if:** budget is tight, you want to compete frequently across a long season, you're starting younger students, or you want a standardized-parts environment where design cleverness beats fabrication budget. It's the easiest place to start and the easiest to sustain.
+
+And you don't have to pick forever. Plenty of students do VEX or FTC first, then move to FRC and bring that experience with them. The habits that make you good, iterating on designs, scouting your opponents, wiring cleanly, documenting what you learn, transfer across all three. If terms like *alliance*, *autonomous*, or *CAN bus* are new to you, our [glossary](/glossary) explains the vocabulary all three programs share.
+
+## Where to go next
+
+If you've landed on FRC, that's what this whole site is built for. Start with our [Getting Started guide](/guides/getting-started) for a beginner's walkthrough of joining a team and learning the tools, then branch into whichever department fits you, whether that's mechanical, CAD, programming, electrical, or strategy. Our structured [learning paths](/paths) will sequence the lessons for you so you're not guessing what to learn next.
+
+Whichever program you choose, the best move is the same: find a local team, ask to visit, and show up. Robotics people are famously generous, and every one of these programs is far less intimidating from the inside than it looks from the stands.`,
+  },
+  {
+    slug: "joining-your-first-frc-team",
+    title: "Joining an FRC Team: Your First-Season Survival Guide",
+    description:
+      "How to join an FRC team as a rookie: where to find a team, when to join, picking a department, what to expect your first year, and surviving your first build season.",
+    keywords: [
+      "how to join an FRC team",
+      "first year FRC",
+      "new FRC member",
+      "what to expect FRC rookie",
+      "FRC rookie survival guide",
+      "joining a robotics team",
+    ],
+    date: "2026-07-03",
+    readMins: 7,
+    content: `To join an FRC team, find a team at your school or in your community, show up to a meeting, and tell them you want to help — most teams take new members year-round and assume you know nothing. You do not need to build robots, write code, or even own a screwdriver on day one; you need to show up consistently and be willing to get good at one thing.
+
+That is the whole barrier to entry. Everything below is what happens after you walk in the door, and how to not feel completely lost your first season.
+
+## Step 1: Find a team
+
+Most FRC teams are based at a high school, but plenty run out of community centers, libraries, homeschool co-ops, and 4-H groups. Start by asking your school's science, engineering, or CTE teachers whether there's a team — a lot of them exist quietly and never advertise. If that turns up nothing, use the official **team locator** on firstinspires.org to find the closest teams to your zip code, then email the ones within driving distance.
+
+When you reach out, keep it simple: your name, your grade, that you're interested, and that you have no experience. Teams hear that constantly and it's not a problem. Every strong veteran on that team started as a confused freshman who didn't know what a "roboRIO" was.
+
+If there genuinely isn't a team near you, you have two real options: join as a **student who commutes** to a nearby team (more teams allow this than you'd think), or help start one. That's a bigger project, but a very doable one — our [complete guide to starting a team](/blog/how-to-start-an-frc-team) covers registration, mentors, space, and the first-year grants.
+
+## Step 2: Know when to join
+
+The honest answer is **you can join almost any time**, but the timing changes your experience.
+
+The best time is the **fall preseason** (September through December). This is when teams recruit, train new members, run small offseason projects, and teach fundamentals before the pressure hits. Join now and you'll actually be useful by January.
+
+If you join in **January or during build season**, expect to be dropped straight into the deep end. That's not necessarily bad — you learn fast under a deadline — but nobody will have time to slowly onboard you. You'll learn by grabbing whatever job needs doing and watching closely.
+
+Joining in the **spring**, during competition season, usually means you're along for the ride this year and a full contributor next year. Still worth it. You'll see events firsthand, which is the best recruiting pitch FRC has. Whenever you jump in, our lesson on [joining a team as a new student](/guides/getting-started/getting-started-your-first-steps/new-student-join-a-team) walks through finding one, showing up prepared, and learning the ropes even mid-season.
+
+## Step 3: Understand the season's rhythm
+
+FRC runs on the same annual cycle, and knowing it means you're never blindsided. Our lesson on [the annual season from Kickoff to Championship](/guides/getting-started/the-season-and-the-game/annual-season-kickoff-to-championship) walks the whole calendar; the short version is four phases:
+
+- **Preseason (fall):** Training, recruiting, and fundraising, sometimes with an offseason event. Low pressure, high learning.
+- **Kickoff (early January):** FIRST reveals a brand-new game to every team on the planet at the same moment — the whole community starts from zero on the same Saturday.
+- **Build season (about six weeks):** Design, build, wire, and program a robot to play that specific game. This is the crunch; meetings get long and frequent.
+- **Competition season (late February through April):** Take the robot to Regional or District events, fix it between matches, and try to qualify for a District or the FIRST Championship.
+
+Because the game changes every year, last season's robot is mostly a paperweight by January — and that fresh start means a rookie isn't as far behind the veterans as you'd expect.
+
+## Step 4: Pick a department (but stay flexible)
+
+A common myth is that FRC is only for people who want to build robots. In reality, a functioning team is a small organization that needs people across very different jobs — our lesson on [sub-teams and roles](/guides/getting-started/culture-teams-and-roles/sub-teams-and-roles) maps all of them so you can find where you fit. The quick landscape:
+
+- **Mechanical / Build** — the physical robot: drivetrains, arms, intakes, shooters. Hands-on and tangible. See our [Mechanical & Build guides](/guides/mechanical-build).
+- **CAD & Design** — modeling the robot in software (Onshape, Fusion, or SolidWorks) before anyone cuts metal.
+- **Programming** — writing the code that makes the robot move and think, using **WPILib** in Java, C++, or Python. Our [Programming guides](/guides/programming-software) start from scratch.
+- **Electrical & Wiring** — power, the control system, and wiring that passes inspection. Underrated and always short-staffed; the [Electrical & Wiring guides](/guides/electrical-wiring) are a great entry point.
+- **Scouting & Strategy** — collecting match data and deciding who to pick for playoff alliances.
+- **Business, Media, and Outreach** — fundraising, sponsors, branding, social media, and the community impact work that funds and sustains the team.
+- **Drive Team and Safety** — the students who actually operate the robot at events, and the people keeping the shop from hurting anyone.
+
+Pick the one that sounds most interesting and go deep on it. Do **not** try to learn all of them your first year — that's the fastest way to be mediocre at everything. Get genuinely good at one thing, then broaden later. If you're not sure where you fit, the [learning paths](/paths) group the guides into a sensible order for a beginner.
+
+## What to actually expect as a rookie
+
+Here's the part most "how to join" pages skip: what the experience really feels like in month one.
+
+**You will feel lost for a few weeks, and that's normal.** Everyone around you is throwing around acronyms — CAN bus, PDH, teleop, COTS, roboRIO. It sounds like a different language because it is one. Keep our [glossary](/glossary) open on your phone and look up terms as they fly past. By week three the fog lifts.
+
+**Meetings are frequent.** In preseason, expect a couple of meetings a week. During build season, many teams meet four to six days a week, sometimes for four or five hours a night. You don't have to make every minute of it, but the members who show up consistently are the ones who get trusted with real work. Consistency beats talent here, every single time.
+
+**You'll do grunt work early, and that's how you earn trust.** Your first tasks might be sorting hardware, cutting wire, deburring metal, or filling out a scouting sheet. It's not glamorous, but doing the small jobs well and reliably is exactly how you get handed the interesting jobs. Nobody gets to program the autonomous routine in week one; they get there by being the person who showed up and did the unsexy stuff without complaining.
+
+**Ask questions constantly.** The single biggest rookie mistake is staying quiet because you're afraid of looking dumb. Veterans genuinely want to teach — that's a huge part of why they're on the team. When you're stuck, ask the person next to you, and when the whole team is stuck, the [Chief Delphi](https://www.chiefdelphi.com) forums have answered almost every FRC question ever asked.
+
+## How to be useful on day one
+
+You can make a good first impression without knowing anything technical.
+
+Show up with **closed-toe shoes and [safety glasses](/guides/safety/ppe-and-shop-safety/ppe-basics)** (or ask if the team provides them — most do). Bring a notebook or use your phone to write down what you learn, because you will forget the name of that one tool three times before it sticks. Learn people's names. Clean up after yourself in the shop without being asked. Say yes when someone needs a hand.
+
+None of that requires engineering skill, and all of it signals that you're someone worth investing time in. In a rookie, reliability and attitude matter more than raw ability, because the ability comes with reps.
+
+## Your first competition
+
+At some point in the spring you'll go to an event, and it's a genuine shock the first time — loud, fast, and busier than you expect.
+
+Each team gets a **pit**, a small workspace where you repair and tune the robot between matches. Qualification matches are short, around two and a half minutes, played by two alliances of three robots each ([how a match works](/guides/getting-started/the-season-and-the-game/how-a-match-works) breaks down the auto, teleop, and endgame phases). Before you can play, your robot has to pass **inspection**, which checks that it's built and wired to the rules — this is where clean electrical work quietly saves your weekend. Meanwhile, the scouting crew is logging data on every team so that when top-ranked teams draft playoff alliances, yours knows who's worth picking.
+
+Your job as a rookie at your first event is mostly to watch closely, help in the pit, and pick a lane where you're useful — scouting is the classic entry point because it's high-impact and needs a lot of hands, and [why scouting wins matches](/guides/scouting-strategy/scouting-fundamentals/why-scouting-wins-matches) shows what all that data actually decides. You'll leave understanding the whole thing far better than any guide can teach you, including this one.
+
+## The mindset that gets you through
+
+Your first season isn't about being the best builder or the star programmer. It's about showing up, getting good at one thing, and becoming a member the team wants back next year.
+
+Treat the learning curve as the fun part rather than something to survive. The students who thrive in FRC aren't the ones who walked in knowing the most — they're the ones who kept showing up, kept asking questions, and got a little better every meeting. Do that, and by next January you'll be the veteran teaching some nervous freshman what a CAN bus is.
+
+Ready to get a head start before you even walk in? Skim the [Getting Started guide](/guides/getting-started), then browse the [learning paths](/paths) and pick a department to go deep on. And once you're on a team, [the 10 mistakes that trip up first-year teams](/blog/frc-rookie-mistakes) are worth a read so you can help yours dodge the avoidable ones. Showing up already knowing a few things is the fastest way to go from "the new kid" to "the person we hand real work to."`,
+  },
+  {
+    slug: "what-happens-at-frc-kickoff",
+    title: "What Happens at FRC Kickoff (and How to Prepare)",
+    description:
+      "What happens at FRC Kickoff: the game reveal, manual, and Kit of Parts, plus exactly how to prepare your team for the six-week build season.",
+    keywords: [
+      "frc kickoff",
+      "what happens at frc kickoff",
+      "frc kickoff 2027",
+      "frc game reveal",
+      "frc build season",
+      "frc kit of parts",
+    ],
+    date: "2026-07-03",
+    readMins: 8,
+    content: `FRC Kickoff is the single-day event on a Saturday in early January when FIRST reveals the brand-new game for the season, and every team on the planet starts from zero at the exact same moment. You watch the game-reveal video, read the newly released game manual, and then have roughly six weeks to design, build, wire, and program a robot to play it.
+
+That's the whole thing in two sentences. But Kickoff is also the most exciting and most disorienting day of the FRC year, so here's what actually happens, hour by hour, and how to walk in ready instead of overwhelmed.
+
+## When Kickoff happens
+
+Kickoff lands on a Saturday in **early January** almost every year. Kickoff 2027 will follow the same pattern, in early January 2027, just like every season before it. The game-reveal broadcast goes live in the morning US time and streams globally on the official FIRST channels (YouTube and Twitch), so teams everywhere see the game at the same instant. There's no early access, no leaks that hold up, and no way to prepare for the specific game beforehand. That fresh-start-for-everyone design is the entire point of FRC.
+
+Some regions still host in-person Kickoff gatherings where nearby teams watch the reveal together and pick up physical kit materials. Plenty of teams just watch the stream from their own shop. Both are fine. What matters is that you're together as a team when the game drops, because the hours right after the reveal are when the season's direction gets set.
+
+## What actually gets revealed
+
+Three things arrive at Kickoff, and they arrive fast.
+
+### The game animation
+
+The broadcast opens with a two-to-three-minute animated video that shows the new field and demonstrates how the game is scored. This is the fun part everyone screenshots and reacts to. It gives you the vibe of the game (climbing, shooting, stacking, whatever it is that year) but it is *not* the rulebook. Do not design a robot off the animation alone. Every season, teams get burned by assuming something works the way the cartoon made it look.
+
+### The game manual
+
+The moment the reveal ends, FIRST publishes the **game manual**, a dense PDF that is the actual source of truth for the season. This is where the real work starts. The manual is organized into sections covering the game overview, the arena and field elements, robot construction rules, the detailed game rules and scoring, the inspection checklist, and the tournament structure. It's long, often well over a hundred pages, and it uses precise, lawyer-like language for a reason: the exact wording of a rule decides what's legal and how points are scored.
+
+One thing rookies miss: the manual is a **living document**. FIRST releases weekly **Team Updates** throughout build season that correct, clarify, and sometimes change rules. A rule you designed around in week one can be amended in week three, so someone on your team needs to read every Team Update as it comes out.
+
+### The field drawings and CAD
+
+Alongside the manual, FIRST releases the official **field drawings** and CAD models of the field elements. These give you real dimensions: how tall the goal is, how wide the gaps are, how heavy the game pieces are, what the field surface is. This is the data your design has to respect. If your mechanism needs to reach 6 feet 6 inches, you find that number here, not by eyeballing the animation.
+
+## What's in the Kit of Parts (and what isn't)
+
+Alongside the game, FIRST makes the season's **Kit of Parts** available: not one big box anymore, but a mix of a physical control-system kit, **FIRST Choice** credits for an online store of donated parts, and **Product Donation Vouchers** from sponsors like REV and CTRE. Rookie teams get a fuller kit meant to get a basic robot driving; veterans get a lighter one focused on that year's control-system updates.
+
+For Kickoff day itself, only two things about the kit really matter. It's a **starting point, not a shopping list** — most competitive robots are mostly bought or fabricated on top of it. And FIRST usually publishes an **"Everybody Can Play" KitBot** shortly after Kickoff: a simple, proven robot that scores in that year's game, and a genuinely smart plan for a rookie or resource-limited team, because a reliable simple robot beats an ambitious broken one every time. For the full breakdown of what's in the kit and how the credits and vouchers work, see our lesson on [registering a new team and the Kit of Parts](/guides/getting-started/getting-started-your-first-steps/new-team-registration-and-kit).
+
+## What your team should actually do on Kickoff day
+
+The reveal wraps up within about an hour. The temptation is to immediately start sketching a robot. Resist that. The best teams spend Kickoff day understanding the game, not designing for it. A rough playbook:
+
+1. **Watch the reveal together**, then watch it again while pausing to note every scoring action.
+2. **Read the manual as a group.** Split it up if you have to, but everyone should read the game rules and scoring section carefully. Assign one person to become the "rules expert" who owns the manual and every Team Update for the rest of the season.
+3. **Rank the ways to score.** List every task in the game and estimate how many points each is worth and how hard it looks. This is your first cut at strategy.
+4. **Do a field walkthrough** using the drawings and CAD, so you understand real distances and heights.
+5. **Talk strategy before geometry.** Decide what you want the robot to *do* (which two or three scoring objectives) before anyone draws a single bracket. The classic mistake is designing a cool mechanism and then discovering it chases low-value points.
+
+Notice that scoring analysis shows up on day one. Kickoff is where **scouting and strategy** thinking begins, not something you bolt on at your first event. If you want to get sharper at reading a game and picking priorities, our [scouting and strategy guides](/guides/scouting-strategy) walk through how good teams turn a fresh game into a plan.
+
+Most teams do *not* finalize a design on Kickoff day, and that's correct. Day one is for shared understanding. The design converges over the following week as you prototype.
+
+## How to prepare before Kickoff
+
+Here's the part that separates smooth seasons from chaotic ones: the most important Kickoff prep happens in November and December, before you know anything about the game.
+
+- **Get your tools and shop ready.** You do not want to spend build season hunting for a drill or waiting on a tool order. Sort your workspace, inventory your stock, and make sure your fabrication basics (cutting aluminum, drilling, tapping) are working.
+- **Update your software toolchain.** The new season's **WPILib** release typically becomes available right around Kickoff, along with updated vendor libraries (vendordeps) from REV and CTRE for their motor controllers. Install the new WPILib version and confirm your programmers can build and deploy a blank project *before* the game drops. Losing the first week to a broken toolchain is a real and avoidable failure. Our lesson on [installing WPILib and the FRC game tools](/guides/programming-software/foundations-tools-and-first-program/installing-the-toolchain) walks through it from scratch.
+- **Train your electrical and wiring people.** A large share of robot failures at events are electrical, and Kickoff is too late to learn crimping and CAN-bus basics. Get people comfortable with the control system in the offseason. Start with our [Electrical and Wiring guides](/guides/electrical-wiring).
+- **Learn the vocabulary.** If terms like autonomous, teleop, roboRIO, alliance, or district are fuzzy, skim our [glossary](/glossary) so the manual and the broadcast make sense.
+- **Follow a learning path as a team.** Rather than everyone studying random topics, put new members on a structured track. Our [learning paths](/paths) sequence the fundamentals per department so your whole team walks into Kickoff able to contribute.
+
+The teams that stumble in the first two weeks of build season are almost always the ones that spent those weeks *learning basics* instead of building. Do the learning now.
+
+## After Kickoff: the six weeks that follow
+
+Kickoff kicks off (yes) the **build season**, which runs about six weeks from that Saturday until teams head to their first competition. Since FIRST removed the old "stop build day" and robot-bagging requirement, teams now have continuous access to their robot right up until events, so how you pace those weeks is on you. The broad arc is familiar: prototype and lock strategy first, then design and fabricate, then wire and program on real hardware, and spend the final week making the robot reliable rather than adding features. Then competition season runs roughly from February into April at Regional or District events, with the top teams advancing toward the FIRST Championship. For the full week-by-week plan, and where those six weeks sit in the larger FRC calendar, see our lesson on [the annual season from Kickoff to Championship](/guides/getting-started/the-season-and-the-game/annual-season-kickoff-to-championship).
+
+## The mindset that matters most
+
+Kickoff feels like a starting gun, and it is, but the goal on day one is not to win the race in the first hour. It's to understand the game deeply and make calm, honest decisions about what your team can actually build in six weeks. The community is genuinely helpful here. Watch how veteran teams break down the game on Chief Delphi in the days after Kickoff, and lean on the experienced teams near you.
+
+Prepare in the offseason, read the manual like it's law, prioritize scoring before styling a mechanism, and keep the robot as simple as your competitive goals allow. Do that, and Kickoff goes from overwhelming to the best day of your year. When you're ready to train your team for the next one, start with the [free department guides on LearnFRC](/guides).`,
+  },
+  {
+    slug: "how-frc-competitions-work",
+    title: "How FRC Competitions Work: Matches, Ranking Points, Alliances, and Playoffs",
+    description:
+      "How FRC competitions work: qualification matches, ranking points, alliance selection, and the double-elimination playoff format, explained for new teams.",
+    keywords: [
+      "how do FRC competitions work",
+      "FRC ranking points",
+      "FRC alliance selection",
+      "FRC playoffs format",
+      "FRC qualification matches",
+      "FRC double elimination",
+    ],
+    date: "2026-07-03",
+    readMins: 7,
+    content: `FRC competitions run in two phases at every event: a round of qualification matches where randomly assigned three-team alliances play for **ranking points**, followed by a playoff tournament where the top-ranked teams draft their own alliances and fight through a bracket. Each match is about two and a half minutes long and pits two alliances against each other — a red alliance and a blue alliance, three robots each — and your job across the day is to rank high enough to either captain a playoff alliance or get picked for one.
+
+If you have watched a stream and felt lost about why teams that lost a match still looked happy, or why the "top team" didn't automatically win, this is the article that untangles it. The format is genuinely different from a normal sports tournament, and once it clicks, watching FRC gets a lot more fun.
+
+## The event structure: Regional vs. District
+
+Where you compete depends on your region. Some parts of the world run large standalone **Regional** events; others use the **District** model, a series of smaller events that feed into a District Championship. Either way, a single event follows the same two-part shape: qualification matches first, then playoffs. A typical event runs two to three days, and your robot will play somewhere around **8 to 12 qualification matches** before playoffs even start.
+
+The important mental model: qualifications are not the tournament. They are the ranking round that decides who *gets* to draft alliances for the tournament. You can go 6-6 in quals and still win the whole event if the right captain picks you.
+
+## Anatomy of a single match
+
+Every match is played by six robots split into two alliances of three — red against blue — scoring on opposite ends of a field roughly the size of a basketball court. A match runs **about 2 minutes 30 seconds** and moves through three phases: a short **autonomous** opening (usually around 15 seconds) where robots run entirely on pre-written code with no driver input, a **teleoperated** period that is the bulk of the match, and an **endgame** in the final 20 to 30 seconds where teams do something high-value like climbing or parking. Whichever alliance scores more wins.
+
+Two of those phases reward specialized work. A reliable autonomous is almost entirely a software and tuning problem — this is where all that [WPILib and sensor work](/guides/programming-software) pays off — and endgame is frequently where matches are won or lost, so drive teams practice those final seconds obsessively (our [Drive Team guides](/guides/drive-team) cover driver, operator, and coach, and there's a full lesson on [endgame execution](/guides/drive-team/driver-practice-and-match-performance/endgame-execution)). For a phase-by-phase breakdown with examples from recent games, see our lesson on [how a match works](/guides/getting-started/the-season-and-the-game/how-a-match-works).
+
+In qualifications, though, winning the match isn't the whole story — because of how ranking works.
+
+## Ranking points, explained
+
+This is the part that confuses newcomers most. You are **not** ranked by how many matches you win. You are ranked by **ranking points (RP)**, and you earn RP whether you win, tie, or hit specific in-game objectives. Winning a match is worth the most; a tie is worth less; and **bonus RP** stack on top for completing game-specific challenges like scoring enough game pieces or getting enough robots to climb. The exact values change every season, so confirm them against the current game manual — but the framework has held for years.
+
+That structure is why an alliance can lose a close match and still walk away happy: the bonus RP it earned are banked by every team on the alliance regardless of the result. Teams are then ranked by **average RP per match** (often shown as "Ranking Score"), with the game manual defining the tiebreakers when teams are level. The top-level rule never changes: **stack RP, not just wins.** For the full RP-and-tiebreaker mechanics, see our lessons on [alliances, scoring, and ranking points](/guides/drive-team/prerequisites/alliances-scoring-and-ranking-points) and [reading FRC rankings](/guides/scouting-strategy/data-analysis-tba-statbotics/reading-frc-rankings).
+
+Because RP is shared across your randomly assigned three-team alliance, your ranking depends partly on your partners. That randomness is intentional: it rewards robots that are consistently useful to *whoever* they're paired with — exactly the kind of robot alliance captains want to pick later.
+
+## Alliance selection: the draft
+
+Once qualification matches end, the event pauses for **alliance selection**, where FRC turns into something like a sports draft on the field. The **top eight ranked teams become alliance captains** and take turns picking partners out loud, in a **serpentine (snake) order** — Captain 1 through 8, then back from 8 to 1 — so that after two rounds each alliance has three teams (many events also allow a **backup** robot). The reverse second round is a deliberate balance for the lower captains. The exact pick order, timer, and decline procedure are governed by precise rules, which our lesson on [alliance selection at the event](/guides/scouting-strategy/strategy-picklists-and-match-play/alliance-selection-at-event) lays out in full.
+
+A few things trip up rookies. A picked team can **decline**, though at most events that's rare — a playoff spot is a playoff spot. And being ranked #1 doesn't guarantee a trophy; it guarantees you pick first, which is an advantage, not a win. Above all, this is why **scouting is not optional**: you pick partners on data, not vibes, and teams that scout well draft better. If you're building that pipeline, start with our [Scouting & Strategy guides](/guides/scouting-strategy) and the lesson on [building a picklist](/guides/scouting-strategy/strategy-picklists-and-match-play/building-a-picklist).
+
+By the end you have eight alliances of three (sometimes four) teams, seeded 1 through 8, ready for the playoffs.
+
+## The playoff format: double elimination
+
+Modern FRC playoffs use a **double-elimination bracket** among the eight alliances: an alliance has to lose **twice** to be knocked out. One loss drops you into the lower bracket, where you can fight your way back; only a second loss ends your run. That's why you'll see an alliance lose early, vanish for a while, and reappear deep in the tournament. Matches are still three-on-three, but now there are no ranking points — it's straight win-or-lose — and the bracket resolves into two finalists and a **best-of-three final**, which the first alliance to win twice takes. Our lesson on [alliances, rankings, and playoffs](/guides/getting-started/the-season-and-the-game/alliances-rankings-and-playoffs) walks the bracket step by step.
+
+Two practical notes. Playoffs run fast and physical, and robots break, so a strong alliance prizes a reliable partner over a flashy-but-fragile one — and legal defense becomes its own skill (see [playing and surviving defense in eliminations](/guides/drive-team/advanced-strategy-case-studies/defense-in-eliminations)). Because it's double elimination, a single bad match — a dead battery, a jammed mechanism, a penalty — usually isn't fatal, which rewards teams that stay calm and fix their robot between matches. A large share of mid-event failures trace back to electrical issues, which is why our [Electrical & Wiring guides](/guides/electrical-wiring) exist largely to keep you off the disabled list.
+
+## How you actually advance
+
+Winning the event is the headline path forward, but not the only one — and what advancement looks like depends on your region's model. **Regional events** send the winning alliance and certain award winners to the **FIRST Championship**, most notably the team that wins the **Impact Award**, FRC's most prestigious award, which advances automatically. **District events** instead award **district points** for how you finish — ranking, whether you captained or were picked, playoff run, and awards — and those points accumulate across your events to decide who advances to the District Championship and on to Worlds. Our lesson on [the annual season, from kickoff to championship](/guides/getting-started/the-season-and-the-game/annual-season-kickoff-to-championship) maps the full path, and [how the Impact Award advances](/guides/impact-award/building-a-program-worth-recognizing/advancement-and-hall-of-fame) covers the award route.
+
+The takeaway is that "doing well" at an FRC event is broader than winning matches. Ranking, being draftable, playoff performance, and awards all feed into whether your season continues. A team can have a mediocre robot and still advance on the strength of its outreach and Impact submission — which is the whole point of a program that's about more than just the machine.
+
+## Putting it together
+
+Here's the full arc of an event in one breath: you play a batch of **qualification matches** in random alliances, earning **ranking points** for wins and bonus objectives; those RP set your **ranking**; the top eight teams become captains and run a **serpentine draft** to build playoff alliances; those alliances battle through a **double-elimination bracket** into a **best-of-three final**; and your placement plus any awards decide whether you advance.
+
+None of it requires memorizing this year's specific point values — those live in the game manual and change every January. What stays constant is the shape: rank, get picked, survive the bracket. Once you've got that, you can watch any FRC match and actually follow the story.
+
+If you're brand new to all of this, start with our [Getting Started guide](/guides/getting-started) for the big picture, keep the [glossary](/glossary) open for the acronyms that fly around at events, and browse the [learning paths](/paths) to train up whatever role you're taking on this season.`,
+  },
+  {
+    slug: "first-frc-competition-what-to-expect",
+    title: "Your First FRC Competition: What to Actually Expect",
+    description:
+      "What to expect at your first FRC competition: the day-by-day schedule, pit setup, robot inspection, matches, and a full what-to-bring checklist for rookies.",
+    keywords: [
+      "first FRC competition",
+      "FRC competition day",
+      "what to bring FRC event",
+      "FRC pit setup",
+      "FRC robot inspection",
+      "FRC rookie tips",
+    ],
+    date: "2026-07-03",
+    readMins: 8,
+    content: `Your first FRC competition is a two- or three-day marathon where your team sets up a pit, passes robot inspection, plays a schedule of qualification matches, and — if you rank well or get picked — competes in a double-elimination playoff. Expect long days, a loud venue, a robot that breaks and gets fixed repeatedly, and far more help from strangers than you would ever guess.
+
+Knowing the rhythm ahead of time is the single biggest thing that separates a calm rookie team from a panicked one. Here is what actually happens, in order, and what to have ready.
+
+## The shape of the weekend
+
+Events come in two formats, and the schedule differs a little between them. **District events** usually run two days (often Friday–Saturday). **Regional events** usually run three days (often Thursday–Saturday). Either way, the flow is the same: set up, get inspected, practice, play qualifications, then alliance selection and playoffs on the final day.
+
+Days are long. Doors frequently open around 7–8 a.m. and the venue does not clear out until early evening. Bring the whole team prepared to be there all day, not to swing by for a couple of matches.
+
+### Move-in and pit setup
+
+The first thing you do is find your **pit** — your team's assigned workspace on the pit floor. A standard pit is roughly 10 feet by 10 feet, though this varies by venue, so check your event's specifics. This is where your robot lives, gets repaired, and gets staged between matches.
+
+Set up with function in mind, not looks. You want your tools reachable, your battery charging station running immediately (batteries take time to charge, and you will never have enough), and a clear path to roll the robot in and out on its cart. Get power sorted early: bring a heavy-duty extension cord and a power strip, because the outlet may not be where you want it.
+
+Pit setup is also when reality hits that a lot of small things travel with the robot. A folding table, a labeled parts bin, spare bumpers, and a printed pit checklist do more for you here than a fancy banner.
+
+### Robot inspection
+
+Before you can play a real match, your robot has to pass **inspection** (the volunteers who run it are called Robot Inspectors, or RIs). A volunteer inspector walks through a checklist to confirm your robot is legal and safe: weight, size, frame perimeter, bumpers, wiring, and the control system.
+
+Do not guess at the limits — they shift year to year, so the current game manual is always the source of truth. Rather than build to numbers you half-remember, work from our lesson on [inspection-day failures](/guides/getting-started/common-mistakes-troubleshooting/inspection-failures), which lists the exact bumper, size, and weight figures rookies get bounced on. A few things that trip up first-timers at inspection:
+
+- **Bumpers.** You need both a red set and a blue set, built to spec, covering the required fraction of your frame perimeter with the number visible. Bumper construction rules are strict; read them carefully in the [Mechanical & Build guides](/guides/mechanical-build) and the manual.
+- **Wiring.** Correct main breaker, proper wire gauges, a fuse/breaker on every branch, and a securely mounted battery. A large share of failed inspections and dead robots come down to electrical, so tidy it up in advance — our [Electrical & Wiring guides](/guides/electrical-wiring) walk through what inspectors look for.
+- **A single, secured battery** with a legal connector, and nothing that can short.
+
+Get inspected as early as possible on day one. If something is wrong, you want hours to fix it, not minutes.
+
+### Practice matches
+
+On the first day (three-day Regionals especially), you usually get **practice matches**. These are not scored and do not affect your ranking. Their entire purpose is to let you connect to the field, drive on the real carpet, test your autonomous routine, and shake out problems before it counts.
+
+Treat practice as gold. This is where you confirm your robot actually connects to the **Field Management System (FMS)** — the field takes control of your robot the moment you plug into its ethernet, and if your code, radio, or driver station has a problem you want to find it here, not in a match that counts. Drill the exact [pre-match connection routine that prevents a no-show](/guides/drive-team/driver-station-and-controls/connecting-to-the-field-and-fms) before you go.
+
+### Qualification matches
+
+The bulk of the weekend is **qualification matches** ("quals"). Every team plays a schedule of them — usually somewhere between about 8 and 12 depending on the event size — and the outcomes build your [ranking](/guides/getting-started/the-season-and-the-game/alliances-rankings-and-playoffs).
+
+A few things about quals that surprise first-timers:
+
+Your alliance partners are randomized and change every match. Each match pits a **red alliance of three robots against a blue alliance of three robots**, and you are teamed with different partners nearly every time. That means cooperation is the whole game — you win with partners you met an hour ago.
+
+The match schedule is posted, and you are responsible for getting your robot to the **queue line** on time, typically a few matches ahead of yours. Miss the queue and you risk a no-show, which hurts your ranking and wastes a match. Assign someone to watch the schedule and the queue all day.
+
+Between matches you are on a [tight turnaround loop](/guides/drive-team/the-pit-and-match-turnaround/pit-crew-roles-and-turnaround): play, roll back to the pit, swap to a freshly charged battery, diagnose anything that broke, fix it, and queue again. Rookie robots break. That is normal. The teams that do well are the ones who repair fast and calmly.
+
+### Alliance selection and playoffs
+
+On the final day, ranking closes and **alliance selection** happens — a live [serpentine draft](/guides/scouting-strategy/strategy-picklists-and-match-play/alliance-selection-at-event) in which the top eight ranked teams become alliance captains and take turns picking the rest of the field into eight playoff alliances of (usually) three robots each, sometimes with an optional backup.
+
+This is why scouting matters. Captains pick based on data about who plays well and who complements their robot, not on vibes. Even as a rookie, keep a scout or two watching matches and recording notes — being a team others want to pick is a real goal, and good [Scouting & Strategy](/guides/scouting-strategy) habits are how you get noticed. Getting picked in your rookie year is a genuine win.
+
+Playoffs run as a **double-elimination bracket** among the eight alliances, so a single loss does not end your day — you drop to the lower bracket and can fight back. The bracket culminates in the finals, and the winning alliance advances (at Regionals directly toward the Championship; in the district system, points accumulate toward a District Championship).
+
+## What a match actually feels like
+
+A match runs just a couple of minutes and moves fast. It opens with a short **autonomous period** — your robot on pre-written code with no driver input — then transitions into the longer driver-controlled teleop period, usually with a scramble of endgame scoring at the very end. If the [rhythm of a match](/guides/drive-team/prerequisites/how-an-frc-match-is-structured) is new to your drive team, walk through it before you arrive; check the current manual for the year's exact timings and scoring.
+
+Your **drive team** stands at the alliance station behind the field wall — typically a [driver, an operator, a coach, and often a human player and a technician](/guides/drive-team/the-drive-team-and-its-roles/what-the-drive-team-is), each with a defined role and spot. You get a short, fixed window to plug in and set up your driver station before the match starts, so practice that routine until it is automatic. The field is loud, the referees are watching, and the whole thing is over before you catch your breath. It is genuinely thrilling — and completely survivable.
+
+## What to bring to an FRC event
+
+Pack like the venue has nothing, because it mostly does not. The essentials:
+
+- **Safety glasses for everyone** — ANSI Z87-rated eye protection is [required any time you are in the pits or at the field](/guides/safety/events-and-program/event-and-pit-rules), no exceptions. Bring spares; people forget theirs.
+- **Closed-toe shoes** are required on the pit floor. No open shoes get in.
+- **Your full tool kit** — the tools you used to build the robot, plus zip ties, tape, wire, crimpers, a multimeter, and hardware in the sizes your robot uses.
+- **Spare parts** — anything you can imagine breaking: a spare battery or three, extra motors and controllers if you have them, spare bumper fasteners, wheels, chain/belt, and fuses.
+- **A battery charger** (ideally more than one) and a way to [log which battery is charged and rested](/guides/drive-team/the-pit-and-match-turnaround/battery-management).
+- **A programming laptop** with WPILib and your current robot code, plus your driver station, an ethernet cable, and any radio configuration tools. Keep a known-good version of your code you can re-deploy.
+- **Power and workspace** — extension cord, power strip, a small folding table, and a robot cart.
+- **Scouting materials** — printed sheets, tablets, or whatever your system uses, and people assigned to run it.
+- **Human fuel** — water, snacks, and lunch plans. Venues get hot and food lines get long.
+
+A printed pit checklist taped to your table, and a whiteboard for the match schedule and battery status, keep a rookie team from losing track of the chaos.
+
+## Rookie mindset that actually helps
+
+The biggest surprise for most first-year teams is how generous the community is. FIRST calls it **[Coopertition](/guides/getting-started/culture-teams-and-roles/core-values-gp-and-coopertition)** — you compete hard while helping the people around you. If you blow a motor and do not have a spare, ask a neighboring team; someone almost always has one. Veteran teams will lend parts, lend hands, and answer questions all weekend. Ask early and ask often.
+
+Set the right goal. Your first event is not about winning — it is about getting your robot inspected, connecting to the field, playing every match you are scheduled for, and going home with a team that wants to come back. If you do that, you had a great rookie competition.
+
+Spend the weeks before the event getting your people ready, not just your robot. Make sure your drive team has practiced, your pit crew knows the repair routine, and your electrical is clean enough to survive a full day of matches. If you are still getting your bearings, start with our [Getting Started guide](/guides/getting-started), and if a term at the event leaves you lost, our [glossary](/glossary) has the FRC vocabulary you will hear announcers and volunteers throwing around all weekend.
+
+Show up, stay calm when the robot breaks, help the teams around you, and soak it in. Your first competition is loud, exhausting, and one of the best things you will do all season.`,
+  },
+  {
+    slug: "frc-control-system-explained",
+    title: "The FRC Control System Explained: roboRIO, PDH, Radio, and Everything Between",
+    description:
+      "The FRC control system explained: how the roboRIO, REV PDH, radio, motor controllers, and CAN bus connect to make your robot drive \u2014 a plain-English electronics board tour.",
+    keywords: [
+      "frc control system",
+      "roboRIO explained",
+      "frc electronics board",
+      "REV PDH",
+      "frc radio",
+      "frc CAN bus wiring",
+    ],
+    date: "2026-07-03",
+    readMins: 8,
+    content: `The FRC control system is the collection of legal electronics that lets your robot receive commands and drive motors: a **roboRIO** as the brain, a **power distribution hub** feeding everything from the battery, a **radio** that carries data to and from the driver station, and the motor controllers, breakers, and wiring that tie it together. If you can name each box and trace how power and signals flow between them, you understand the whole board — and you'll pass inspection a lot faster.
+
+This is the one subsystem every team has to get right. A brilliant mechanism bolted to a sloppy control system just sits there and blinks error codes. This is the map of every major component and how the pieces connect — not the connector-by-connector build. When you're ready to actually run wire and crimp, our [how to wire an FRC robot](/blog/how-to-wire-an-frc-robot) guide walks the physical assembly; here we name the boxes and trace the flow so the wiring guide makes sense when you get there.
+
+## The mental model: power flows one way, data flows both ways
+
+Before the parts list, hold this in your head. **Power** starts at the battery, passes through a big main breaker, lands on the power distribution board, and fans out to every motor controller and electronic. **Data** is separate: the driver station laptop talks to the radio over the field network, the radio talks to the roboRIO over Ethernet, and the roboRIO talks to motor controllers over a communication bus called CAN. Power and data are two different plumbing systems that happen to share the same robot.
+
+Almost every wiring mistake rookies make is confusing those two — running signal wire where a 40-amp motor branch should be, or forgetting that the radio needs both a data connection and its own power. Keep them mentally separate and the board stops being intimidating.
+
+## The roboRIO: the brain
+
+The **roboRIO** (currently the roboRIO 2.0) is the official robot controller, made by National Instruments. It's the only device on the robot that runs your code. When you deploy a program written with **WPILib** in Java, C++, or Python, it runs on the roboRIO's real-time Linux processor about 50 times a second, reading inputs and sending outputs on every loop.
+
+Physically it's a metal box covered in ports: **Ethernet** to the radio, a **CAN** bus out to your motor controllers and sensors, and **PWM, DIO, and analog** headers plus **USB** and the **MXP** expansion port for everything that doesn't speak CAN. Our lesson on [the roboRIO](/guides/electrical-wiring/control-system-components/the-roborio) walks the full I/O and how each port is powered. The one rule to carry from here: the roboRIO gets clean, regulated power on a dedicated channel from the power board — never wire it to a random 40A motor channel.
+
+If you're the one writing the code that lives here, our [Programming & Software guides](/guides/programming-software) walk through WPILib from install to your first working robot, and the [become a robot programmer path](/paths) sequences it lesson by lesson.
+
+## Power distribution: the PDH (and PDP)
+
+Every powered device on the robot draws from one board. Most teams now run the **REV Power Distribution Hub (PDH)**; the older, still-legal option is the **CTRE Power Distribution Panel (PDP)**. They do the same job: take one thick pair of wires from the battery and split it into many individually-protected channels — a mix of high-current channels for motors and lower-current ones for electronics, plus, on the PDH, a software-switchable channel you can toggle over CAN. The exact channel counts and current ratings are worth confirming against current REV or CTRE documentation; our lesson on [PDH vs PDP](/guides/electrical-wiring/control-system-components/power-distribution-pdh-vs-pdp) lays both boards out side by side. The concept never changes: one motor branch, one channel, one breaker sized to that motor.
+
+The breaker matters. A typical brushless drive motor lives behind a **40A** breaker; smaller mechanisms use 30A or 20A. The breaker is auto-resetting — if a motor stalls and pulls too much current, the breaker pops, the motor stops, and a few seconds later it resets. That's a feature, not a failure, and it's why you never bypass one. [Branch circuit breakers and fuses](/guides/electrical-wiring/power-battery-breakers/branch-circuit-breakers) covers which protection is legal and how to size it.
+
+## The battery, the main breaker, and the RSL
+
+The robot runs on a single **12-volt, ~18Ah sealed lead-acid battery**, and a weak or half-charged one is behind a huge share of "the robot got sluggish in the last 30 seconds" complaints. Number every battery, log its cycles, and rotate them — our lessons on [the 12V battery and Anderson connectors](/guides/electrical-wiring/power-battery-breakers/battery-and-anderson-connectors) and [battery management like a pro team](/guides/electrical-wiring/advanced-techniques-case-studies/battery-management-program) cover the specs, legal rules, and load-testing that keep you on a strong pack.
+
+Between the battery and the power board sits the **120A main breaker** — one big red button that is the master cutoff for the entire robot. Everything downstream of it dies when it's off, which is exactly what you want during pit work. The battery connects through an **Anderson SB connector** and heavy **6 AWG** wire; that gauge is a rules requirement on the main run, not a suggestion. See [the main 120A breaker](/guides/electrical-wiring/power-battery-breakers/main-120a-breaker) for how it wires in and why it's the true master switch.
+
+One small part with big consequences: the **Robot Signal Light (RSL)**. It's a required amber light that shows the robot's state — solid when disabled, blinking when enabled — and an inspector will fail you without one. It's easy to skip in the rush of build season and easy to fix once you know it's mandatory.
+
+## The radio: how the robot talks to the driver
+
+The **radio** is the robot's connection to the outside world. On the field, your **driver station** laptop (running the FRC Driver Station and the FRC Game Tools) connects to the field network, the field talks to your robot's radio, and the radio hands that data to the roboRIO over Ethernet. No radio link, no control — the robot just sits there disabled.
+
+The specific radio has changed recently, so check the **current game manual and Kit of Parts** rather than trusting last year's memory: recent seasons (2025 onward) use the **Vivid-Hosting VH-109**, powered through a dedicated **Radio Power Module (RPM)**, while older robots used the **OpenMesh OM5P-AC**. This is one of the few control-system pieces FIRST has actively swapped out, and how it must be powered is exactly what our lesson on [the radio, VRM, and Radio Power Module](/guides/electrical-wiring/control-system-components/radio-vrm-rpm) pins down for the current season.
+
+Two habits save event-day panic: give the radio its **own regulated power path** (never straight off a motor channel), and mount it high and away from big metal and motors so its signal isn't shielded. A radio buried at the bottom of the frame is asking for dropped connections mid-match.
+
+## Motor controllers and the CAN bus
+
+A roboRIO can't drive a motor directly — it sends a low-power command to a **motor controller**, which switches the real current from the power board into the motor. The lineup shifts year to year (REV's **Spark MAX** and **Spark Flex**, CTRE's **Talon FX** built into integrated motors like the Kraken X60 and Falcon 500, plus the Talon SRX and Victor SPX); our [motor controller lineup](/guides/electrical-wiring/motor-controllers-can-bus/motor-controller-lineup) lesson matches each controller to the motors it drives.
+
+Controllers talk to the roboRIO one of two ways. **PWM** uses one signal wire per controller with no data coming back. **CAN** is the modern default: a single two-wire bus that daisy-chains through every device, each with its own ID, carrying commands out and rich telemetry (current, temperature, encoder position) back. Most competitive robots put nearly everything on CAN because that feedback is what makes precise control and on-robot diagnostics possible — [PWM vs CAN control](/guides/electrical-wiring/motor-controllers-can-bus/pwm-vs-can) covers when each still makes sense.
+
+The CAN bus has two rules people forget until it breaks. It must be a continuous chain with a **120-ohm termination resistor** at the end (the PDH has one built in), and a single broken CAN connection can drop every device downstream of it. When "half the robot stopped responding," a loose CAN wire is the first suspect. Spend real time in [building a reliable CAN bus](/guides/electrical-wiring/motor-controllers-can-bus/building-a-reliable-can-bus) before you need it, and keep [diagnosing CAN bus failures](/guides/electrical-wiring/common-mistakes-troubleshooting/can-bus-failures) bookmarked for when yours misbehaves — clean CAN is the difference between a robot that finishes matches and one that doesn't.
+
+## The supporting cast: VRM and coprocessors
+
+A couple of extra boxes show up on more advanced robots. The **Voltage Regulator Module (VRM)** takes battery voltage and outputs steady, regulated 12V and 5V rails for devices that hate the voltage sag of a hard-driving robot — LED strips, some sensors, and, on older setups, the radio. As batteries droop under load, regulated power keeps these devices happy.
+
+Many teams also add a **coprocessor** — a Raspberry Pi, an Orange Pi, or a Limelight smart camera — for vision processing that would bog down the roboRIO. It connects to the roboRIO through a small **Ethernet switch** so the radio, roboRIO, and coprocessor all share the robot's network. It's optional, but it's how teams get reliable target tracking and vision-assisted scoring — [AprilTags and vision coprocessors](/guides/programming-software/vision-pose-estimation/apriltags-and-coprocessors) picks up where this leaves off.
+
+## How it all connects, in order
+
+Trace a working robot from the battery out and it always goes the same way (our [full robot wiring walkthrough](/guides/electrical-wiring/connections-rules-troubleshooting/full-robot-wiring-walkthrough) builds exactly this, connection by connection):
+
+1. **Battery** → **120A main breaker** → **power distribution board (PDH/PDP)**.
+2. From the board: a dedicated regulated channel to the **roboRIO**, one fused channel per **motor controller**, and a clean power path to the **radio** (via its RPM or a VRM).
+3. **Radio** → Ethernet → **roboRIO**.
+4. **roboRIO** → **CAN bus** daisy-chained through the motor controllers and CAN sensors (with termination at the end).
+5. The **RSL** wired in so it reflects robot state.
+
+If you can point at each of those five links on a real robot, you can debug most control-system problems and you can talk an inspector through your board without sweating.
+
+## Where to go next
+
+The control system is one of those topics that feels like a wall of acronyms until you've wired it once, and then it clicks for good. If the vocabulary is what's tripping you up, keep the [glossary](/glossary) open in another tab — roboRIO, PDH, VRM, RSL, and CAN all live there with plain-English definitions. If you're brand new to the whole program, start with [Getting Started](/guides/getting-started) for the big picture. When you're ready to go component by component in depth, [what is the FRC control system?](/guides/electrical-wiring/control-system-components/what-is-the-frc-control-system) opens our full [Electrical & Wiring guides](/guides/electrical-wiring) — the place to actually wire a board with this map in hand. Learn this board well and you become the person every FRC team is desperate to have: the one who can make the robot actually turn on.`,
+  },
+  {
+    slug: "frc-battery-guide",
+    title: "FRC Battery Guide: Charging, Care, Testing, and Safety",
+    description:
+      "FRC battery guide: how to charge, care for, test with a Battery Beak, wire the SB50 connector, and safely handle your 12V FRC battery fleet.",
+    keywords: [
+      "frc battery",
+      "frc battery charging",
+      "frc battery maintenance",
+      "frc battery beak",
+      "sb50 connector",
+      "frc battery safety",
+    ],
+    date: "2026-07-03",
+    readMins: 8,
+    content: `An FRC robot runs on a single **12-volt, roughly 18-amp-hour sealed lead-acid (SLA) battery**, and looking after it is one of the cheapest ways to make your robot more reliable. A battery that's fully charged, rested, and low on internal resistance is the difference between a robot that drives strong for a full match and one that browns out with thirty seconds left on the clock.
+
+Batteries are the single most neglected part of most rookie robots. Teams pour hours into a shooter mechanism and then run every match on the same tired battery straight off the charger. This guide covers what the battery is, how to charge and store it, how to test it with a Battery Beak, how the SB50 connector fits into the power path, and how to handle all of it safely.
+
+## What an FRC battery actually is
+
+Every legal FRC robot uses one **12V SLA (sealed lead-acid) battery**, also called an AGM battery. Nominal capacity is around 18 Ah, and a full one weighs about 12.6 lb (5.7 kg). It is a genuinely heavy, genuinely hazardous chunk of lead and sulfuric acid, not a hobby-grade LiPo.
+
+The one number worth memorizing is the resting voltage: a fully charged battery reads roughly **12.7 to 13.0 V at rest** (no load). If a "charged" battery is sitting at 12.3 V, it isn't actually full. Under the load of a match, voltage sags, and a weak or half-charged battery sags further and sooner — far enough to trip the roboRIO's **brownout protection**, which sheds motor output and makes the robot feel sluggish or cut out late in a match. Our lesson on [why the robot goes limp](/guides/electrical-wiring/common-mistakes-troubleshooting/diagnosing-brownouts) walks through the staged brownout thresholds and the systematic fixes.
+
+The rest is rules and specs the game manual pins down: you may run **only one battery at a time**, it has to come from the manual's **approved COTS list** (check the current manual — the list changes), and the main power path uses **6 AWG wire** behind a **120 A main breaker**. Our full lesson on [the 12V SLA battery and Anderson connectors](/guides/electrical-wiring/power-battery-breakers/battery-and-anderson-connectors) covers the specs, the legal rules, and battery care in depth, so this guide stays focused on keeping the battery healthy.
+
+## Charging: do it right, every time
+
+Charge with a smart SLA/AGM charger, and don't rush it. FRC rules **cap how fast you're allowed to charge** — recently the limit has been **6 A** — so a legal charger won't blast current into the battery. Check the current manual for the exact figure, but the practical takeaway is the same: slow, complete charges are healthier than fast ones anyway.
+
+A few habits separate reliable teams from the rest:
+
+- **Charge fully, then let it rest.** A battery straight off the charger is warm and its surface voltage is artificially high. Let it sit **20 to 30 minutes** before a match so the voltage settles and you get an honest reading.
+- **Never deep-discharge.** SLA batteries hate being run flat. Every time you drain one down near or below its cutoff, you shave permanent capacity off it. Pull a battery before it's dead, not after.
+- **Charge off the robot.** At competition you charge batteries at your pit charging station and swap fresh ones in — never on a powered robot.
+
+Beyond charging technique, the batteries themselves need to be managed as a fleet: numbered, cycle-tracked, and rotated so a tired pack never sneaks into an elimination match. That whole discipline — labeling, load-testing, rotating, and retiring packs — is a topic of its own, and our lesson on [battery management like a pro team](/guides/electrical-wiring/advanced-techniques-case-studies/battery-management-program) lays it out.
+
+### How many batteries you need
+
+Enough that you *always* have a fully charged, fully rested one ready to go. A single battery can't cool down, rest, and recharge in the ~8 to 12 minutes you sometimes get between matches. Most competitive teams own **at least four batteries, and six or more is common.** Rookie teams should budget for a minimum of three. The math is simple: one on the robot, one resting after charging, one on the charger, and spares so an elimination run never forces you onto a hot or half-charged pack. Multi-bank chargers that top off several batteries at once are worth the money for any team running a full event schedule.
+
+## The SB50 connector and the power path
+
+The battery connects to the robot through an **Anderson SB50 connector** — the chunky two-contact plug you unplug every time you swap batteries. From there, power runs to the **120 A main breaker**, then into your power distribution board (a CTRE PDP or a REV PDH), and out to everything else. If wiring that path from scratch is new to you, our companion guide on [how to wire an FRC robot](/blog/how-to-wire-an-frc-robot) walks the whole battery-to-motors chain.
+
+For battery care, the SB50 matters because it's the connector you handle constantly — and it's a very common source of mysterious brownouts, so treat it as a maintenance item, not a fit-and-forget part:
+
+- **It's genderless, so standardize on one color.** The two halves only mate if they share the **same color housing**, so teams pick one (red and gray are both common) and stick with it, so any battery plugs into any robot.
+- **Crimp the 6 AWG contacts properly.** A cold or loose crimp adds resistance, and resistance in the main power path becomes voltage sag under load. Doing this connection — and every other one — right is its own skill: see [crimping and connectors done right](/guides/electrical-wiring/connections-rules-troubleshooting/crimping-and-connectors).
+- **Keep contacts clean, tight, and restrained.** Corroded or pitted contacts heat up and rob voltage, and vibration slowly works a dangling plug loose over a match. If a connector looks burnt, discolored, or feels loose when mated, replace it.
+
+A robot that browns out only sometimes, seemingly at random, very often has a bad connector or a worn crimp somewhere in this chain, not a bad battery. When you're chasing that gremlin, the SB50 and its contacts are one of the first things to check.
+
+## Testing: the Battery Beak and what the numbers mean
+
+The **Battery Beak** (from CTR Electronics) is a small handheld tester that plugs onto the SB50 and, in a couple of seconds, tells you three things: **resting voltage, internal resistance, and an estimated cranking-amps figure.** Of these, **internal resistance** is the one that actually predicts whether a battery is worth using.
+
+Internal resistance, measured in milliohms (mΩ), is basically how hard the battery fights back when you draw current. Low is good. A fresh, healthy FRC battery typically reads in the **low double digits — roughly 10 to 13 mΩ.** As a battery ages and gets abused, that number climbs. Once a battery drifts up toward the **high teens or into the 20s (mΩ)**, its voltage will sag badly under match load, and it's time to retire it for competition use.
+
+Exact numbers vary by battery model and by tester, so don't obsess over a single reading. The real move is to **Beak your whole fleet and compare.** Rank them by internal resistance, keep your lowest-resistance batteries for elimination matches, and pull the outliers — a battery that reads 8 mΩ higher than the rest of your fleet is your weak link, whatever the absolute number says. Turning that into a repeatable, logged process is a project in itself: our [battery management and logging system](/guides/safety/safety-worked-examples-mini-projects/battery-management-logging-system) mini-project builds the numbered, tested fleet around exactly this workflow.
+
+You can also watch battery voltage live during a match: the PDP/PDH reports it over CAN, the Driver Station displays it, and you can log it. If you want to pull and record that telemetry so you can correlate voltage sag with what the robot was doing, our [live power-monitoring dashboard](/guides/electrical-wiring/worked-examples-mini-projects/power-monitoring-dashboard) mini-project streams voltage, current, and energy off the power distribution board.
+
+## Care and storage between events and in the off-season
+
+Lead-acid chemistry has one big enemy in storage: **sulfation.** Leave an SLA battery sitting discharged and lead sulfate crystals harden on the plates, permanently killing capacity. So the rule for storage is simple:
+
+- **Store batteries fully charged**, never discharged.
+- **Top them off every one to three months** during the off-season — a battery on the shelf slowly self-discharges even with nothing connected.
+- **Keep them somewhere cool and dry.** Heat accelerates aging.
+
+Between competition events, treat storage the same way: charge everything up before it goes on the shelf. Come back a couple of weeks later, Beak the fleet, and you'll know exactly what you're working with.
+
+Batteries don't last forever. Under heavy FRC use, a battery is often good for something like one to three seasons before its internal resistance climbs enough to retire it. When you do retire one, **recycle it** — SLA batteries are nearly 100% recyclable, and any auto-parts store or battery recycler will take them. Never throw one in the trash.
+
+## Safety: lead-acid deserves respect
+
+A charged FRC battery can dump **hundreds of amps into a dead short** almost instantly. That's enough to weld a dropped wrench to the terminals, cause serious burns, melt tools, and start a fire. This is not a theoretical risk — it's the most common way people get hurt around the electrical system. The non-negotiables:
+
+- **Never let anything metal bridge the two terminals.** Keep the SB50 connected or the terminals covered whenever a battery is charged. No loose tools, jewelry, or wristbands near exposed terminals.
+- **Carry batteries with two hands, and never by the leads.** The case is plastic and it holds sulfuric acid. A cracked case leaks acid, which will ruin the battery and can burn skin and eyes.
+- **Retire damaged batteries immediately.** A swollen, cracked, leaking, or physically dented battery is done. Bag it, keep it away from metal, and recycle it. Don't try to squeeze one more match out of it.
+
+There's more to it — ventilated charging, hydrogen venting, spill response — and it's a team-culture habit, not a one-time lesson. Our lesson on [sealed lead-acid battery safety](/guides/safety/battery-pneumatics-electrical/sla-battery-safety) covers handling, charging, inspecting, and disposing of the 12V pack without acid burns or fires, in the context of the rest of your shop and pit practices.
+
+## The short version
+
+If you remember nothing else: **charge fully and let it rest, keep your SB50 connectors clean and tight, Beak your fleet and race your best batteries, store everything charged, and never short the terminals.** None of it costs much, and all of it makes your robot noticeably more reliable when it counts.
+
+New to the electrical side of a team? Start with [Getting Started](/guides/getting-started) for the big picture, then work through the [learning paths](/paths) to build up the rest of your control-system knowledge alongside battery care.`,
+  },
+  {
+    slug: "frc-apriltags-explained",
+    title: "AprilTags in FRC: How Robots See the Field",
+    description:
+      "AprilTags in FRC are the fiducial markers robots use to see the field and know their exact position. How the tags, cameras, and pose estimation actually work.",
+    keywords: [
+      "apriltags frc",
+      "what are apriltags",
+      "frc vision tracking",
+      "frc pose estimation",
+      "frc apriltag detection",
+      "photonvision vs limelight",
+    ],
+    date: "2026-07-03",
+    readMins: 8,
+    content: `AprilTags are the black-and-white square markers you see mounted around an FRC field, and they work like a QR code that your robot can read from a distance. When a camera on your robot spots one, the robot can figure out exactly where it is standing on the field, because the location of every tag is published before the season starts.
+
+That single capability, knowing your own position accurately, is what makes modern autonomous routines, auto-aiming, and driver-assist alignment possible. Here is how the whole system works, from the pattern on the wall to the pose your code actually uses.
+
+## What an AprilTag actually is
+
+An AprilTag is a *fiducial marker*: a printed pattern designed to be detected quickly and identified reliably by a camera. They were developed by the APRIL robotics lab at the University of Michigan and they long predate FRC, since robotics researchers have used them for years to track objects and localize robots.
+
+Each tag encodes a single number, its **ID**. The grid of black and white squares inside the border is not decoration; it is a binary code with built-in error correction, so a camera can read the ID correctly even at an angle or in mediocre lighting. FRC uses the **36h11** tag family (it switched to 36h11 for the 2024 season, replacing the older 16h5 family used in 2023, the first year AprilTags appeared on the FRC field). Every tag on the field has a unique ID, usually numbered 1 through however many the game uses that year.
+
+The tags are printed at a fixed, known size, roughly 6.5 inches (about 16.5 cm) on the black square, and that known size is what makes the geometry work: because your code knows the tag's real-world dimensions, it can reason backwards from how big and skewed the tag looks in the image to how far away and at what angle the camera must be. Confirm the exact size against the current field drawings, and for the full detail on tag families and the coprocessors that read them, see our lesson on [AprilTags and vision coprocessors](/guides/programming-software/vision-pose-estimation/apriltags-and-coprocessors).
+
+## Where the tags live on the field
+
+Every AprilTag on an FRC field sits at a surveyed, fixed location, and FIRST publishes those locations. WPILib ships this as an **AprilTagFieldLayout**, effectively a lookup table mapping each tag ID to its exact position and orientation. The number of tags and where they sit changes every year with the game, so always pull the current field drawings and layout file from the game manual rather than assuming last year's map.
+
+Those positions live in the standard **WPILib field coordinate system**, the same frame every pose your vision system produces lives in, so getting comfortable with it pays off fast; our lesson on [the field coordinate system and odometry](/guides/programming-software/gyros-imus-orientation/coordinate-system-odometry) walks through how WPILib defines field position with Pose2d and Rotation2d. If terms like *pose*, *fiducial*, or *field-relative* are new to you, our [glossary](/glossary) defines the vocabulary you will hit constantly here.
+
+## How a robot turns a tag into a position
+
+The path from "a camera sees a square" to "my robot is at (4.2, 1.8) facing 30 degrees" runs through three steps, and it is worth understanding the shape of it even when a library does the heavy lifting:
+
+1. **Detection.** The vision software scans each camera frame, finds any AprilTags, decodes their IDs, and locates the four corners of each tag in the image with sub-pixel precision.
+2. **Pose solving (PnP).** From those four corners, the tag's known size, and the camera's calibration, the software solves the *Perspective-n-Point* problem to get the tag's 3D pose relative to the camera: how far away it is and how it is rotated.
+3. **Transform to the field.** Combine that with where the tag sits on the field (from the AprilTagFieldLayout) and where the camera is mounted on your robot, and you have your robot's pose on the field.
+
+Step two only works if the camera is **calibrated** to its exact lens and resolution; an uncalibrated pipeline produces poses that look plausible but are quietly off by feet, which is one of the most common reasons a team's estimates come out wrong. PhotonVision and Limelight both ship calibration routines, and our lesson on [turning tag detections into a field-relative pose](/guides/programming-software/vision-pose-estimation/vision-pose-estimation-tools) covers the detection-to-pose path in code.
+
+## Pose estimation: fusing vision with odometry
+
+Here is the part that trips people up: you almost never use the raw vision pose by itself. Vision measurements are accurate but arrive intermittently, can be noisy, and lag by a few tens of milliseconds while the coprocessor works. Your drivetrain encoders and gyro, meanwhile, give a smooth, high-rate estimate of motion that slowly drifts over a match. **Pose estimation** fuses the two so you get the best of both: smooth, high-rate, and drift-free.
+
+WPILib does this out of the box with a pose estimator that runs on your odometry and lets you fold in each vision measurement, tagged with the frame's timestamp so the correction lands at the right moment in its history, which is how it compensates for camera latency. You also tell it how much to **trust** vision versus odometry: trust vision too much and your position snaps around every time a tag flickers in and out of view; trust it too little and you never correct odometry drift. That tuning, and the code around it, is where a lot of the real engineering happens, our lessons on [fusing vision with odometry](/guides/programming-software/vision-pose-estimation/fusing-vision-odometry) and [tuning trust with standard deviations](/guides/programming-software/advanced-techniques-case-studies/advanced-pose-estimation-fusion) work through the whole pipeline.
+
+## The tools you will actually use
+
+You do not implement tag detection from scratch. Two solutions dominate FRC. **PhotonVision** is free, open-source software you flash onto a small coprocessor, an Orange Pi, a Raspberry Pi, or similar, paired with a USB camera, with strong WPILib integration and a lot of control. **Limelight** is a self-contained smart camera, camera, coprocessor, and LEDs in one box, that costs more but is close to plug-and-play. Both run AprilTag pipelines, both publish poses over NetworkTables, and both are used by top teams; the pick comes down to your budget and how much you want to tinker versus buy a mostly finished tool. If you are weighing the two head to head on features, latency, and cost, our [getting-started AprilTag vision walkthrough](/guides/getting-started/advanced-techniques-case-studies/apriltag-vision-photonvision) gets a PhotonVision coprocessor reading tags end to end.
+
+One hardware detail matters a lot: use a **global-shutter** camera. A rolling-shutter camera captures the image one row at a time, so a moving robot smears the tag and wrecks the pose solution; a global shutter (built into the Limelight; the Arducam OV9281 is a popular PhotonVision choice) captures the whole frame at once and stays sharp while you drive. Mount the camera rigidly, too, because a bracket that flexes quietly throws off the transform to your robot. That intersects with clean power and wiring, which our [Electrical & Wiring guides](/guides/electrical-wiring) cover.
+
+### Multi-tag solving
+
+A single tag gives you a usable pose, but it can be *ambiguous*: from certain angles the math has two nearly-equal solutions and can flip between them. Seeing two or more tags at once fixes this. Both major platforms support multi-tag solving, PhotonVision through a multi-tag PnP strategy and Limelight through its **MegaTag2** approach, which also folds in your gyro heading to lock down orientation. Whenever your camera can frame more than one tag the resulting pose is far more stable, which is exactly why teams think carefully about camera placement, and why our lesson on [multi-tag fusion](/guides/programming-software/advanced-techniques-case-studies/advanced-pose-estimation-fusion) treats it as a core part of getting to centimeter-level localization.
+
+## What teams actually use this for
+
+The point of all this is not to know your coordinates for their own sake. Accurate pose unlocks a few things that win matches:
+
+- **Auto-aiming and alignment.** The robot drives itself to a precise scoring position, or lines up a shot, without the driver eyeballing it. That is faster and more repeatable under pressure, and our [vision-aligned scoring mini-project](/guides/programming-software/worked-examples-mini-projects/mini-project-vision-aligned-scoring) builds exactly that: an AprilTag aim controller fused with pose estimation to drive up and score.
+- **Better autonomous.** Instead of dead-reckoning off encoders alone and slowly drifting, an auton routine can correct its position off tags mid-run and hit its marks reliably across different fields and battery states.
+- **Driver assist.** Even in teleop, a button that snaps the robot to a known alignment saves a second or two every cycle, and seconds add up over a match.
+
+Teams that align quickly and score consistently tend to rank higher and get picked, which is why vision quietly became a scouting talking point too.
+
+## Gotchas that bite rookie programmers
+
+A few hard-won lessons save weeks of frustration:
+
+- **Calibrate the camera.** Do the calibration for your exact camera and resolution, or your poses will be quietly off by feet.
+- **Reject bad measurements.** Filter out poses from far-away single tags, high-ambiguity detections, and anything that places you off the field. Feeding garbage into the pose estimator is worse than feeding it nothing.
+- **Get the timestamps right.** Latency compensation only works if you pass the true capture time. The vision libraries hand you a proper timestamp; use it instead of the current clock time.
+- **Mind your coordinate frames.** A large share of vision bugs come down to a sign flip or a swapped axis in the camera-to-robot transform. Measure the mounting position carefully and test against a known spot on the field.
+
+## Where to start
+
+If you are the one setting this up, the realistic path is short: pick PhotonVision or Limelight, get a global-shutter camera calibrated, confirm you can see a tag and read a pose in the web dashboard, then feed that pose into a WPILib pose estimator and drive around watching your position on a field widget. Get that loop working on a bench before you ever try to auto-align at an event.
+
+For the programming fundamentals underneath all of this, our [Become a Robot Programmer path](/paths/become-a-robot-programmer) and the [Programming, Controls & Sensors guides](/guides/programming-software) walk through the control system, sensors, and command-based structure that AprilTag code plugs into. Vision feels like magic the first time your robot locks onto a target on its own, but under the hood it is just a camera, a known map, and some careful geometry.`,
+  },
+  {
+    slug: "frc-scholarships",
+    title: "FRC Scholarships: How FIRST Can Help Pay for College",
+    description:
+      "FRC scholarships explained: how FIRST connects robotics students to tens of millions in college scholarships, who qualifies, the Dean's List Award, and how to apply.",
+    keywords: [
+      "frc scholarships",
+      "first robotics scholarships",
+      "first scholarships college",
+      "frc dean's list award",
+      "first scholarship program",
+      "robotics college scholarships",
+    ],
+    date: "2026-07-03",
+    readMins: 7,
+    content: `FIRST helps thousands of robotics students pay for college through a dedicated scholarship program that lists tens of millions of dollars in awards from colleges, corporations, and professional organizations. If you're on an FRC team, you already qualify for many of them, and most don't require winning a single match or award.
+
+That last part trips people up, so let's be clear up front: you do not have to be a robot-driving prodigy or your team's lead programmer to get this money. Simply being a student on a registered FIRST team makes you eligible for a large chunk of the scholarships FIRST lists. Here's how the whole thing actually works, and how to make sure you don't leave money on the table.
+
+## How the FIRST scholarship program works
+
+FIRST doesn't hand out most of these scholarships itself. Instead, it runs a **scholarship provider listing** — a searchable database of colleges, universities, companies, and organizations that have committed to funding FIRST students specifically. That listing spans **more than 150 colleges, universities, companies, and organizations**, with awards running well into the tens of millions of dollars — though the exact totals shift every year, so check the current numbers on the [FIRST scholarships page](https://www.firstinspires.org/scholarships).
+
+You search that database, find scholarships you're eligible for, and then apply to each one **directly through the provider** — the college's financial aid office, the company's foundation, or the organization running it. FIRST is the matchmaker, not the bank. Each award has its own application, its own essay prompts, and its own deadline.
+
+The awards range wildly. Some are one-time $500 or $1,000 grants. Others are renewable four-year packages, and a handful are effectively full rides at specific universities. Treat the small ones seriously anyway: three or four $1,000 scholarships stack into real textbook-and-housing money, and the small ones usually have fewer applicants.
+
+## You qualify just for being on a team
+
+The single most important thing to understand is that a big portion of these scholarships are open to **any current FIRST participant**. No award required. No specific GPA in some cases. No "you must have designed the swerve modules." You're a student on a registered FRC (or FTC, or even FLL) team, and that's the entry ticket.
+
+This matters because a lot of students assume scholarships are only for the standout kids — the captain, the CAD lead, the person who gave the big presentation. Not true. Providers fund FIRST students because the program itself is the credential. Showing up, contributing to a real engineering organization for a few years, and being able to write about it honestly is what they're looking for.
+
+If you're brand new and not sure what "contributing" even looks like yet, our [Getting Started guide](/guides/getting-started) walks through the departments and where beginners plug in. Every one of those roles — wiring, scouting, fundraising, media — is a legitimate story to tell on a scholarship application.
+
+## The kinds of scholarships you'll find
+
+The listing sorts into a few broad buckets, and it helps to know which you're chasing.
+
+### College and university scholarships
+
+Dozens of schools offer awards **specifically for FIRST alumni** who enroll there. Some are competitive; others are close to automatic if you meet the criteria and check the box on your application. Engineering-heavy schools have historically been the most generous here, but the list changes and expands, so search the current database rather than assuming which colleges participate. When you're building your college list senior year, cross-reference it against the FIRST providers — a school that gives FIRST students an extra few thousand dollars a year is worth a hard look.
+
+### Corporate and organization scholarships
+
+Companies in tech, aerospace, manufacturing, and engineering fund a lot of these, often because they want to hire FIRST alumni down the road. Professional societies and regional STEM foundations chip in too. These are frequently national, meaning you can attend any college and still collect, which makes them some of the highest-value applications relative to effort.
+
+### Need-based versus merit-based
+
+Both exist in the listing. Some ask for financial documents; others weigh grades, essays, and leadership. A few blend the two. Don't self-select out of need-based awards because you think your family "makes too much" — the thresholds vary, and it costs you nothing to apply and find out.
+
+## The FIRST Leadership Award (formerly the Dean's List)
+
+If there's one FRC-specific award worth understanding for the college-application game, it's the **FIRST Leadership Award** — the honor FIRST called the Dean's List until it was renamed in 2025. It recognizes the program's most outstanding student leaders — the ones driving their team's technical work and community impact, not just their own robot skills.
+
+Here's the mechanics: each team can nominate up to two students who still have **at least one more year of FRC eligibility** (in practice, sophomores and juniors). Those two nominees are the team's Semi-finalists; Finalists are then selected at FRC Regional events and District Championships, and a small group of Winners is named from the finalists at the FIRST Championship. Being named a Finalist or Winner is a genuine distinction that stands out on a college or scholarship application, and it gets you visibility with scholarship providers.
+
+You can't apply for it yourself — your mentors nominate you — but you can absolutely earn it by being the person who takes ownership: leading a subteam, running the team's outreach, mentoring rookies. If you're aiming that direction, the work that gets you noticed overlaps heavily with the [Impact Award](/guides/impact-award) side of the program and with running the team like a real organization, which our [Business, Operations & Fundraising guide](/guides/business-operations) covers in depth.
+
+## It is not just for future engineers
+
+A myth worth killing: FIRST scholarships are only for people majoring in mechanical or electrical engineering. Plenty of them are, but the listing also includes awards for students heading into **business, communications, graphic design, computer science, culinary arts, education, and more**. FIRST leans hard into the idea that a robotics team needs marketers, writers, and organizers as much as it needs machinists, and the scholarship pool reflects that.
+
+So if you spent your FRC years running the team's social media, writing grant applications, or managing the budget, you have scholarships aimed at you too. Filter the database by field of study and you'll see.
+
+## How to actually find and apply
+
+The process is straightforward, but it rewards students who start early and stay organized.
+
+1. **Go to the FIRST scholarships page** and open the scholarship search — FIRST now hosts the provider listing on the Pearson Futures portal. Filter by the things that describe you — your state, your intended major, need-based versus merit, whether you're a current student or alum.
+2. **Build a spreadsheet.** For every scholarship you might qualify for, log the provider, the award amount, the deadline, the essay prompts, and what documents it needs. This is the single highest-leverage thing you can do, and almost nobody does it.
+3. **Read the eligibility fine print.** Some scholarships require you to be a *current* participant, which means you have to apply while you're still on the team — usually senior year. Miss that window and the door closes.
+4. **Write about your FIRST experience concretely.** The essays almost always ask about it. "I was on the robotics team" is weak. "I rewired our robot's [CAN bus](/glossary) after it failed inspection, then wrote the checklist our whole electrical group now uses" is strong. Specifics win.
+5. **Apply directly to each provider** by its own deadline. FIRST hands you the lead; you close it.
+
+Keep receipts on what you actually did across your seasons. The student who kept a running log of their contributions writes better applications in an afternoon than the one trying to reconstruct three years from memory the night before a deadline.
+
+## A realistic timeline
+
+The scholarship listing updates through the year, with a lot of activity in the fall and winter. Most deadlines land in the winter and spring of **senior year**, lining up with regular college applications, but some open earlier and a few key ones close before you might expect.
+
+Underclassmen aren't off the hook. Sophomore and junior year is when you build the résumé — take on a real role, chase the FIRST Leadership Award nomination, keep your grades where merit awards need them. Then senior fall, you sit down with your spreadsheet and grind through applications while everyone else is only thinking about the Common App.
+
+## Mistakes that quietly cost students money
+
+A few patterns show up every year:
+
+- **Assuming you're not "good enough" to apply.** Participation-based scholarships don't care that you weren't the captain. Apply anyway.
+- **Only chasing the big ones.** The $10,000 national awards have thousands of applicants. The $750 regional one from a local engineering firm might have a dozen. Do both.
+- **Ignoring your own college's FIRST scholarship.** Students commit to a school without ever checking whether it offers FIRST alumni money. Check every school on your list.
+- **Waiting until it's too late.** Current-participant scholarships expire when you graduate. Senior-year procrastination is the most expensive habit here.
+
+## Bottom line
+
+FIRST scholarships are one of the most underused benefits of being on an FRC team. There's real money — tens of millions of dollars — sitting in a searchable database, a meaningful slice of it open to you just for showing up and contributing over a few seasons. The students who cash in aren't necessarily the best builders; they're the ones who searched the listing early, kept an organized spreadsheet, and wrote honestly about what they did.
+
+Start now. Build the experience worth writing about, keep track of your contributions, and when the applications open, you'll be the one ready. If you're still finding your footing on a team, pick a department and start learning — browse the [free LearnFRC guides](/guides) or map out a [learning path](/paths) to build the kind of FRC story scholarship providers actually fund.`,
+  },
+  {
+    slug: "frc-offseason-guide",
+    title: "The FRC Offseason: What Strong Teams Do Between Seasons",
+    description:
+      "What strong FRC teams do in the offseason: new-member training, offseason competitions, and skill projects that set up a winning season.",
+    keywords: [
+      "frc offseason",
+      "frc offseason projects",
+      "frc summer training",
+      "offseason competitions frc",
+      "frc preseason",
+      "frc new member training",
+    ],
+    date: "2026-07-03",
+    readMins: 7,
+    content: `The FRC offseason is the stretch from late April, right after the FIRST Championship, until Kickoff in early January — roughly eight months of the year. Strong teams treat it as the most important part of their calendar: they train new members, run and attend offseason competitions, and take on skill-building projects instead of letting the shop go dark until January.
+
+If build season is a six-week sprint, the offseason is where you actually get better. The teams that consistently do well in the spring aren't smarter than you during those six weeks. They did the work in the eight months before.
+
+## When the offseason actually happens
+
+The competition calendar wraps up in late April with the FIRST Championship in Houston. After that, there are no more official FRC events until the next Kickoff in early January. That gap breaks down roughly like this:
+
+- **Late spring (May–June):** Debrief the season, run demos, start onboarding. School is still in session for part of it, so use it.
+- **Summer (June–August):** The deep-work window. Big training pushes, offseason competitions, and projects that need real shop time.
+- **Fall (September–November):** Recruiting season. New members show up when school starts. This is when you build next year's team.
+- **December:** Ramp-up. Finalize preseason projects, run a mock kickoff, and get the shop and tooling ready before the real thing.
+
+You don't need to grind all eight months. But a team that vanishes in May and reappears in January is starting every season from scratch.
+
+## 1. Run a real season retrospective
+
+Before anyone forgets what went wrong, get the whole team in a room and write it down. What broke at events? What took too long in the build? Which subsystems never really worked? Where did you lose matches: the robot, driver practice, or scouting?
+
+Be specific and honest. "Electrical failed a lot" is useless. "We lost three matches to a CAN wire that backed out of a motor controller" is a problem you can actually fix in the offseason. Write it into a document your team will still have next year, because your seniors are about to graduate and take that knowledge with them.
+
+## 2. Recruit and train new members (this is the big one)
+
+Every FRC team loses its seniors every year. The single biggest thing the offseason is for is replacing that knowledge before you need it.
+
+When school starts in the fall, recruit hard: club fairs, class visits, word of mouth. Then actually train the people who show up. Don't just have them watch. New members should get hands-on with the fundamentals of each department well before build season starts: drivetrains and fasteners, wiring that passes inspection, the programming toolchain, basic CAD, and how scouting works.
+
+This is exactly the gap we built LearnFRC to fill. Point new members at the [Getting Started guide](/guides/getting-started) for the big picture, then let them go deep in whatever department pulls them in. The [Electrical & Wiring guides](/guides/electrical-wiring) and [Programming guides](/guides/programming-software) cover the two areas where rookies most often get stuck during build season, so front-load them now.
+
+The goal is simple. By January, a new member can be handed a task and do it, instead of spending the first two weeks of build season figuring out what a motor controller even is.
+
+## 3. Compete in offseason events
+
+Offseason competitions are unofficial tournaments that teams host over the summer and fall. They don't count toward any official ranking, and that is the point. They're low-stakes, which makes them the best training environment in FRC.
+
+They matter for a few reasons. New drivers get real match reps without a season on the line. Rookie programmers get to test autonomous routines on an actual field instead of your shop floor. And you get to run the robot you spent all of build season on, months after you last touched it, which surfaces every reliability problem you papered over in the spring.
+
+### Finding offseason competitions
+
+Some offseason events are large and famously competitive, like the Indiana Robotics Invitational (IRI) and Chezy Champs. Most are smaller regional events run by veteran teams. To find them:
+
+- Check **The Blue Alliance**, which lists offseason events alongside the official ones.
+- Watch **Chief Delphi**, where hosts post registration threads.
+- Ask veteran teams in your area. Offseason events are often word-of-mouth within a region.
+
+Registration is usually cheap compared to an official regional, sometimes only a few hundred dollars, and some events let teams run students who don't normally drive. Doing well at these also builds the scouting and match instincts your team will lean on all spring, which is worth the same offseason attention as our [Scouting & Strategy guides](/guides/scouting-strategy). If you can only do one thing off this whole list, do this one.
+
+## 4. Take on skill-building projects
+
+The offseason is when you learn the things you never had time for in the panic of build season.
+
+### Learn the tools you skipped
+
+FRC's software stack moves every year, and the offseason is when to catch up. A few concrete projects worth a summer:
+
+- **Get comfortable with WPILib and [command-based programming](/guides/programming-software/robot-program-and-command-based/command-based-subsystems)** if your team is still cramming everything into one file. A new WPILib version ships each January, but the core concepts are stable. Learn them now.
+- **Add vision.** Whether it's a Limelight or PhotonVision running on a coprocessor, the offseason is the time to figure out [AprilTag tracking](/guides/programming-software/vision-pose-estimation/apriltags-and-coprocessors) without a match clock running.
+- **Learn path planning.** Tools like [PathPlanner and Choreo](/guides/programming-software/autonomous-trajectories-simulation/trajectories-pathplanner-choreo) make autonomous routines far more capable, but they take real time to learn well.
+
+If your team runs REV or CTRE hardware, the offseason is also when to actually read the docs for your motor controllers and IMU instead of copying last year's config and hoping it holds. Our [Programming guides](/guides/programming-software) walk through the toolchain from install to first deploy.
+
+### Build something
+
+Nothing teaches faster than building a real mechanism with no deadline pressure. Common offseason builds:
+
+- A **spare or practice drivetrain**, which is especially valuable if you want to learn [swerve](/guides/mechanical-build/drivetrains/swerve-drive) before betting an entire season on it.
+- A **prototype of a mechanism** you were curious about — a shooter, an elevator, an intake — just to learn how it goes together.
+- A **demo robot** you can safely drive at outreach events and recruiting fairs.
+
+Keep it small and finish it. A completed simple project beats an abandoned ambitious one, in the offseason exactly like in build season.
+
+## 5. Fix your finances and your Impact story
+
+Robots cost money, and the offseason is when funding gets locked in for next year. Season registration alone runs several thousand dollars (check the current FIRST fee schedule for exact numbers), before you spend a cent on parts or travel. Sponsors and grants don't materialize in January. You court them in the fall.
+
+Use the quiet months to write thank-you letters to this year's sponsors, line up next year's, and [apply for grants](/guides/business-operations/first-grants-and-programs/first-team-grant-portal). If your team is chasing the [Impact Award](/guides/impact-award/understanding-the-impact-award/what-the-impact-award-is), the offseason is when you build the outreach record and documentation it's judged on. You cannot fake a year of community work in the two weeks before an event.
+
+## 6. Hand off leadership on purpose
+
+If your team leads are all seniors, you have a countdown clock running. Use the offseason to name and train [next year's leadership](/guides/business-operations/team-structure-and-leadership/student-leadership-and-mentors) — subsystem leads, a drive team, department heads — and let them actually run things during offseason projects while the veterans are still around to catch mistakes.
+
+Teams that survive graduation waves do it by making leadership transition a normal, planned event instead of a January surprise.
+
+## A minimum viable offseason
+
+If this all feels like a lot, here's the shortest version that still works:
+
+1. **May:** One honest retrospective meeting, written down.
+2. **Summer:** Register for one offseason competition and run your robot at it.
+3. **Fall:** Recruit hard, and run a structured new-member training program.
+4. **December:** A mock kickoff so build season doesn't start cold.
+
+Everything else — practice bots, vision, path planning, a bigger sponsor push — is upside stacked on top of that. If you want a ready-made structure for the fall training push, our [learning paths](/paths) sequence the department guides in the order a new member should tackle them.
+
+## The one rule
+
+The offseason is the difference between a team that rebuilds itself from zero every January and a team that compounds year over year. You don't win in the spring because of six weeks of work. You win because of the eight months nobody saw. Pick a couple of things off this list, start now, and let your team walk into Kickoff already ahead.
+
+Ready to get the team going? Browse the [free department guides](/guides/getting-started) and [learning paths](/paths) on LearnFRC — built by an FRC student, for teams that want to get better between seasons.`,
+  },
+  {
+    slug: "how-to-read-the-frc-game-manual",
+    title: "How to Read the FRC Game Manual (Without Getting Lost)",
+    description:
+      "The FRC game manual is the season's official rulebook. Here's how to read the FRC manual without getting lost: structure, rule prefixes, scoring, and Team Updates.",
+    keywords: [
+      "frc game manual",
+      "how to read frc manual",
+      "frc rules explained",
+      "frc manual tips",
+      "frc rulebook",
+    ],
+    date: "2026-07-03",
+    readMins: 7,
+    content: `The FRC game manual is the official rulebook FIRST publishes at Kickoff every January. It defines that season's game, the field, how points are scored, and every rule your robot, drivers, and team have to follow. The way to read it without getting lost is simple: don't read it front-to-back like a novel. Skim it once for structure, read the scoring section closely, then have each sub-team deep-read only the parts that apply to them.
+
+That's the whole strategy. The rest of this is how to actually do it.
+
+## What the game manual actually is
+
+Every FRC season is a brand-new game, revealed at **Kickoff** in early January. Minutes after the reveal animation, FIRST drops the game manual, a PDF that usually runs well over 100 pages. It is the single source of truth for the season. Chief Delphi threads, YouTube breakdowns, and your mentors' opinions are all helpful, but none of them override the manual. If there is ever a disagreement about what's legal, the answer is in the text (or in the official Q&A, which we'll get to).
+
+The manual covers four big things: the **game** (objective, match flow, scoring), the **arena** (the field you play on), the **robot** (what you're allowed to build), and the **tournament** (how events and rankings work). Almost everything a rookie needs for their first season lives somewhere in those four buckets.
+
+## Where to find it, and which version to read
+
+The manual lives on the FIRST website's game-and-season page, alongside the field drawings, the Kit of Parts list, and the other official documents. Download the PDF and keep a copy locally. You'll be searching it constantly, and you don't want to be reloading a web page in the middle of an argument. Ctrl+F is genuinely your most-used tool all season.
+
+One critical thing rookies miss: **the manual you download at Kickoff is not final.** Throughout build season, FIRST releases **Team Updates** that add, change, or clarify rules. A rule you memorized in week one can be different by week three. More on that below, but the short version is to always confirm you're looking at the latest version.
+
+## How the manual is organized
+
+The manual is split into numbered sections with a consistent internal logic. You don't need to memorize the section numbers, since they shift year to year, but you do need to understand the three conventions that make the whole thing readable.
+
+### Rule prefixes: G, R, and the rest
+
+Every rule has a short code like **G401** or **R501**. The letter tells you what kind of rule it is, and that lets you jump straight to what you care about:
+
+- **G rules** are **game rules**, things you can and can't do *during a match*. Drivers and the drive coach live here.
+- **R rules** are **robot rules**, the construction and build constraints like size, weight, legal materials, and motor limits. Your mechanical, electrical, and CAD people live here.
+- Other prefixes cover inspection, tournament, and event rules. The manual's own "how to read a rule" intro page lists exactly which letter means what for the current season. Read that one page and the entire document gets easier.
+
+Getting fluent in the prefixes is the single biggest unlock. When a teammate asks "is this legal?", you should know whether the answer is an R rule or a G rule before you even open the file.
+
+### Blue boxes are the best thing in the manual
+
+Scattered through the manual are shaded **Blue Boxes**. These are not rules themselves. They explain the *intent* behind a rule, give worked examples, or clarify edge cases the plain rule text can't cover on its own. When a rule confuses you, the Blue Box right after it usually answers the exact question you had. Rookies skip them because they look like filler. They are the opposite of filler.
+
+### Defined terms and the glossary
+
+The manual formats specific **defined terms** in a consistent style (you'll notice certain words are capitalized or styled differently), and each one has a precise meaning listed in the glossary at the back. A term like FRAME PERIMETER, BUMPER ZONE, or ALLIANCE means exactly what the glossary says, not what it sounds like in everyday English. When a rule hinges on a defined term, go read that definition before you argue about the rule. Half of all "these rules contradict each other!" moments are just someone using the casual meaning of a word the manual defines narrowly.
+
+If a term ever trips you up, our [FRC glossary](/glossary) explains the common ones in plain language.
+
+## A reading order that actually works
+
+Here's the sequence I'd give any new team on Kickoff day:
+
+1. **Watch the game reveal animation first.** Two minutes of video gives you the mental model that makes the text readable.
+2. **Read the game overview and match-flow section** to get the shape of a match start to finish — the autonomous period, the driver-controlled period, and endgame — and let the manual fill in that season's exact timing. If those phases are new to you, [our lesson on how a match works](/guides/getting-started/the-season-and-the-game/how-a-match-works) walks through them so the manual reads faster.
+3. **Read the scoring section slowly and completely.** This is the part your entire strategy is built on.
+4. **Skim the whole manual once** so you know what exists and where it is. Don't try to absorb it, just build a map in your head.
+5. **Split the deep read by sub-team.** Build and CAD read the R rules cover to cover. Drivers and strategy read the G rules. Whoever handles inspection reads the inspection and bumper rules. Nobody reads all 100-plus pages at full depth alone.
+
+That last point is the real anti-getting-lost move. The manual is written for an entire team, not one person. Trying to be the single human who has every rule memorized is how you burn out by week two.
+
+## Read the scoring like your season depends on it
+
+Because it does. The scoring section is where design and strategy actually come from. Before you sketch a single mechanism, your team should be able to answer: what's worth the most points, what's cheap and reliable to score, what the autonomous period rewards, and what the bonus [ranking-point objectives](/guides/drive-team/prerequisites/alliances-scoring-and-ranking-points) are.
+
+A robot that reliably does the one highest-value thing usually beats a robot that tries to do everything and does none of it well. You can only make that call if you've read the points closely. This is also where [Scouting & Strategy](/guides/scouting-strategy) starts, because the scoring rules define what's even worth scouting in the first place.
+
+## The parts that quietly disqualify rookies
+
+A few rule categories cause the most rookie pain, mostly because they're easy to overlook until inspection day:
+
+- **Size and weight limits.** Robots have a maximum weight and have to fit inside a starting volume, with rules about how far mechanisms may extend during a match. The exact numbers change year to year, so check the current R rules, but know these limits exist and design to them from day one, not the night before your event.
+- **Bumper rules.** Bumpers have their own detailed rules: how they're constructed, where they sit on the frame, what colors they are, and how much of the frame perimeter they cover. Get these wrong and you fail inspection, so read them carefully before you finalize your frame.
+- **The control system and wiring.** The legal electrical system (main breaker, correct wire gauges, a properly secured battery) is spelled out in the rules and checked at inspection. Our [Electrical & Wiring guides](/guides/electrical-wiring) map directly onto what the manual requires.
+
+None of these are hard. They just have to be right, and the manual tells you exactly what "right" is.
+
+## Team Updates and the Q&A change the manual under you
+
+Two official systems keep the manual alive after Kickoff, and ignoring them is a classic rookie mistake.
+
+**Team Updates** are FIRST's official amendments to the manual, released on a schedule during build season. They can change a rule, add a new one, or correct an error. Reading them is not optional, because a Team Update can invalidate a design decision you already committed to. Assign someone to check for updates and read them out to the team every time they drop.
+
+The **official Q&A system** is where teams submit questions about rules they find ambiguous, and FIRST answers on the record. Those answers are official clarifications straight from FIRST, though the manual text itself takes precedence if the two ever conflict. Before you spend an hour arguing about an edge case, search the Q&A. Odds are another team already asked and there's an official ruling. If there isn't, you can submit the question yourself.
+
+## Common mistakes when reading the manual
+
+- **Reading it front-to-back like a book.** You'll lose the plot by page 30. Skim for structure, then deep-read by section.
+- **Trusting a Chief Delphi hot take over the actual text.** The community is great for pointers, but always confirm against the manual and the Q&A.
+- **Ignoring the Blue Boxes.** They answer the exact question the rule left open.
+- **Skipping the glossary.** Most rule confusion is a defined term someone assumed they already understood.
+- **Forgetting Team Updates.** The manual changes. Keep up.
+- **Reading a rule without its penalty.** Most rules state the consequence for breaking them, whether a FOUL, a TECH FOUL, a card, or a disqualification. Knowing the cost tells you how much a rule actually matters to your strategy.
+
+## The bottom line
+
+The FRC game manual looks intimidating because it's long and precise, but it's precise on purpose. It's the one document every team on the field has agreed to play by. Read it in layers instead of all at once: animation, overview, scoring, a full skim, then a deep read split across your sub-teams. Learn the rule prefixes, respect the Blue Boxes and the glossary, and never let a Team Update sneak past you.
+
+If this is your first season and the manual is your first real taste of FRC, start with our [Getting Started guide](/guides/getting-started) and let it point you to the rest as you grow. Read the manual well and you'll spend build season building, not arguing about rules.`,
+  },
+  {
+    slug: "frc-simulation-wpilib",
+    title: "Practice FRC Programming Without a Robot: WPILib Simulation",
+    description:
+      "Practice FRC programming without a robot using WPILib simulation: run real robot code on your laptop, drive a virtual robot, model physics, and test.",
+    keywords: [
+      "wpilib simulation",
+      "frc programming without robot",
+      "frc robot simulator",
+      "practice frc code",
+      "wpilib sim gui",
+      "frc simulation tutorial",
+    ],
+    date: "2026-07-03",
+    readMins: 7,
+    content: `You can practice FRC programming without a robot by using WPILib's built-in simulator, which runs your real robot code on your laptop and shows a virtual robot you can enable, drive, and debug. Everything you write for the actual roboRIO, including command-based structure, subsystems, autonomous routines, and PID loops, runs in the sim with no hardware attached.
+
+That matters because programming is the department most starved for hardware time. The robot is usually half-built, being rewired, or in use by drive practice, and the code team is stuck waiting. Simulation removes that bottleneck. You can iterate on autonomous paths at midnight in December, months before Kickoff, and show up to build season already knowing your tools.
+
+## Why simulation is worth your time
+
+The old way to learn FRC code was to wait for a working robot, deploy, watch it do the wrong thing, and repeat with a 30-second deploy cycle and a crowd of people who also need the robot. Simulation flips that. Your test loop drops to a few seconds, you get a debugger, and a broken line of code crashes a window on your screen instead of driving a 120-pound machine into a wall.
+
+There are three honest limits to be clear about. First, physics in sim is approximate, so a mechanism that works in the simulator may still need real-world tuning. Second, you will not catch wiring, CAN bus, or mechanical problems in sim, because there is no wiring. Third, sensor behavior is only as realistic as the model you feed it. None of that makes simulation less useful. It just means sim is for validating your **logic and structure**, and the real robot is for the final tuning pass.
+
+## What you actually need
+
+The requirements are small: a laptop running Windows, macOS, or Linux, and the WPILib release for the current season installed. That single installer gives you a preconfigured VS Code, the WPILib libraries, the build tools, and the simulator. You do not need a roboRIO, a power supply, or any motors. If you have never installed it, walk through our [Programming, Controls & Sensors guides](https://learnfrc.systemerr.com/guides/programming-controls-sensors) — [installing the toolchain](https://learnfrc.systemerr.com/guides/programming-software/foundations-tools-and-first-program/installing-the-toolchain) is covered there step by step — because the sim assumes you already have a project that builds.
+
+Simulation works in all three WPILib languages — Java, C++, and Python — so your language choice doesn't limit you here. If you're still weighing them, our lesson on [choosing a language](https://learnfrc.systemerr.com/guides/programming-software/foundations-tools-and-first-program/choosing-a-language) covers the tradeoffs; whichever you pick, make sure a template project builds cleanly before you simulate, because the sim runs your compiled code and cannot fix a project that does not compile.
+
+## Running the simulator
+
+You launch it from your robot project in the WPILib VS Code: open the command palette and run the WPILib command to simulate your robot code, or use the Gradle task from the terminal (\`./gradlew simulateJava\` for a Java project). The exact command label can shift between seasons, so if the palette entry looks slightly different from a tutorial you are following, trust the current WPILib docs at docs.wpilib.org over an older guide. The first time you run it, WPILib asks which simulation extensions to load; pick the **Sim GUI** and the driver station extension, and the Sim GUI window that opens is the heart of the whole workflow.
+
+Its **Robot State** panel is a virtual Driver Station: set the robot to Disabled, Autonomous, Teleoperated, or Test, and flip the Enable control exactly like the real thing. Enable in Teleop and the panels showing your commanded outputs — PWM values, motor controller outputs — move in real time, which alone catches a huge share of "why isn't my motor doing anything" bugs. To drive, plug in a game controller and drag it from the System Joysticks panel into the Joysticks panel so it maps to joystick 0 the way your code expects; now your teleop code is reading a real controller with no robot in the room, but the full input-to-output path is live. Our lesson [Simulation: Test Without a Robot](https://learnfrc.systemerr.com/guides/programming-software/autonomous-trajectories-simulation/simulation) walks the full panel tour and each robot state end to end.
+
+## Making the virtual robot move
+
+Out of the box, the Sim GUI shows you commanded outputs but not motion, because nothing is modeling the physics of your drivetrain or arm. WPILib ships **physics simulation classes** for the common FRC mechanisms — a differential (tank) drivetrain, a flywheel, an elevator, a single-jointed arm, and a generic DC motor — and you feed each one the real parameters, such as the gearbox reduction, the motor type and count, and the mass or moment of inertia. Wired in through a \`simulationPeriodic()\` method, which the framework calls only when running in simulation, the model turns your commanded voltage into a position and velocity and writes it back into your simulated sensors, such as encoders. Now a closed-loop PID that holds an elevator height will actually settle in the sim, and a badly tuned one will visibly oscillate on screen — that feedback is the entire point, and you got it without a robot or a single risk of stripping a gear. Our lesson on [simulation-driven design with WPILib physics models](https://learnfrc.systemerr.com/guides/mechanical-build/advanced-techniques-case-studies/simulation-driven-design) works a full mechanism through from CAD-derived inputs to a settling loop.
+
+You do not have to model everything on day one. A common and productive path is to simulate just the drivetrain so you can develop autonomous routines and odometry, then add mechanism models later as you need them.
+
+## Vendor hardware: CTRE and REV in sim
+
+Most modern FRC robots run motors on either CTRE or REV electronics, and both vendors support simulation, so you are not limited to WPILib-native motor controllers. CTRE's Phoenix library exposes a simulation state on its motor controllers, letting you feed a simulated position and velocity into a device like a TalonFX and read realistic encoder and status values back. REV's library similarly provides simulation hooks for its SPARK controllers. The details and the exact API names change with each vendor release, so pull the current version of the vendor's own simulation documentation rather than trusting a two-year-old forum post. The takeaway is that whatever hardware your team standardized on, you can very likely develop against it in sim. If you are still deciding on electronics, our [Electrical & Wiring guides](https://learnfrc.systemerr.com/guides/electrical-wiring) cover the tradeoffs on the hardware side.
+
+## Seeing your robot on a field
+
+Numbers in a panel are fine for a motor, but for a drivetrain you want to see where the robot is. WPILib provides a **Field2d** widget: you publish your robot's estimated [pose from odometry](https://learnfrc.systemerr.com/guides/programming-software/autonomous-trajectories-simulation/kinematics-and-odometry) and the Sim GUI (or the Glass dashboard) draws the robot as an arrow on a top-down field. Drive in teleop and the arrow moves; run an autonomous path and you watch it trace the route. If your odometry math is wrong, the arrow drifts or teleports, and the bug is obvious in a way it never is by staring at code.
+
+Two companion tools go further. **Glass** is a standalone dashboard that connects to your running sim and gives you richer, more configurable widgets and plots than the basic Sim GUI. **AdvantageScope**, a widely used community tool, visualizes NetworkTables and log data — including 2D and 3D field views and mechanism animations — and can replay recorded logs after the fact, so teams that log aggressively can reconstruct exactly what the code believed was happening during a match or a sim run. We cover both in depth in [a systematic debugging workflow for FRC](https://learnfrc.systemerr.com/guides/programming-software/common-mistakes-troubleshooting/systematic-debugging-workflow); here it is enough to know they attach to the same running sim. There is also a growing ecosystem of higher-fidelity physics simulators from the community that add game-piece collisions and more realistic field interaction. If you want to explore that, search for the current season's popular FRC simulation libraries, since the leading options change from year to year.
+
+## Test your code, not just your patience
+
+Simulation is not only about the GUI. Because your robot code is ordinary Java, C++, or Python, you can write **unit tests** that run on your laptop with no robot and no sim window at all. A typical test constructs a subsystem, commands it to do something, steps the physics model forward a few times, and asserts that the encoder ended up where it should. These tests run in seconds as part of your build, so a broken change gets caught before anyone deploys. For a rookie team, even a handful of tests around your drivetrain and your critical autonomous logic pays for itself the first time a refactor would have quietly broken something.
+
+## Cheap physical practice: Romi and XRP
+
+If you want the feel of real hardware without a real robot, two small platforms run genuine WPILib code over a wireless connection to your laptop. The **Romi** is a compact wheeled robot built on a common hobby chassis, and the **XRP** (Experiential Robotics Platform) is an even cheaper option often in the range of a textbook rather than a robot budget. Both let you write a normal WPILib project, connect through a simulation websocket extension, and drive an actual little robot around a table. They are not a substitute for the competition robot, but they are a fantastic bridge between pure simulation and the real thing, and they are ideal for training new programmers in the offseason. Check the current price and setup steps in the WPILib docs, since both platforms get revised.
+
+## A realistic way to start
+
+If you have never touched the simulator, do this in order. Install the current WPILib release and confirm a new project builds. Run the simulator, open the Sim GUI, drag in a controller, and enable a stock template in teleop so you see outputs respond. Add a differential drivetrain physics model and a Field2d widget, and drive your virtual robot around. Then write one unit test. That sequence, which you can do in an afternoon, covers the core skills you will use all season.
+
+Simulation is the single highest-leverage habit a new FRC programmer can build, because it turns "we're blocked on the robot" into "we shipped working code before the robot existed." Ready to go deeper? Work through the full walkthroughs in the [LearnFRC Programming department](https://learnfrc.systemerr.com/guides/programming-controls-sensors), map out where code fits in the season with our [learning paths](https://learnfrc.systemerr.com/paths), and keep the [glossary](https://learnfrc.systemerr.com/glossary) open for any term that trips you up.`,
+  },
 ];
 
 export function getArticle(slug: string): Article | undefined {
