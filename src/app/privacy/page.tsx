@@ -31,6 +31,7 @@ import { PrivacyGlass } from "./_privacy-glass";
 export const metadata: Metadata = {
   title: "Privacy Policy",
   description: "How LearnFRC collects, uses, and protects your information.",
+  alternates: { canonical: "/privacy" },
 };
 
 const UPDATED = "July 3, 2026";

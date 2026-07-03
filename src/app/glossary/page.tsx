@@ -11,6 +11,7 @@ export const metadata: Metadata = {
   title: "FRC Glossary",
   description:
     "A searchable glossary of FRC terms, acronyms, and jargon — from roboRIO and swerve to OPR and the Impact Award.",
+  alternates: { canonical: "/glossary" },
 };
 
 const BRAND_GRADIENT: CSSProperties = {

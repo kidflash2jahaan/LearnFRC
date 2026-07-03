@@ -30,6 +30,7 @@ export const metadata: Metadata = {
   title: "LearnFRC for Teams — free onboarding curriculum for FRC teams",
   description:
     "Onboard your whole FRC team with a ready-made curriculum across every department. Everyone who signs up with your team number is grouped automatically — and you can all see each other's progress. Free.",
+  alternates: { canonical: "/for-teams" },
 };
 
 // Icons are referenced by NAME and resolved inside the client rail —

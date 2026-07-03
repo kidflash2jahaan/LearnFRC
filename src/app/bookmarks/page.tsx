@@ -27,6 +27,7 @@ import { pluralize } from "@/lib/utils";
 export const metadata: Metadata = {
   title: "Bookmarks · LearnFRC",
   description: "Your saved lessons, ready to pick up any time.",
+  robots: { index: false, follow: false },
 };
 
 type LessonJoin = {

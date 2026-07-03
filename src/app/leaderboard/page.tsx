@@ -33,6 +33,7 @@ export const metadata = {
   title: "Leaderboard · LearnFRC",
   description:
     "See the top FRC learners climbing the ranks — earn XP, level up, and represent your team on the global LearnFRC leaderboard.",
+  alternates: { canonical: "/leaderboard" },
 };
 
 const HEADLINE_GRADIENT: CSSProperties = {

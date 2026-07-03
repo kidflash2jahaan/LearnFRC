@@ -49,9 +49,18 @@ export async function generateMetadata({
   const { department } = await params;
   const dept = await getDepartmentBySlug(department).catch(() => null);
   if (!dept) return { title: "Department" };
+  const url = `${SITE}/guides/${department}`;
+  const description = dept.tagline ?? dept.description ?? undefined;
   return {
     title: dept.name,
-    description: dept.tagline ?? dept.description ?? undefined,
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      title: `${dept.name} · LearnFRC`,
+      description,
+      url,
+      type: "website",
+    },
   };
 }
 
@@ -134,11 +143,29 @@ export default async function DepartmentPage({
           name: dept.name,
           description: dept.tagline ?? dept.description ?? undefined,
           url: `${SITE}/guides/${dept.slug}`,
+          isAccessibleForFree: true,
+          inLanguage: "en",
           provider: {
             "@type": "Organization",
             name: "LearnFRC",
             url: SITE,
           },
+        }}
+      />
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "BreadcrumbList",
+          itemListElement: [
+            { "@type": "ListItem", position: 1, name: "Home", item: SITE },
+            { "@type": "ListItem", position: 2, name: "Guides", item: `${SITE}/guides` },
+            {
+              "@type": "ListItem",
+              position: 3,
+              name: dept.name,
+              item: `${SITE}/guides/${dept.slug}`,
+            },
+          ],
         }}
       />
 

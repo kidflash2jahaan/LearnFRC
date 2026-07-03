@@ -45,6 +45,7 @@ import { WhatsNew } from "./_whats-new";
 export const metadata: Metadata = {
   title: "Dashboard · LearnFRC",
   description: "Your progress, streak, and achievements across every FRC department.",
+  robots: { index: false, follow: false },
 };
 
 const XP_PER_LEVEL = 100;

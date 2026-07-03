@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import type { Metadata } from "next";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -25,6 +26,15 @@ import {
   Glow,
 } from "@/components/motion/primitives";
 import { HeroPanel, type HeroDept } from "./_hero-panel";
+
+// Title/description/OG are inherited from the root layout defaults (which are
+// written for the home page); we only pin the self-referential canonical.
+export const metadata: Metadata = {
+  // Tighter than the sitewide fallback so the home SERP snippet isn't truncated.
+  description:
+    "Free, structured guides to every department of the FIRST Robotics Competition — mechanical, CAD, programming, electrical, strategy, business and more.",
+  alternates: { canonical: "/" },
+};
 
 const BRAND_GRADIENT: CSSProperties = {
   background: "linear-gradient(120deg, #2560e6, #1aa9d6)",

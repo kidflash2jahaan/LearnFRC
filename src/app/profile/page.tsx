@@ -35,6 +35,7 @@ import { IdentityCard } from "./_identity-card";
 export const metadata = {
   title: "Your profile · LearnFRC",
   description: "Your XP, level, completed lessons, and achievements on LearnFRC.",
+  robots: { index: false, follow: false },
 };
 
 const ROLE_LABEL: Record<string, string> = {

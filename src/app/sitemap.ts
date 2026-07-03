@@ -1,25 +1,31 @@
 import type { MetadataRoute } from "next";
-import { createClient } from "@/lib/supabase/server";
+import { getAllDepartmentSlugs, getDepartmentBySlug } from "@/lib/queries";
 import { ARTICLES } from "@/lib/blog-data";
+import { PATHS } from "@/lib/paths-data";
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.systemerr.com";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
+
+  // Public, non-catalog routes. Home is top priority; legal pages are indexable
+  // but low priority.
   const staticRoutes: MetadataRoute.Sitemap = [
-    "",
-    "/guides",
-    "/paths",
-    "/glossary",
-    "/resources",
-    "/leaderboard",
-    "/blog",
-    "/for-teams",
-  ].map((p) => ({
-    url: `${SITE}${p}`,
+    { path: "", priority: 1, freq: "weekly" as const },
+    { path: "/guides", priority: 0.9, freq: "weekly" as const },
+    { path: "/paths", priority: 0.7, freq: "weekly" as const },
+    { path: "/glossary", priority: 0.7, freq: "monthly" as const },
+    { path: "/resources", priority: 0.6, freq: "monthly" as const },
+    { path: "/leaderboard", priority: 0.5, freq: "daily" as const },
+    { path: "/blog", priority: 0.8, freq: "weekly" as const },
+    { path: "/for-teams", priority: 0.7, freq: "monthly" as const },
+    { path: "/terms", priority: 0.2, freq: "yearly" as const },
+    { path: "/privacy", priority: 0.2, freq: "yearly" as const },
+  ].map((r) => ({
+    url: `${SITE}${r.path}`,
     lastModified: now,
-    changeFrequency: "weekly",
-    priority: p === "" ? 1 : 0.7,
+    changeFrequency: r.freq,
+    priority: r.priority,
   }));
 
   const blogRoutes: MetadataRoute.Sitemap = ARTICLES.map((a) => ({
@@ -29,37 +35,51 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.7,
   }));
 
-  try {
-    const supabase = await createClient();
-    const [{ data: depts }, { data: lessons }] = await Promise.all([
-      supabase.from("departments").select("slug"),
-      supabase.from("lessons").select("slug, modules(slug, departments(slug))"),
-    ]);
+  const pathRoutes: MetadataRoute.Sitemap = PATHS.map((p) => ({
+    url: `${SITE}/paths/${p.slug}`,
+    lastModified: now,
+    changeFrequency: "monthly",
+    priority: 0.6,
+  }));
 
-    const deptRoutes: MetadataRoute.Sitemap = (depts ?? []).map((d) => ({
-      url: `${SITE}/guides/${d.slug}`,
+  try {
+    // Reuse the durably-cached content-layer functions (anon public client, no
+    // cookies) so the sitemap never adds fresh DB egress on the hot path.
+    const slugs = await getAllDepartmentSlugs();
+    const depts = await Promise.all(
+      slugs.map((s) => getDepartmentBySlug(s).catch(() => null))
+    );
+
+    const deptRoutes: MetadataRoute.Sitemap = slugs.map((slug) => ({
+      url: `${SITE}/guides/${slug}`,
       lastModified: now,
       changeFrequency: "weekly",
       priority: 0.8,
     }));
 
-    const lessonRoutes: MetadataRoute.Sitemap = (lessons ?? [])
-      .map((l) => {
-        const m = l.modules as { slug?: string; departments?: { slug?: string } } | null;
-        const ds = m?.departments?.slug;
-        const ms = m?.slug;
-        if (!ds || !ms) return null;
-        return {
-          url: `${SITE}/guides/${ds}/${ms}/${l.slug}`,
-          lastModified: now,
-          changeFrequency: "monthly" as const,
-          priority: 0.6,
-        };
-      })
-      .filter(Boolean) as MetadataRoute.Sitemap;
+    const lessonRoutes: MetadataRoute.Sitemap = [];
+    for (const d of depts) {
+      if (!d) continue;
+      for (const m of d.modules) {
+        for (const l of m.lessons) {
+          lessonRoutes.push({
+            url: `${SITE}/guides/${d.slug}/${m.slug}/${l.slug}`,
+            lastModified: now,
+            changeFrequency: "monthly",
+            priority: 0.6,
+          });
+        }
+      }
+    }
 
-    return [...staticRoutes, ...blogRoutes, ...deptRoutes, ...lessonRoutes];
+    return [
+      ...staticRoutes,
+      ...blogRoutes,
+      ...pathRoutes,
+      ...deptRoutes,
+      ...lessonRoutes,
+    ];
   } catch {
-    return [...staticRoutes, ...blogRoutes];
+    return [...staticRoutes, ...blogRoutes, ...pathRoutes];
   }
 }

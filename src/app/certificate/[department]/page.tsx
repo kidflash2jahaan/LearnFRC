@@ -46,7 +46,10 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { department } = await params;
   const dept = await getDepartmentBySlug(department).catch(() => null);
-  return { title: dept ? `${dept.name} — Certificate` : "Certificate" };
+  return {
+    title: dept ? `${dept.name} — Certificate` : "Certificate",
+    robots: { index: false, follow: false },
+  };
 }
 
 export default async function CertificatePage({

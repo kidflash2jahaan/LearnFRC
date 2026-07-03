@@ -27,6 +27,7 @@ export const metadata: Metadata = {
   title: "Guides",
   description:
     "Explore every FRC department — mechanical, CAD, programming, electrical, business, outreach, scouting, drive team and more. Structured guides from fundamentals to advanced.",
+  alternates: { canonical: "/guides" },
 };
 
 const BRAND_GRADIENT: CSSProperties = {

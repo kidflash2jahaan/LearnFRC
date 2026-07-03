@@ -31,7 +31,10 @@ import {
 } from "@/components/motion/primitives";
 import { MissionRail } from "./_mission-rail";
 
-export const metadata: Metadata = { title: "Admin" };
+export const metadata: Metadata = {
+  title: "Admin",
+  robots: { index: false, follow: false },
+};
 
 export default async function AdminPage() {
   const { user, isAdmin } = await getSession();

@@ -23,6 +23,7 @@ export const metadata: Metadata = {
   title: "My Team · LearnFRC",
   description:
     "See your whole FRC team's progress. Everyone who signs up with your team number is grouped automatically.",
+  robots: { index: false, follow: false },
 };
 
 const BRAND_GRADIENT: CSSProperties = {

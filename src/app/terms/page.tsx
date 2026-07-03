@@ -33,6 +33,7 @@ import { ContentsRail, type RailItem } from "./_contents-rail";
 export const metadata: Metadata = {
   title: "Terms of Service",
   description: "The terms for using LearnFRC.",
+  alternates: { canonical: "/terms" },
 };
 
 const UPDATED = "June 20, 2026";

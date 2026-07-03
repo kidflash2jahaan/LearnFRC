@@ -28,7 +28,17 @@ export async function generateMetadata({
   params: Promise<{ username: string }>;
 }): Promise<Metadata> {
   const { username } = await params;
-  return { title: `@${username}` };
+  return {
+    title: `@${username}`,
+    description: `@${username}'s FRC learning profile on LearnFRC — XP, level, completed lessons, and achievements across every department.`,
+    alternates: { canonical: `/u/${username}` },
+    openGraph: {
+      title: `@${username} · LearnFRC`,
+      description: `@${username}'s FRC learning profile — XP, level, and achievements on LearnFRC.`,
+      url: `/u/${username}`,
+      type: "profile",
+    },
+  };
 }
 
 const ROLE_LABEL: Record<string, string> = {

@@ -21,6 +21,7 @@ export const metadata: Metadata = {
   title: "Learning Paths",
   description:
     "Guided, multi-department journeys through FRC — onboarding, programming, build & design, the Impact Award, and game day.",
+  alternates: { canonical: "/paths" },
 };
 
 const BRAND_GRADIENT: CSSProperties = {

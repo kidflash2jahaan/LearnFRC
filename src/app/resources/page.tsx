@@ -23,6 +23,7 @@ export const metadata: Metadata = {
   title: "Resources",
   description:
     "The essential FRC links — official docs, software, vendors, community, and learning resources, plus the sources behind every LearnFRC guide.",
+  alternates: { canonical: "/resources" },
 };
 
 const BRAND_GRADIENT: CSSProperties = {

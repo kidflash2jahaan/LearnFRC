@@ -39,7 +39,17 @@ export async function generateMetadata({
   const { slug } = await params;
   const path = getPathBySlug(slug);
   if (!path) return { title: "Path" };
-  return { title: path.title, description: path.description };
+  return {
+    title: path.title,
+    description: path.description,
+    alternates: { canonical: `/paths/${slug}` },
+    openGraph: {
+      title: `${path.title} · LearnFRC`,
+      description: path.description,
+      url: `/paths/${slug}`,
+      type: "website",
+    },
+  };
 }
 
 export default async function PathPage({

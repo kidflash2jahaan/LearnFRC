@@ -158,8 +158,38 @@ export default async function LessonPage({
           description: les.summary ?? undefined,
           learningResourceType: "lesson",
           url: `${SITE}${lessonPath}`,
-          isPartOf: { "@type": "Course", name: dept.name },
+          inLanguage: "en",
+          isAccessibleForFree: true,
+          isPartOf: {
+            "@type": "Course",
+            name: dept.name,
+            url: `${SITE}/guides/${dept.slug}`,
+          },
           provider: { "@type": "Organization", name: "LearnFRC", url: SITE },
+        }}
+      />
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "BreadcrumbList",
+          // Mirrors the on-page breadcrumb. There is no standalone module route,
+          // so the module tier is omitted rather than linking a 404.
+          itemListElement: [
+            { "@type": "ListItem", position: 1, name: "Home", item: SITE },
+            { "@type": "ListItem", position: 2, name: "Guides", item: `${SITE}/guides` },
+            {
+              "@type": "ListItem",
+              position: 3,
+              name: dept.name,
+              item: `${SITE}/guides/${dept.slug}`,
+            },
+            {
+              "@type": "ListItem",
+              position: 4,
+              name: les.title,
+              item: `${SITE}${lessonPath}`,
+            },
+          ],
         }}
       />
 

@@ -21,6 +21,7 @@ export const metadata = {
   title: "Settings · LearnFRC",
   description:
     "Update your profile, username, team, and how you appear across LearnFRC.",
+  robots: { index: false, follow: false },
 };
 
 const ROLE_LABELS: Record<string, string> = {

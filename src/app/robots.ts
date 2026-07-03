@@ -8,7 +8,19 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "*",
         allow: "/",
-        disallow: ["/admin", "/dashboard", "/settings", "/profile", "/bookmarks", "/api/"],
+        // Auth-gated / private / non-content routes. Public profiles (/u/*) and
+        // the public catalog stay crawlable.
+        disallow: [
+          "/admin",
+          "/dashboard",
+          "/settings",
+          "/profile",
+          "/bookmarks",
+          "/certificate",
+          "/teams",
+          "/join",
+          "/api/",
+        ],
       },
     ],
     sitemap: `${SITE}/sitemap.xml`,
