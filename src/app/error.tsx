@@ -14,6 +14,20 @@ export default function Error({
 }) {
   React.useEffect(() => {
     console.error(error);
+
+    // Deploy skew: a tab opened before a deploy submits a Server Action id
+    // that no longer exists. A hard reload picks up the new build and the
+    // user's action works on retry — recover automatically, once per URL,
+    // and skip the error report (it's expected churn right after deploys).
+    if (/not found on the server|failed to find server action/i.test(error?.message || "")) {
+      const key = "lf_skew_reload_" + window.location.pathname;
+      if (!sessionStorage.getItem(key)) {
+        sessionStorage.setItem(key, "1");
+        window.location.reload();
+        return;
+      }
+    }
+
     try {
       fetch("/api/report-error", {
         method: "POST",
