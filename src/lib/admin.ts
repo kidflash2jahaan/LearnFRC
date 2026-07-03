@@ -1,5 +1,6 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { ARTICLES } from "@/lib/blog-data";
 
 /** A row from the `admin_department_stats` view. */
 export type DepartmentStat = {
@@ -85,6 +86,12 @@ export type AdminStats = {
   /** Who referred how many people, most first. */
   recruiters: { name: string; username: string | null; referrals: number }[];
   daily: DailyPoint[];
+  /** Combined blog-article views, all-time. */
+  articleViewsTotal: number;
+  /** Combined blog-article views in the trailing 7 days. */
+  articleViews7d: number;
+  /** Per-article view counts, most read first, incl. zero-view articles. */
+  articleViews: { slug: string; title: string; views: number }[];
 };
 
 /** Number of trailing calendar days rendered in the activity chart. */
@@ -126,6 +133,7 @@ export async function getAdminStats(): Promise<AdminStats> {
     recentRes,
     dailySignupsRes,
     dailyCompletionsRes,
+    articleViewsRes,
   ] = await Promise.all([
     supabase.from("profiles").select("*", { count: "exact", head: true }),
     supabase.from("lesson_progress").select("*", { count: "exact", head: true }),
@@ -155,6 +163,8 @@ export async function getAdminStats(): Promise<AdminStats> {
       .limit(8),
     supabase.from("admin_daily_signups").select("day, count"),
     supabase.from("admin_daily_completions").select("day, count"),
+    // Aggregated in SQL (one row per slug) so we never fetch raw view rows.
+    supabase.rpc("article_view_counts"),
   ]);
 
   const subscribersRes = await supabase
@@ -386,6 +396,19 @@ export async function getAdminStats(): Promise<AdminStats> {
     })
     .sort((a, b) => b.referrals - a.referrals);
 
+  // ── Blog-article views (from the SQL aggregate above) ─────────────
+  // Postgres bigints arrive as strings, so coerce everything through Number().
+  type AVRow = { slug: string; views: number | string; views_7d: number | string };
+  const avRows = (articleViewsRes.data as AVRow[] | null) ?? [];
+  const avMap = new Map(avRows.map((r) => [r.slug, r]));
+  const articleViews = ARTICLES.map((a) => ({
+    slug: a.slug,
+    title: a.title,
+    views: Number(avMap.get(a.slug)?.views ?? 0),
+  })).sort((x, y) => y.views - x.views);
+  const articleViewsTotal = avRows.reduce((s, r) => s + Number(r.views ?? 0), 0);
+  const articleViews7d = avRows.reduce((s, r) => s + Number(r.views_7d ?? 0), 0);
+
   return {
     totals: {
       users: countOf(usersRes),
@@ -416,5 +439,8 @@ export async function getAdminStats(): Promise<AdminStats> {
     referralUsers,
     recruiters,
     daily,
+    articleViewsTotal,
+    articleViews7d,
+    articleViews,
   };
 }

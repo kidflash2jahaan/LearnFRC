@@ -16,6 +16,7 @@ import { ARTICLES, getArticle, getRelated } from "@/lib/blog-data";
 import { Markdown } from "@/components/markdown";
 import { JsonLd } from "@/components/json-ld";
 import { ShareButton } from "@/components/share-button";
+import { ArticleViewBeacon } from "@/components/article-view-beacon";
 import { AnimatedCounter } from "@/components/animated-counter";
 import {
   RiseGroup,
@@ -150,6 +151,7 @@ export default async function ArticlePage({
 
   return (
     <article className="relative overflow-x-clip text-foreground">
+      <ArticleViewBeacon slug={a.slug} />
       <JsonLd data={jsonLd} />
       <JsonLd
         data={{
