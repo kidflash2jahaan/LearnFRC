@@ -115,6 +115,20 @@ export async function signUp(
   });
   if (error) return { error: error.message };
 
+  // Supabase's signUp deliberately succeeds (no error, no email) when the email
+  // is already registered — it returns a user with an EMPTY identities array to
+  // avoid leaking which emails exist. Without this check the user is sent to a
+  // dead "check your inbox" screen for an email that never arrives. Detect it
+  // and route them to log in instead. Skip the profile update below so we don't
+  // clobber the existing account's source/settings.
+  const alreadyRegistered =
+    !!data.user &&
+    Array.isArray(data.user.identities) &&
+    data.user.identities.length === 0;
+  if (alreadyRegistered) {
+    redirect(`/login?notice=exists&email=${encodeURIComponent(email)}`);
+  }
+
   // Record acquisition source (first-touch cookie set by <SourceCapture/>) and,
   // if they came via a referral link, who referred them. The XP referral reward
   // is still paid out only on email verification (see /auth/confirm).

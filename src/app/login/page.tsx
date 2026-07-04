@@ -30,13 +30,14 @@ const STATS: Stat[] = [
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string }>;
+  searchParams: Promise<{ next?: string; notice?: string; email?: string }>;
 }) {
-  const { next } = await searchParams;
+  const { next, notice, email } = await searchParams;
   const { user } = await getSession();
   if (user) redirect("/dashboard");
 
   const safeNext = next && next.startsWith("/") ? next : undefined;
+  const noticeExists = notice === "exists" ? "exists" : undefined;
 
   const orbit: OrbitDept[] = ORBIT_SLUGS.map((slug) => {
     const m = deptMeta(slug);
@@ -56,7 +57,12 @@ export default async function LoginPage({
       {/* Global navbar provides branding + navigation — no page-level header. */}
       <div className="mx-auto flex min-h-[100svh] max-w-2xl flex-col px-4 pb-16 pt-28 sm:px-6">
         <AuthScene orbit={orbit} stats={STATS}>
-          <AuthForm mode="login" next={safeNext} />
+          <AuthForm
+            mode="login"
+            next={safeNext}
+            notice={noticeExists}
+            defaultEmail={email}
+          />
         </AuthScene>
       </div>
     </div>

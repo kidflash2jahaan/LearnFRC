@@ -34,10 +34,14 @@ export function AuthForm({
   mode,
   next,
   referrer,
+  notice,
+  defaultEmail,
 }: {
   mode: Mode;
   next?: string;
   referrer?: string;
+  notice?: "exists";
+  defaultEmail?: string;
 }) {
   const reduce = useReducedMotion();
   const isSignup = mode === "signup";
@@ -89,6 +93,18 @@ export function AuthForm({
       <input type="hidden" name="next" value={nextValue} />
       {isSignup && referrer && (
         <input type="hidden" name="ref" value={referrer} />
+      )}
+
+      {/* Notice: arrived here because their email already has an account */}
+      {notice === "exists" && (
+        <motion.div variants={item}>
+          <div className="flex items-start gap-2.5 rounded-xl border border-primary/25 bg-primary/10 px-3.5 py-3 text-sm text-foreground">
+            <Mail className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
+            <span className="leading-relaxed">
+              You already have an account with that email — just log in below.
+            </span>
+          </div>
+        </motion.div>
       )}
 
       {/* Error alert */}
@@ -146,6 +162,7 @@ export function AuthForm({
             inputMode={isSignup ? "email" : undefined}
             autoComplete={isSignup ? "email" : "username"}
             required
+            defaultValue={!isSignup ? defaultEmail : undefined}
             placeholder={isSignup ? "you@team.org" : "you@team.org or janebuilds"}
             className="pl-10"
             disabled={isPending}
