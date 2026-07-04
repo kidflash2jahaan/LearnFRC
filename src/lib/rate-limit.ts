@@ -1,6 +1,6 @@
 import "server-only";
 import { headers } from "next/headers";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 /**
  * Per-IP rate limit backed by a SECURITY DEFINER Postgres function.
@@ -20,7 +20,10 @@ export async function rateLimit(
       h.get("x-real-ip") ||
       "unknown";
     const bucket = `${action}:${ip}${extraKey ? `:${extraKey}` : ""}`;
-    const supabase = await createClient();
+    // Use the service-role client: the check_rate_limit RPC is now revoked from
+    // anon/authenticated (so it can't be poked directly via /rest/v1/rpc), and
+    // rate limiting is enforced server-side regardless of the caller's session.
+    const supabase = createAdminClient();
     const { data, error } = await supabase.rpc("check_rate_limit", {
       p_bucket: bucket,
       p_max: max,
