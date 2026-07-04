@@ -60,6 +60,7 @@ export async function signUp(
   const email = String(formData.get("email") || "").trim();
   const password = String(formData.get("password") || "");
   const fullName = String(formData.get("full_name") || "").trim();
+  const hideName = String(formData.get("hide_name") || "") === "true";
   const usernameRaw = String(formData.get("username") || "").trim();
   const teamNumber = String(formData.get("team_number") || "").trim();
   const next = String(formData.get("next") || "/dashboard");
@@ -124,7 +125,8 @@ export async function signUp(
     const source = (
       ref ? "Referral" : cookieStore.get("lf_src")?.value || "Direct"
     ).slice(0, 40);
-    const update: { source: string; referred_by?: string } = { source };
+    const update: { source: string; referred_by?: string; hide_name?: boolean } = { source };
+    if (hideName) update.hide_name = true;
     if (ref) {
       const { data: referrer } = await admin
         .from("profiles")
