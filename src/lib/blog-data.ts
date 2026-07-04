@@ -23,7 +23,7 @@ export const ARTICLES: Article[] = [
     ],
     date: "2026-06-22",
     readMins: 7,
-    content: `Starting a FIRST Robotics Competition team feels huge — a 120-pound robot, a six-week build season, thousands of dollars. But thousands of teams started exactly where you are. Here's the honest, practical path from "we want a team" to your first match.
+    content: `Starting a FIRST Robotics Competition team feels huge — a robot that can weigh over 100 pounds, a six-week build season, thousands of dollars. But thousands of teams started exactly where you are. Here's the honest, practical path from "we want a team" to your first match.
 
 ## What FRC actually is
 
@@ -407,7 +407,7 @@ The ecosystem is the other reason it dominates. Community resources like FRCDesi
 
 ## SolidWorks: the industry standard
 
-SolidWorks is professional desktop CAD used widely in mechanical engineering, and it is free for FIRST teams through a sponsorship with Dassault Systemes. It is the same software used to design the FRC field and game pieces, so the official CAD lines up natively.
+SolidWorks is professional desktop CAD used widely in mechanical engineering, and it is free for FIRST teams through a sponsorship with Dassault Systemes. FIRST also publishes SolidWorks-compatible versions of the official field and game-piece CAD each season, though the official model itself is built in Onshape.
 
 Strengths:
 
@@ -516,7 +516,7 @@ You cannot get both high speed and high torque from the same gearing. Every rati
 - A lower reduction (numerically smaller) gives a faster top speed but less pushing force and slower acceleration.
 - A higher reduction (numerically larger) gives more torque, better acceleration, and more pushing power, but a lower top speed.
 
-This is why gearbox vendors like West Coast Products, REV, AndyMark, and Swerve Drive Specialties ship their drive gearboxes with several selectable ratios. REV's 3 inch MAXSwerve module, for example, includes gears for low, medium, and high speed configurations, and an upgrade kit adds even faster ratios. SDS sells the MK4i swerve module in L1 through L4 ratios, where L1 and L2 are the popular choices for a standard full-weight competition robot.
+This is why gearbox vendors like West Coast Products, REV, AndyMark, and Swerve Drive Specialties ship their drive gearboxes with several selectable ratios. REV's 3 inch MAXSwerve module, for example, includes gears for low, medium, and high speed configurations, and an upgrade kit adds even faster ratios. SDS sells the MK4i swerve module in L1 through L3 ratios, where L1 and L2 are the popular choices for a standard full-weight competition robot.
 
 ## How to estimate your robot's speed
 
@@ -673,7 +673,7 @@ The KOP comes in a few pieces. There is a season-specific box with game-related 
 This is the part that confuses new teams. Rookies and veterans do not receive the same physical kit.
 
 - Rookie teams receive a Gray Tote, sometimes called the Rookie Tote. It holds the harder-to-source, reusable components a brand-new team has never owned, things you keep and reuse year after year.
-- Veteran teams instead get a Black Tote of season-restock items, and they can opt out of it in exchange for vendor vouchers.
+- Veteran teams also get that Black Tote of season-restock items, and only veterans are eligible to opt out of it in exchange for vendor vouchers; rookies keep the Black Tote plus the Gray Tote on top.
 - Both rookies and veterans are offered the Drive Base Kit, the AM14U6 six-wheel chassis. Rookies cannot opt out of it; veterans can trade it for an AndyMark voucher because most already own a chassis.
 
 So the rookie kit is deliberately heavier and more complete. FIRST front-loads the expensive, foundational parts to teams in their first year. If you are still figuring out how all of this fits together, our [Getting Started guide](https://learnfrc.systemerr.com/guides/getting-started) walks through the first-season basics.
@@ -722,8 +722,8 @@ The game manual defines four roles a drive team can fill: Drivers, Human Players
 
 ## The four roles
 
-- Drivers (up to 3, must be students): The people holding controllers and operating the robot. Importantly, only Drivers and Human Players are allowed to operate the robot - the coach cannot grab a controller mid-match.
-- Human Players (up to 3, must be students): The students who handle game pieces from the field perimeter - loading pieces into the robot, feeding them through a station, or scoring them by hand, depending on that season's game.
+- Drivers (must be students): The people holding controllers and operating the robot. Importantly, only Drivers and Human Players are allowed to operate the robot - the coach cannot grab a controller mid-match.
+- Human Players (must be students): The students who handle game pieces from the field perimeter - loading pieces into the robot, feeding them through a station, or scoring them by hand, depending on that season's game. Drivers and Human Players draw from the same pool of up to 3 student slots on the drive team - for example 3 Drivers and 0 Human Players, 2 and 1, or 1 and 2 - rather than each role getting its own 3.
 - Drive Coach (1, any team member): The strategist and on-field leader. The coach calls the game, watches the whole field, and communicates with the two alliance partners. This is the role that most often uses the team's one non-student slot.
 - Technician (1, any team member): The technical resource for pre-match setup, robot connectivity, operator console troubleshooting, and removing the robot after the match. The technician does not stand in the alliance station during play - they work from an event-designated area near the field and are not part of the in-match action.
 
@@ -1001,7 +1001,7 @@ The current lineup includes the Limelight 2+, 3, 3A, 3G, and 4. The differences 
 | Limelight 3G | OV9281 mono, global shutter | 120 fps @ 1280x800 | No |
 | Limelight 4 | OV9281 mono, global shutter | 120 fps @ 1280x800 | Yes |
 
-The jump to a **global shutter** sensor (3G and 4) is significant: global shutters capture the whole frame at once, so AprilTags stay crisp even when the robot is moving fast, while rolling shutters smear them. The [Limelight 4](https://docs.limelightvision.io/docs/docs-limelight/getting-started/limelight-4) also adds a built-in IMU (for the MegaTag2 algorithm described below) and supports a Hailo-8 accelerator for YOLOv8 object detection at up to 80 fps. Note the LL4 accepts a 5V-24V input (35V absolute maximum) but dropped Power-over-Ethernet support, so plan your wiring on the [electrical side](https://learnfrc.systemerr.com/guides/electrical) accordingly.
+The jump to a **global shutter** sensor (3G and 4) is significant: global shutters capture the whole frame at once, so AprilTags stay crisp even when the robot is moving fast, while rolling shutters smear them. The [Limelight 4](https://docs.limelightvision.io/docs/docs-limelight/getting-started/limelight-4) also adds a built-in IMU (for the MegaTag2 algorithm described below) and supports a Hailo-8 accelerator for YOLOv8 object detection at up to 80 fps. Note the LL4 accepts a 3.3V-24V input (35V absolute maximum) but dropped Power-over-Ethernet support, so plan your wiring on the [electrical side](https://learnfrc.systemerr.com/guides/electrical) accordingly.
 
 ### MegaTag and MegaTag2
 
@@ -1888,7 +1888,7 @@ The exact range depends on the vendor, but they overlap closely:
 
 [REV's documentation](https://docs.revrobotics.com/brushless/spark-max/control-interfaces) states plainly that "each device on the CAN bus must be assigned a unique CAN ID number" — give two SPARK MAX controllers the same ID and the roboRIO can no longer tell them apart. A common beginner trap: every new controller ships with **ID 0**, so the moment you put two fresh controllers on the bus, you have a conflict. Assign a unique ID to each device the first time you connect it. Many teams use a simple scheme, like numbering controllers 1-8 by mechanism, and write the ID on tape next to each one.
 
-One nuance from the [WPILib CAN addressing docs](https://docs.wpilib.org/en/stable/docs/software/can-devices/can-addressing.html): the full CAN address also includes a device *type* and *manufacturer* field. That means a CTRE Talon FX with ID 1 and a REV SPARK MAX with ID 1 do **not** conflict, because they're different device types from different manufacturers. The conflict rule applies within the same device type. When in doubt, give everything a unique number anyway. It's free insurance.
+One nuance from the [WPILib CAN addressing docs](https://docs.wpilib.org/en/stable/docs/software/can-devices/can-addressing.html): the full CAN address also includes a device *type* and *manufacturer* field. That means a CTRE Talon FX with ID 1 and a REV SPARK MAX with ID 1 do **not** conflict, because they're actually the same device type (motor controller) but different manufacturers, and CAN's uniqueness rule is keyed off the manufacturer-plus-device-type combination together. The conflict rule applies within the same device type from the same manufacturer. When in doubt, give everything a unique number anyway. It's free insurance.
 
 ## Reading CAN utilization in the Driver Station
 
