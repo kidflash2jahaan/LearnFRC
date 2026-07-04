@@ -4,11 +4,37 @@ import { rateLimit } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
+// Only accept reports fired by our own pages in a browser. Real error
+// boundaries send an Origin (or at least a same-site Referer) automatically;
+// scripted junk (e.g. a `node` POST pasting the Bee Movie script into the
+// admin inbox) does not. This is the cheap, effective gate against abuse of
+// what is otherwise an unauthenticated "email the admin" endpoint.
+const ALLOWED_HOSTS = new Set([
+  "learnfrc.systemerr.com",
+  "www.learnfrc.systemerr.com",
+  "localhost:3000",
+]);
+
+function sameOrigin(req: Request): boolean {
+  const origin = req.headers.get("origin");
+  const referer = req.headers.get("referer");
+  const raw = origin || referer;
+  if (!raw) return false;
+  try {
+    return ALLOWED_HOSTS.has(new URL(raw).host);
+  } catch {
+    return false;
+  }
+}
+
 // Lightweight built-in error monitor: client/server error boundaries POST here,
 // and we email the site admin. Rate-limited so one bad bug can't flood the inbox.
 export async function POST(req: Request) {
   const admin = (process.env.ADMIN_EMAILS || "").split(",")[0]?.trim();
   if (!admin) return new NextResponse(null, { status: 204 });
+
+  // Drop anything not fired from our own origin in a real browser.
+  if (!sameOrigin(req)) return new NextResponse(null, { status: 204 });
 
   // Cap to a few alerts/hour per IP, and globally, to avoid email storms.
   const ok =

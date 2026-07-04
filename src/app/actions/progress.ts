@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { rateLimit } from "@/lib/rate-limit";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 function currentStreak(timestamps: string[]): number {
@@ -95,6 +96,17 @@ export async function setLessonComplete(
   if (!user) return { error: "You must be signed in." };
 
   if (completed) {
+    // Leaderboard integrity: a real learner reads before completing, so no one
+    // legitimately marks dozens of lessons done per minute. Cap the rate per
+    // user (keyed to their id, not just IP) so the board can't be farmed by a
+    // script hammering this action. XP itself is trigger-computed and no longer
+    // user-writable, so this is defense-in-depth against automated completion.
+    const withinLimit =
+      (await rateLimit("lesson-complete", 12, 60, user.id)) &&
+      (await rateLimit("lesson-complete-hourly", 120, 3600, user.id));
+    if (!withinLimit)
+      return { error: "You're completing lessons unusually fast — take a breather and try again in a minute." };
+
     const { error } = await supabase
       .from("lesson_progress")
       .upsert(
