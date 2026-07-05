@@ -36,7 +36,7 @@ It is not just engineering: a strong team needs people doing mechanical, CAD, pr
 You need three things before anything else:
 
 - **Students.** You can start with as few as 5–10 committed members. Quality of commitment matters far more than headcount in year one.
-- **At least one adult mentor / lead coach.** This is required for registration. A teacher, parent, or local engineer all work — they don't need robotics experience, just reliability.
+- **At least two adult mentors who will serve as Lead Coaches.** FIRST requires two Youth Protection Program-screened Lead Coaches per team before registration is complete and the team is "event ready." A teacher, parent, or local engineer all work — they don't need robotics experience, just reliability.
 - **A host organization.** Usually a school, but homeschool groups, libraries, and community organizations can charter teams too.
 
 ## Step 2: Understand the real costs
@@ -202,7 +202,7 @@ The teams that win this award aren't the ones with the best writers — they're 
 
 ## The one-sentence definition
 
-FRC is a varsity-style robotics competition for students in grades 9 through 12 (ages 14 to 18), run by the nonprofit FIRST. It was founded in 1989 by inventor Dean Kamen, with early help from MIT professor Woodie Flowers, on a simple idea: make building robots feel as exciting and team-driven as a sport.
+FRC is a varsity-style robotics competition for students in grades 9 through 12 (ages 14 to 18), run by the nonprofit FIRST. FIRST, the parent nonprofit, was founded in 1989 by inventor Dean Kamen. FRC itself grew out of that work in 1992, when Kamen teamed up with MIT professor Woodie Flowers to run the very first competition, built on a simple idea: make building robots feel as exciting and team-driven as a sport.
 
 The robots are not desktop kits. They are industrial-sized machines built from metal, motors, pneumatics, and custom code, and they play a fast, physical game on a field about the size of a basketball court.
 
@@ -279,7 +279,7 @@ The installer sets up everything you need in one shot:
 
 - A dedicated copy of VS Code labeled for the year (for example "WPILib VS Code 2026"), kept separate from any VS Code you already have so updates do not break it.
 - A Java JDK, the C++ toolchains, and the Gradle build system.
-- Dashboards and utilities like Shuffleboard, Glass, Elastic, AdvantageScope, SysId, and the roboRIO Team Number Setter.
+- Dashboards and utilities like Glass, Elastic, AdvantageScope, SysId, and the roboRIO Team Number Setter. (Shuffleboard and SmartDashboard still ship with the installer but are deprecated and slated for removal in an upcoming season, so build your habits on Elastic for driving and AdvantageScope for debugging instead.)
 
 Install the full offline package rather than the online one when you can - the build server room at competition rarely has reliable Wi-Fi.
 
@@ -436,7 +436,7 @@ Match the tool to your team, not to a forum opinion:
 
 - Mixed or school-managed computers, lots of new students, heavy collaboration: choose Onshape.
 - Mentors who know SolidWorks, students targeting mechanical engineering, Windows machines available: choose SolidWorks.
-- You run a CNC and want CAD plus CAM in one place: choose Fusion.
+- You run a CNC and want CAD plus CAM in one place: Fusion is the classic pick, but Onshape teams can also add its CAM Studio (free via the Educator Plan) rather than switching ecosystems just for machining.
 
 A few honest realities. First, the best CAD software is the one your mentors can actually teach, so existing expertise should weigh heavily. Second, switching mid-season is painful, so pick once and commit. Third, whatever you choose, download the official field and game-piece CAD that FIRST releases each season and design against it, because guessing at dimensions is how robots fail inspection.
 
@@ -641,7 +641,7 @@ Because each wheel can point anywhere, swerve can do something neither tank nor 
 
 The cost is real complexity. Swerve needs roughly twice the drive motors of a tank drive (a typical four-module setup uses eight motors), it is heavier and more expensive, and it demands more maintenance and far more careful programming. WPILib treats swerve through its kinematics system rather than a single simple drive class - you describe the robot's desired motion as a 'ChassisSpeeds' object (forward, sideways, and rotational speed), and swerve kinematics converts that into a target speed and angle for each module.
 
-Most teams do not machine their own modules. Commercial off-the-shelf options like Swerve Drive Specialties MK4, REV MAXSwerve, and WCP Swerve X are widely used and well documented, which has made swerve far more approachable than it was a few years ago.
+Most teams do not machine their own modules. Commercial off-the-shelf options like Swerve Drive Specialties MK4, REV MAXSwerve, and WCP Swerve X2 (the successor to the now-legacy original Swerve X) are widely used and well documented, which has made swerve far more approachable than it was a few years ago.
 
 ## So Which Should You Pick?
 
@@ -691,7 +691,7 @@ These are exactly the parts the game manual requires, so building from the kit k
 
 ## The KitBot and the drive base
 
-The Drive Base Kit is the AM14U6 chassis, a rolling frame that a small group can assemble in roughly a day. On top of that, FIRST releases a KitBot each season: a free set of instructions and a parts list for a simple, competitive robot built around that chassis. Many strong rookie teams build the KitBot in year one rather than designing something custom, because it reliably scores and gives you a working robot to practice driving. There is no shame in it, and it is genuinely good advice.
+The Drive Base Kit is the AM14U6 chassis, a rolling frame that a small group can assemble in about six hours or less, per FIRST's build guide. On top of that, FIRST releases a KitBot each season: a free set of instructions and a parts list for a simple, competitive robot built around that chassis. Many strong rookie teams build the KitBot in year one rather than designing something custom, because it reliably scores and gives you a working robot to practice driving. There is no shame in it, and it is genuinely good advice.
 
 ## The Virtual Kit: software and vouchers
 
@@ -847,7 +847,7 @@ Once a prototype proves a concept, formalize it in CAD. A full robot model lets 
 
 ## Build, test, and iterate continuously
 
-The build period runs roughly six weeks from Kickoff to your first competition. Importantly, the old "bag and tag" and Stop Build Day rules ended after the 2019-20 season, so you can keep working on and improving your robot throughout the season. Use that freedom: build, test against real game tasks, find what breaks, and refine. A driver who has practiced for weeks on a finished robot is worth more than one extra mechanism added the night before bag-up used to happen.
+The formal build season runs about six weeks from Kickoff to your ship date, but most teams don't reach their first competition until several weeks after that, often in late February or March. Importantly, the old "bag and tag" and Stop Build Day rules ended after the 2019-20 season, so you can keep working on and improving your robot throughout the season. Use that freedom: build, test against real game tasks, find what breaks, and refine. A driver who has practiced for weeks on a finished robot is worth more than one extra mechanism added the night before bag-up used to happen.
 
 ## The short version
 
@@ -993,7 +993,7 @@ One catch worth knowing early: **pose ambiguity**. With a single tag, multiple r
 
 [Limelight](https://docs.limelightvision.io/docs/docs-limelight/getting-started/summary) is a **smart camera** — a self-contained unit with a lens, image sensor, and an onboard processor that does all the vision math *inside the camera*. You configure zero-code pipelines for color blobs, AprilTags, and neural networks through a built-in web interface, then read results over NetworkTables. Nothing extra to assemble.
 
-The current lineup includes the Limelight 2+, 3, 3A, 3G, and 4. The differences matter:
+The current lineup includes the Limelight 3, 3A, 3G, and 4 (the older Limelight 2+ has been phased out of sale, though it still gets firmware updates for teams that already own one). The differences matter:
 
 | Model | Image sensor | Best resolution / FPS | Built-in IMU |
 |---|---|---|---|
@@ -1069,7 +1069,7 @@ Ready to wire vision into your robot code? Start with the [LearnFRC Programming 
     keywords: ["FRC motor comparison","NEO vs Kraken","Falcon 500 vs Kraken X60","best FRC motor","NEO Vortex","FRC brushless motors"],
     date: "2026-06-24",
     readMins: 8,
-    content: `Picking a motor used to be the easy part of designing an FRC robot. Now there are four serious brushless options, two competing ecosystems, and a feature called FOC that sounds like a typo. This guide cuts through it with exact numbers straight from the manufacturers, so you can choose the right motor for your drivetrain and your mechanisms without guessing.
+    content: `Picking a motor used to be the easy part of designing an FRC robot. Now there are half a dozen serious brushless options (REV's NEO 2.0 and CTRE's compact Kraken X44 both joined the lineup for the 2026 season), two competing ecosystems, and a feature called FOC that sounds like a typo. This guide cuts through it with exact numbers straight from the manufacturers, so you can choose the right motor for your drivetrain and your mechanisms without guessing.
 
 Every motor below is a **brushless DC motor**, meaning it uses electronic commutation (no carbon brushes to wear out) and needs a **motor controller** to spin. They split cleanly into two camps: REV Robotics motors (NEO family) that use a separate controller, and the CTRE/VEX motors (Kraken, Falcon) that have the controller built into the motor housing.
 
@@ -1132,7 +1132,7 @@ If you're already a REV team or want simpler licensing, the **NEO Vortex** is a 
 
 ### Mechanisms (arms, elevators, shooters, intakes)
 
-This is where the standard **NEO V1.1** still earns its place. It's the lightest (0.425 kg), cheapest, and most plentiful brushless motor in FRC. For an intake roller, a wrist, or a light arm joint, 2.6 Nm of stall torque through a gearbox is plenty, and there's no reason to spend Kraken money on it. Many championship robots run Krakens on the drivetrain and NEOs everywhere else.
+This is where the standard **NEO V1.1** still earns its place, though teams starting fresh in 2026 should also weigh REV's newer **NEO 2.0**: at 364 g and 3.75 Nm of stall torque it's both lighter and torquier than the V1.1, while bolting onto the same SPARK controllers. Either motor is cheap and plentiful in FRC. For an intake roller, a wrist, or a light arm joint, 2.6 Nm of stall torque through a gearbox is plenty, and there's no reason to spend Kraken money on it. Many championship robots run Krakens on the drivetrain and NEOs everywhere else.
 
 For high-torque mechanisms like a heavy elevator or a powerful shooter, a single Kraken or NEO Vortex can do the job of two NEOs, simplifying your CAD and your gearbox. Plan that reduction carefully in the [CAD](https://learnfrc.systemerr.com/guides/cad-design) and [Mechanical](https://learnfrc.systemerr.com/guides/mechanical-build) phases.
 
@@ -1157,7 +1157,7 @@ Ready to turn these motors into a working mechanism? Start with the LearnFRC [Me
 
 ## How the build season really works now
 
-For the 2026 **REBUILT presented by Haas** season, [Kickoff was Saturday, January 10, 2026 at noon Eastern](https://community.firstinspires.org/2026-just-a-few-days-until-kickoff), when *FIRST* revealed the game animation and unlocked the official game manual. From there, your "build season" runs until your first event, and competition events are spread across roughly seven weekends from late February through mid-April.
+For the 2026 **REBUILT presented by Haas** season, [Kickoff was Saturday, January 10, 2026 at noon Eastern](https://community.firstinspires.org/2026-just-a-few-days-until-kickoff), when *FIRST* revealed the game animation and unlocked the official game manual. From there, your "build season" runs until your first event, and competition events are spread across roughly seven weekends, typically beginning in early March and running into late April, with the FIRST Championship following about a week after the last regional/district event (always check the current season's official event calendar for exact dates).
 
 Here is the single most important rule change to understand: **Stop Build Day and "bag-and-tag" are gone.** [*FIRST* retired them after the 2019-20 season](https://www.firstinspires.org/robotics/frc/blog/2020-rule-changes-stop-build-day) because teams without the resources to build a second practice robot were at a disadvantage. There is no longer a date where you must seal your robot in a bag and stop working. Your real deadline is the day you load the robot for your first competition. That means you can **iterate continuously** right up to (and between) events — a huge change from the old model that this timeline is built around.
 
@@ -1706,7 +1706,7 @@ Here is the short version before we dig in:
 
 Java is the most popular FRC language and, for most teams, the recommended starting point. The WPILib docs put it plainly: "New/inexperienced users are encouraged to use Java." It hits a sweet spot between being readable and being safe — the language manages memory for you (so a forgotten cleanup will not silently corrupt your robot), and the compiler catches many mistakes before code ever runs.
 
-The practical advantage of Java is the ecosystem around it. Because so many teams use it, the example code, tutorials, and Chief Delphi forum answers you will find are overwhelmingly in Java. Every vendor ships a polished Java library on day one, and WPILib's own example projects are written first in Java and C++. When your robot misbehaves at 11 p.m. before a competition, having the largest pool of people who have hit your exact problem is worth a lot.
+The practical advantage of Java is the ecosystem around it. Because so many teams use it, the example code, tutorials, and Chief Delphi forum answers you will find are overwhelmingly in Java. Every vendor ships a polished Java library on day one, and WPILib's own example projects are published with official feature parity across Java, C++, and Python. When your robot misbehaves at 11 p.m. before a competition, having the largest pool of people who have hit your exact problem is worth a lot.
 
 Java code interacts with WPILib classes like \`TimedRobot\`, \`CommandScheduler\`, and motor controller classes such as \`SparkMax\` (REV) or \`TalonFX\` (CTRE). Heads up that vendor class names drift between seasons — REV's controller class, for example, was renamed from \`CANSparkMax\` to \`SparkMax\` in the 2025 library, so older code you find online may use the previous name. Always confirm names against the current vendor docs. Either way, the overall structure you learn in Java carries over almost identically to the other two languages.
 
@@ -1867,7 +1867,7 @@ CAN uses two signal wires, conventionally **yellow for CAN-High** and **green fo
 The most important and most misunderstood part is **termination**. A CAN bus needs a 120-ohm resistor at *each end* of the chain. These resistors absorb electrical reflections that would otherwise bounce back down the wire and corrupt your data. In FRC you usually don't add these yourself, because they're built into the devices at the two ends:
 
 - The **roboRIO** has a 120-ohm terminating resistor built in. It sits at one end of the bus.
-- The **PDP** ships with its termination jumper in the **"ON"** position. WPILib recommends leaving that jumper on and placing the PDP at the *other* end of the bus, so it provides the second terminator.
+- The classic CTRE **PDP** ships with its termination jumper in the **"ON"** position, and WPILib recommends leaving that jumper on and placing the PDP at the *other* end of the bus, so it provides the second terminator. One catch: CTRE has discontinued that original PDP in favor of the **PDP 2.0**, which drops CAN bus connectivity (and the termination jumper) entirely, so it can't fill this role. If your board is a PDP 2.0, plan on ending the chain at a REV **PDH** instead (it has its own CAN termination switch) or adding a stand-alone 120-ohm resistor.
 
 If you want the PDP somewhere in the middle of the chain instead, you must move its jumper to **"OFF"** and add your own 120-ohm resistor at the new end of the bus. CTRE's [CAN Bus Troubleshooting guide](https://v6.docs.ctr-electronics.com/en/stable/docs/troubleshooting/canbus-troubleshooting.html) puts it simply: there must be two 120-ohm resistors, one at each end.
 
@@ -2331,7 +2331,7 @@ Here's the honest breakdown, from someone inside the FRC ecosystem.
 
 **FTC (FIRST Tech Challenge)** is FIRST's middle-and-high-school program (grades 7–12). Robots start each match inside an 18-inch cube and can expand from there. It runs on the same season rhythm as a sport but costs far less than FRC and needs a fraction of the space.
 
-**VEX** is run by the REC Foundation, *not* FIRST. It comes in tiers: VEX IQ (plastic, snap-together, elementary and middle school) and the VEX V5 Robotics Competition, or V5RC (metal parts, middle and high school). VEX is the most affordable, has the longest season, and runs the most tournaments.
+**VEX** competitions have long been organized by the Robotics Education & Competition Foundation (REC Foundation), a nonprofit separate from *FIRST* — but don't take that as fixed. In 2026, VEX Robotics, Inc. and the REC Foundation ended up in a very public dispute (a lawsuit over unpaid fees, followed by the REC Foundation announcing plans for its own competitions), so who actually administers VEX events in your area could keep changing. Check recf.org and vex.com directly for the current setup before you commit. VEX itself still comes in tiers: VEX IQ (plastic, snap-together, elementary and middle school) and the VEX V5 Robotics Competition, or V5RC (metal parts, middle and high school). VEX is the most affordable, has the longest season, and runs the most tournaments.
 
 If you only remember one thing: **FRC is the varsity-sport version, VEX is the year-round club version, and FTC lands in between.**
 
@@ -2485,7 +2485,7 @@ None of that requires engineering skill, and all of it signals that you're someo
 
 At some point in the spring you'll go to an event, and it's a genuine shock the first time — loud, fast, and busier than you expect.
 
-Each team gets a **pit**, a small workspace where you repair and tune the robot between matches. Qualification matches are short, around two and a half minutes, played by two alliances of three robots each ([how a match works](/guides/getting-started/the-season-and-the-game/how-a-match-works) breaks down the auto, teleop, and endgame phases). Before you can play, your robot has to pass **inspection**, which checks that it's built and wired to the rules — this is where clean electrical work quietly saves your weekend. Meanwhile, the scouting crew is logging data on every team so that when top-ranked teams draft playoff alliances, yours knows who's worth picking.
+Each team gets a **pit**, a small workspace where you repair and tune the robot between matches. Qualification matches are short — this season's run 2 minutes and 40 seconds (auto plus teleop), though the exact length can shift a bit season to season — played by two alliances of three robots each ([how a match works](/guides/getting-started/the-season-and-the-game/how-a-match-works) breaks down the auto, teleop, and endgame phases). Before you can play, your robot has to pass **inspection**, which checks that it's built and wired to the rules — this is where clean electrical work quietly saves your weekend. Meanwhile, the scouting crew is logging data on every team so that when top-ranked teams draft playoff alliances, yours knows who's worth picking.
 
 Your job as a rookie at your first event is mostly to watch closely, help in the pit, and pick a lane where you're useful — scouting is the classic entry point because it's high-impact and needs a lot of hands, and [why scouting wins matches](/guides/scouting-strategy/scouting-fundamentals/why-scouting-wins-matches) shows what all that data actually decides. You'll leave understanding the whole thing far better than any guide can teach you, including this one.
 
@@ -2639,7 +2639,7 @@ Two practical notes. Playoffs run fast and physical, and robots break, so a stro
 
 ## How you actually advance
 
-Winning the event is the headline path forward, but not the only one — and what advancement looks like depends on your region's model. **Regional events** send the winning alliance and certain award winners to the **FIRST Championship**, most notably the team that wins the **Impact Award**, FRC's most prestigious award, which advances automatically. **District events** instead award **district points** for how you finish — ranking, whether you captained or were picked, playoff run, and awards — and those points accumulate across your events to decide who advances to the District Championship and on to Worlds. Our lesson on [the annual season, from kickoff to championship](/guides/getting-started/the-season-and-the-game/annual-season-kickoff-to-championship) maps the full path, and [how the Impact Award advances](/guides/impact-award/building-a-program-worth-recognizing/advancement-and-hall-of-fame) covers the award route.
+Winning the event is the headline path forward, but not the only one — and what advancement looks like depends on your region's model. **Regional events** send the winning alliance and certain award winners to the **FIRST Championship**, most notably the team that wins the **Impact Award**, FRC's most prestigious award — though winning it no longer guarantees a Championship berth by itself. Regional advancement now runs on an event points system, and a Regional Impact Award winner who hasn't already qualified through points is instead offered a remote interview for a shot at the award at the Championship level. **District events** instead award **district points** for how you finish — ranking, whether you captained or were picked, playoff run, and awards — and those points accumulate across your events to decide who advances to the District Championship and on to Worlds. Our lesson on [the annual season, from kickoff to championship](/guides/getting-started/the-season-and-the-game/annual-season-kickoff-to-championship) maps the full path, and [how the Impact Award advances](/guides/impact-award/building-a-program-worth-recognizing/advancement-and-hall-of-fame) covers the award route.
 
 The takeaway is that "doing well" at an FRC event is broader than winning matches. Ranking, being draftable, playoff performance, and awards all feed into whether your season continues. A team can have a mediocre robot and still advance on the strength of its outreach and Impact submission — which is the whole point of a program that's about more than just the machine.
 
@@ -2720,7 +2720,7 @@ On the final day, ranking closes and **alliance selection** happens — a live [
 
 This is why scouting matters. Captains pick based on data about who plays well and who complements their robot, not on vibes. Even as a rookie, keep a scout or two watching matches and recording notes — being a team others want to pick is a real goal, and good [Scouting & Strategy](/guides/scouting-strategy) habits are how you get noticed. Getting picked in your rookie year is a genuine win.
 
-Playoffs run as a **double-elimination bracket** among the eight alliances, so a single loss does not end your day — you drop to the lower bracket and can fight back. The bracket culminates in the finals, and the winning alliance advances (at Regionals directly toward the Championship; in the district system, points accumulate toward a District Championship).
+Playoffs run as a **double-elimination bracket** among the eight alliances, so a single loss does not end your day — you drop to the lower bracket and can fight back. The bracket culminates in the finals. Doing well here matters beyond the trophy: at Regionals, FIRST now uses a points system that combines qualification performance, playoff results, and judged awards, and the top point-scorers at each event (not simply whoever wins) earn a berth at the FIRST Championship; in the district system, points instead accumulate toward a District Championship. Check the current season's advancement rules for the exact thresholds.
 
 ## What a match actually feels like
 
@@ -2862,7 +2862,7 @@ Batteries are the single most neglected part of most rookie robots. Teams pour h
 
 Every legal FRC robot uses one **12V SLA (sealed lead-acid) battery**, also called an AGM battery. Nominal capacity is around 18 Ah, and a full one weighs about 12.6 lb (5.7 kg). It is a genuinely heavy, genuinely hazardous chunk of lead and sulfuric acid, not a hobby-grade LiPo.
 
-The one number worth memorizing is the resting voltage: a fully charged battery reads roughly **12.7 to 13.0 V at rest** (no load). If a "charged" battery is sitting at 12.3 V, it isn't actually full. Under the load of a match, voltage sags, and a weak or half-charged battery sags further and sooner — far enough to trip the roboRIO's **brownout protection**, which sheds motor output and makes the robot feel sluggish or cut out late in a match. Our lesson on [why the robot goes limp](/guides/electrical-wiring/common-mistakes-troubleshooting/diagnosing-brownouts) walks through the staged brownout thresholds and the systematic fixes.
+The one number worth memorizing is the resting voltage: a fully charged battery reads roughly **12.7 to 13.5 V at rest** (no load). If a "charged" battery is sitting at 12.3 V, it isn't actually full. Under the load of a match, voltage sags, and a weak or half-charged battery sags further and sooner — far enough to trip the roboRIO's **brownout protection**, which sheds motor output and makes the robot feel sluggish or cut out late in a match. Our lesson on [why the robot goes limp](/guides/electrical-wiring/common-mistakes-troubleshooting/diagnosing-brownouts) walks through the staged brownout thresholds and the systematic fixes.
 
 The rest is rules and specs the game manual pins down: you may run **only one battery at a time**, it has to come from the manual's **approved COTS list** (check the current manual — the list changes), and the main power path uses **6 AWG wire** behind a **120 A main breaker**. Our full lesson on [the 12V SLA battery and Anderson connectors](/guides/electrical-wiring/power-battery-breakers/battery-and-anderson-connectors) covers the specs, the legal rules, and battery care in depth, so this guide stays focused on keeping the battery healthy.
 
@@ -3279,7 +3279,7 @@ Scattered through the manual are shaded **Blue Boxes**. These are not rules them
 
 ### Defined terms and the glossary
 
-The manual formats specific **defined terms** in a consistent style (you'll notice certain words are capitalized or styled differently), and each one has a precise meaning listed in the glossary at the back. A term like FRAME PERIMETER, BUMPER ZONE, or ALLIANCE means exactly what the glossary says, not what it sounds like in everyday English. When a rule hinges on a defined term, go read that definition before you argue about the rule. Half of all "these rules contradict each other!" moments are just someone using the casual meaning of a word the manual defines narrowly.
+The manual formats specific **defined terms** in a consistent style (you'll notice certain words are capitalized or styled differently), and each one has a precise meaning listed in the glossary at the back. A term like ROBOT PERIMETER, BUMPER ZONE, or ALLIANCE means exactly what the glossary says, not what it sounds like in everyday English. When a rule hinges on a defined term, go read that definition before you argue about the rule. Half of all "these rules contradict each other!" moments are just someone using the casual meaning of a word the manual defines narrowly.
 
 If a term ever trips you up, our [FRC glossary](/glossary) explains the common ones in plain language.
 
@@ -3306,7 +3306,7 @@ A robot that reliably does the one highest-value thing usually beats a robot tha
 A few rule categories cause the most rookie pain, mostly because they're easy to overlook until inspection day:
 
 - **Size and weight limits.** Robots have a maximum weight and have to fit inside a starting volume, with rules about how far mechanisms may extend during a match. The exact numbers change year to year, so check the current R rules, but know these limits exist and design to them from day one, not the night before your event.
-- **Bumper rules.** Bumpers have their own detailed rules: how they're constructed, where they sit on the frame, what colors they are, and how much of the frame perimeter they cover. Get these wrong and you fail inspection, so read them carefully before you finalize your frame.
+- **Bumper rules.** Bumpers have their own detailed rules: how they're constructed, where they sit on the frame, what colors they are, and how much of the robot perimeter they cover. Get these wrong and you fail inspection, so read them carefully before you finalize your frame.
 - **The control system and wiring.** The legal electrical system (main breaker, correct wire gauges, a properly secured battery) is spelled out in the rules and checked at inspection. Our [Electrical & Wiring guides](/guides/electrical-wiring) map directly onto what the manual requires.
 
 None of these are hard. They just have to be right, and the manual tells you exactly what "right" is.
