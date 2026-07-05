@@ -4,16 +4,8 @@ import { revalidatePath, revalidateTag } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getSession } from "@/lib/auth";
-import { sendEmail } from "@/lib/email";
+import { sendEmail, adminNotifyHtml } from "@/lib/email";
 import { rateLimit } from "@/lib/rate-limit";
-
-function esc(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
 
 /**
  * A signed-in user proposes a new version of a lesson's markdown. Stored as a
@@ -66,14 +58,17 @@ export async function submitContentEdit(input: {
       to: admin,
       subject: `✏️ Suggested edit: ${input.lessonTitle}`.slice(0, 120),
       replyTo: user.email || undefined,
-      html: `<div style="font-family:Inter,Arial,sans-serif;max-width:560px;margin:0 auto;padding:28px;color:#182338">
-        <h2 style="margin:0 0 12px;font-size:18px">New suggested edit</h2>
-        <p style="margin:6px 0"><strong>Lesson:</strong> ${esc(input.lessonTitle)}</p>
-        <p style="margin:6px 0"><strong>From:</strong> ${esc(user.email || "a signed-in user")}</p>
-        ${input.note ? `<p style="margin:6px 0"><strong>Note:</strong> ${esc(input.note)}</p>` : ""}
-        <p style="margin:18px 0 6px"><a href="${site}/admin#suggested-edits" style="background:#2560e6;color:#fff;text-decoration:none;padding:10px 18px;border-radius:12px;display:inline-block">Review it in the admin panel →</a></p>
-        <p style="margin:16px 0 0;font-size:13px;color:#4d5b78">You can accept or reject it there; nothing changes on the site until you accept.</p>
-      </div>`,
+      html: adminNotifyHtml({
+        heading: "New suggested edit",
+        rows: [
+          { label: "Lesson", value: input.lessonTitle },
+          { label: "From", value: user.email || "a signed-in user" },
+          ...(input.note ? [{ label: "Note", value: input.note }] : []),
+        ],
+        ctaText: "Review in the admin panel",
+        ctaUrl: `${site}/admin#contributions`,
+        note: "Nothing changes on the site until you accept.",
+      }),
     });
   }
 

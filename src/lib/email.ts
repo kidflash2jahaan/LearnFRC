@@ -40,7 +40,8 @@ export async function sendEmail({
   }
 }
 
-const shell = (inner: string) => `
+/** The one shared email frame — every LearnFRC email renders inside this. */
+export const emailShell = (inner: string) => `
 <div style="background:#060912;padding:40px 0;font-family:Inter,Arial,sans-serif">
   <div style="max-width:520px;margin:0 auto;background:#0c1220;border:1px solid #1d2740;border-radius:18px;overflow:hidden">
     <div style="background:linear-gradient(110deg,#2f5fff,#22d3ee);padding:28px 32px">
@@ -53,6 +54,48 @@ const shell = (inner: string) => `
     </div>
   </div>
 </div>`;
+const shell = emailShell;
+
+const esc = (s: string) =>
+  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+/**
+ * Consistent admin-notification body (used by edit/submission notifications and
+ * the moderation digest) so every operational email looks identical.
+ */
+export function adminNotifyHtml({
+  heading,
+  rows = [],
+  bodyHtml,
+  ctaText,
+  ctaUrl,
+  note,
+}: {
+  heading: string;
+  rows?: { label: string; value: string }[];
+  bodyHtml?: string;
+  ctaText?: string;
+  ctaUrl?: string;
+  note?: string;
+}) {
+  const rowsHtml = rows
+    .map(
+      (r) =>
+        `<p style="margin:6px 0"><strong style="color:#c8d3ee">${esc(r.label)}:</strong> ${esc(r.value)}</p>`
+    )
+    .join("");
+  return shell(`
+    <p style="margin:0 0 14px;font-weight:700;font-size:17px">${esc(heading)}</p>
+    ${rowsHtml}
+    ${bodyHtml ?? ""}
+    ${
+      ctaText && ctaUrl
+        ? `<p style="margin:20px 0 6px"><a href="${ctaUrl}" style="display:inline-block;background:linear-gradient(110deg,#2f5fff,#22d3ee);color:#fff;text-decoration:none;padding:11px 20px;border-radius:12px;font-weight:600">${esc(ctaText)} →</a></p>`
+        : ""
+    }
+    ${note ? `<p style="margin:16px 0 0;color:#94a2bf;font-size:13px">${esc(note)}</p>` : ""}
+  `);
+}
 
 export function welcomeEmailHtml(name?: string | null) {
   const greeting = name ? `Hey ${name},` : "Welcome aboard,";
