@@ -65,7 +65,8 @@ export async function submitNewContent(input: {
 /** Admin-only: accept (creates the module/lesson) or reject a submission. */
 export async function reviewContentSubmission(
   submissionId: string,
-  decision: "accepted" | "rejected"
+  decision: "accepted" | "rejected",
+  overrideContent?: string
 ): Promise<{ ok?: boolean; error?: string }> {
   const { user, isAdmin } = await getSession();
   if (!isAdmin) return { error: "Not authorized." };
@@ -144,7 +145,15 @@ export async function reviewContentSubmission(
       slug = `${base}-${i}`;
     }
 
-    const words = (sub.content as string).split(/\s+/).length;
+    // The admin can tweak the submitted content before it's published as a
+    // lesson (edit-before-accept). Fall back to the submitter's version.
+    const content =
+      typeof overrideContent === "string" && overrideContent.trim().length
+        ? overrideContent
+        : (sub.content as string);
+    if (content.trim().length < 80)
+      return { error: "The edited lesson content is too short to publish." };
+    const words = content.split(/\s+/).length;
     const { data: lesson, error: lesErr } = await admin
       .from("lessons")
       .insert({
@@ -152,7 +161,7 @@ export async function reviewContentSubmission(
         slug,
         title: sub.title as string,
         summary: (sub.summary as string) ?? null,
-        content: sub.content as string,
+        content,
         estimated_minutes: Math.max(1, Math.round(words / 200)),
         sort_order: nextOrder,
       })

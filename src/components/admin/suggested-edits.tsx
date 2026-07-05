@@ -41,11 +41,19 @@ function EditRow({ edit }: { edit: PendingEdit }) {
   const [open, setOpen] = React.useState(false);
   const [pending, startTransition] = React.useTransition();
   const [error, setError] = React.useState<string | null>(null);
+  // Editable draft of the proposed content — the admin can tweak it before
+  // accepting; what gets published is exactly what's in this box.
+  const [draft, setDraft] = React.useState(edit.proposed);
+  const touched = draft !== edit.proposed;
 
   function decide(decision: "accepted" | "rejected") {
     setError(null);
     startTransition(async () => {
-      const res = await reviewContentEdit(edit.id, decision);
+      const res = await reviewContentEdit(
+        edit.id,
+        decision,
+        decision === "accepted" ? draft : undefined
+      );
       if (res.error) setError(res.error);
       else router.refresh();
     });
@@ -112,10 +120,36 @@ function EditRow({ edit }: { edit: PendingEdit }) {
           className={`h-4 w-4 transition-transform ${open ? "rotate-180" : ""}`}
           aria-hidden
         />
-        {open ? "Hide changes" : "Review changes"}
+        {open ? "Hide changes" : "Review & edit changes"}
       </button>
 
-      {open && <Diff original={edit.original} proposed={edit.proposed} />}
+      {open && (
+        <div className="mt-3 space-y-3">
+          <div>
+            <label className="mb-1.5 flex items-center gap-2 text-xs font-medium text-muted-foreground">
+              Proposed content — edit here to tweak it before you accept
+              {touched && (
+                <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[11px] font-semibold text-primary">
+                  edited
+                </span>
+              )}
+            </label>
+            <textarea
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              spellCheck={false}
+              disabled={pending}
+              className="h-64 w-full resize-y rounded-xl border border-border bg-card p-3 font-mono text-[12px] leading-relaxed text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-50"
+            />
+          </div>
+          <div>
+            <p className="mb-1.5 text-xs font-medium text-muted-foreground">
+              Diff vs. the current live version
+            </p>
+            <Diff original={edit.original} proposed={draft} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

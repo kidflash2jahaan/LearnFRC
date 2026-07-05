@@ -197,7 +197,7 @@ export default async function ArticlePage({
             <div className="mt-6 flex flex-wrap items-center gap-2.5">
               <span className="ac-chip inline-flex items-center gap-1.5">
                 <BookOpen aria-hidden className="h-3.5 w-3.5 text-primary" />
-                <span className="ac-eyebrow">FRC Guide</span>
+                <span className="ac-eyebrow">FRC Article</span>
               </span>
               <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
                 <Clock aria-hidden className="h-3.5 w-3.5" /> {a.readMins} min read
@@ -233,8 +233,8 @@ export default async function ArticlePage({
             <div className="mt-7 flex flex-wrap items-center gap-3">
               <ShareButton
                 variant="brand"
-                label="Share this guide"
-                text={`${a.title} — a free FRC guide on LearnFRC`}
+                label="Share this article"
+                text={`${a.title} — a free FRC article on LearnFRC`}
                 url={url}
               />
               <Link href="/guides" className="ac-btn-ghost text-sm">

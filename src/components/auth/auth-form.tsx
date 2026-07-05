@@ -185,7 +185,9 @@ export function AuthForm({
                 id="username"
                 name="username"
                 type="text"
-                autoComplete="username"
+                // "nickname" (not "username") so browsers don't autofill the
+                // saved login email here — a public handle, never the email.
+                autoComplete="nickname"
                 required
                 minLength={3}
                 pattern="[A-Za-z0-9_]+"
@@ -194,6 +196,9 @@ export function AuthForm({
                 disabled={isPending}
               />
             </Field>
+            <p className="mt-1.5 text-xs text-muted-foreground">
+              Public — pick a handle, not your email.
+            </p>
           </div>
           <div>
             <Label htmlFor="team_number" className={LABEL_CLS}>

@@ -63,7 +63,7 @@ export function DeskIndex({
             <AnimatedCounter value={guideCount} />
           </div>
           <div className="mt-1 text-[11px] font-medium leading-tight text-muted-foreground">
-            guides
+            articles
           </div>
         </div>
         <div className="ac-card rounded-2xl p-3.5">
@@ -123,7 +123,7 @@ export function DeskIndex({
       </div>
 
       <p className="mt-5 text-[13px] leading-relaxed text-muted-foreground">
-        Every guide is free to read, no login needed. Join the list below and
+        Every article is free to read, no login needed. Join the list below and
         new filings land in your inbox.
       </p>
     </motion.div>

@@ -61,7 +61,8 @@ export async function submitContentEdit(input: {
 /** Admin-only: accept (apply to the lesson) or reject a suggested edit. */
 export async function reviewContentEdit(
   editId: string,
-  decision: "accepted" | "rejected"
+  decision: "accepted" | "rejected",
+  overrideContent?: string
 ): Promise<{ ok?: boolean; error?: string }> {
   const { user, isAdmin } = await getSession();
   if (!isAdmin) return { error: "Not authorized." };
@@ -77,9 +78,17 @@ export async function reviewContentEdit(
 
   if (decision === "accepted") {
     const isArticle = edit.content_type === "article";
+    // The admin can tweak the proposed content before publishing it
+    // (edit-before-accept). Fall back to the submitter's version if untouched.
+    const content =
+      typeof overrideContent === "string" && overrideContent.trim().length
+        ? overrideContent
+        : (edit.proposed_content as string);
+    if (content.trim().length < 20)
+      return { error: "The edited content is too short to publish." };
     const { error } = await admin
       .from(isArticle ? "articles" : "lessons")
-      .update({ content: edit.proposed_content as string })
+      .update({ content })
       .eq("id", (isArticle ? edit.article_id : edit.lesson_id) as string);
     if (error) return { error: error.message };
     // Bust the cached content layer so the change goes live (this fork's

@@ -11,11 +11,19 @@ function SubmissionRow({ sub }: { sub: PendingSubmission }) {
   const [open, setOpen] = React.useState(false);
   const [pending, startTransition] = React.useTransition();
   const [error, setError] = React.useState<string | null>(null);
+  // Editable draft of the submitted content — the admin can tweak it before it
+  // becomes a live lesson; what publishes is exactly what's in this box.
+  const [draft, setDraft] = React.useState(sub.content);
+  const touched = draft !== sub.content;
 
   function decide(decision: "accepted" | "rejected") {
     setError(null);
     startTransition(async () => {
-      const res = await reviewContentSubmission(sub.id, decision);
+      const res = await reviewContentSubmission(
+        sub.id,
+        decision,
+        decision === "accepted" ? draft : undefined
+      );
       if (res.error) setError(res.error);
       else router.refresh();
     });
@@ -73,14 +81,34 @@ function SubmissionRow({ sub }: { sub: PendingSubmission }) {
         className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
       >
         <ChevronDown className={`h-4 w-4 transition-transform ${open ? "rotate-180" : ""}`} aria-hidden />
-        {open ? "Hide content" : "Preview content"}
+        {open ? "Hide content" : "Review & edit content"}
       </button>
 
       {open && (
-        <pre className="mt-3 max-h-80 overflow-auto whitespace-pre-wrap rounded-xl border border-border bg-muted/40 p-3 font-mono text-[12px] leading-relaxed text-foreground/90">
-          {sub.summary ? `${sub.summary}\n\n` : ""}
-          {sub.content}
-        </pre>
+        <div className="mt-3 space-y-3">
+          {sub.summary && (
+            <p className="rounded-lg bg-secondary/40 px-3 py-2 text-sm text-foreground/80">
+              <span className="font-medium text-foreground">Summary:</span> {sub.summary}
+            </p>
+          )}
+          <div>
+            <label className="mb-1.5 flex items-center gap-2 text-xs font-medium text-muted-foreground">
+              Lesson content — edit here to tweak it before you publish
+              {touched && (
+                <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[11px] font-semibold text-primary">
+                  edited
+                </span>
+              )}
+            </label>
+            <textarea
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              spellCheck={false}
+              disabled={pending}
+              className="h-72 w-full resize-y rounded-xl border border-border bg-card p-3 font-mono text-[12px] leading-relaxed text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-50"
+            />
+          </div>
+        </div>
       )}
     </div>
   );

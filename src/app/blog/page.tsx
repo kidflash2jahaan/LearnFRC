@@ -111,7 +111,7 @@ export default async function BlogPage() {
           </RiseItem>
           <RiseItem>
             <h1 className="mt-5 text-balance font-display text-4xl font-extrabold leading-[1.02] sm:text-5xl lg:text-[3.3rem]">
-              FRC guides,{" "}
+              FRC articles,{" "}
               <span style={BRAND_GRADIENT}>decoded for the pit.</span>
             </h1>
           </RiseItem>
@@ -136,7 +136,7 @@ export default async function BlogPage() {
                 <b className="font-semibold text-foreground">
                   <AnimatedCounter value={articles.length} />
                 </b>{" "}
-                guides in print
+                articles in print
               </span>
               <span>
                 <b className="font-semibold text-foreground">
@@ -164,14 +164,14 @@ export default async function BlogPage() {
         <Reveal>
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
-              <p className="ac-eyebrow">Every guide, newest first</p>
+              <p className="ac-eyebrow">Every article, newest first</p>
               <h2 className="mt-2 text-balance font-display text-3xl font-bold sm:text-4xl">
                 The full library
               </h2>
             </div>
             <span className="hidden items-center gap-1.5 text-xs text-muted-foreground sm:inline-flex">
               <Sparkles className="h-3.5 w-3.5 text-primary" aria-hidden />
-              <AnimatedCounter value={articles.length} /> guides
+              <AnimatedCounter value={articles.length} /> articles
             </span>
           </div>
         </Reveal>
@@ -240,10 +240,10 @@ export default async function BlogPage() {
             <p className="ac-eyebrow">New lessons, filed weekly</p>
             <h2 className="mx-auto mt-3 max-w-xl text-balance font-display text-3xl font-bold sm:text-4xl">
               Never miss a new{" "}
-              <span style={BRAND_GRADIENT}>guide.</span>
+              <span style={BRAND_GRADIENT}>article.</span>
             </h2>
             <p className="mx-auto mt-3 max-w-md text-[15px] leading-relaxed text-muted-foreground">
-              Join the list for new FRC guides as they&apos;re published — no spam,
+              Join the list for new FRC articles as they&apos;re published — no spam,
               unsubscribe anytime.
             </p>
             <div className="mt-7 flex flex-col items-center gap-3">
