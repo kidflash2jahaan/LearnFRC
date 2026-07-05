@@ -2512,7 +2512,7 @@ Ready to get a head start before you even walk in? Skim the [Getting Started gui
     ],
     date: "2026-07-03",
     readMins: 8,
-    content: `FRC Kickoff is the single-day event on a Saturday in early January when FIRST reveals the brand-new game for the season, and every team on the planet starts from zero at the exact same moment. You watch the game-reveal video, read the newly released game manual, and then have roughly six weeks to design, build, wire, and program a robot to play it.
+    content: `FRC Kickoff is the single-day event on a Saturday in early January when FIRST reveals the brand-new game for the season, and every team on the planet starts from zero at the exact same moment. You watch the game-reveal video, read the newly released game manual, and then have several weeks -- recent seasons have run closer to seven or eight weeks than the classic six -- to design, build, wire, and program a robot to play it.
 
 That's the whole thing in two sentences. But Kickoff is also the most exciting and most disorienting day of the FRC year, so here's what actually happens, hour by hour, and how to walk in ready instead of overwhelmed.
 
@@ -2542,7 +2542,7 @@ Alongside the manual, FIRST releases the official **field drawings** and CAD mod
 
 ## What's in the Kit of Parts (and what isn't)
 
-Alongside the game, FIRST makes the season's **Kit of Parts** available: not one big box anymore, but a mix of a physical control-system kit, **FIRST Choice** credits for an online store of donated parts, and **Product Donation Vouchers** from sponsors like REV and CTRE. Rookie teams get a fuller kit meant to get a basic robot driving; veterans get a lighter one focused on that year's control-system updates.
+Alongside the game, FIRST makes the season's **Kit of Parts** available: not one big box anymore, but a mix of a physical control-system kit, **FIRST Choice** credits for an online store of donated parts, and **Product Donation Vouchers** from sponsors like REV, AndyMark, and Digi-Key. Rookie teams get a fuller kit meant to get a basic robot driving; veterans get a lighter one focused on that year's control-system updates.
 
 For Kickoff day itself, only two things about the kit really matter. It's a **starting point, not a shopping list** — most competitive robots are mostly bought or fabricated on top of it. And FIRST usually publishes an **"Everybody Can Play" KitBot** shortly after Kickoff: a simple, proven robot that scores in that year's game, and a genuinely smart plan for a rookie or resource-limited team, because a reliable simple robot beats an ambitious broken one every time. For the full breakdown of what's in the kit and how the credits and vouchers work, see our lesson on [registering a new team and the Kit of Parts](/guides/getting-started/getting-started-your-first-steps/new-team-registration-and-kit).
 
@@ -2574,7 +2574,7 @@ The teams that stumble in the first two weeks of build season are almost always 
 
 ## After Kickoff: the six weeks that follow
 
-Kickoff kicks off (yes) the **build season**, which runs about six weeks from that Saturday until teams head to their first competition. Since FIRST removed the old "stop build day" and robot-bagging requirement, teams now have continuous access to their robot right up until events, so how you pace those weeks is on you. The broad arc is familiar: prototype and lock strategy first, then design and fabricate, then wire and program on real hardware, and spend the final week making the robot reliable rather than adding features. Then competition season runs roughly from February into April at Regional or District events, with the top teams advancing toward the FIRST Championship. For the full week-by-week plan, and where those six weeks sit in the larger FRC calendar, see our lesson on [the annual season from Kickoff to Championship](/guides/getting-started/the-season-and-the-game/annual-season-kickoff-to-championship).
+Kickoff kicks off (yes) the **build season**, which now runs seven to eight weeks or more from that Saturday until teams head to their first competition, since FIRST's calendar has stretched a bit longer than the classic six-week build season. Since FIRST removed the old "stop build day" and robot-bagging requirement, teams now have continuous access to their robot right up until events, so how you pace those weeks is on you. The broad arc is familiar: prototype and lock strategy first, then design and fabricate, then wire and program on real hardware, and spend the final week making the robot reliable rather than adding features. Then competition season runs roughly from March into April at Regional or District events, with the top teams advancing toward the FIRST Championship. For the full week-by-week plan, and where those six weeks sit in the larger FRC calendar, see our lesson on [the annual season from Kickoff to Championship](/guides/getting-started/the-season-and-the-game/annual-season-kickoff-to-championship).
 
 ## The mindset that matters most
 
