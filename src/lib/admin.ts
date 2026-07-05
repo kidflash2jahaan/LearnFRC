@@ -515,3 +515,79 @@ export async function getPendingEdits(): Promise<PendingEdit[]> {
     };
   });
 }
+
+export type PendingSubmission = {
+  id: string;
+  title: string;
+  department: string;
+  moduleLabel: string;
+  submitter: string;
+  note: string | null;
+  summary: string | null;
+  content: string;
+  createdAt: string;
+};
+
+/** Pending new-lesson submissions, newest first (admin review queue). */
+export async function getPendingSubmissions(): Promise<PendingSubmission[]> {
+  const admin = createAdminClient();
+  const { data: subs } = await admin
+    .from("content_submissions")
+    .select(
+      "id, submitter_id, department_id, module_id, new_module_title, title, summary, content, note, created_at"
+    )
+    .eq("status", "pending")
+    .order("created_at", { ascending: false })
+    .limit(100);
+  if (!subs?.length) return [];
+
+  type SubRow = {
+    id: string;
+    submitter_id: string;
+    department_id: string;
+    module_id: string | null;
+    new_module_title: string | null;
+    title: string;
+    summary: string | null;
+    content: string;
+    note: string | null;
+    created_at: string;
+  };
+  const rows = subs as unknown as SubRow[];
+  const deptIds = [...new Set(rows.map((s) => s.department_id))];
+  const modIds = [...new Set(rows.map((s) => s.module_id).filter(Boolean))] as string[];
+  const subIds = [...new Set(rows.map((s) => s.submitter_id))];
+
+  const [depts, mods, profs] = await Promise.all([
+    admin.from("departments").select("id, name").in("id", deptIds),
+    modIds.length
+      ? admin.from("modules").select("id, title").in("id", modIds)
+      : Promise.resolve({ data: [] as { id: string; title: string }[] }),
+    admin.from("profiles").select("id, full_name, username").in("id", subIds),
+  ]);
+  const deptById = new Map(
+    ((depts.data as { id: string; name: string }[]) ?? []).map((d) => [d.id, d.name])
+  );
+  const modById = new Map(
+    ((mods.data as { id: string; title: string }[]) ?? []).map((m) => [m.id, m.title])
+  );
+  const nameById = new Map(
+    ((profs.data as { id: string; full_name: string | null; username: string | null }[]) ?? []).map(
+      (p) => [p.id, p.full_name || p.username || "A member"]
+    )
+  );
+
+  return rows.map((s) => ({
+    id: s.id,
+    title: s.title,
+    department: deptById.get(s.department_id) ?? "—",
+    moduleLabel: s.module_id
+      ? (modById.get(s.module_id) ?? "an existing module")
+      : `New module: ${s.new_module_title ?? "Community Lessons"}`,
+    submitter: nameById.get(s.submitter_id) ?? "A member",
+    note: s.note ?? null,
+    summary: s.summary ?? null,
+    content: s.content,
+    createdAt: s.created_at,
+  }));
+}

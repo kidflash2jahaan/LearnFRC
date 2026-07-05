@@ -12,8 +12,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { getSession } from "@/lib/auth";
-import { getAdminStats, getPendingEdits } from "@/lib/admin";
-import { SuggestedEdits } from "@/components/admin/suggested-edits";
+import { getAdminStats, getPendingEdits, getPendingSubmissions } from "@/lib/admin";
 import { Avatar } from "@/components/ui/avatar";
 import { ActivityChart } from "@/components/admin/activity-chart";
 import { AdminOverview } from "@/components/admin/admin-overview";
@@ -84,9 +83,10 @@ export default async function AdminPage() {
     );
   }
 
-  const [stats, pendingEdits] = await Promise.all([
+  const [stats, pendingEdits, pendingSubmissions] = await Promise.all([
     getAdminStats(),
     getPendingEdits(),
+    getPendingSubmissions(),
   ]);
   const maxCompletions = Math.max(
     1,
@@ -222,29 +222,9 @@ export default async function AdminPage() {
             onlineUsers={stats.onlineUsers}
             recruiters={stats.recruiters}
             articleViews={stats.articleViews}
+            pendingEdits={pendingEdits}
+            pendingSubmissions={pendingSubmissions}
           />
-        </Reveal>
-
-        {/* ===================== SUGGESTED EDITS: community review queue ============ */}
-        <Reveal className="mt-10">
-          <section id="suggested-edits" className="scroll-mt-24">
-            <div className="mb-4 flex flex-wrap items-center gap-2">
-              <span className="ac-eyebrow">Community edits</span>
-              {pendingEdits.length > 0 && (
-                <span className="ac-chip inline-flex items-center text-xs font-bold text-primary">
-                  {pendingEdits.length} pending
-                </span>
-              )}
-            </div>
-            <h2 className="font-display text-2xl font-bold tracking-tight">
-              Suggested edits
-            </h2>
-            <p className="mb-5 mt-2 max-w-md text-sm leading-relaxed text-foreground/70">
-              Changes members proposed to lessons. Review the diff, then accept (it goes live
-              instantly) or deny.
-            </p>
-            <SuggestedEdits edits={pendingEdits} />
-          </section>
         </Reveal>
 
         {/* ===================== SIGNALS: activity + top depts ===================== */}

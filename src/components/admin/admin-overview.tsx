@@ -16,6 +16,7 @@ import {
   Radio,
   UserPlus,
   Newspaper,
+  Inbox,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar } from "@/components/ui/avatar";
@@ -23,7 +24,14 @@ import { Badge } from "@/components/ui/badge";
 import { AnimatedCounter } from "@/components/animated-counter";
 import { RevealGroup, RevealItem } from "@/components/motion/primitives";
 import { useStaticMotion } from "@/components/perf-mode";
-import type { AdminUser, AdminTeam } from "@/lib/admin";
+import { SuggestedEdits } from "@/components/admin/suggested-edits";
+import { SubmissionsReview } from "@/components/admin/submissions-review";
+import type {
+  AdminUser,
+  AdminTeam,
+  PendingEdit,
+  PendingSubmission,
+} from "@/lib/admin";
 
 type Panel =
   | "online"
@@ -34,6 +42,7 @@ type Panel =
   | "subscribers"
   | "achievements"
   | "articles"
+  | "contributions"
   | null;
 
 const EASE = [0.21, 0.47, 0.32, 0.98] as const;
@@ -108,6 +117,8 @@ export function AdminOverview({
   onlineUsers,
   recruiters,
   articleViews,
+  pendingEdits,
+  pendingSubmissions,
 }: {
   data: OverviewData;
   users: AdminUser[];
@@ -118,6 +129,8 @@ export function AdminOverview({
   onlineUsers: { name: string; username: string | null; lastSeen: string }[];
   recruiters: { name: string; username: string | null; referrals: number }[];
   articleViews: { slug: string; title: string; views: number }[];
+  pendingEdits: PendingEdit[];
+  pendingSubmissions: PendingSubmission[];
 }) {
   const [open, setOpen] = React.useState<Panel>(null);
   const toggle = (p: Panel) => setOpen((cur) => (cur === p ? null : p));
@@ -165,6 +178,13 @@ export function AdminOverview({
       icon: UsersRound,
       sub: "by team number",
       panel: "teams" as Panel,
+    },
+    {
+      label: "Contributions",
+      value: pendingEdits.length + pendingSubmissions.length,
+      icon: Inbox,
+      sub: "edits + new lessons to review",
+      panel: "contributions" as Panel,
     },
   ];
 
@@ -235,6 +255,32 @@ export function AdminOverview({
           );
         })}
       </RevealGroup>
+
+      {open === "contributions" && (
+        <div id="contributions" className="scroll-mt-24">
+          <PanelShell
+            title="Community contributions"
+            count={`${pendingEdits.length + pendingSubmissions.length} pending`}
+          >
+            <div className="space-y-7">
+              <div>
+                <h3 className="mb-3 font-display text-base font-semibold text-foreground">
+                  Suggested edits{" "}
+                  <span className="text-muted-foreground">({pendingEdits.length})</span>
+                </h3>
+                <SuggestedEdits edits={pendingEdits} />
+              </div>
+              <div id="submissions">
+                <h3 className="mb-3 font-display text-base font-semibold text-foreground">
+                  New lessons{" "}
+                  <span className="text-muted-foreground">({pendingSubmissions.length})</span>
+                </h3>
+                <SubmissionsReview submissions={pendingSubmissions} />
+              </div>
+            </div>
+          </PanelShell>
+        </div>
+      )}
 
       {open === "online" && (
         <PanelShell

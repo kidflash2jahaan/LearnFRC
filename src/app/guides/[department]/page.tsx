@@ -22,6 +22,7 @@ import { getSession } from "@/lib/auth";
 import { deptMeta, inkFor } from "@/lib/departments";
 import { Icon } from "@/lib/icon-map";
 import { DepartmentModules } from "@/components/guides/department-modules";
+import { SuggestNewContent } from "@/components/guides/suggest-new-content";
 import { AnimatedCounter } from "@/components/animated-counter";
 import { JsonLd } from "@/components/json-ld";
 import type { Resource } from "@/lib/types";
@@ -351,6 +352,18 @@ export default async function DepartmentPage({
               modules={dept.modules}
               completedIds={[...completed]}
               accent={accent}
+            />
+          </div>
+
+          {/* community authoring: contribute a whole new lesson */}
+          <div className="mt-6 flex flex-wrap items-center gap-2 border-t border-border pt-6 text-sm text-muted-foreground">
+            <span>Know something this department is missing?</span>
+            <SuggestNewContent
+              departmentId={dept.id}
+              departmentName={dept.name}
+              modules={dept.modules.map((m) => ({ id: m.id, title: m.title }))}
+              isLoggedIn={!!user}
+              loginPath={`/login?next=${encodeURIComponent(`/guides/${dept.slug}`)}`}
             />
           </div>
         </div>
