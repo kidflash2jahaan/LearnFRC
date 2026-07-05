@@ -115,10 +115,11 @@ export const getArticles = unstable_cache(
     const supabase = createPublicClient();
     const { data } = await supabase
       .from("articles")
-      .select("slug, title, description, keywords, date, read_mins, content")
+      .select("id, slug, title, description, keywords, date, read_mins, content")
       .order("date", { ascending: false })
       .order("sort_order", { ascending: true });
     type Row = {
+      id: string;
       slug: string;
       title: string;
       description: string;
@@ -128,6 +129,7 @@ export const getArticles = unstable_cache(
       content: string;
     };
     return ((data as unknown as Row[]) ?? []).map((a) => ({
+      id: a.id,
       slug: a.slug,
       title: a.title,
       description: a.description,

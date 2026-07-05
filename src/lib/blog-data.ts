@@ -4,6 +4,7 @@
 // related-articles scorer.
 
 export interface Article {
+  id?: string;
   slug: string;
   title: string;
   description: string;

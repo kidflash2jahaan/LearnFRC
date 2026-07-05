@@ -15,6 +15,7 @@ import {
 import { getRelated } from "@/lib/blog-data";
 import { getArticles } from "@/lib/queries";
 import { Markdown } from "@/components/markdown";
+import { ArticleSuggestEdit } from "@/components/blog/article-suggest-edit";
 import { JsonLd } from "@/components/json-ld";
 import { ShareButton } from "@/components/share-button";
 import { ArticleViewBeacon } from "@/components/article-view-beacon";
@@ -272,6 +273,14 @@ export default async function ArticlePage({
           <Reveal delay={0.1}>
             <Markdown content={a.content} />
           </Reveal>
+          {a.id && (
+            <ArticleSuggestEdit
+              articleId={a.id}
+              title={a.title}
+              path={`/blog/${a.slug}`}
+              content={a.content}
+            />
+          )}
         </div>
 
         {/* Signature: fixed reading-progress bar (all sizes) + sticky TOC

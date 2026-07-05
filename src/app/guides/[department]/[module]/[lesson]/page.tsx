@@ -361,9 +361,10 @@ export default async function LessonPage({
             </Reveal>
 
             <SuggestEdit
-              lessonId={les.id}
-              lessonTitle={les.title}
-              lessonPath={lessonPath}
+              contentType="lesson"
+              targetId={les.id}
+              title={les.title}
+              path={lessonPath}
               content={content}
               isLoggedIn={!!user}
             />

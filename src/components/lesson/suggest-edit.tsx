@@ -13,15 +13,17 @@ import { Button } from "@/components/ui/button";
  * server (just the trigger row); the editor panel only mounts on interaction.
  */
 export function SuggestEdit({
-  lessonId,
-  lessonTitle,
-  lessonPath,
+  contentType = "lesson",
+  targetId,
+  title,
+  path,
   content,
   isLoggedIn,
 }: {
-  lessonId: string;
-  lessonTitle: string;
-  lessonPath: string;
+  contentType?: "lesson" | "article";
+  targetId: string;
+  title: string;
+  path: string;
   content: string;
   isLoggedIn: boolean;
 }) {
@@ -47,9 +49,10 @@ export function SuggestEdit({
     setPending(true);
     setError(null);
     const res = await submitContentEdit({
-      lessonId,
-      lessonTitle,
-      lessonPath,
+      contentType,
+      targetId,
+      title,
+      path,
       proposedContent: value,
       note: note.trim() || undefined,
     });
@@ -78,7 +81,7 @@ export function SuggestEdit({
         </button>
       ) : (
         <Link
-          href={`/login?next=${encodeURIComponent(lessonPath)}`}
+          href={`/login?next=${encodeURIComponent(path)}`}
           className="font-semibold text-primary underline-offset-2 hover:underline"
         >
           Log in to suggest an edit
@@ -96,7 +99,7 @@ export function SuggestEdit({
         className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 p-4 backdrop-blur-sm"
         role="dialog"
         aria-modal="true"
-        aria-label={`Suggest an edit to ${lessonTitle}`}
+        aria-label={`Suggest an edit to ${title}`}
         onClick={(e) => {
           if (e.target === e.currentTarget && !pending) setOpen(false);
         }}
@@ -105,7 +108,7 @@ export function SuggestEdit({
           <div className="flex items-center justify-between gap-3 border-b border-border px-5 py-4">
             <div className="min-w-0">
               <h2 className="truncate font-display text-lg font-bold">Suggest an edit</h2>
-              <p className="truncate text-sm text-muted-foreground">{lessonTitle}</p>
+              <p className="truncate text-sm text-muted-foreground">{title}</p>
             </div>
             <button
               type="button"

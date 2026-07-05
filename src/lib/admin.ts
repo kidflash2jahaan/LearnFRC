@@ -464,21 +464,24 @@ export async function getPendingEdits(): Promise<PendingEdit[]> {
   const { data: edits } = await admin
     .from("content_edits")
     .select(
-      "id, lesson_id, editor_id, original_content, proposed_content, note, created_at"
+      "id, content_type, lesson_id, article_id, editor_id, original_content, proposed_content, note, created_at"
     )
     .eq("status", "pending")
     .order("created_at", { ascending: false })
     .limit(100);
   if (!edits?.length) return [];
 
-  const lessonIds = [...new Set(edits.map((e) => e.lesson_id as string))];
+  const lessonIds = [...new Set(edits.map((e) => e.lesson_id).filter(Boolean))] as string[];
+  const articleIds = [...new Set(edits.map((e) => e.article_id).filter(Boolean))] as string[];
   const editorIds = [...new Set(edits.map((e) => e.editor_id as string))];
 
-  const [{ data: lessons }, { data: profs }] = await Promise.all([
-    admin
-      .from("lessons")
-      .select("id, slug, title, modules(slug, departments(slug))")
-      .in("id", lessonIds),
+  const [{ data: lessons }, articlesRes, { data: profs }] = await Promise.all([
+    lessonIds.length
+      ? admin.from("lessons").select("id, slug, title, modules(slug, departments(slug))").in("id", lessonIds)
+      : Promise.resolve({ data: [] }),
+    articleIds.length
+      ? admin.from("articles").select("id, slug, title").in("id", articleIds)
+      : Promise.resolve({ data: [] as { id: string; slug: string; title: string }[] }),
     admin.from("profiles").select("id, full_name, username").in("id", editorIds),
   ]);
 
@@ -491,6 +494,9 @@ export async function getPendingEdits(): Promise<PendingEdit[]> {
   const lessonById = new Map(
     ((lessons as unknown as LessonRow[]) ?? []).map((l) => [l.id, l])
   );
+  const articleById = new Map(
+    ((articlesRes.data as { id: string; slug: string; title: string }[]) ?? []).map((a) => [a.id, a])
+  );
   const nameById = new Map(
     ((profs as { id: string; full_name: string | null; username: string | null }[]) ?? []).map(
       (p) => [p.id, p.full_name || p.username || "A member"]
@@ -498,15 +504,23 @@ export async function getPendingEdits(): Promise<PendingEdit[]> {
   );
 
   return edits.map((e) => {
-    const l = lessonById.get(e.lesson_id as string);
-    const deptSlug = l?.modules?.departments?.slug ?? "";
-    const modSlug = l?.modules?.slug ?? "";
-    const path =
-      l && deptSlug && modSlug ? `/guides/${deptSlug}/${modSlug}/${l.slug}` : "/guides";
+    let title = "Unknown";
+    let path = "/";
+    if (e.content_type === "article") {
+      const a = articleById.get(e.article_id as string);
+      title = a?.title ?? "Unknown article";
+      path = a ? `/blog/${a.slug}` : "/blog";
+    } else {
+      const l = lessonById.get(e.lesson_id as string);
+      const deptSlug = l?.modules?.departments?.slug ?? "";
+      const modSlug = l?.modules?.slug ?? "";
+      title = l?.title ?? "Unknown lesson";
+      path = l && deptSlug && modSlug ? `/guides/${deptSlug}/${modSlug}/${l.slug}` : "/guides";
+    }
     return {
       id: e.id as string,
-      lessonId: e.lesson_id as string,
-      lessonTitle: l?.title ?? "Unknown lesson",
+      lessonId: (e.lesson_id ?? e.article_id) as string,
+      lessonTitle: title,
       lessonPath: path,
       editor: nameById.get(e.editor_id as string) ?? "A member",
       note: (e.note as string) ?? null,

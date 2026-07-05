@@ -44,7 +44,7 @@ export async function GET(req: Request) {
   const [{ data: edits }, { data: subs }] = await Promise.all([
     admin
       .from("content_edits")
-      .select("id, lesson_id, original_content, proposed_content, note")
+      .select("id, content_type, lesson_id, article_id, original_content, proposed_content, note")
       .eq("status", "pending")
       .limit(30),
     admin
@@ -54,13 +54,17 @@ export async function GET(req: Request) {
       .limit(30),
   ]);
 
-  // Enrich edits with the lesson title; submissions with dept/module names.
-  const lessonIds = [...new Set((edits ?? []).map((e) => e.lesson_id as string))];
+  // Enrich edits with the lesson/article title; submissions with dept/module names.
+  const lessonIds = [...new Set((edits ?? []).map((e) => e.lesson_id).filter(Boolean))] as string[];
+  const artIds = [...new Set((edits ?? []).map((e) => e.article_id).filter(Boolean))] as string[];
   const deptIds = [...new Set((subs ?? []).map((s) => s.department_id as string))];
   const modIds = [...new Set((subs ?? []).map((s) => s.module_id).filter(Boolean))] as string[];
-  const [lessons, depts, mods] = await Promise.all([
+  const [lessons, arts, depts, mods] = await Promise.all([
     lessonIds.length
       ? admin.from("lessons").select("id, title").in("id", lessonIds)
+      : Promise.resolve({ data: [] as { id: string; title: string }[] }),
+    artIds.length
+      ? admin.from("articles").select("id, title").in("id", artIds)
       : Promise.resolve({ data: [] as { id: string; title: string }[] }),
     deptIds.length
       ? admin.from("departments").select("id, name").in("id", deptIds)
@@ -70,13 +74,17 @@ export async function GET(req: Request) {
       : Promise.resolve({ data: [] as { id: string; title: string }[] }),
   ]);
   const lt = new Map((lessons.data ?? []).map((l) => [l.id, l.title]));
+  const at = new Map((arts.data ?? []).map((a) => [a.id, a.title]));
   const dt = new Map((depts.data ?? []).map((d) => [d.id, d.name]));
   const mt = new Map((mods.data ?? []).map((m) => [m.id, m.title]));
 
   return NextResponse.json({
     edits: (edits ?? []).map((e) => ({
       id: e.id,
-      lessonTitle: lt.get(e.lesson_id as string) ?? "Unknown lesson",
+      lessonTitle:
+        e.content_type === "article"
+          ? (at.get(e.article_id as string) ?? "Unknown article")
+          : (lt.get(e.lesson_id as string) ?? "Unknown lesson"),
       note: e.note,
       original_content: e.original_content,
       proposed_content: e.proposed_content,
@@ -124,22 +132,25 @@ export async function POST(req: Request) {
       if (d.kind === "edit") {
         const { data: edit } = await admin
           .from("content_edits")
-          .select("id, lesson_id, proposed_content, status")
+          .select("id, content_type, lesson_id, article_id, proposed_content, status")
           .eq("id", d.id)
           .maybeSingle();
         if (!edit || edit.status !== "pending") continue;
-        const { data: lesson } = await admin
-          .from("lessons")
+        const isArticle = edit.content_type === "article";
+        const targetTable = isArticle ? "articles" : "lessons";
+        const targetId = (isArticle ? edit.article_id : edit.lesson_id) as string;
+        const { data: target } = await admin
+          .from(targetTable)
           .select("title")
-          .eq("id", edit.lesson_id as string)
+          .eq("id", targetId)
           .maybeSingle();
-        const title = (lesson?.title as string) ?? "lesson";
+        const title = (target?.title as string) ?? (isArticle ? "article" : "lesson");
         if (d.decision === "approved" || d.decision === "edited_and_approved") {
           const content =
             d.decision === "edited_and_approved" && d.corrected_content
               ? d.corrected_content
               : (edit.proposed_content as string);
-          await admin.from("lessons").update({ content }).eq("id", edit.lesson_id as string);
+          await admin.from(targetTable).update({ content }).eq("id", targetId);
         }
         await admin
           .from("content_edits")

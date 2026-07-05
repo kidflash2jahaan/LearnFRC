@@ -4,7 +4,6 @@ import { revalidatePath, revalidateTag } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getSession } from "@/lib/auth";
-import { sendEmail, adminNotifyHtml } from "@/lib/email";
 import { rateLimit } from "@/lib/rate-limit";
 
 function slugify(s: string): string {
@@ -58,27 +57,8 @@ export async function submitNewContent(input: {
   });
   if (error) return { error: error.message };
 
-  const admin = (process.env.ADMIN_EMAILS || "").split(",")[0]?.trim();
-  const site = process.env.NEXT_PUBLIC_SITE_URL || "";
-  if (admin) {
-    await sendEmail({
-      to: admin,
-      subject: `➕ New lesson submitted: ${title}`.slice(0, 120),
-      replyTo: user.email || undefined,
-      html: adminNotifyHtml({
-        heading: "New lesson submitted",
-        rows: [
-          { label: "Title", value: title },
-          { label: "Department", value: input.departmentName || "—" },
-          { label: "From", value: user.email || "a signed-in user" },
-          ...(input.note ? [{ label: "Note", value: input.note }] : []),
-        ],
-        ctaText: "Review in the admin panel",
-        ctaUrl: `${site}/admin#contributions`,
-        note: "Nothing is published until you accept it.",
-      }),
-    });
-  }
+  // No admin notification on submit — the daily moderation routine reviews the
+  // queue and emails a digest only when it actually acts on something.
   return { ok: true };
 }
 

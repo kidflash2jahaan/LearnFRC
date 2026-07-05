@@ -4,7 +4,6 @@ import { revalidatePath, revalidateTag } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getSession } from "@/lib/auth";
-import { sendEmail, adminNotifyHtml } from "@/lib/email";
 import { rateLimit } from "@/lib/rate-limit";
 
 /**
@@ -12,12 +11,14 @@ import { rateLimit } from "@/lib/rate-limit";
  * pending suggestion; the admin is emailed and reviews it in /admin.
  */
 export async function submitContentEdit(input: {
-  lessonId: string;
-  lessonTitle: string;
-  lessonPath: string;
+  contentType?: "lesson" | "article";
+  targetId: string;
+  title: string;
+  path: string;
   proposedContent: string;
   note?: string;
 }): Promise<{ ok?: boolean; error?: string }> {
+  const contentType = input.contentType ?? "lesson";
   const supabase = await createClient();
   const {
     data: { user },
@@ -32,46 +33,28 @@ export async function submitContentEdit(input: {
     return { error: "You've submitted several edits recently — try again in a bit." };
 
   // Snapshot the current content so the admin sees a true diff.
-  const { data: lesson } = await supabase
-    .from("lessons")
+  const { data: current } = await supabase
+    .from(contentType === "article" ? "articles" : "lessons")
     .select("content")
-    .eq("id", input.lessonId)
+    .eq("id", input.targetId)
     .maybeSingle();
-  if (!lesson) return { error: "Lesson not found." };
-  if (proposed === (lesson.content ?? "").trim())
+  if (!current) return { error: `${contentType === "article" ? "Article" : "Lesson"} not found.` };
+  if (proposed === ((current.content as string) ?? "").trim())
     return { error: "This is identical to the current version — nothing to submit." };
 
   const { error } = await supabase.from("content_edits").insert({
-    lesson_id: input.lessonId,
+    content_type: contentType,
+    lesson_id: contentType === "lesson" ? input.targetId : null,
+    article_id: contentType === "article" ? input.targetId : null,
     editor_id: user.id,
-    original_content: lesson.content ?? "",
+    original_content: (current.content as string) ?? "",
     proposed_content: proposed,
     note: input.note?.slice(0, 1000) || null,
   });
   if (error) return { error: error.message };
 
-  // Notify the admin (stored Resend key). Never blocks the user on email issues.
-  const admin = (process.env.ADMIN_EMAILS || "").split(",")[0]?.trim();
-  const site = process.env.NEXT_PUBLIC_SITE_URL || "";
-  if (admin) {
-    await sendEmail({
-      to: admin,
-      subject: `✏️ Suggested edit: ${input.lessonTitle}`.slice(0, 120),
-      replyTo: user.email || undefined,
-      html: adminNotifyHtml({
-        heading: "New suggested edit",
-        rows: [
-          { label: "Lesson", value: input.lessonTitle },
-          { label: "From", value: user.email || "a signed-in user" },
-          ...(input.note ? [{ label: "Note", value: input.note }] : []),
-        ],
-        ctaText: "Review in the admin panel",
-        ctaUrl: `${site}/admin#contributions`,
-        note: "Nothing changes on the site until you accept.",
-      }),
-    });
-  }
-
+  // No admin notification on submit — the daily moderation routine reviews the
+  // queue and emails a digest only when it actually acts on something.
   return { ok: true };
 }
 
@@ -86,17 +69,18 @@ export async function reviewContentEdit(
   const admin = createAdminClient();
   const { data: edit } = await admin
     .from("content_edits")
-    .select("id, lesson_id, proposed_content, status")
+    .select("id, content_type, lesson_id, article_id, proposed_content, status")
     .eq("id", editId)
     .maybeSingle();
   if (!edit) return { error: "Suggestion not found." };
   if (edit.status !== "pending") return { error: "This suggestion was already reviewed." };
 
   if (decision === "accepted") {
+    const isArticle = edit.content_type === "article";
     const { error } = await admin
-      .from("lessons")
+      .from(isArticle ? "articles" : "lessons")
       .update({ content: edit.proposed_content as string })
-      .eq("id", edit.lesson_id as string);
+      .eq("id", (isArticle ? edit.article_id : edit.lesson_id) as string);
     if (error) return { error: error.message };
     // Bust the cached content layer so the change goes live (this fork's
     // revalidateTag takes a stale-while-revalidate window; "max" per docs).
