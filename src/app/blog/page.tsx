@@ -10,7 +10,8 @@ import {
   Newspaper,
   Sparkles,
 } from "lucide-react";
-import { ARTICLES, type Article } from "@/lib/blog-data";
+import { type Article } from "@/lib/blog-data";
+import { getArticles } from "@/lib/queries";
 import { NewsletterForm } from "@/components/newsletter-form";
 import {
   RiseGroup,
@@ -75,8 +76,8 @@ function deskFor(a: Article) {
   return DESKS.find((d) => d.test.test(hay)) ?? FALLBACK_DESK;
 }
 
-export default function BlogPage() {
-  const articles = [...ARTICLES].sort((a, b) => b.date.localeCompare(a.date));
+export default async function BlogPage() {
+  const articles = await getArticles();
   const totalMins = articles.reduce((sum, a) => sum + a.readMins, 0);
 
   const deskCounts = new Map<string, DeskCount>();

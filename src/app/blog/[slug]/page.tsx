@@ -12,7 +12,8 @@ import {
   Hash,
   Sparkles,
 } from "lucide-react";
-import { ARTICLES, getArticle, getRelated } from "@/lib/blog-data";
+import { getRelated } from "@/lib/blog-data";
+import { getArticles } from "@/lib/queries";
 import { Markdown } from "@/components/markdown";
 import { JsonLd } from "@/components/json-ld";
 import { ShareButton } from "@/components/share-button";
@@ -71,8 +72,9 @@ function splitTitle(title: string): { lead: string; tail: string } {
   return { lead: words.join(" "), tail };
 }
 
-export function generateStaticParams() {
-  return ARTICLES.map((a) => ({ slug: a.slug }));
+export async function generateStaticParams() {
+  const articles = await getArticles();
+  return articles.map((a) => ({ slug: a.slug }));
 }
 
 export async function generateMetadata({
@@ -81,7 +83,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const a = getArticle(slug);
+  const a = (await getArticles()).find((x) => x.slug === slug);
   if (!a) return { title: "Article not found" };
   const url = `${SITE}/blog/${a.slug}`;
   const img = `${SITE}/opengraph-image`;
@@ -115,10 +117,11 @@ export default async function ArticlePage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const a = getArticle(slug);
+  const articles = await getArticles();
+  const a = articles.find((x) => x.slug === slug);
   if (!a) notFound();
   const url = `${SITE}/blog/${a.slug}`;
-  const related = getRelated(a.slug, 3);
+  const related = getRelated(articles, a.slug, 3);
   const toc = buildToc(a.content);
   const wordCount = a.content.trim().split(/\s+/).length;
   const { lead: titleLead, tail: titleTail } = splitTitle(a.title);

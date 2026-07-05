@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 import { getAllDepartmentSlugs, getDepartmentBySlug } from "@/lib/queries";
-import { ARTICLES } from "@/lib/blog-data";
+import { getArticles } from "@/lib/queries";
 import { PATHS } from "@/lib/paths-data";
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.systemerr.com";
@@ -28,7 +28,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: r.priority,
   }));
 
-  const blogRoutes: MetadataRoute.Sitemap = ARTICLES.map((a) => ({
+  const blogRoutes: MetadataRoute.Sitemap = (await getArticles()).map((a) => ({
     url: `${SITE}/blog/${a.slug}`,
     lastModified: new Date(`${a.date}T12:00:00`),
     changeFrequency: "monthly",

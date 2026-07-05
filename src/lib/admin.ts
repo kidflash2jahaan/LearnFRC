@@ -1,6 +1,6 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { ARTICLES } from "@/lib/blog-data";
+import { getArticles } from "@/lib/queries";
 
 /** A row from the `admin_department_stats` view. */
 export type DepartmentStat = {
@@ -401,7 +401,8 @@ export async function getAdminStats(): Promise<AdminStats> {
   type AVRow = { slug: string; views: number | string; views_7d: number | string };
   const avRows = (articleViewsRes.data as AVRow[] | null) ?? [];
   const avMap = new Map(avRows.map((r) => [r.slug, r]));
-  const articleViews = ARTICLES.map((a) => ({
+  const allArticles = await getArticles();
+  const articleViews = allArticles.map((a) => ({
     slug: a.slug,
     title: a.title,
     views: Number(avMap.get(a.slug)?.views ?? 0),

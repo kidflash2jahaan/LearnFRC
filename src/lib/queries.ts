@@ -12,6 +12,7 @@ import type {
   TeamMemberProgress,
   Resource,
 } from "@/lib/types";
+import type { Article } from "@/lib/blog-data";
 
 type DeptWithModules = Department & { modules: Module[] };
 
@@ -100,6 +101,44 @@ export const getDepartments = unstable_cache(
   },
   ["departments-summary"],
   { revalidate: CATALOG_TTL, tags: ["catalog", "departments"] }
+);
+
+/**
+ * All blog articles, newest first — now sourced from the DB (so they can be
+ * edited via the same review flow as lessons) but returned in the exact
+ * `Article` shape the blog pages already expect, so rendering + SEO are
+ * unchanged. Cached under the `catalog` tag; accepting an article edit
+ * revalidates it.
+ */
+export const getArticles = unstable_cache(
+  async (): Promise<Article[]> => {
+    const supabase = createPublicClient();
+    const { data } = await supabase
+      .from("articles")
+      .select("slug, title, description, keywords, date, read_mins, content")
+      .order("date", { ascending: false })
+      .order("sort_order", { ascending: true });
+    type Row = {
+      slug: string;
+      title: string;
+      description: string;
+      keywords: string[] | null;
+      date: string;
+      read_mins: number;
+      content: string;
+    };
+    return ((data as unknown as Row[]) ?? []).map((a) => ({
+      slug: a.slug,
+      title: a.title,
+      description: a.description,
+      keywords: a.keywords ?? [],
+      date: a.date,
+      readMins: a.read_mins,
+      content: a.content,
+    }));
+  },
+  ["articles-all"],
+  { revalidate: CATALOG_TTL, tags: ["catalog", "articles"] }
 );
 
 /**

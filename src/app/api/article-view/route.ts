@@ -1,16 +1,14 @@
 import { NextResponse } from "next/server";
-import { ARTICLES } from "@/lib/blog-data";
+import { getArticles } from "@/lib/queries";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { rateLimit } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
 // Anonymous readers count, so this endpoint takes no auth. Validate the slug
-// against the real article list up front so junk/unknown slugs never create
-// rows. Insert with the service-role client, which bypasses the (policy-less)
-// RLS on `article_views`.
-const SLUGS = new Set(ARTICLES.map((a) => a.slug));
-
+// against the real (DB-backed, cached) article list up front so junk/unknown
+// slugs never create rows. Insert with the service-role client, which bypasses
+// the (policy-less) RLS on `article_views`.
 export async function POST(req: Request) {
   let body: Record<string, unknown> = {};
   try {
@@ -20,7 +18,8 @@ export async function POST(req: Request) {
   }
 
   const slug = typeof body.slug === "string" ? body.slug : "";
-  if (!SLUGS.has(slug)) {
+  const slugs = new Set((await getArticles()).map((a) => a.slug));
+  if (!slugs.has(slug)) {
     return new NextResponse(null, { status: 400 });
   }
 
