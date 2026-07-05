@@ -444,3 +444,74 @@ export async function getAdminStats(): Promise<AdminStats> {
     articleViews,
   };
 }
+
+export type PendingEdit = {
+  id: string;
+  lessonId: string;
+  lessonTitle: string;
+  lessonPath: string;
+  editor: string;
+  note: string | null;
+  original: string;
+  proposed: string;
+  createdAt: string;
+};
+
+/** Pending community edit suggestions, newest first (admin panel review queue). */
+export async function getPendingEdits(): Promise<PendingEdit[]> {
+  const admin = createAdminClient();
+  const { data: edits } = await admin
+    .from("content_edits")
+    .select(
+      "id, lesson_id, editor_id, original_content, proposed_content, note, created_at"
+    )
+    .eq("status", "pending")
+    .order("created_at", { ascending: false })
+    .limit(100);
+  if (!edits?.length) return [];
+
+  const lessonIds = [...new Set(edits.map((e) => e.lesson_id as string))];
+  const editorIds = [...new Set(edits.map((e) => e.editor_id as string))];
+
+  const [{ data: lessons }, { data: profs }] = await Promise.all([
+    admin
+      .from("lessons")
+      .select("id, slug, title, modules(slug, departments(slug))")
+      .in("id", lessonIds),
+    admin.from("profiles").select("id, full_name, username").in("id", editorIds),
+  ]);
+
+  type LessonRow = {
+    id: string;
+    slug: string;
+    title: string;
+    modules: { slug: string; departments: { slug: string } | null } | null;
+  };
+  const lessonById = new Map(
+    ((lessons as unknown as LessonRow[]) ?? []).map((l) => [l.id, l])
+  );
+  const nameById = new Map(
+    ((profs as { id: string; full_name: string | null; username: string | null }[]) ?? []).map(
+      (p) => [p.id, p.full_name || p.username || "A member"]
+    )
+  );
+
+  return edits.map((e) => {
+    const l = lessonById.get(e.lesson_id as string);
+    const deptSlug = l?.modules?.departments?.slug ?? "";
+    const modSlug = l?.modules?.slug ?? "";
+    const path =
+      l && deptSlug && modSlug ? `/guides/${deptSlug}/${modSlug}/${l.slug}` : "/guides";
+    return {
+      id: e.id as string,
+      lessonId: e.lesson_id as string,
+      lessonTitle: l?.title ?? "Unknown lesson",
+      lessonPath: path,
+      editor: nameById.get(e.editor_id as string) ?? "A member",
+      note: (e.note as string) ?? null,
+      original: (e.original_content as string) ?? "",
+      proposed: (e.proposed_content as string) ?? "",
+      createdAt: e.created_at as string,
+    };
+  });
+}

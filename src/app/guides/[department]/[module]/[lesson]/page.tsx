@@ -28,6 +28,7 @@ import { getSession } from "@/lib/auth";
 import { deptMeta, inkFor } from "@/lib/departments";
 import { Icon } from "@/lib/icon-map";
 import { Markdown, extractHeadings } from "@/components/markdown";
+import { SuggestEdit } from "@/components/lesson/suggest-edit";
 import { LessonActions } from "@/components/lesson/lesson-actions";
 import { LessonComplete } from "@/components/lesson/lesson-complete";
 import {
@@ -358,6 +359,14 @@ export default async function LessonPage({
             <Reveal>
               <Markdown content={content} />
             </Reveal>
+
+            <SuggestEdit
+              lessonId={les.id}
+              lessonTitle={les.title}
+              lessonPath={lessonPath}
+              content={content}
+              isLoggedIn={!!user}
+            />
 
             {/* key takeaways */}
             {takeaways.length > 0 && (
