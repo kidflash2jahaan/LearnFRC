@@ -476,6 +476,158 @@ export async function getTopRecruiters(limit = 10): Promise<Recruiter[]> {
     .slice(0, limit);
 }
 
+// ── Public contributions feed ────────────────────────────────────────────────
+// A read-only, public view of community edit/lesson suggestions — what's open
+// and what's been resolved — so anyone can see what's being improved (no more
+// "black box"). Contributors are shown by USERNAME only, never real names.
+export type PublicContribution = {
+  id: string;
+  kind: "edit" | "submission";
+  targetTitle: string;
+  targetPath: string | null;
+  byUsername: string | null;
+  note: string | null;
+  date: string;
+  status: "open" | "merged" | "declined";
+};
+
+type CEditRow = {
+  id: string;
+  content_type: string | null;
+  lesson_id: string | null;
+  article_id: string | null;
+  editor_id: string;
+  note: string | null;
+  created_at: string;
+  reviewed_at: string | null;
+  status: string;
+};
+type CSubRow = {
+  id: string;
+  submitter_id: string;
+  department_id: string;
+  new_module_title: string | null;
+  title: string;
+  note: string | null;
+  created_at: string;
+  reviewed_at: string | null;
+  status: string;
+};
+type LessonJoin = {
+  id: string;
+  slug: string;
+  title: string;
+  modules: { slug: string; departments: { slug: string } | null } | null;
+};
+
+const EDIT_FEED_COLS =
+  "id, content_type, lesson_id, article_id, editor_id, note, created_at, reviewed_at, status";
+const SUB_FEED_COLS =
+  "id, submitter_id, department_id, new_module_title, title, note, created_at, reviewed_at, status";
+
+function statusOf(s: string): PublicContribution["status"] {
+  return s === "pending" ? "open" : s === "accepted" ? "merged" : "declined";
+}
+
+export const getPublicContributions = unstable_cache(
+  async (): Promise<{ open: PublicContribution[]; resolved: PublicContribution[] }> => {
+    const admin = createAdminClient();
+    const [openEdits, openSubs, doneEdits, doneSubs] = await Promise.all([
+      admin.from("content_edits").select(EDIT_FEED_COLS).eq("status", "pending").order("created_at", { ascending: false }).limit(60),
+      admin.from("content_submissions").select(SUB_FEED_COLS).eq("status", "pending").order("created_at", { ascending: false }).limit(60),
+      admin.from("content_edits").select(EDIT_FEED_COLS).in("status", ["accepted", "rejected"]).order("reviewed_at", { ascending: false }).limit(12),
+      admin.from("content_submissions").select(SUB_FEED_COLS).in("status", ["accepted", "rejected"]).order("reviewed_at", { ascending: false }).limit(12),
+    ]);
+
+    const editRows = [
+      ...((openEdits.data as unknown as CEditRow[]) ?? []),
+      ...((doneEdits.data as unknown as CEditRow[]) ?? []),
+    ];
+    const subRows = [
+      ...((openSubs.data as unknown as CSubRow[]) ?? []),
+      ...((doneSubs.data as unknown as CSubRow[]) ?? []),
+    ];
+
+    const lessonIds = [...new Set(editRows.map((e) => e.lesson_id).filter(Boolean))] as string[];
+    const articleIds = [...new Set(editRows.map((e) => e.article_id).filter(Boolean))] as string[];
+    const userIds = [
+      ...new Set([...editRows.map((e) => e.editor_id), ...subRows.map((s) => s.submitter_id)].filter(Boolean)),
+    ] as string[];
+
+    const [lz, az, uz] = await Promise.all([
+      lessonIds.length
+        ? admin.from("lessons").select("id, slug, title, modules(slug, departments(slug))").in("id", lessonIds)
+        : Promise.resolve({ data: [] }),
+      articleIds.length
+        ? admin.from("articles").select("id, slug, title").in("id", articleIds)
+        : Promise.resolve({ data: [] as { id: string; slug: string; title: string }[] }),
+      userIds.length
+        ? admin.from("profiles").select("id, username").in("id", userIds)
+        : Promise.resolve({ data: [] as { id: string; username: string | null }[] }),
+    ]);
+
+    const lById = new Map(((lz.data as unknown as LessonJoin[]) ?? []).map((l) => [l.id, l]));
+    const aById = new Map(
+      ((az.data as { id: string; slug: string; title: string }[]) ?? []).map((a) => [a.id, a])
+    );
+    const uById = new Map(
+      ((uz.data as { id: string; username: string | null }[]) ?? []).map((u) => [u.id, u.username])
+    );
+
+    const mapEdit = (e: CEditRow): PublicContribution => {
+      let targetTitle = "content";
+      let targetPath: string | null = null;
+      if (e.content_type === "article") {
+        const a = aById.get(e.article_id as string);
+        targetTitle = a?.title ?? "an article";
+        targetPath = a ? `/blog/${a.slug}` : null;
+      } else {
+        const l = lById.get(e.lesson_id as string);
+        targetTitle = l?.title ?? "a lesson";
+        const ds = l?.modules?.departments?.slug;
+        const ms = l?.modules?.slug;
+        targetPath = l && ds && ms ? `/guides/${ds}/${ms}/${l.slug}` : null;
+      }
+      return {
+        id: e.id,
+        kind: "edit",
+        targetTitle,
+        targetPath,
+        byUsername: uById.get(e.editor_id) ?? null,
+        note: e.note,
+        date: (e.status === "pending" ? e.created_at : e.reviewed_at) ?? e.created_at,
+        status: statusOf(e.status),
+      };
+    };
+    const mapSub = (s: CSubRow): PublicContribution => ({
+      id: s.id,
+      kind: "submission",
+      targetTitle: s.title,
+      targetPath: null,
+      byUsername: uById.get(s.submitter_id) ?? null,
+      note: s.note ?? (s.new_module_title ? `Proposes a new module: ${s.new_module_title}` : null),
+      date: (s.status === "pending" ? s.created_at : s.reviewed_at) ?? s.created_at,
+      status: statusOf(s.status),
+    });
+
+    const byDateDesc = (a: PublicContribution, b: PublicContribution) => (a.date < b.date ? 1 : -1);
+    const open = [
+      ...((openEdits.data as unknown as CEditRow[]) ?? []).map(mapEdit),
+      ...((openSubs.data as unknown as CSubRow[]) ?? []).map(mapSub),
+    ].sort(byDateDesc);
+    const resolved = [
+      ...((doneEdits.data as unknown as CEditRow[]) ?? []).map(mapEdit),
+      ...((doneSubs.data as unknown as CSubRow[]) ?? []).map(mapSub),
+    ]
+      .sort(byDateDesc)
+      .slice(0, 15);
+
+    return { open, resolved };
+  },
+  ["public-contributions"],
+  { revalidate: 60, tags: ["contributions"] }
+);
+
 /** How many people a given user has referred. Per-user, uncached. */
 export async function getReferralCount(userId: string): Promise<number> {
   const supabase = await createClient();

@@ -9,6 +9,7 @@ const LEARN = [
   { label: "Articles", href: "/blog" },
   { label: "Glossary", href: "/glossary" },
   { label: "Resources", href: "/resources" },
+  { label: "Contributions", href: "/contributions" },
 ];
 
 const ACCOUNT = [
@@ -125,7 +126,14 @@ export function Footer() {
           >
             Open the lesson and suggest an edit
           </Link>{" "}
-          — corrections are reviewed and applied fast.
+          — every open suggestion is public on the{" "}
+          <Link
+            href="/contributions"
+            className="underline underline-offset-2 transition-colors hover:text-primary"
+          >
+            contributions page
+          </Link>
+          .
         </p>
       </div>
     </footer>
