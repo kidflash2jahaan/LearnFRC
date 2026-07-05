@@ -116,18 +116,16 @@ export function Footer() {
         </div>
 
         <p className="mt-6 max-w-3xl text-xs leading-relaxed text-muted-foreground">
-          LearnFRC lessons are AI-assisted: drafted from primary sources like
-          the WPILib docs, game manual, and vendor sites, then reviewed and
-          fact-checked for accuracy. Spot something off?{" "}
-          <a
-            href="https://www.chiefdelphi.com"
-            target="_blank"
-            rel="noopener noreferrer"
+          LearnFRC is in beta. Lessons are AI-assisted — drafted from primary
+          sources like the WPILib docs, the game manual, and vendor sites, then
+          reviewed for accuracy. Spot something off?{" "}
+          <Link
+            href="/guides"
             className="underline underline-offset-2 transition-colors hover:text-primary"
           >
-            Flag it on Chief Delphi
-          </a>{" "}
-          and it gets fixed fast.
+            Open the lesson and suggest an edit
+          </Link>{" "}
+          — corrections are reviewed and applied fast.
         </p>
       </div>
     </footer>
