@@ -81,8 +81,8 @@ export default async function PublicProfilePage({
   if (!profile) notFound();
 
   const p = profile as Profile;
-  const displayName =
-    (p.hide_name ? p.username : p.full_name || p.username) || username;
+  // Public profile — identify by username only; real names are never public.
+  const displayName = p.username || username;
   const level = Math.floor(p.xp / 100) + 1;
   const xpIntoLevel = p.xp % 100;
   const xpToNext = 100 - xpIntoLevel;
@@ -143,11 +143,8 @@ export default async function PublicProfilePage({
           </RiseItem>
           <RiseItem>
             <h1 className="mt-5 text-balance font-display text-4xl font-extrabold leading-[1.05] sm:text-5xl">
-              <span style={BRAND_GRADIENT}>{displayName}</span>
+              <span style={BRAND_GRADIENT}>@{displayName}</span>
             </h1>
-          </RiseItem>
-          <RiseItem>
-            <p className="mt-2 text-base text-muted-foreground">@{p.username}</p>
           </RiseItem>
           <RiseItem>
             <div className="mt-5 flex flex-wrap items-center gap-2">

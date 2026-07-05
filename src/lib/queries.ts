@@ -392,7 +392,8 @@ export const getTeamLeaderboard = unstable_cache(
  * Auto-team view: everyone who signed up with the same FRC team number, plus
  * each member's progress. Uses the service-role client because lesson_progress
  * is per-user RLS-locked. By design, teammates can see each other's progress
- * (disclosed in the Privacy Policy); display names still honor `hide_name`.
+ * (disclosed in the Privacy Policy); members are shown by username only — no
+ * real names are ever exposed on public surfaces.
  *
  * Left uncached: it shows live per-member progress and isn't on the hot public
  * catalog path.
@@ -426,7 +427,7 @@ export async function getTeamByNumber(
   const members: TeamMemberProgress[] = rows
     .map((p) => ({
       userId: p.id,
-      name: (!p.hide_name && (p.full_name || p.username)) || p.username || "Member",
+      name: p.username || "Member",
       username: p.username,
       avatarUrl: p.avatar_url,
       role: "member",
@@ -466,8 +467,7 @@ export async function getTopRecruiters(limit = 10): Promise<Recruiter[]> {
   return ((profs as Profile[]) ?? [])
     .map((p) => ({
       id: p.id,
-      name:
-        (!p.hide_name && (p.full_name || p.username)) || p.username || "Learner",
+      name: p.username || "Learner",
       username: p.username,
       avatarUrl: p.avatar_url,
       referrals: counts[p.id] ?? 0,

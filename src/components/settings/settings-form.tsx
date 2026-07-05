@@ -13,7 +13,6 @@ import {
   Hash,
   Link2,
   BadgeCheck,
-  EyeOff,
   Trash2,
   AlertTriangle,
 } from "lucide-react";
@@ -61,7 +60,6 @@ export function SettingsForm({
   const [fullName, setFullName] = React.useState(profile?.full_name ?? "");
   const [username, setUsername] = React.useState(profile?.username ?? "");
   const [avatarUrl, setAvatarUrl] = React.useState(profile?.avatar_url ?? "");
-  const [hideName, setHideName] = React.useState(profile?.hide_name ?? false);
 
   // Toast on success (fires once per successful submit)
   const lastSuccess = React.useRef(false);
@@ -204,6 +202,10 @@ export function SettingsForm({
             disabled={isPending}
           />
         </Field>
+        <p className="mt-1.5 text-xs text-muted-foreground">
+          Private — only used on your certificate. Never shown publicly; everyone
+          sees your username.
+        </p>
       </motion.div>
 
       {/* Username + Team number */}
@@ -342,42 +344,6 @@ export function SettingsForm({
         <p id="bio-help" className="mt-1.5 text-xs text-muted-foreground">
           Up to 500 characters. Appears on your public profile.
         </p>
-      </motion.div>
-
-      {/* Privacy: hide full name */}
-      <motion.div
-        variants={item}
-        className="flex items-center justify-between gap-4 rounded-2xl border border-border bg-secondary/30 p-4"
-      >
-        <div className="min-w-0">
-          <div className="flex items-center gap-2 text-sm font-medium">
-            <EyeOff className="h-4 w-4 text-muted-foreground" /> Hide my full name
-          </div>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Show your username instead of your real name on the leaderboard and
-            your public profile.
-          </p>
-        </div>
-        <input type="hidden" name="hide_name" value={hideName ? "true" : "false"} />
-        <button
-          type="button"
-          role="switch"
-          aria-checked={hideName}
-          aria-label="Hide my full name"
-          onClick={() => setHideName((v) => !v)}
-          disabled={isPending}
-          className={cn(
-            "relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors disabled:opacity-50",
-            hideName ? "bg-primary" : "bg-muted"
-          )}
-        >
-          <span
-            className={cn(
-              "inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform",
-              hideName ? "translate-x-5" : "translate-x-0.5"
-            )}
-          />
-        </button>
       </motion.div>
 
       {/* Submit */}

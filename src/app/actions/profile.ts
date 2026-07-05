@@ -24,7 +24,6 @@ export async function updateProfile(
   const avatar_url = String(formData.get("avatar_url") || "").trim() || null;
   if (avatar_url && !/^https?:\/\//i.test(avatar_url))
     return { error: "Avatar URL must start with http:// or https://" };
-  const hide_name = String(formData.get("hide_name") || "") === "true";
   const usernameRaw = String(formData.get("username") || "").trim();
   const teamStr = String(formData.get("team_number") || "").trim();
   const roleRaw = String(formData.get("role") || "student");
@@ -54,7 +53,7 @@ export async function updateProfile(
 
   const { error } = await supabase
     .from("profiles")
-    .update({ full_name, bio, username, team_number, role, avatar_url, hide_name })
+    .update({ full_name, bio, username, team_number, role, avatar_url })
     .eq("id", user.id);
   if (error) return { error: error.message };
 

@@ -43,9 +43,10 @@ const HEADLINE_GRADIENT: CSSProperties = {
   color: "transparent",
 };
 
+// Public surfaces never show real names — learners are identified by username
+// only. Real names live in private/own views (dashboard, settings, certificate).
 function displayName(p: Profile): string {
-  if (p.hide_name) return p.username?.trim() || "Learner";
-  return p.full_name?.trim() || p.username?.trim() || "Learner";
+  return p.username?.trim() || "Learner";
 }
 
 function toEntry(

@@ -147,6 +147,10 @@ export function AuthForm({
               disabled={isPending}
             />
           </Field>
+          <p className="mt-1.5 text-xs text-muted-foreground">
+            Private — only used on your certificate. Never shown publicly;
+            everyone sees your username.
+          </p>
         </motion.div>
       )}
 
@@ -256,25 +260,6 @@ export function AuthForm({
           </p>
         )}
       </motion.div>
-
-      {isSignup && (
-        <motion.div variants={item}>
-          <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-border bg-secondary/40 p-3.5 transition-colors hover:bg-secondary/60">
-            <input
-              type="checkbox"
-              name="hide_name"
-              value="true"
-              disabled={isPending}
-              className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-primary"
-            />
-            <span className="text-sm leading-snug text-muted-foreground">
-              <span className="font-medium text-foreground">Hide my real name</span> on the public
-              leaderboard and profile — show my username instead. You can change this anytime in
-              settings.
-            </span>
-          </label>
-        </motion.div>
-      )}
 
       <motion.div variants={item} className="pt-1">
         <Button

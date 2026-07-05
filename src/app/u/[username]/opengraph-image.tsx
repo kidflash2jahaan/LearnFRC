@@ -20,13 +20,13 @@ export default async function Image({
     const res = await fetch(
       `${url}/rest/v1/profiles?username=eq.${encodeURIComponent(
         username
-      )}&select=full_name,username,team_number,xp,hide_name`,
+      )}&select=username,team_number,xp`,
       { headers: { apikey: anon, Authorization: `Bearer ${anon}` }, cache: "no-store" }
     );
     const rows = await res.json();
     const p = Array.isArray(rows) ? rows[0] : null;
     if (p) {
-      name = (p.hide_name ? p.username : p.full_name || p.username) || username;
+      name = p.username || username;
       team = p.team_number ?? null;
       xp = p.xp ?? 0;
     }
@@ -75,11 +75,12 @@ export default async function Image({
 
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           <div style={{ fontSize: 26, color: "#94a2bf" }}>FRC learning profile</div>
-          <div style={{ fontSize: 76, fontWeight: 800, letterSpacing: -2 }}>{name}</div>
-          <div style={{ display: "flex", alignItems: "center", gap: 18, fontSize: 30, color: "#5b8cff" }}>
-            <span>@{username}</span>
-            {team ? <span style={{ color: "#94a2bf" }}>· Team {team}</span> : null}
-          </div>
+          <div style={{ fontSize: 76, fontWeight: 800, letterSpacing: -2 }}>@{name}</div>
+          {team ? (
+            <div style={{ display: "flex", alignItems: "center", gap: 18, fontSize: 30, color: "#5b8cff" }}>
+              <span style={{ color: "#94a2bf" }}>Team {team}</span>
+            </div>
+          ) : null}
         </div>
 
         <div style={{ display: "flex", gap: 20 }}>
