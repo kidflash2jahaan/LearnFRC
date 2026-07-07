@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { firstProfaneField } from "@/lib/profanity";
 
 export type ProfileState = { error?: string; success?: boolean } | undefined;
 
@@ -50,6 +51,22 @@ export async function updateProfile(
   }
 
   const role = ROLES.includes(roleRaw) ? roleRaw : "student";
+
+  // Block offensive username / name / bio on edit (local, no AI).
+  const badField = firstProfaneField({
+    username: username ?? "",
+    full_name: full_name ?? "",
+    bio: bio ?? "",
+  });
+  if (badField)
+    return {
+      error:
+        badField === "username"
+          ? "That username isn't allowed — please choose another."
+          : badField === "full_name"
+            ? "That name isn't allowed — please use a different one."
+            : "Please remove the inappropriate language from your bio.",
+    };
 
   const { error } = await supabase
     .from("profiles")

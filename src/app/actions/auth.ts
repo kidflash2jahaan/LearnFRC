@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { firstProfaneField } from "@/lib/profanity";
 
 export type AuthState = { error?: string } | undefined;
 
@@ -77,6 +78,16 @@ export async function signUp(
   if (!username || username.length < 3)
     return {
       error: "Choose a username — at least 3 characters (letters, numbers, _).",
+    };
+
+  // Block offensive usernames / names at creation time (local, no AI).
+  const badField = firstProfaneField({ username, full_name: fullName });
+  if (badField)
+    return {
+      error:
+        badField === "username"
+          ? "That username isn't allowed — please choose another."
+          : "That name isn't allowed — please use a different one.",
     };
 
   let teamNum: number | null = null;
