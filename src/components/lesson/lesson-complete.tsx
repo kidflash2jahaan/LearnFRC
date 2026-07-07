@@ -85,8 +85,12 @@ export function LessonComplete({
     if (!authed) return requireAuth();
     setCompleted(value);
     if (value) setBurst((b) => b + 1);
+    // Send the quiz answers so the server can verify the pass (the gate is
+    // enforced server-side, not just here).
+    const answerArr =
+      value && hasQuiz ? quiz.map((_, i) => answers[i]) : undefined;
     startTransition(async () => {
-      const r = await setLessonComplete(lessonId, deptSlug, value);
+      const r = await setLessonComplete(lessonId, deptSlug, value, answerArr);
       if (r?.error) {
         setCompleted(!value);
         toast.error(r.error);

@@ -87,7 +87,8 @@ async function awardAchievements(supabase: SupabaseClient, userId: string) {
 export async function setLessonComplete(
   lessonId: string,
   deptSlug: string,
-  completed: boolean
+  completed: boolean,
+  answers?: number[]
 ): Promise<{ ok?: boolean; error?: string; completed?: boolean }> {
   const supabase = await createClient();
   const {
@@ -96,6 +97,25 @@ export async function setLessonComplete(
   if (!user) return { error: "You must be signed in." };
 
   if (completed) {
+    // Server-enforced quiz gate: if the lesson has a quiz, it only counts as
+    // complete when every answer is correct. Verified here — not just in the UI —
+    // so a completion can't be recorded by calling this action directly.
+    const { data: lesson } = await supabase
+      .from("lessons")
+      .select("quiz")
+      .eq("id", lessonId)
+      .maybeSingle();
+    const quiz = (lesson?.quiz as { answer: number }[] | null) ?? [];
+    if (quiz.length > 0) {
+      const a = Array.isArray(answers) ? answers : [];
+      const allCorrect =
+        a.length === quiz.length && quiz.every((q, i) => a[i] === q.answer);
+      if (!allCorrect)
+        return {
+          error: "Answer every quiz question correctly to complete this lesson.",
+        };
+    }
+
     // Leaderboard integrity: a real learner reads before completing, so no one
     // legitimately marks dozens of lessons done per minute. Cap the rate per
     // user (keyed to their id, not just IP) so the board can't be farmed by a
