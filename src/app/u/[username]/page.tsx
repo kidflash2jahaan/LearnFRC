@@ -73,9 +73,11 @@ export default async function PublicProfilePage({
   const { username } = await params;
   const supabase = await createClient();
 
+  // Public profile — explicit safe columns only. Never select `full_name`: it's
+  // PII and the anon/authenticated API role is no longer granted it.
   const { data: profile } = await supabase
     .from("profiles")
-    .select("*")
+    .select("id, username, avatar_url, team_number, bio, role, xp, created_at")
     .eq("username", username)
     .maybeSingle();
   if (!profile) notFound();

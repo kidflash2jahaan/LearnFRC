@@ -35,8 +35,10 @@ const MODULE_COLS =
 const LESSON_LIST_COLS =
   "id, module_id, slug, title, summary, estimated_minutes, sort_order";
 // Profile columns needed by the leaderboard/podium (drops the free-text `bio`).
+// No `full_name`: the board shows usernames only, and full_name is PII the
+// public/anon API role can no longer read anyway.
 const PROFILE_BOARD_COLS =
-  "id, username, full_name, avatar_url, team_number, role, xp, hide_name, created_at";
+  "id, username, avatar_url, team_number, role, xp, hide_name, created_at";
 
 function sortModules(modules: Module[]): Module[] {
   return [...(modules ?? [])]
@@ -252,7 +254,10 @@ export async function getBookmarkedLessonIds(
 }
 
 export async function getProfile(userId: string): Promise<Profile | null> {
-  const supabase = await createClient();
+  // Own-profile loader (getSession passes the signed-in user's own id). Uses the
+  // service-role client because `full_name` is now readable only server-side —
+  // the anon/authenticated API roles are barred from SELECTing it (PII lockdown).
+  const supabase = createAdminClient();
   const { data } = await supabase
     .from("profiles")
     .select(
@@ -271,7 +276,8 @@ export const getOverviewStats = unstable_cache(
       supabase.from("departments").select("*", { count: "exact", head: true }),
       supabase.from("modules").select("*", { count: "exact", head: true }),
       supabase.from("lessons").select("*", { count: "exact", head: true }),
-      supabase.from("profiles").select("*", { count: "exact", head: true }),
+      // count only (no full_name egress; "*" would touch the now-restricted column)
+      supabase.from("profiles").select("id", { count: "exact", head: true }),
     ]);
     return {
       deptCount: depts.count ?? 0,
@@ -633,7 +639,7 @@ export async function getReferralCount(userId: string): Promise<number> {
   const supabase = await createClient();
   const { count } = await supabase
     .from("profiles")
-    .select("*", { count: "exact", head: true })
+    .select("id", { count: "exact", head: true })
     .eq("referred_by", userId);
   return count ?? 0;
 }
