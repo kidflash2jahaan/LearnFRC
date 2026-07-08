@@ -22,9 +22,13 @@ import {
   Glow,
 } from "@/components/motion/primitives";
 import { PitRow, type PitStop } from "./_pit-row";
+import { JsonLd } from "@/components/json-ld";
+
+const SITE =
+  process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.systemerr.com";
 
 export const metadata: Metadata = {
-  title: "Guides",
+  title: "FRC Guides — Learn Every Department, Free",
   description:
     "Explore every FRC department — mechanical, CAD, programming, electrical, business, outreach, scouting, drive team and more. Structured guides from fundamentals to advanced.",
   alternates: { canonical: "/guides" },
@@ -67,6 +71,20 @@ export default async function GuidesPage() {
   const totalModules = departments.reduce((s, d) => s + d.moduleCount, 0);
   const totalLessons = departments.reduce((s, d) => s + d.lessonCount, 0);
 
+  // Catalog structured data — tells search engines this is a browsable set of
+  // FRC department guides, each linking to its own curriculum.
+  const catalogLd = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name: "FRC guides by department",
+    itemListElement: departments.map((d, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      name: d.name,
+      url: `${SITE}/guides/${d.slug}`,
+    })),
+  };
+
   // Signature hero device: the first stops on the pit walk.
   const pitStops: PitStop[] = departments.slice(0, 6).map((d) => ({
     slug: d.slug,
@@ -85,6 +103,8 @@ export default async function GuidesPage() {
           { size: "540px", pos: { left: "30%", top: "520px" }, color: "#c8b6ff", opacity: 0.45, delay: 4 },
         ]}
       />
+
+      <JsonLd data={catalogLd} />
 
       {/* ============================ HERO — walk the pit ============================ */}
       <section className="mx-auto grid max-w-7xl items-center gap-12 px-4 pb-16 pt-28 sm:px-6 lg:grid-cols-2 lg:gap-10 lg:pb-20 lg:pt-36 lg:px-8">

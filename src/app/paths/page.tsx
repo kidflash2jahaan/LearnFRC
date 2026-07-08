@@ -18,7 +18,7 @@ import {
 import { RoutePreview } from "./_route-preview";
 
 export const metadata: Metadata = {
-  title: "Learning Paths",
+  title: "FRC Learning Paths — Guided Tracks by Goal",
   description:
     "Guided, multi-department journeys through FRC — onboarding, programming, build & design, the Impact Award, and game day.",
   alternates: { canonical: "/paths" },

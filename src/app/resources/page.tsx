@@ -20,7 +20,7 @@ import { ToolboxPanel } from "./_toolbox-panel";
 import { ShelfRail } from "./_shelf-rail";
 
 export const metadata: Metadata = {
-  title: "Resources",
+  title: "FRC Resources — Tools, Docs & Links",
   description:
     "The essential FRC links — official docs, software, vendors, community, and learning resources, plus the sources behind every LearnFRC guide.",
   alternates: { canonical: "/resources" },
