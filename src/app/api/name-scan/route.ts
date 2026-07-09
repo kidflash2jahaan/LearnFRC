@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { sendEmail, adminNotifyHtml } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 
@@ -121,43 +120,6 @@ export async function POST(req: Request) {
     }
   }
 
-  if (done.length) {
-    const adminEmail = (process.env.ADMIN_EMAILS || "").split(",")[0]?.trim();
-    if (adminEmail) {
-      const esc = (s: string) => s.replace(/</g, "&lt;");
-      const rowsHtml = done
-        .map(
-          (x) =>
-            `<div style="margin:10px 0;padding:10px 12px;background:#070b14;border:1px solid #1d2740;border-radius:10px">
-              <div style="color:#e8edf7">${
-                x.newUsername
-                  ? `username <span style="color:#ff9b9b">${esc(x.oldUsername || "")}</span> → <span style="color:#8be9c3">${esc(x.newUsername)}</span>`
-                  : ""
-              }${x.oldFullName && x.newUsername ? "<br>" : ""}${
-                x.oldFullName && x.newUsername === null
-                  ? ""
-                  : x.oldFullName
-                    ? `full name <span style="color:#ff9b9b">${esc(x.oldFullName)}</span> cleared`
-                    : ""
-              }</div>
-              ${x.reason ? `<div style="margin-top:4px;color:#94a2bf;font-size:13px">${esc(x.reason).slice(0, 300)}</div>` : ""}
-            </div>`
-        )
-        .join("");
-      await sendEmail({
-        to: adminEmail,
-        subject: `🛡️ ${done.length} offensive name${done.length === 1 ? "" : "s"} changed`,
-        html: adminNotifyHtml({
-          heading: "Names auto-moderated",
-          rows: [{ label: "Names changed", value: String(done.length) }],
-          bodyHtml: `<div style="margin-top:8px">${rowsHtml}</div>`,
-          ctaText: "Open the admin panel",
-          ctaUrl: `${process.env.NEXT_PUBLIC_SITE_URL || ""}/admin`,
-          note: "Old values are saved in name_moderation_log, so any wrong change can be reverted.",
-        }),
-      });
-    }
-  }
-
-  return NextResponse.json({ changed: done.length });
+  // No email here — the scheduled routine folds `done` into one combined digest.
+  return NextResponse.json({ changed: done.length, done });
 }

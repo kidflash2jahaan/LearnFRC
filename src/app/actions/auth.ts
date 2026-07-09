@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { firstProfaneField } from "@/lib/profanity";
@@ -99,6 +99,29 @@ export async function signUp(
 
   const supabase = await createClient();
 
+  // Client IP (Vercel forwards it) — used for the ban list and stored per-account
+  // so a repeat offender's whole IP can be banned by the scheduled scan.
+  const hdrs = await headers();
+  const signupIp =
+    (hdrs.get("x-forwarded-for") || "").split(",")[0].trim() ||
+    hdrs.get("x-real-ip") ||
+    null;
+
+  // Ban list — reject banned emails or banned IPs with a generic message.
+  {
+    const banAdmin = createAdminClient();
+    const [{ data: bannedEmail }, { data: bannedIp }] = await Promise.all([
+      banAdmin.from("banned_emails").select("email").eq("email", email.toLowerCase()).maybeSingle(),
+      signupIp
+        ? banAdmin.from("banned_ips").select("ip").eq("ip", signupIp).maybeSingle()
+        : Promise.resolve({ data: null as { ip: string } | null }),
+    ]);
+    if (bannedEmail || bannedIp)
+      return {
+        error: "This account can't be created. If you believe this is a mistake, contact support.",
+      };
+  }
+
   // Friendly pre-check for username collision (avoids cryptic DB error)
   if (username) {
     const { data: taken } = await supabase
@@ -149,7 +172,10 @@ export async function signUp(
     const source = (
       ref ? "Referral" : cookieStore.get("lf_src")?.value || "Direct"
     ).slice(0, 40);
-    const update: { source: string; referred_by?: string } = { source };
+    const update: { source: string; referred_by?: string; signup_ip?: string } = {
+      source,
+    };
+    if (signupIp) update.signup_ip = signupIp;
     if (ref) {
       const { data: referrer } = await admin
         .from("profiles")

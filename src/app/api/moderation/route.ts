@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { revalidateTag } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { sendEmail, adminNotifyHtml } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 
@@ -276,42 +275,6 @@ export async function POST(req: Request) {
   // Revalidate cached content if anything was published, so it goes live.
   if (done.some((x) => x.decision !== "rejected")) revalidateTag("catalog", "max");
 
-  // Digest email — only when something actually happened.
-  if (done.length) {
-    const admin_email = (process.env.ADMIN_EMAILS || "").split(",")[0]?.trim();
-    if (admin_email) {
-      const label = (d: string) =>
-        d === "approved" ? "✅ Approved" : d === "rejected" ? "❌ Rejected" : "✏️ Edited &amp; approved";
-      const rowsHtml = done
-        .map(
-          (x) =>
-            `<div style="margin:10px 0;padding:10px 12px;background:#070b14;border:1px solid #1d2740;border-radius:10px">
-              <div style="font-weight:600;color:#e8edf7">${label(x.decision)} — <span style="color:#c8d3ee">${x.title.replace(/</g, "&lt;")}</span> <span style="color:#94a2bf;font-size:12px">(${x.kind})</span></div>
-              ${x.reason ? `<div style="margin-top:4px;color:#94a2bf;font-size:13px">${x.reason.replace(/</g, "&lt;").slice(0, 400)}</div>` : ""}
-            </div>`
-        )
-        .join("");
-      const nApproved = done.filter((d) => d.decision === "approved").length;
-      const nEdited = done.filter((d) => d.decision === "edited_and_approved").length;
-      const nRejected = done.filter((d) => d.decision === "rejected").length;
-      await sendEmail({
-        to: admin_email,
-        subject: `🤖 Moderation: ${nApproved + nEdited} published, ${nRejected} rejected`,
-        html: adminNotifyHtml({
-          heading: "Auto-moderation summary",
-          rows: [
-            { label: "Approved", value: String(nApproved) },
-            { label: "Edited & approved", value: String(nEdited) },
-            { label: "Rejected", value: String(nRejected) },
-          ],
-          bodyHtml: `<div style="margin-top:8px">${rowsHtml}</div>`,
-          ctaText: "Open the admin panel",
-          ctaUrl: `${process.env.NEXT_PUBLIC_SITE_URL || ""}/admin#contributions`,
-          note: "The AI reviewed and acted on these. Anything here can be reversed in the admin panel.",
-        }),
-      });
-    }
-  }
-
-  return NextResponse.json({ applied: done.length });
+  // No email here — the scheduled routine folds `done` into one combined digest.
+  return NextResponse.json({ applied: done.length, done });
 }
