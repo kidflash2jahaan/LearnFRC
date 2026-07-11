@@ -1,13 +1,14 @@
 import type { CSSProperties } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Sparkles, CheckCircle2, ArrowRight, LayoutGrid } from "lucide-react";
+import { Sparkles, CheckCircle2, ArrowRight, LayoutGrid, Gift } from "lucide-react";
 import { Icon } from "@/lib/icon-map";
 import { deptMeta, inkFor } from "@/lib/departments";
 import { DEPT_CATALOG } from "@/lib/dept-catalog";
 import { AuthForm } from "@/components/auth/auth-form";
 import { AnimatedCounter } from "@/components/animated-counter";
 import { getSession } from "@/lib/auth";
+import { createAdminClient } from "@/lib/supabase/admin";
 import {
   Rise,
   RiseGroup,
@@ -59,6 +60,24 @@ export default async function SignupPage({
   const refValue =
     (ref || "").toLowerCase().replace(/[^a-z0-9_]/g, "") || undefined;
 
+  // If they arrived via a referral link, resolve the referrer so we can show
+  // real social proof ("@jane invited you") instead of a cold form. refValue
+  // is the referrer's username (referral links are /signup?ref=<username>).
+  let referrer: { username: string; team_number: string | null } | null = null;
+  if (refValue) {
+    const admin = createAdminClient();
+    const { data: r } = await admin
+      .from("profiles")
+      .select("username, team_number")
+      .eq("username", refValue)
+      .maybeSingle();
+    if (r?.username)
+      referrer = {
+        username: r.username as string,
+        team_number: (r.team_number as string) ?? null,
+      };
+  }
+
   return (
     <div className="relative overflow-x-clip">
       <Glow
@@ -74,19 +93,45 @@ export default async function SignupPage({
         <Rise y={24} className="w-full">
           {/* Global navbar provides branding — no page-level logo. */}
           <div className="ac-glass relative mx-auto w-full max-w-md p-6 sm:p-8">
-            <span className="ac-chip inline-flex items-center gap-2">
-              <Sparkles className="h-3.5 w-3.5 text-primary" aria-hidden />
-              <span className="ac-eyebrow">Free forever</span>
-            </span>
+            {referrer ? (
+              <>
+                <span className="ac-chip inline-flex items-center gap-2">
+                  <Gift className="h-3.5 w-3.5 text-primary" aria-hidden />
+                  <span className="ac-eyebrow">You were invited</span>
+                </span>
 
-            <h1 className="mt-5 text-balance font-display text-2xl font-extrabold leading-tight sm:text-3xl">
-              Create your free{" "}
-              <span style={BRAND_GRADIENT}>account</span>
-            </h1>
-            <p className="mt-2 text-[15px] leading-relaxed text-foreground/70">
-              A few details and you&apos;re into build season — every seat on
-              the team, unlocked.
-            </p>
+                <h1 className="mt-5 text-balance font-display text-2xl font-extrabold leading-tight sm:text-3xl">
+                  <span style={BRAND_GRADIENT}>@{referrer.username}</span>{" "}
+                  invited you to LearnFRC
+                </h1>
+                <p className="mt-2 text-[15px] leading-relaxed text-foreground/70">
+                  Join{" "}
+                  {referrer.team_number
+                    ? `the Team ${referrer.team_number} crew and `
+                    : ""}
+                  learn every part of FRC — free, forever. You{" "}
+                  <span className="font-semibold text-foreground">
+                    both get +25 XP
+                  </span>{" "}
+                  when you confirm your email.
+                </p>
+              </>
+            ) : (
+              <>
+                <span className="ac-chip inline-flex items-center gap-2">
+                  <Sparkles className="h-3.5 w-3.5 text-primary" aria-hidden />
+                  <span className="ac-eyebrow">Free forever</span>
+                </span>
+
+                <h1 className="mt-5 text-balance font-display text-2xl font-extrabold leading-tight sm:text-3xl">
+                  Create your free <span style={BRAND_GRADIENT}>account</span>
+                </h1>
+                <p className="mt-2 text-[15px] leading-relaxed text-foreground/70">
+                  A few details and you&apos;re into build season — every seat
+                  on the team, unlocked.
+                </p>
+              </>
+            )}
 
             <hr className="ac-divider my-6" />
 

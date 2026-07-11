@@ -80,8 +80,8 @@ export function InviteCard({
         ) : (
           "Be the reason your team levels up. "
         )}
-        You earn <span className="font-semibold text-foreground">+25 XP</span> for
-        everyone who signs up with your link.
+        You <span className="font-semibold text-foreground">both earn +25 XP</span>{" "}
+        when a teammate joins with your link.
       </p>
 
       <div className="relative mt-4 flex flex-col gap-2.5 sm:flex-row sm:items-center">

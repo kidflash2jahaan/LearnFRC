@@ -43,7 +43,7 @@ export function TeamChallenge({
             Challenge your team
           </p>
           <p className="text-sm leading-snug text-foreground/70">
-            They learn free — you rack up the XP and the bragging rights.
+            They learn free — you both get +25 XP and the bragging rights.
           </p>
         </div>
       </div>

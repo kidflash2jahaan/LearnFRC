@@ -57,9 +57,20 @@ export async function GET(request: Request) {
               .update({ xp: ((refUser.xp as number) ?? 0) + 25 })
               .eq("id", refUser.id);
           }
+          // Double-sided reward: the invited user also gets +25 XP as a
+          // welcome head-start, so joining through a teammate's link beats
+          // signing up cold. referral_rewarded gates this so it pays once.
+          const { data: self } = await admin
+            .from("profiles")
+            .select("xp")
+            .eq("id", data.user.id)
+            .maybeSingle();
           await admin
             .from("profiles")
-            .update({ referral_rewarded: true })
+            .update({
+              xp: ((self?.xp as number) ?? 0) + 25,
+              referral_rewarded: true,
+            })
             .eq("id", data.user.id);
         }
       }
