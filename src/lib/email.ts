@@ -42,14 +42,14 @@ export async function sendEmail({
 
 /** The one shared email frame — every LearnFRC email renders inside this. */
 export const emailShell = (inner: string) => `
-<div style="background:#060912;padding:40px 0;font-family:Inter,Arial,sans-serif">
-  <div style="max-width:520px;margin:0 auto;background:#0c1220;border:1px solid #1d2740;border-radius:18px;overflow:hidden">
-    <div style="background:linear-gradient(110deg,#2f5fff,#22d3ee);padding:28px 32px">
+<div style="background:#eef3fb;padding:40px 20px;font-family:'Helvetica Neue',Arial,sans-serif">
+  <div style="max-width:520px;margin:0 auto;background:#ffffff;border:1px solid #e2e8f5;border-radius:18px;overflow:hidden;box-shadow:0 8px 30px rgba(16,30,60,0.08)">
+    <div style="background:linear-gradient(110deg,#2560e6,#1aa9d6);padding:28px 32px">
       <div style="color:#fff;font-size:22px;font-weight:800;letter-spacing:-0.02em">LearnFRC</div>
-      <div style="color:rgba(255,255,255,0.85);font-size:13px;margin-top:2px">Master FIRST Robotics Competition</div>
+      <div style="color:rgba(255,255,255,0.9);font-size:13px;margin-top:2px">Master FIRST Robotics Competition</div>
     </div>
-    <div style="padding:30px 32px;color:#e8edf7;font-size:15px;line-height:1.6">${inner}</div>
-    <div style="padding:18px 32px;border-top:1px solid #1d2740;color:#94a2bf;font-size:12px">
+    <div style="padding:30px 32px;color:#1e2a44;font-size:15px;line-height:1.6">${inner}</div>
+    <div style="padding:18px 32px;border-top:1px solid #eef2f9;color:#64748b;font-size:12px">
       LearnFRC · Built by Jahaan Pardhanani
     </div>
   </div>
@@ -71,18 +71,18 @@ export const marketingShell = (inner: string, unsubscribeUrl: string) => {
   const site = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com";
   const address = process.env.MAILING_ADDRESS; // optional; shown only if set
   return `
-<div style="background:#060912;padding:40px 0;font-family:Inter,Arial,sans-serif">
-  <div style="max-width:520px;margin:0 auto;background:#0c1220;border:1px solid #1d2740;border-radius:18px;overflow:hidden">
-    <div style="background:linear-gradient(110deg,#2f5fff,#22d3ee);padding:28px 32px">
+<div style="background:#eef3fb;padding:40px 20px;font-family:'Helvetica Neue',Arial,sans-serif">
+  <div style="max-width:520px;margin:0 auto;background:#ffffff;border:1px solid #e2e8f5;border-radius:18px;overflow:hidden;box-shadow:0 8px 30px rgba(16,30,60,0.08)">
+    <div style="background:linear-gradient(110deg,#2560e6,#1aa9d6);padding:28px 32px">
       <div style="color:#fff;font-size:22px;font-weight:800;letter-spacing:-0.02em">LearnFRC</div>
-      <div style="color:rgba(255,255,255,0.85);font-size:13px;margin-top:2px">Master FIRST Robotics Competition</div>
+      <div style="color:rgba(255,255,255,0.9);font-size:13px;margin-top:2px">Master FIRST Robotics Competition</div>
     </div>
-    <div style="padding:30px 32px;color:#e8edf7;font-size:15px;line-height:1.6">${inner}</div>
-    <div style="padding:18px 32px;border-top:1px solid #1d2740;color:#94a2bf;font-size:12px;line-height:1.6">
+    <div style="padding:30px 32px;color:#1e2a44;font-size:15px;line-height:1.6">${inner}</div>
+    <div style="padding:18px 32px;border-top:1px solid #eef2f9;color:#64748b;font-size:12px;line-height:1.6">
       You're getting this because you have a LearnFRC account with lessons in
       progress. Manage emails in your
-      <a href="${site}/settings" style="color:#7fb0ff">settings</a> or
-      <a href="${unsubscribeUrl}" style="color:#7fb0ff">turn these off</a>.${address ? `<br/>LearnFRC · ${esc(address)}` : ""}
+      <a href="${site}/settings" style="color:#2560e6">settings</a> or
+      <a href="${unsubscribeUrl}" style="color:#2560e6">turn these off</a>.${address ? `<br/>LearnFRC · ${esc(address)}` : ""}
     </div>
   </div>
 </div>`;
@@ -116,8 +116,8 @@ export function lifecycleEmailHtml({
     <p style="margin:0 0 14px">You've completed <strong>${completed} ${completed === 1 ? "lesson" : "lessons"}</strong> on LearnFRC. ${streakLine}</p>
     <p style="margin:0 0 22px">Your next lesson is waiting on your dashboard — pick up right where you left off:</p>
     <a href="${site}/dashboard"
-       style="display:inline-block;background:linear-gradient(110deg,#2f5fff,#22d3ee);color:#fff;text-decoration:none;padding:12px 22px;border-radius:12px;font-weight:600">Continue learning →</a>
-    <p style="margin:22px 0 0;color:#94a2bf">Gracious professionalism, always. 🤖</p>
+       style="display:inline-block;background:linear-gradient(110deg,#2560e6,#1aa9d6);color:#fff;text-decoration:none;padding:12px 22px;border-radius:12px;font-weight:600">Continue learning →</a>
+    <p style="margin:22px 0 0;color:#64748b">Gracious professionalism, always. 🤖</p>
   `,
     unsubscribeUrl
   );
@@ -145,7 +145,7 @@ export function adminNotifyHtml({
   const rowsHtml = rows
     .map(
       (r) =>
-        `<p style="margin:6px 0"><strong style="color:#c8d3ee">${esc(r.label)}:</strong> ${esc(r.value)}</p>`
+        `<p style="margin:6px 0"><strong style="color:#334155">${esc(r.label)}:</strong> ${esc(r.value)}</p>`
     )
     .join("");
   return shell(`
@@ -154,10 +154,10 @@ export function adminNotifyHtml({
     ${bodyHtml ?? ""}
     ${
       ctaText && ctaUrl
-        ? `<p style="margin:20px 0 6px"><a href="${ctaUrl}" style="display:inline-block;background:linear-gradient(110deg,#2f5fff,#22d3ee);color:#fff;text-decoration:none;padding:11px 20px;border-radius:12px;font-weight:600">${esc(ctaText)} →</a></p>`
+        ? `<p style="margin:20px 0 6px"><a href="${ctaUrl}" style="display:inline-block;background:linear-gradient(110deg,#2560e6,#1aa9d6);color:#fff;text-decoration:none;padding:11px 20px;border-radius:12px;font-weight:600">${esc(ctaText)} →</a></p>`
         : ""
     }
-    ${note ? `<p style="margin:16px 0 0;color:#94a2bf;font-size:13px">${esc(note)}</p>` : ""}
+    ${note ? `<p style="margin:16px 0 0;color:#64748b;font-size:13px">${esc(note)}</p>` : ""}
   `);
 }
 
@@ -168,8 +168,8 @@ export function welcomeEmailHtml(name?: string | null) {
     <p style="margin:0 0 14px">Welcome to <strong>LearnFRC</strong> — your structured path to mastering every department of FIRST Robotics Competition, from swerve drivetrains and WPILib to the Impact Award and scouting.</p>
     <p style="margin:0 0 22px">Pick a department, work through the guides, and track your progress as you go.</p>
     <a href="${process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com"}/guides"
-       style="display:inline-block;background:linear-gradient(110deg,#2f5fff,#22d3ee);color:#fff;text-decoration:none;padding:12px 22px;border-radius:12px;font-weight:600">Explore the guides →</a>
-    <p style="margin:22px 0 0;color:#94a2bf">Gracious professionalism, always. 🤖</p>
+       style="display:inline-block;background:linear-gradient(110deg,#2560e6,#1aa9d6);color:#fff;text-decoration:none;padding:12px 22px;border-radius:12px;font-weight:600">Explore the guides →</a>
+    <p style="margin:22px 0 0;color:#64748b">Gracious professionalism, always. 🤖</p>
   `);
 }
 
@@ -185,7 +185,7 @@ export function feedbackEmailHtml({
   return shell(`
     <p style="margin:0 0 10px;font-weight:600">New feedback / topic request</p>
     <p style="margin:0 0 10px;white-space:pre-wrap">${message.replace(/</g, "&lt;")}</p>
-    <p style="margin:14px 0 0;color:#94a2bf;font-size:13px">From: ${
+    <p style="margin:14px 0 0;color:#64748b;font-size:13px">From: ${
       fromEmail || "anonymous"
     }${page ? ` · Page: ${page}` : ""}</p>
   `);
@@ -210,10 +210,10 @@ export function errorEmailHtml({
   return shell(`
     <p style="margin:0 0 10px;font-weight:600;color:#ff6b6b">⚠️ ${esc(kind || "Error")} on LearnFRC</p>
     <p style="margin:0 0 12px;white-space:pre-wrap;font-family:ui-monospace,monospace;font-size:13px">${esc(message)}</p>
-    ${url ? `<p style="margin:0 0 6px;color:#94a2bf;font-size:13px">URL: ${esc(url)}</p>` : ""}
-    ${digest ? `<p style="margin:0 0 6px;color:#94a2bf;font-size:13px">Digest: ${esc(digest)}</p>` : ""}
-    ${userAgent ? `<p style="margin:0 0 12px;color:#94a2bf;font-size:12px">UA: ${esc(userAgent)}</p>` : ""}
-    ${stack ? `<pre style="margin:8px 0 0;padding:12px;background:#070b14;border:1px solid #1d2740;border-radius:10px;color:#94a2bf;font-size:11px;overflow:auto;white-space:pre-wrap">${esc(stack).slice(0, 4000)}</pre>` : ""}
+    ${url ? `<p style="margin:0 0 6px;color:#64748b;font-size:13px">URL: ${esc(url)}</p>` : ""}
+    ${digest ? `<p style="margin:0 0 6px;color:#64748b;font-size:13px">Digest: ${esc(digest)}</p>` : ""}
+    ${userAgent ? `<p style="margin:0 0 12px;color:#64748b;font-size:12px">UA: ${esc(userAgent)}</p>` : ""}
+    ${stack ? `<pre style="margin:8px 0 0;padding:12px;background:#070b14;border:1px solid #1d2740;border-radius:10px;color:#64748b;font-size:11px;overflow:auto;white-space:pre-wrap">${esc(stack).slice(0, 4000)}</pre>` : ""}
   `);
 }
 
@@ -222,6 +222,6 @@ export function subscribeEmailHtml() {
     <p style="margin:0 0 14px">Thanks for joining the LearnFRC list! 🤖</p>
     <p style="margin:0 0 18px">We'll send the occasional update on new departments, lessons, and features. In the meantime, dive in:</p>
     <a href="${process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com"}/guides"
-       style="display:inline-block;background:linear-gradient(110deg,#2f5fff,#22d3ee);color:#fff;text-decoration:none;padding:12px 22px;border-radius:12px;font-weight:600">Explore the guides</a>
+       style="display:inline-block;background:linear-gradient(110deg,#2560e6,#1aa9d6);color:#fff;text-decoration:none;padding:12px 22px;border-radius:12px;font-weight:600">Explore the guides</a>
   `);
 }
