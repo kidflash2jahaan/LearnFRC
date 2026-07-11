@@ -147,7 +147,7 @@ export function Markdown({
           ),
           a: ({ ...p }) => (
             <a
-              className="font-medium text-primary underline decoration-primary/30 underline-offset-2 transition-colors hover:text-accent hover:decoration-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              className="break-words font-medium text-primary underline decoration-primary/30 underline-offset-2 transition-colors hover:text-accent hover:decoration-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
               target="_blank"
               rel="noopener noreferrer"
               {...p}
@@ -191,7 +191,7 @@ export function Markdown({
             // Inline code: light clay chip.
             return (
               <code
-                className="rounded-md border border-primary/15 bg-primary/[0.07] px-1.5 py-0.5 font-mono text-[0.82em] text-primary"
+                className="break-words rounded-md border border-primary/15 bg-primary/[0.07] px-1.5 py-0.5 font-mono text-[0.82em] text-primary"
                 {...rest}
               >
                 {children}

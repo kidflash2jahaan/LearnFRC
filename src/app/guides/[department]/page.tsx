@@ -313,9 +313,9 @@ export default async function DepartmentPage({
       </section>
 
       {/* ======================= THE CURRICULUM ======================= */}
-      <div className="mx-auto grid max-w-6xl gap-10 px-4 py-8 sm:px-6 lg:grid-cols-3 lg:gap-12 lg:px-8 lg:py-12">
+      <div className="mx-auto grid max-w-6xl grid-cols-1 gap-10 px-4 py-8 sm:px-6 lg:grid-cols-3 lg:gap-12 lg:px-8 lg:py-12">
         {/* main: the module path */}
-        <div className="lg:col-span-2">
+        <div className="min-w-0 lg:col-span-2">
           <Reveal className="mb-6 flex items-end justify-between gap-4">
             <div className="flex items-center gap-3">
               <span
