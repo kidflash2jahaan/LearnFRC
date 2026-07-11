@@ -19,6 +19,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { DepartmentCard } from "@/components/department-card";
 import { InviteCard } from "@/components/leaderboard/invite-card";
+import { FirstRunGuide } from "@/components/dashboard/first-run-guide";
 import {
   Reveal,
   RevealGroup,
@@ -284,6 +285,17 @@ export default async function DashboardPage() {
       />
 
       <div className="mx-auto max-w-7xl px-4 pt-28 pb-20 sm:px-6 lg:px-8">
+        {/* First-run guide — only for brand-new (zero-progress) learners. */}
+        {completedCount === 0 && continueLesson && cm && (
+          <Reveal className="mb-8">
+            <FirstRunGuide
+              href={`/guides/${continueLesson.deptSlug}/${continueLesson.moduleSlug}/${continueLesson.lessonSlug}`}
+              lessonTitle={continueLesson.lessonTitle}
+              deptName={continueLesson.deptName}
+            />
+          </Reveal>
+        )}
+
         {/* ============================ HERO — SIGNATURE INSTRUMENT ============================ */}
         <section className="grid items-center gap-10 lg:grid-cols-[1.05fr_1fr] lg:gap-14">
           <RiseGroup>
