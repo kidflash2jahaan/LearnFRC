@@ -27,9 +27,12 @@ function authed(req: Request): boolean {
   const secret = process.env.CRON_SECRET;
   if (!secret) return false;
   const url = new URL(req.url);
+  // Vercel Cron sends `Authorization: Bearer <CRON_SECRET>` automatically, so
+  // the secret never has to live in vercel.json. Also accept the manual forms.
   return (
-    (url.searchParams.get("secret") || req.headers.get("x-cron-secret")) ===
-    secret
+    req.headers.get("authorization") === `Bearer ${secret}` ||
+    url.searchParams.get("secret") === secret ||
+    req.headers.get("x-cron-secret") === secret
   );
 }
 

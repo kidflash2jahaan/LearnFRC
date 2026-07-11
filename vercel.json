@@ -1,1 +1,8 @@
-{}
+{
+  "crons": [
+    {
+      "path": "/api/lifecycle-email",
+      "schedule": "0 16 * * *"
+    }
+  ]
+}
