@@ -309,17 +309,27 @@ export const getLeaderboard = unstable_cache(
     // XP no longer equals lessons*10 (streak multiplier), so count real
     // completions. lesson_progress is per-user RLS-locked → use the admin client.
     const admin = createAdminClient();
-    const { data: lp } = await admin
-      .from("lesson_progress")
-      .select("user_id")
-      .in(
-        "user_id",
-        profs.map((p) => p.id)
-      );
-    const counts: Record<string, number> = {};
-    for (const r of (lp ?? []) as { user_id: string }[])
-      counts[r.user_id] = (counts[r.user_id] ?? 0) + 1;
-    return profs.map((p) => ({ ...p, lessons: counts[p.id] ?? 0 }));
+    // lesson_progress holds one row per completed lesson, but the table can
+    // exceed PostgREST's 1000-row response cap — a plain .select() silently
+    // truncates and undercounts, which is what made the all-time board show
+    // FEWER lessons than the weekly board. Page through in 1000-row windows
+    // (stable-ordered by id) and count DISTINCT lessons per user.
+    const ids = profs.map((p) => p.id);
+    const lessonsByUser: Record<string, Set<string>> = {};
+    const PAGE = 1000;
+    for (let from = 0; ; from += PAGE) {
+      const { data: lp } = await admin
+        .from("lesson_progress")
+        .select("user_id, lesson_id")
+        .in("user_id", ids)
+        .order("id", { ascending: true })
+        .range(from, from + PAGE - 1);
+      const chunk = (lp ?? []) as { user_id: string; lesson_id: string }[];
+      for (const r of chunk)
+        (lessonsByUser[r.user_id] ??= new Set<string>()).add(r.lesson_id);
+      if (chunk.length < PAGE) break;
+    }
+    return profs.map((p) => ({ ...p, lessons: lessonsByUser[p.id]?.size ?? 0 }));
   },
   ["leaderboard-all-time"],
   { revalidate: LEADERBOARD_TTL, tags: ["leaderboard"] }
@@ -335,17 +345,31 @@ export const getWeeklyLeaderboard = unstable_cache(
     // aggregate everyone's recent activity for the public weekly ranking.
     const supabase = createAdminClient();
     const since = new Date(Date.now() - 7 * 86_400_000).toISOString();
-    const { data: lp } = await supabase
-      .from("lesson_progress")
-      .select("user_id, xp_awarded")
-      .gte("completed_at", since);
-    const counts: Record<string, number> = {};
+    // Same 1000-row cap applies to a busy week, so page through here too and
+    // count DISTINCT lessons per user (XP is the sum of awards, which can span
+    // multiple rows legitimately).
+    const lessonsByUser: Record<string, Set<string>> = {};
     const xpByUser: Record<string, number> = {};
-    for (const r of (lp ?? []) as { user_id: string; xp_awarded: number | null }[]) {
-      counts[r.user_id] = (counts[r.user_id] || 0) + 1;
-      xpByUser[r.user_id] = (xpByUser[r.user_id] || 0) + (r.xp_awarded ?? 10);
+    const PAGE = 1000;
+    for (let from = 0; ; from += PAGE) {
+      const { data: lp } = await supabase
+        .from("lesson_progress")
+        .select("user_id, lesson_id, xp_awarded")
+        .gte("completed_at", since)
+        .order("id", { ascending: true })
+        .range(from, from + PAGE - 1);
+      const chunk = (lp ?? []) as {
+        user_id: string;
+        lesson_id: string;
+        xp_awarded: number | null;
+      }[];
+      for (const r of chunk) {
+        (lessonsByUser[r.user_id] ??= new Set<string>()).add(r.lesson_id);
+        xpByUser[r.user_id] = (xpByUser[r.user_id] || 0) + (r.xp_awarded ?? 10);
+      }
+      if (chunk.length < PAGE) break;
     }
-    const ids = Object.keys(counts);
+    const ids = Object.keys(lessonsByUser);
     if (!ids.length) return [];
     const { data: profs } = await supabase
       .from("profiles")
@@ -354,7 +378,7 @@ export const getWeeklyLeaderboard = unstable_cache(
     return ((profs as Profile[]) ?? [])
       .map((p) => ({
         ...p,
-        weeklyLessons: counts[p.id] ?? 0,
+        weeklyLessons: lessonsByUser[p.id]?.size ?? 0,
         weeklyXp: xpByUser[p.id] ?? 0,
       }))
       .sort((a, b) => b.weeklyXp - a.weeklyXp || b.xp - a.xp)
