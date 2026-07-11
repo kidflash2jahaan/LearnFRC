@@ -321,10 +321,10 @@ export default async function LessonPage({
                     <Info className="h-4 w-4 shrink-0 text-primary" aria-hidden />
                     <span>
                       <Link
-                        href={`/login?next=${encodeURIComponent(lessonPath)}`}
+                        href={`/signup?next=${encodeURIComponent(lessonPath)}`}
                         className="font-medium text-primary hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                       >
-                        Sign in
+                        Create a free account
                       </Link>{" "}
                       to track progress, earn XP, and save lessons.
                     </span>

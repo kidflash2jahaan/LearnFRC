@@ -81,10 +81,10 @@ export function SuggestEdit({
         </button>
       ) : (
         <Link
-          href={`/login?next=${encodeURIComponent(path)}`}
+          href={`/signup?next=${encodeURIComponent(path)}`}
           className="font-semibold text-primary underline-offset-2 hover:underline"
         >
-          Log in to suggest an edit
+          Create a free account to suggest an edit
         </Link>
       )}
     </div>

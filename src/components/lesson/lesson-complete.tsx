@@ -73,10 +73,12 @@ export function LessonComplete({
   const passed = hasQuiz && correctCount === quiz.length;
 
   const requireAuth = () => {
-    toast("Sign in to track your progress", {
+    // Just passed a quiz = peak intent. Send them to signup (has a login link
+    // for returning users), not the returning-user login screen.
+    toast("Create a free account to save your progress", {
       action: {
-        label: "Sign in",
-        onClick: () => router.push(`/login?next=${encodeURIComponent(lessonPath)}`),
+        label: "Sign up free",
+        onClick: () => router.push(`/signup?next=${encodeURIComponent(lessonPath)}`),
       },
     });
   };

@@ -220,8 +220,12 @@ export default async function CertificatePage({
           </Link>
           <div className="flex items-center gap-2">
             <ShareButton
-              text={`I just earned the ${dept.name} certificate on LearnFRC! 🤖`}
-              url="https://learnfrc.com"
+              text={`I just earned the ${dept.name} certificate on LearnFRC — free FRC training for every seat on the team. Earn yours 👇`}
+              url={
+                profile?.username
+                  ? `https://learnfrc.com/signup?ref=${profile.username}`
+                  : "https://learnfrc.com"
+              }
             />
             <PrintButton />
           </div>

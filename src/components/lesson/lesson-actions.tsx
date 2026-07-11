@@ -35,11 +35,15 @@ export function LessonActions({
   React.useEffect(() => setCompleted(initialCompleted), [initialCompleted]);
 
   const requireAuth = (verb: string) => {
-    toast(`Sign in to ${verb}`, {
+    // First-time FRC readers dominate this path — send them to signup (which
+    // has a "log in" link for the rare returning user), not the returning-user
+    // login screen. Routing account-creation moments to /login was silently
+    // bleeding signups.
+    toast(`Create a free account to ${verb}`, {
       action: {
-        label: "Sign in",
+        label: "Sign up free",
         onClick: () =>
-          router.push(`/login?next=${encodeURIComponent(lessonPath)}`),
+          router.push(`/signup?next=${encodeURIComponent(lessonPath)}`),
       },
     });
   };

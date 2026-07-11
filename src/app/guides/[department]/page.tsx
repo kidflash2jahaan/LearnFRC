@@ -363,7 +363,7 @@ export default async function DepartmentPage({
               departmentName={dept.name}
               modules={dept.modules.map((m) => ({ id: m.id, title: m.title }))}
               isLoggedIn={!!user}
-              loginPath={`/login?next=${encodeURIComponent(`/guides/${dept.slug}`)}`}
+              loginPath={`/signup?next=${encodeURIComponent(`/guides/${dept.slug}`)}`}
             />
           </div>
         </div>

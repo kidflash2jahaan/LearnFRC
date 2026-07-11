@@ -27,8 +27,8 @@ const NEXT_STEPS = [
   },
   {
     icon: LogIn,
-    title: "Sign in",
-    body: "Come back and log in — your progress dashboard is waiting.",
+    title: "You're signed in",
+    body: "The link logs you in automatically — no need to sign in again.",
   },
   {
     icon: Wrench,
@@ -169,10 +169,10 @@ export default async function VerifyEmailPage({
 
             {/* actions */}
             <div className="mt-6 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-              <Link href="/login" className="ac-btn min-h-11 text-sm">
-                Go to sign in
-              </Link>
               {email && <ResendButton email={email} />}
+              <Link href="/login" className="ac-btn-ghost min-h-11 text-sm">
+                Already confirmed? Log in
+              </Link>
             </div>
 
             <div className="ac-divider mt-8" />

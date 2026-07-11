@@ -161,10 +161,10 @@ export function ReadingRail({
         ) : (
           <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
             <Link
-              href={`/login?next=${encodeURIComponent(lessonPath)}`}
+              href={`/signup?next=${encodeURIComponent(lessonPath)}`}
               className="font-medium text-primary hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             >
-              Sign in
+              Create a free account
             </Link>{" "}
             to track your mastery.
           </p>
