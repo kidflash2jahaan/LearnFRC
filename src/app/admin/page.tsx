@@ -7,7 +7,6 @@ import {
   ShieldCheck,
   TrendingUp,
   PieChart,
-  Users,
   UserPlus,
   CheckCircle2,
 } from "lucide-react";
@@ -195,14 +194,6 @@ export default async function AdminPage() {
           <MissionRail onlineNow={stats.onlineNow} vitals={railVitals} />
         </section>
 
-        {/* ===================== RETENTION: the growth-plan metric ===================== */}
-        <Reveal className="mt-10">
-          <span className="ac-eyebrow">Are they coming back?</span>
-          <div className="mt-2">
-            <RetentionPanel s={retention} />
-          </div>
-        </Reveal>
-
         {/* ===================== OVERVIEW: metric console grid ===================== */}
         <Reveal className="mt-10">
           <span className="ac-eyebrow">The whole platform</span>
@@ -332,65 +323,9 @@ export default async function AdminPage() {
           </section>
         </Reveal>
 
-        {/* ===================== RECENT SIGNUPS ===================== */}
+        {/* ===================== RETENTION (bottom) ===================== */}
         <Reveal className="mt-6">
-          <section className="ac-card p-5 sm:p-6">
-            <h2 className="mb-5 flex items-center gap-2 text-lg font-semibold">
-              <span
-                className="ac-badge flex h-9 w-9 items-center justify-center"
-                style={{ "--a": "var(--primary)" } as CSSProperties}
-              >
-                <Users className="h-[18px] w-[18px]" aria-hidden="true" />
-              </span>
-              Recent signups
-            </h2>
-            {stats.recentSignups.length === 0 ? (
-              <p className="text-sm text-foreground/70">No signups yet.</p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm [&_td]:px-3 [&_th]:px-3 [&_td:first-child]:pl-0 [&_th:first-child]:pl-0 [&_td:last-child]:pr-0 [&_th:last-child]:pr-0">
-                  <thead>
-                    <tr className="border-b border-border text-left text-xs uppercase tracking-wider text-muted-foreground">
-                      <th className="pb-2.5 font-medium">Member</th>
-                      <th className="pb-2.5 font-medium">Team</th>
-                      <th className="pb-2.5 text-right font-medium">XP</th>
-                      <th className="pb-2.5 text-right font-medium">Joined</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {stats.recentSignups.map((p) => (
-                      <tr
-                        key={p.id}
-                        className="border-b border-border/60 transition-colors last:border-0 hover:bg-primary/[0.05]"
-                      >
-                        <td className="py-3">
-                          <div className="flex items-center gap-2.5">
-                            <Avatar
-                              name={p.full_name || p.username}
-                              seed={p.id}
-                              className="h-8 w-8"
-                            />
-                            <span className="font-medium text-foreground">
-                              {p.full_name || p.username || "Learner"}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="py-3 tabular-nums text-muted-foreground">
-                          {p.team_number ? `#${p.team_number}` : "—"}
-                        </td>
-                        <td className="py-3 text-right tabular-nums font-semibold text-primary">
-                          <AnimatedCounter value={p.xp} />
-                        </td>
-                        <td className="py-3 text-right tabular-nums text-muted-foreground">
-                          {new Date(p.created_at).toLocaleDateString()}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </section>
+          <RetentionPanel s={retention} />
         </Reveal>
       </div>
     </div>

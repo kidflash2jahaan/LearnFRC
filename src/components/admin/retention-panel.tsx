@@ -9,41 +9,29 @@ const GRADIENT: CSSProperties = {
   color: "transparent",
 };
 
-/** The one number the 2-year plan hinges on: do users come back? */
-function toneForReturn(pct: number): { label: string; cls: string } {
-  if (pct >= 50) return { label: "on target", cls: "text-emerald-600" };
-  if (pct >= 40) return { label: "close", cls: "text-amber-600" };
-  return { label: "below target (aim 50%+)", cls: "text-red-600" };
-}
-
 export function RetentionPanel({ s }: { s: RetentionStats }) {
-  const rt = toneForReturn(s.returnPct);
   return (
-    <section className="ac-card rounded-2xl p-6">
-      <div className="mb-5 flex items-center gap-2">
-        <Repeat className="h-4 w-4 text-primary" aria-hidden />
-        <h2 className="font-display text-lg font-bold tracking-tight">
-          Retention
-        </h2>
-        <span className="ml-auto text-xs text-muted-foreground">
-          the metric the whole growth plan sits on
+    <section className="ac-card rounded-2xl p-5 sm:p-6">
+      <h2 className="mb-5 flex items-center gap-2 text-lg font-semibold">
+        <span
+          className="ac-badge flex h-9 w-9 items-center justify-center"
+          style={{ "--a": "var(--primary)" } as CSSProperties}
+        >
+          <Repeat className="h-[18px] w-[18px]" aria-hidden />
         </span>
-      </div>
+        Retention
+      </h2>
 
-      {/* Headline: return rate */}
+      {/* Return rate */}
       <div className="rounded-2xl border border-border bg-secondary/40 p-5">
         <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
           Return rate · came back on a 2nd day
         </div>
-        <div className="mt-1 flex items-baseline gap-3">
-          <span className="font-display text-4xl font-extrabold tabular-nums" style={GRADIENT}>
-            {s.returnPct}%
-          </span>
-          <span className={`text-sm font-semibold ${rt.cls}`}>{rt.label}</span>
+        <div className="mt-1 font-display text-4xl font-extrabold tabular-nums" style={GRADIENT}>
+          {s.returnPct}%
         </div>
         <div className="mt-1 text-sm text-muted-foreground tabular-nums">
-          {s.returned} of {s.activated} activated learners · target is 50%+ for
-          the referral loop to compound.
+          {s.returned} of {s.activated} activated learners
         </div>
       </div>
 
