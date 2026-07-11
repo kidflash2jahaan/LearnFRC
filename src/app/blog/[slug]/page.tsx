@@ -231,15 +231,15 @@ export default async function ArticlePage({
 
           <RiseItem>
             <div className="mt-7 flex flex-wrap items-center gap-3">
+              <Link href="/signup" className="ac-btn text-sm">
+                Start learning — free <ArrowRight aria-hidden className="h-4 w-4" />
+              </Link>
               <ShareButton
-                variant="brand"
-                label="Share this article"
+                variant="outline"
+                label="Share"
                 text={`${a.title} — a free FRC article on LearnFRC`}
                 url={url}
               />
-              <Link href="/guides" className="ac-btn-ghost text-sm">
-                Browse the guides
-              </Link>
             </div>
           </RiseItem>
 
@@ -346,11 +346,12 @@ export default async function ArticlePage({
               <BookOpen aria-hidden className="h-6 w-6" />
             </span>
             <h2 className="text-balance font-display text-2xl font-bold tracking-tight sm:text-3xl">
-              Learn every department of FRC — <span style={GRADIENT_TEXT}>free</span>
+              Start learning FRC — <span style={GRADIENT_TEXT}>free</span>
             </h2>
             <p className="mx-auto mt-3 max-w-md text-base leading-relaxed text-foreground/70">
-              Structured lessons, quizzes, and team tools. Built by an FRC
-              student, for the community.
+              Structured lessons and quizzes across every department. Create a
+              free account to save your progress, track your team, and earn a
+              certificate.
             </p>
             <div className="mt-7 flex flex-wrap items-center justify-center gap-6">
               {[
@@ -366,9 +367,14 @@ export default async function ArticlePage({
                 </div>
               ))}
             </div>
-            <Link href="/guides" className="ac-btn mt-7 text-sm">
-              Browse the guides <ArrowRight aria-hidden className="h-4 w-4" />
-            </Link>
+            <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
+              <Link href="/signup" className="ac-btn text-sm">
+                Create your free account <ArrowRight aria-hidden className="h-4 w-4" />
+              </Link>
+              <Link href="/guides" className="ac-btn-ghost text-sm">
+                Browse the guides first
+              </Link>
+            </div>
           </div>
         </Reveal>
       </section>
