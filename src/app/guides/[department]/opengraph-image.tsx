@@ -1,6 +1,7 @@
 import { ImageResponse } from "next/og";
 import { DEPT_CATALOG } from "@/lib/dept-catalog";
 import { deptMeta } from "@/lib/departments";
+import { ogFonts } from "@/app/_og/font";
 
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
@@ -16,6 +17,7 @@ export default async function Image({
   const name = entry?.name ?? "FRC Department";
   const tagline = entry?.tagline ?? "Master FIRST Robotics Competition";
   const m = deptMeta(department);
+  const fonts = await ogFonts();
 
   return new ImageResponse(
     (
@@ -27,7 +29,9 @@ export default async function Image({
           flexDirection: "column",
           justifyContent: "space-between",
           padding: "72px",
-          background: "#060912",
+          background:
+            "linear-gradient(135deg, #eef3fd 0%, #dde8f8 55%, #e7edfb 100%)",
+          fontFamily: "Baloo 2",
           position: "relative",
         }}
       >
@@ -39,7 +43,7 @@ export default async function Image({
             width: 720,
             height: 720,
             borderRadius: "9999px",
-            background: `radial-gradient(circle, ${m.color}66, transparent 60%)`,
+            background: `radial-gradient(circle, ${m.color}30, transparent 62%)`,
             display: "flex",
           }}
         />
@@ -53,8 +57,9 @@ export default async function Image({
               display: "flex",
             }}
           />
-          <div style={{ color: "#e8edf7", fontSize: 30, fontWeight: 700 }}>
-            LearnFRC
+          <div style={{ display: "flex", fontSize: 30, fontWeight: 800 }}>
+            <span style={{ color: "#16203a" }}>Learn</span>
+            <span style={{ color: "#2560e6" }}>FRC</span>
           </div>
         </div>
 
@@ -62,7 +67,7 @@ export default async function Image({
           <div
             style={{
               fontSize: 26,
-              fontWeight: 600,
+              fontWeight: 700,
               textTransform: "uppercase",
               letterSpacing: 3,
               color: m.color,
@@ -76,7 +81,7 @@ export default async function Image({
               marginTop: 14,
               fontSize: 76,
               fontWeight: 800,
-              color: "white",
+              color: "#16203a",
               lineHeight: 1.05,
               letterSpacing: "-0.03em",
               maxWidth: 1000,
@@ -89,7 +94,7 @@ export default async function Image({
             style={{
               marginTop: 22,
               fontSize: 32,
-              color: "#94a2bf",
+              color: "#55668a",
               maxWidth: 920,
               display: "flex",
             }}
@@ -98,11 +103,29 @@ export default async function Image({
           </div>
         </div>
 
-        <div style={{ fontSize: 24, color: "#5b6b8c", display: "flex" }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 14,
+            fontSize: 24,
+            color: "#7a8aa8",
+            fontWeight: 600,
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              width: 10,
+              height: 10,
+              borderRadius: 9999,
+              background: "#2560e6",
+            }}
+          />
           learnfrc.com
         </div>
       </div>
     ),
-    { ...size }
+    { ...size, fonts }
   );
 }

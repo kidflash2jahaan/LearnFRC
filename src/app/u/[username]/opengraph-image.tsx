@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og";
+import { ogFonts } from "@/app/_og/font";
 
 export const alt = "LearnFRC profile";
 export const size = { width: 1200, height: 630 };
@@ -17,12 +18,18 @@ export default async function Image({
   try {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 3000);
     const res = await fetch(
       `${url}/rest/v1/profiles?username=eq.${encodeURIComponent(
         username
       )}&select=username,team_number,xp`,
-      { headers: { apikey: anon, Authorization: `Bearer ${anon}` }, cache: "no-store" }
-    );
+      {
+        headers: { apikey: anon, Authorization: `Bearer ${anon}` },
+        cache: "no-store",
+        signal: ctrl.signal,
+      }
+    ).finally(() => clearTimeout(timer));
     const rows = await res.json();
     const p = Array.isArray(rows) ? rows[0] : null;
     if (p) {
@@ -35,8 +42,8 @@ export default async function Image({
   }
 
   const level = Math.floor(xp / 100) + 1;
-  const stat = (label: string, value: string | number) => ({ label, value });
-  const stats = [stat("XP", xp), stat("Level", level)];
+  const meta = `Level ${level} · ${xp.toLocaleString("en-US")} XP${team ? ` · Team ${team}` : ""} · learnfrc.com`;
+  const fonts = await ogFonts();
 
   return new ImageResponse(
     (
@@ -48,62 +55,82 @@ export default async function Image({
           flexDirection: "column",
           justifyContent: "space-between",
           padding: "72px",
-          background: "linear-gradient(135deg, #060912 0%, #0c1322 60%, #0a1a2e 100%)",
-          color: "#e8edf7",
-          fontFamily: "sans-serif",
+          background:
+            "linear-gradient(135deg, #eef3fd 0%, #dde8f8 55%, #e7edfb 100%)",
+          fontFamily: "Baloo 2",
+          position: "relative",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+        <div
+          style={{
+            position: "absolute",
+            top: -220,
+            right: -160,
+            width: 720,
+            height: 720,
+            borderRadius: "9999px",
+            background: "radial-gradient(circle, rgba(37,96,230,0.16), transparent 62%)",
+            display: "flex",
+          }}
+        />
+        <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
           <div
             style={{
               width: 56,
               height: 56,
               borderRadius: 16,
               display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              background: "linear-gradient(110deg,#2f5fff,#22d3ee)",
-              fontSize: 30,
+              background: "linear-gradient(135deg,#2560e6,#1aa9d6)",
+            }}
+          />
+          <div style={{ display: "flex", fontSize: 30, fontWeight: 800 }}>
+            <span style={{ color: "#16203a" }}>Learn</span>
+            <span style={{ color: "#2560e6" }}>FRC</span>
+          </div>
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column" }}>
+          <div
+            style={{
+              fontSize: 26,
+              fontWeight: 700,
+              textTransform: "uppercase",
+              letterSpacing: 3,
+              color: "#2560e6",
+              display: "flex",
             }}
           >
-            🤖
+            FRC Learning Profile
           </div>
-          <div style={{ fontSize: 34, fontWeight: 800, letterSpacing: -1 }}>
-            Learn<span style={{ color: "#22d3ee" }}>FRC</span>
+          <div
+            style={{
+              marginTop: 14,
+              fontSize: 84,
+              fontWeight: 800,
+              color: "#16203a",
+              lineHeight: 1.05,
+              letterSpacing: "-0.03em",
+              display: "flex",
+            }}
+          >
+            {`@${name}`}
           </div>
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <div style={{ fontSize: 26, color: "#94a2bf" }}>FRC learning profile</div>
-          <div style={{ fontSize: 76, fontWeight: 800, letterSpacing: -2 }}>@{name}</div>
-          {team ? (
-            <div style={{ display: "flex", alignItems: "center", gap: 18, fontSize: 30, color: "#5b8cff" }}>
-              <span style={{ color: "#94a2bf" }}>Team {team}</span>
-            </div>
-          ) : null}
-        </div>
-
-        <div style={{ display: "flex", gap: 20 }}>
-          {stats.map((s) => (
-            <div
-              key={s.label}
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                padding: "20px 32px",
-                borderRadius: 18,
-                border: "1px solid #1d2740",
-                background: "rgba(255,255,255,0.03)",
-                minWidth: 180,
-              }}
-            >
-              <div style={{ fontSize: 52, fontWeight: 800 }}>{s.value}</div>
-              <div style={{ fontSize: 24, color: "#94a2bf" }}>{s.label}</div>
-            </div>
-          ))}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 14,
+            fontSize: 26,
+            color: "#55668a",
+            fontWeight: 600,
+          }}
+        >
+          {meta}
         </div>
       </div>
     ),
-    { ...size }
+    { ...size, fonts }
   );
 }

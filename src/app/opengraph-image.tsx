@@ -1,10 +1,12 @@
 import { ImageResponse } from "next/og";
+import { ogFonts } from "@/app/_og/font";
 
 export const alt = "LearnFRC — Master FIRST Robotics Competition";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
 export default async function Image() {
+  const fonts = await ogFonts();
   return new ImageResponse(
     (
       <div
@@ -16,6 +18,7 @@ export default async function Image() {
           justifyContent: "center",
           padding: "84px",
           background: "linear-gradient(135deg, #eef3fd 0%, #dde8f8 55%, #e7edfb 100%)",
+          fontFamily: "Baloo 2",
           position: "relative",
         }}
       >
@@ -114,6 +117,6 @@ export default async function Image() {
         </div>
       </div>
     ),
-    { ...size }
+    { ...size, fonts }
   );
 }
