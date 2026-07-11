@@ -9,6 +9,11 @@ import {
   ClipboardCheck,
   Award,
   LayoutGrid,
+  Wrench,
+  Calculator,
+  Cable,
+  Move3d,
+  BatteryCharging,
 } from "lucide-react";
 import { Icon } from "@/lib/icon-map";
 import { deptMeta, inkFor } from "@/lib/departments";
@@ -263,6 +268,51 @@ export default async function HomePage() {
                     {s.body}
                   </p>
                 </div>
+              </Hover>
+            </RevealItem>
+          ))}
+        </RevealGroup>
+      </section>
+
+      {/* =========================== FREE TOOLS =========================== */}
+      <section className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
+        <Reveal>
+          <p className="ac-eyebrow flex items-center gap-1.5">
+            <Wrench className="h-3.5 w-3.5" aria-hidden /> Free FRC tools
+          </p>
+          <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
+            <h2 className="max-w-xl text-balance font-display text-3xl font-bold sm:text-4xl">
+              Calculators that get the numbers right
+            </h2>
+            <Link href="/tools" className="ac-btn-ghost shrink-0 text-sm">
+              All tools <ArrowRight className="h-4 w-4" aria-hidden />
+            </Link>
+          </div>
+        </Reveal>
+        <RevealGroup className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            { href: "/tools/frc-budget-calculator", icon: Calculator, title: "Team Budget", desc: "What your season will actually cost — itemized, sponsor-ready." },
+            { href: "/tools/frc-wire-gauge-calculator", icon: Cable, title: "Wire Gauge", desc: "Voltage drop + a check against FRC's minimum-AWG rules." },
+            { href: "/tools/frc-tipping-calculator", icon: Move3d, title: "Tip-Over", desc: "Will your robot tip? Enter track, wheelbase, CoG height." },
+            { href: "/tools/frc-current-budget", icon: BatteryCharging, title: "Brownout", desc: "Total draw vs the 120 A main breaker + roboRIO threshold." },
+          ].map((t) => (
+            <RevealItem key={t.href}>
+              <Hover className="h-full" lift={-5}>
+                <Link
+                  href={t.href}
+                  className="ac-card group flex h-full flex-col gap-2.5 rounded-2xl p-5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                >
+                  <span className="ac-badge flex h-10 w-10 items-center justify-center rounded-2xl">
+                    <t.icon className="h-5 w-5" aria-hidden />
+                  </span>
+                  <h3 className="font-display text-lg font-bold tracking-tight transition-colors group-hover:text-primary">
+                    {t.title}
+                  </h3>
+                  <p className="text-sm leading-relaxed text-foreground/70">{t.desc}</p>
+                  <span className="mt-auto inline-flex items-center gap-1 pt-1 text-sm font-semibold text-primary">
+                    Open <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" aria-hidden />
+                  </span>
+                </Link>
               </Hover>
             </RevealItem>
           ))}
