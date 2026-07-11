@@ -7,6 +7,7 @@ import {
   Cable,
   Move3d,
   BatteryCharging,
+  Ruler,
   ArrowRight,
 } from "lucide-react";
 import {
@@ -73,6 +74,14 @@ const TOOLS = [
     title: "Current Budget & Brownout",
     desc: "Add up your mechanisms' current draw against the 120 A main breaker and the roboRIO brownout thresholds — before you brown out at an event.",
     tag: "Power",
+  },
+  {
+    href: "/tools/frc-deflection-calculator",
+    icon: Ruler,
+    color: "#c07a00",
+    title: "Structural Deflection",
+    desc: "Will your arm, elevator, or rail sag? Enter material, cross-section, length, and load for deflection, bending stress, and a safety factor.",
+    tag: "Mechanical",
   },
 ];
 

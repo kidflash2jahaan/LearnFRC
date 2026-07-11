@@ -21,6 +21,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { path: "/tools/frc-wire-gauge-calculator", priority: 0.8, freq: "monthly" as const },
     { path: "/tools/frc-tipping-calculator", priority: 0.8, freq: "monthly" as const },
     { path: "/tools/frc-current-budget", priority: 0.8, freq: "monthly" as const },
+    { path: "/tools/frc-deflection-calculator", priority: 0.8, freq: "monthly" as const },
     { path: "/leaderboard", priority: 0.5, freq: "daily" as const },
     { path: "/blog", priority: 0.8, freq: "weekly" as const },
     { path: "/for-teams", priority: 0.7, freq: "monthly" as const },
