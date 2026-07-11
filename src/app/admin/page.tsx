@@ -13,6 +13,8 @@ import {
 } from "lucide-react";
 import { getSession } from "@/lib/auth";
 import { getAdminStats, getPendingEdits, getPendingSubmissions } from "@/lib/admin";
+import { getRetentionStats } from "@/lib/retention";
+import { RetentionPanel } from "@/components/admin/retention-panel";
 import { Avatar } from "@/components/ui/avatar";
 import { ActivityChart } from "@/components/admin/activity-chart";
 import { AdminOverview } from "@/components/admin/admin-overview";
@@ -83,10 +85,11 @@ export default async function AdminPage() {
     );
   }
 
-  const [stats, pendingEdits, pendingSubmissions] = await Promise.all([
+  const [stats, pendingEdits, pendingSubmissions, retention] = await Promise.all([
     getAdminStats(),
     getPendingEdits(),
     getPendingSubmissions(),
+    getRetentionStats(),
   ]);
   const maxCompletions = Math.max(
     1,
@@ -191,6 +194,14 @@ export default async function AdminPage() {
           {/* SIGNATURE: floating glass "command rail" — live vitals readout */}
           <MissionRail onlineNow={stats.onlineNow} vitals={railVitals} />
         </section>
+
+        {/* ===================== RETENTION: the growth-plan metric ===================== */}
+        <Reveal className="mt-10">
+          <span className="ac-eyebrow">Are they coming back?</span>
+          <div className="mt-2">
+            <RetentionPanel s={retention} />
+          </div>
+        </Reveal>
 
         {/* ===================== OVERVIEW: metric console grid ===================== */}
         <Reveal className="mt-10">
