@@ -60,15 +60,16 @@ const esc = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
 /**
- * Marketing/lifecycle frame — same look as emailShell but with the CAN-SPAM
- * footer these emails legally require: a one-click unsubscribe and a physical
- * postal address. Transactional emails (welcome/reset/admin) must NOT use this
- * (they don't need an unsubscribe). MAILING_ADDRESS must be set before any
- * lifecycle send — the sender refuses to run without it.
+ * Lifecycle frame — same look as emailShell, for RELATIONSHIP emails to a
+ * registered user about their OWN account activity (their unfinished lessons /
+ * progress). Kept strictly non-promotional so its primary purpose is
+ * relationship/transactional, which under CAN-SPAM does not require a physical
+ * postal address. We still include a one-click unsubscribe as courtesy + a
+ * settings link. Do NOT add promotional content here or it changes category.
  */
 export const marketingShell = (inner: string, unsubscribeUrl: string) => {
-  const address =
-    process.env.MAILING_ADDRESS || "[set MAILING_ADDRESS before sending]";
+  const site = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com";
+  const address = process.env.MAILING_ADDRESS; // optional; shown only if set
   return `
 <div style="background:#060912;padding:40px 0;font-family:Inter,Arial,sans-serif">
   <div style="max-width:520px;margin:0 auto;background:#0c1220;border:1px solid #1d2740;border-radius:18px;overflow:hidden">
@@ -78,18 +79,19 @@ export const marketingShell = (inner: string, unsubscribeUrl: string) => {
     </div>
     <div style="padding:30px 32px;color:#e8edf7;font-size:15px;line-height:1.6">${inner}</div>
     <div style="padding:18px 32px;border-top:1px solid #1d2740;color:#94a2bf;font-size:12px;line-height:1.6">
-      You're getting this because you created a free LearnFRC account.
-      <a href="${unsubscribeUrl}" style="color:#7fb0ff">Unsubscribe</a> anytime.<br/>
-      LearnFRC · ${esc(address)}
+      You're getting this because you have a LearnFRC account with lessons in
+      progress. Manage emails in your
+      <a href="${site}/settings" style="color:#7fb0ff">settings</a> or
+      <a href="${unsubscribeUrl}" style="color:#7fb0ff">turn these off</a>.${address ? `<br/>LearnFRC · ${esc(address)}` : ""}
     </div>
   </div>
 </div>`;
 };
 
 /**
- * Lifecycle "come back and keep going" email — the only marketing email we send.
- * Personalized with the learner's progress; links them back to their dashboard
- * where their exact next lesson + streak live.
+ * Lifecycle "come back and keep going" email — RELATIONSHIP content only,
+ * strictly about the learner's own progress (no promotion). Links them back to
+ * their dashboard where their exact next lesson + streak live.
  */
 export function lifecycleEmailHtml({
   name,

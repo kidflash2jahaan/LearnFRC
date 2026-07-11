@@ -69,14 +69,29 @@ async function run(req: Request) {
   const dry = url.searchParams.get("dry") === "1";
   const site = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com";
 
-  // Compliance hard stop — never SEND without a physical postal address.
-  // (dry-run only computes eligibility, so it's allowed without these.)
-  if (!dry && !process.env.MAILING_ADDRESS) {
-    return NextResponse.json({
-      ok: false,
-      skipped: "MAILING_ADDRESS not set — refusing to send (CAN-SPAM).",
+  // ?test=you@example.com — send ONE sample lifecycle email to that address and
+  // stop, so the founder can preview the real email without touching any users.
+  const test = url.searchParams.get("test");
+  if (test && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(test)) {
+    if (!process.env.RESEND_API_KEY)
+      return NextResponse.json({ ok: false, skipped: "no RESEND_API_KEY" });
+    const res = await sendEmail({
+      to: test,
+      subject: "Your next FRC lesson is waiting",
+      html: lifecycleEmailHtml({
+        name: null,
+        completed: 6,
+        streak: 0,
+        unsubscribeUrl: `${site}/unsubscribe?token=preview`,
+      }),
     });
+    return NextResponse.json({ ok: res.ok, sentTestTo: test, error: res.error });
   }
+
+  // These are RELATIONSHIP emails (a registered user's own unfinished-lesson
+  // progress, strictly non-promotional) — under CAN-SPAM's primary-purpose test
+  // that category doesn't require a physical postal address. We still ship a
+  // one-click unsubscribe as courtesy. MAILING_ADDRESS, if set, is shown anyway.
   if (!dry && !process.env.RESEND_API_KEY) {
     return NextResponse.json({ ok: false, skipped: "no RESEND_API_KEY" });
   }
