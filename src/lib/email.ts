@@ -60,6 +60,68 @@ const esc = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
 /**
+ * Marketing/lifecycle frame — same look as emailShell but with the CAN-SPAM
+ * footer these emails legally require: a one-click unsubscribe and a physical
+ * postal address. Transactional emails (welcome/reset/admin) must NOT use this
+ * (they don't need an unsubscribe). MAILING_ADDRESS must be set before any
+ * lifecycle send — the sender refuses to run without it.
+ */
+export const marketingShell = (inner: string, unsubscribeUrl: string) => {
+  const address =
+    process.env.MAILING_ADDRESS || "[set MAILING_ADDRESS before sending]";
+  return `
+<div style="background:#060912;padding:40px 0;font-family:Inter,Arial,sans-serif">
+  <div style="max-width:520px;margin:0 auto;background:#0c1220;border:1px solid #1d2740;border-radius:18px;overflow:hidden">
+    <div style="background:linear-gradient(110deg,#2f5fff,#22d3ee);padding:28px 32px">
+      <div style="color:#fff;font-size:22px;font-weight:800;letter-spacing:-0.02em">LearnFRC</div>
+      <div style="color:rgba(255,255,255,0.85);font-size:13px;margin-top:2px">Master FIRST Robotics Competition</div>
+    </div>
+    <div style="padding:30px 32px;color:#e8edf7;font-size:15px;line-height:1.6">${inner}</div>
+    <div style="padding:18px 32px;border-top:1px solid #1d2740;color:#94a2bf;font-size:12px;line-height:1.6">
+      You're getting this because you created a free LearnFRC account.
+      <a href="${unsubscribeUrl}" style="color:#7fb0ff">Unsubscribe</a> anytime.<br/>
+      LearnFRC · ${esc(address)}
+    </div>
+  </div>
+</div>`;
+};
+
+/**
+ * Lifecycle "come back and keep going" email — the only marketing email we send.
+ * Personalized with the learner's progress; links them back to their dashboard
+ * where their exact next lesson + streak live.
+ */
+export function lifecycleEmailHtml({
+  name,
+  completed,
+  streak,
+  unsubscribeUrl,
+}: {
+  name?: string | null;
+  completed: number;
+  streak: number;
+  unsubscribeUrl: string;
+}) {
+  const site = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com";
+  const greeting = name ? `Hey ${esc(name)},` : "Hey,";
+  const streakLine =
+    streak > 1
+      ? `You're on a <strong>${streak}-day streak</strong> — do one lesson today to keep it alive. 🔥`
+      : `Off-season is the best time to get ahead before build season.`;
+  return marketingShell(
+    `
+    <p style="margin:0 0 14px">${greeting}</p>
+    <p style="margin:0 0 14px">You've completed <strong>${completed} ${completed === 1 ? "lesson" : "lessons"}</strong> on LearnFRC. ${streakLine}</p>
+    <p style="margin:0 0 22px">Your next lesson is waiting on your dashboard — pick up right where you left off:</p>
+    <a href="${site}/dashboard"
+       style="display:inline-block;background:linear-gradient(110deg,#2f5fff,#22d3ee);color:#fff;text-decoration:none;padding:12px 22px;border-radius:12px;font-weight:600">Continue learning →</a>
+    <p style="margin:22px 0 0;color:#94a2bf">Gracious professionalism, always. 🤖</p>
+  `,
+    unsubscribeUrl
+  );
+}
+
+/**
  * Consistent admin-notification body (used by edit/submission notifications and
  * the moderation digest) so every operational email looks identical.
  */
