@@ -25,7 +25,7 @@ import { PitRow, type PitStop } from "./_pit-row";
 import { JsonLd } from "@/components/json-ld";
 
 const SITE =
-  process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.systemerr.com";
+  process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com";
 
 export const metadata: Metadata = {
   title: "FRC Guides — Learn Every Department, Free",

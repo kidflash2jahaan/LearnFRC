@@ -10,8 +10,8 @@ export const dynamic = "force-dynamic";
 // admin inbox) does not. This is the cheap, effective gate against abuse of
 // what is otherwise an unauthenticated "email the admin" endpoint.
 const ALLOWED_HOSTS = new Set([
-  "learnfrc.systemerr.com",
-  "www.learnfrc.systemerr.com",
+  "learnfrc.com",
+  "www.learnfrc.com",
   "localhost:3000",
 ]);
 

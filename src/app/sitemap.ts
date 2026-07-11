@@ -3,7 +3,7 @@ import { getAllDepartmentSlugs, getDepartmentBySlug } from "@/lib/queries";
 import { getArticles } from "@/lib/queries";
 import { PATHS } from "@/lib/paths-data";
 
-const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.systemerr.com";
+const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();

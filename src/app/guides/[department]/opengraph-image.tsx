@@ -99,7 +99,7 @@ export default async function Image({
         </div>
 
         <div style={{ fontSize: 24, color: "#5b6b8c", display: "flex" }}>
-          learnfrc.systemerr.com
+          learnfrc.com
         </div>
       </div>
     ),

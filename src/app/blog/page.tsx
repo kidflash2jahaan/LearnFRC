@@ -25,7 +25,7 @@ import {
 import { AnimatedCounter } from "@/components/animated-counter";
 import { DeskIndex, type DeskCount } from "./_desk-index";
 
-const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.systemerr.com";
+const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com";
 
 export const metadata: Metadata = {
   title: "FRC Guides & Articles",

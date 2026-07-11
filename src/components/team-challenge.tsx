@@ -21,7 +21,7 @@ export function TeamChallenge({
   username: string;
   className?: string;
 }) {
-  const link = `https://learnfrc.systemerr.com/signup?ref=${username}`;
+  const link = `https://learnfrc.com/signup?ref=${username}`;
 
   return (
     <div

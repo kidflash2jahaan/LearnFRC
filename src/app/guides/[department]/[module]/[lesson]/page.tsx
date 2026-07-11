@@ -47,7 +47,7 @@ import { cn } from "@/lib/utils";
 import type { Resource, QuizQuestion } from "@/lib/types";
 import { ReadingRail } from "./_reading-rail";
 
-const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.systemerr.com";
+const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com";
 
 const BRAND_GRADIENT: CSSProperties = {
   background: "linear-gradient(120deg, #2560e6, #1aa9d6)",

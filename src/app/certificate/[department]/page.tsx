@@ -221,7 +221,7 @@ export default async function CertificatePage({
           <div className="flex items-center gap-2">
             <ShareButton
               text={`I just earned the ${dept.name} certificate on LearnFRC! 🤖`}
-              url="https://learnfrc.systemerr.com"
+              url="https://learnfrc.com"
             />
             <PrintButton />
           </div>

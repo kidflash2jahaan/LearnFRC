@@ -110,7 +110,7 @@ export default async function Image() {
           }}
         >
           <div style={{ display: "flex", width: 10, height: 10, borderRadius: 9999, background: "#2560e6" }} />
-          learnfrc.systemerr.com
+          learnfrc.com
         </div>
       </div>
     ),

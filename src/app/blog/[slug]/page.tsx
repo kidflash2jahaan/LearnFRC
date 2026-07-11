@@ -31,7 +31,7 @@ import {
 } from "@/components/motion/primitives";
 import { ReadingRail, type TocItem } from "./_reading-rail";
 
-const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.systemerr.com";
+const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com";
 
 const GRADIENT_TEXT: CSSProperties = {
   background: "linear-gradient(120deg,#2560e6,#1aa9d6)",

@@ -38,7 +38,7 @@ import {
 } from "@/components/motion/primitives";
 import { MasteryPanel } from "./_mastery-panel";
 
-const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.systemerr.com";
+const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com";
 
 export const dynamic = "force-dynamic";
 

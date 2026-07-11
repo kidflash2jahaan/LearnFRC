@@ -22,7 +22,7 @@ export function InviteCard({
   username: string;
   count: number;
 }) {
-  const link = `https://learnfrc.systemerr.com/signup?ref=${username}`;
+  const link = `https://learnfrc.com/signup?ref=${username}`;
   const [copied, setCopied] = React.useState(false);
   const reduce = useReducedMotion();
 

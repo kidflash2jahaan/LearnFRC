@@ -192,7 +192,7 @@ async function renderTeam(teamNumber: number, uid: string) {
                 variant="ghost"
                 label="Invite teammates"
                 text={`Join our FRC team on LearnFRC — sign up with team #${teamNumber} and we can track each other's progress and learn together:`}
-                url="https://learnfrc.systemerr.com"
+                url="https://learnfrc.com"
               />
             </div>
           </RiseItem>
@@ -308,7 +308,7 @@ async function renderTeam(teamNumber: number, uid: string) {
               variant="brand"
               label="Share invite"
               text={`Join our FRC team on LearnFRC — sign up with team #${teamNumber} and we can track each other's progress and learn together:`}
-              url="https://learnfrc.systemerr.com"
+              url="https://learnfrc.com"
             />
           </div>
         </div>
