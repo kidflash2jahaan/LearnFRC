@@ -5,6 +5,11 @@ import { PATHS } from "@/lib/paths-data";
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com";
 
+// ISR: regenerate hourly so DB-inserted articles/lessons surface in the sitemap
+// without a redeploy. (A plain static sitemap is baked at build time and never
+// sees new content — which is how new articles were missing from it.)
+export const revalidate = 3600;
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
 

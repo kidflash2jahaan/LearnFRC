@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { revalidateTag } from "next/cache";
+import { revalidateTag, revalidatePath } from "next/cache";
 
 export const dynamic = "force-dynamic";
 
@@ -24,9 +24,20 @@ async function run(req: Request) {
     .split(",")
     .map((t) => t.trim())
     .filter(Boolean);
+  // Optional full-route revalidation (e.g. the ISR sitemap, which tag-based
+  // revalidation doesn't reach). Empty by default.
+  const paths = (url.searchParams.get("paths") || "")
+    .split(",")
+    .map((p) => p.trim())
+    .filter((p) => p.startsWith("/"));
   // The custom Next fork's revalidateTag takes a profile as the 2nd arg.
   for (const t of tags) revalidateTag(t, "max");
-  return NextResponse.json({ revalidated: tags, at: new Date().toISOString() });
+  for (const p of paths) revalidatePath(p);
+  return NextResponse.json({
+    revalidated: tags,
+    paths,
+    at: new Date().toISOString(),
+  });
 }
 
 export const GET = run;
