@@ -165,7 +165,7 @@ export default async function ForTeamsPage() {
           </RiseItem>
         </RiseGroup>
 
-        <TeamPanel teamNumber="254" roster={SAMPLE_ROSTER} />
+        <TeamPanel roster={SAMPLE_ROSTER} />
       </section>
 
       {/* ============= HOW IT WORKS — the signature 3-step rail ========= */}

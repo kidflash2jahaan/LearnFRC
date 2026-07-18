@@ -15,7 +15,7 @@ export type RosterMember = {
  * — sets up the onboarding-rail signature below the fold. Sample data only;
  * clearly labeled so it never reads as a real team's private info.
  */
-export function TeamPanel({ teamNumber, roster }: { teamNumber: string; roster: RosterMember[] }) {
+export function TeamPanel({ roster }: { roster: RosterMember[] }) {
   const reduce = useReducedMotion();
 
   return (
@@ -28,16 +28,10 @@ export function TeamPanel({ teamNumber, roster }: { teamNumber: string; roster: 
     >
       <div className="mb-4 flex items-center gap-2">
         <span className="font-display text-[17px] font-bold text-foreground">
-          Team {teamNumber} · roster
+          Your team · roster
         </span>
-        <span className="ml-auto inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.08em] text-success">
-          <motion.span
-            className="h-2 w-2 rounded-full bg-[#12b565]"
-            animate={reduce ? undefined : { scale: [1, 1.35, 1], opacity: [1, 0.6, 1] }}
-            transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
-            aria-hidden
-          />
-          Sample
+        <span className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-muted px-2 py-0.5 text-xs font-bold uppercase tracking-[0.08em] text-muted-foreground">
+          Example
         </span>
       </div>
 
@@ -77,6 +71,9 @@ export function TeamPanel({ teamNumber, roster }: { teamNumber: string; roster: 
       <p className="text-center text-[13px] leading-relaxed text-muted-foreground">
         One team number groups everyone — rookies, veterans, and mentors —
         into a shared roster you can all see.
+      </p>
+      <p className="mt-2 text-center text-[11px] text-muted-foreground/80">
+        Illustrative example — not a real team or actual member data.
       </p>
     </motion.div>
   );
