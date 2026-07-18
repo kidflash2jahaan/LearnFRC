@@ -224,18 +224,26 @@ export async function getAdminStats(): Promise<AdminStats> {
   }
   for (const d of daily) d.verified = verifiedByDay.get(d.day) ?? 0;
 
-  const profsRes = await supabase
-    .from("profiles")
-    .select("id, full_name, username, team_number, xp, referred_by, source, hide_name, created_at");
-  const pmap = new Map(
-    ((profsRes.data as Record<string, unknown>[]) ?? []).map((p) => [
-      p.id as string,
-      p,
-    ])
-  );
+  // Page through profiles — the table can exceed PostgREST's 1000-row response
+  // cap as the user base grows, and a plain .select() would silently truncate
+  // every total derived from it (XP, team members, unique teams).
+  const allProfs: Record<string, unknown>[] = [];
+  for (let from = 0; ; from += 1000) {
+    const { data } = await supabase
+      .from("profiles")
+      .select(
+        "id, full_name, username, team_number, xp, referred_by, source, hide_name, created_at"
+      )
+      .order("id", { ascending: true })
+      .range(from, from + 999);
+    const chunk = (data as Record<string, unknown>[]) ?? [];
+    allProfs.push(...chunk);
+    if (chunk.length < 1000) break;
+  }
+  const pmap = new Map(allProfs.map((p) => [p.id as string, p]));
   // Real total XP = sum of every profile's stored xp (includes the streak
   // multiplier and referral bonuses), not completions * 10.
-  const totalXP = ((profsRes.data as { xp: number | null }[]) ?? []).reduce(
+  const totalXP = (allProfs as { xp: number | null }[]).reduce(
     (s, p) => s + (p.xp ?? 0),
     0
   );
@@ -260,26 +268,49 @@ export async function getAdminStats(): Promise<AdminStats> {
   // ── Teams (grouped by FRC team number from profiles) ───────────
   const teamAgg = new Map<number, { members: number; completed: number }>();
   const userTeam = new Map<string, number>();
-  for (const p of (profsRes.data as { id: string; team_number: number | null }[]) ?? []) {
+  for (const p of allProfs as { id: string; team_number: number | null }[]) {
     if (p.team_number == null) continue;
     userTeam.set(p.id, p.team_number);
     const t = teamAgg.get(p.team_number) ?? { members: 0, completed: 0 };
     t.members += 1;
     teamAgg.set(p.team_number, t);
   }
-  const { data: allLpRows } = await supabase.from("lesson_progress").select("user_id");
-  for (const r of (allLpRows as { user_id: string }[]) ?? []) {
-    const tn = userTeam.get(r.user_id);
-    if (tn == null) continue;
-    const t = teamAgg.get(tn);
-    if (t) t.completed += 1;
+  // Page through lesson_progress (it can exceed the 1000-row cap) and count each
+  // team's DISTINCT completed lessons — matching the leaderboard's definition of
+  // "lessons done". The old plain .select("user_id") both truncated at 1000 rows
+  // AND counted raw rows, so team totals were wrong (this is the bug reported).
+  {
+    const perTeam = new Map<number, Set<string>>();
+    for (let from = 0; ; from += 1000) {
+      const { data: lp } = await supabase
+        .from("lesson_progress")
+        .select("user_id, lesson_id")
+        .order("id", { ascending: true })
+        .range(from, from + 999);
+      const chunk = (lp ?? []) as { user_id: string; lesson_id: string }[];
+      for (const r of chunk) {
+        const tn = userTeam.get(r.user_id);
+        if (tn == null) continue;
+        let set = perTeam.get(tn);
+        if (!set) {
+          set = new Set();
+          perTeam.set(tn, set);
+        }
+        set.add(`${r.user_id}:${r.lesson_id}`);
+      }
+      if (chunk.length < 1000) break;
+    }
+    for (const [tn, set] of perTeam) {
+      const t = teamAgg.get(tn);
+      if (t) t.completed = set.size;
+    }
   }
   const teams: AdminTeam[] = [...teamAgg.entries()]
     .map(([teamNumber, v]) => ({ teamNumber, members: v.members, completed: v.completed }))
-    .sort((a, b) => b.members - a.members || b.completed - a.completed);
+    .sort((a, b) => b.completed - a.completed || b.members - a.members);
 
   const totalUniqueTeams = new Set(
-    ((profsRes.data as { team_number: number | null }[]) ?? [])
+    (allProfs as { team_number: number | null }[])
       .map((p) => p.team_number)
       .filter((t): t is number => t != null)
   ).size;
@@ -361,7 +392,8 @@ export async function getAdminStats(): Promise<AdminStats> {
     hide_name: boolean | null;
     created_at: string;
   };
-  const allProfs = (profsRes.data as unknown as ProfRow[]) ?? [];
+  // Reuse the fully-paginated profile list fetched above (typed for this block).
+  const profRows = allProfs as unknown as ProfRow[];
 
   const aggSources = (rows: ProfRow[]) => {
     const counts = new Map<string, number>();
@@ -373,15 +405,15 @@ export async function getAdminStats(): Promise<AdminStats> {
       .map(([name, count]) => ({ name, count }))
       .sort((a, b) => b.count - a.count);
   };
-  const sources = aggSources(allProfs);
+  const sources = aggSources(profRows);
   const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
   const sources7d = aggSources(
-    allProfs.filter((p) => p.created_at && +new Date(p.created_at) >= weekAgo)
+    profRows.filter((p) => p.created_at && +new Date(p.created_at) >= weekAgo)
   );
 
-  const referralUsers = allProfs.filter((p) => p.referred_by != null).length;
+  const referralUsers = profRows.filter((p) => p.referred_by != null).length;
   const recruiterCounts = new Map<string, number>();
-  for (const p of allProfs) {
+  for (const p of profRows) {
     if (!p.referred_by) continue;
     recruiterCounts.set(p.referred_by, (recruiterCounts.get(p.referred_by) ?? 0) + 1);
   }

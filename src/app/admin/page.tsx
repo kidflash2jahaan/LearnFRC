@@ -13,7 +13,9 @@ import {
 import { getSession } from "@/lib/auth";
 import { getAdminStats, getPendingEdits, getPendingSubmissions } from "@/lib/admin";
 import { getRetentionStats } from "@/lib/retention";
+import { getFeedback } from "@/lib/feedback";
 import { RetentionPanel } from "@/components/admin/retention-panel";
+import { FeedbackInbox } from "@/components/admin/feedback-inbox";
 import { Avatar } from "@/components/ui/avatar";
 import { ActivityChart } from "@/components/admin/activity-chart";
 import { AdminOverview } from "@/components/admin/admin-overview";
@@ -84,12 +86,14 @@ export default async function AdminPage() {
     );
   }
 
-  const [stats, pendingEdits, pendingSubmissions, retention] = await Promise.all([
-    getAdminStats(),
-    getPendingEdits(),
-    getPendingSubmissions(),
-    getRetentionStats(),
-  ]);
+  const [stats, pendingEdits, pendingSubmissions, retention, feedback] =
+    await Promise.all([
+      getAdminStats(),
+      getPendingEdits(),
+      getPendingSubmissions(),
+      getRetentionStats(),
+      getFeedback(),
+    ]);
   const maxCompletions = Math.max(
     1,
     ...stats.topDepartments.map((d) => d.completions ?? 0)
@@ -227,6 +231,11 @@ export default async function AdminPage() {
             pendingEdits={pendingEdits}
             pendingSubmissions={pendingSubmissions}
           />
+        </Reveal>
+
+        {/* ===================== FEEDBACK INBOX (actionable) ===================== */}
+        <Reveal className="mt-6">
+          <FeedbackInbox items={feedback} />
         </Reveal>
 
         {/* ===================== SIGNALS: activity + top depts ===================== */}

@@ -50,8 +50,20 @@ export async function POST(req: Request) {
   }
 
   const message = String(body.message || "Unknown error").slice(0, 500);
+
+  // Defense-in-depth backstop (the client boundary already filters these):
+  // drop transient network noise and admin-route reports so they never email.
+  if (
+    /load failed|failed to fetch|networkerror|network connection was lost|the request timed out|cancell?ed|aborted/i.test(
+      message
+    )
+  )
+    return new NextResponse(null, { status: 204 });
+
   const stack = body.stack ? String(body.stack).slice(0, 6000) : undefined;
   const url = body.url ? String(body.url).slice(0, 300) : undefined;
+  if (url && /\/admin(\/|$|\?|#)/.test(url))
+    return new NextResponse(null, { status: 204 });
   const kind = body.kind ? String(body.kind).slice(0, 40) : "Client error";
   const digest = body.digest ? String(body.digest).slice(0, 80) : undefined;
   const userAgent = req.headers.get("user-agent")?.slice(0, 200) || undefined;

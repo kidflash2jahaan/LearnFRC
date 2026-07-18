@@ -224,9 +224,19 @@ export function AuthForm({
       )}
 
       <motion.div variants={item}>
-        <Label htmlFor="password" className={LABEL_CLS}>
-          Password
-        </Label>
+        <div className="flex items-center justify-between gap-2">
+          <Label htmlFor="password" className={LABEL_CLS}>
+            Password
+          </Label>
+          {!isSignup && (
+            <Link
+              href="/forgot-password"
+              className="text-xs font-medium text-primary underline-offset-4 transition-colors hover:underline focus-visible:outline-none focus-visible:underline"
+            >
+              Forgot password?
+            </Link>
+          )}
+        </div>
         <Field icon={Lock}>
           <Input
             id="password"

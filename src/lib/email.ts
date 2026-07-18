@@ -191,6 +191,35 @@ export function feedbackEmailHtml({
   `);
 }
 
+/**
+ * Personal reply the admin sends back to someone who left feedback / a support
+ * note. Relationship/transactional (a direct answer to a message they sent us),
+ * so no marketing footer or unsubscribe is required.
+ */
+export function feedbackReplyHtml({
+  reply,
+  original,
+}: {
+  reply: string;
+  original?: string | null;
+}) {
+  return shell(`
+    <p style="margin:0 0 14px">Thanks for reaching out to LearnFRC — here&rsquo;s a reply to your message:</p>
+    <div style="margin:0 0 16px;padding:14px 16px;background:#f4f7fd;border:1px solid #e2e8f5;border-radius:12px;white-space:pre-wrap;color:#1e2a44">${esc(
+      reply
+    )}</div>
+    ${
+      original
+        ? `<p style="margin:0 0 6px;color:#64748b;font-size:12px">In reply to what you sent:</p>
+    <div style="margin:0;padding:12px 14px;background:#fbfcfe;border:1px solid #eef2f9;border-radius:10px;color:#64748b;font-size:13px;white-space:pre-wrap">${esc(
+      original
+    ).slice(0, 800)}</div>`
+        : ""
+    }
+    <p style="margin:18px 0 0">— Jahaan · LearnFRC</p>
+  `);
+}
+
 export function errorEmailHtml({
   message,
   stack,

@@ -28,6 +28,22 @@ export default function Error({
       }
     }
 
+    // Don't email the admin about non-actionable noise:
+    //  • Transient client network drops — iOS Safari/Chrome surface a failed
+    //    RSC/fetch as "Load failed", plus "Failed to fetch", aborted/timed-out
+    //    requests. These are the visitor's connection, not a code bug.
+    //  • The /admin dashboard is only ever seen by the admin, who is already
+    //    looking at the screen — no point emailing themselves on every hiccup.
+    const msg = error?.message || "";
+    const isNetworkNoise =
+      /load failed|failed to fetch|networkerror|network connection was lost|the request timed out|cancell?ed|aborted/i.test(
+        msg
+      );
+    const onAdmin =
+      typeof window !== "undefined" &&
+      window.location.pathname.startsWith("/admin");
+    if (isNetworkNoise || onAdmin) return;
+
     try {
       fetch("/api/report-error", {
         method: "POST",
