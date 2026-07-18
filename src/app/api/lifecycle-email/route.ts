@@ -1,8 +1,33 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail, lifecycleEmailHtml } from "@/lib/email";
+import { getDepartments, getDepartmentBySlug } from "@/lib/queries";
 
 export const dynamic = "force-dynamic";
+
+/** Flat, ordered list of every lesson (dept → module → lesson order), so we can
+ * name each user's *next* lesson in the re-engagement email. Uses the durably
+ * cached content functions, so it adds no real DB egress on a cron run. */
+async function orderedLessons(): Promise<
+  { id: string; title: string; href: string }[]
+> {
+  const depts = await getDepartments().catch(() => []);
+  const out: { id: string; title: string; href: string }[] = [];
+  for (const d of depts) {
+    const full = await getDepartmentBySlug(d.slug).catch(() => null);
+    if (!full) continue;
+    for (const m of full.modules) {
+      for (const l of m.lessons) {
+        out.push({
+          id: l.id,
+          title: l.title,
+          href: `/guides/${full.slug}/${m.slug}/${l.slug}`,
+        });
+      }
+    }
+  }
+  return out;
+}
 
 /**
  * Automatic, recurring lifecycle email (Duolingo-style "come back / keep your
@@ -81,8 +106,11 @@ async function run(req: Request) {
       html: lifecycleEmailHtml({
         name: null,
         completed: 6,
-        streak: 0,
+        streak: 3,
         unsubscribeUrl: `${site}/unsubscribe?token=preview`,
+        nextLessonTitle: "Understanding the FRC Control System",
+        nextLessonHref: "/guides",
+        inviteUrl: `${site}/signup?ref=yourname`,
       }),
     });
     return NextResponse.json({ ok: res.ok, sentTestTo: test, error: res.error });
@@ -117,16 +145,29 @@ async function run(req: Request) {
     .select("id, username, full_name, unsubscribe_token, last_lifecycle_email_at")
     .eq("email_opt_in", true);
 
-  // 3) progress -> per-user completed dates
+  // 3) progress -> per-user completed dates + completed lesson ids
   const byUser = new Map<string, string[]>();
+  const byUserLessons = new Map<string, Set<string>>();
   for (let from = 0; ; from += 1000) {
     const { data: lp } = await admin
       .from("lesson_progress")
-      .select("user_id, completed_at")
+      .select("user_id, lesson_id, completed_at")
       .order("id", { ascending: true })
       .range(from, from + 999);
-    const chunk = (lp ?? []) as { user_id: string; completed_at: string }[];
+    const chunk = (lp ?? []) as {
+      user_id: string;
+      lesson_id: string;
+      completed_at: string;
+    }[];
     for (const r of chunk) {
+      if (r.lesson_id) {
+        let s = byUserLessons.get(r.user_id);
+        if (!s) {
+          s = new Set();
+          byUserLessons.set(r.user_id, s);
+        }
+        s.add(r.lesson_id);
+      }
       if (!r.completed_at) continue;
       const arr = byUser.get(r.user_id) ?? [];
       arr.push(r.completed_at);
@@ -135,13 +176,19 @@ async function run(req: Request) {
     if (chunk.length < 1000) break;
   }
 
+  // Ordered catalog, loaded once — used to name each user's next lesson.
+  const catalog = await orderedLessons();
+
   const eligible: {
     id: string;
     email: string;
     name: string | null;
+    username: string | null;
     token: string;
     completed: number;
     streak: number;
+    nextLessonTitle: string | null;
+    nextLessonHref: string | null;
   }[] = [];
 
   for (const p of (profs ?? []) as {
@@ -163,13 +210,18 @@ async function run(req: Request) {
         THROTTLE_DAYS * 86_400_000
     )
       continue; // emailed recently
+    const doneSet = byUserLessons.get(p.id) ?? new Set<string>();
+    const next = catalog.find((l) => !doneSet.has(l.id)) ?? null;
     eligible.push({
       id: p.id,
       email,
       name: p.full_name || p.username || null,
+      username: p.username,
       token: p.unsubscribe_token,
       completed: dates.length, // one lesson_progress row per lesson (no dupes)
       streak: streakFromDates(dates),
+      nextLessonTitle: next?.title ?? null,
+      nextLessonHref: next?.href ?? null,
     });
   }
 
@@ -180,7 +232,7 @@ async function run(req: Request) {
       dryRun: true,
       totalEligible: eligible.length,
       wouldSend: batch.length,
-      sample: batch.slice(0, 5).map((b) => ({ email: b.email.replace(/(.).+(@.*)/, "$1***$2"), completed: b.completed, streak: b.streak })),
+      sample: batch.slice(0, 5).map((b) => ({ email: b.email.replace(/(.).+(@.*)/, "$1***$2"), completed: b.completed, streak: b.streak, next: b.nextLessonTitle })),
     });
   }
 
@@ -198,6 +250,9 @@ async function run(req: Request) {
         completed: u.completed,
         streak: u.streak,
         unsubscribeUrl,
+        nextLessonTitle: u.nextLessonTitle,
+        nextLessonHref: u.nextLessonHref,
+        inviteUrl: u.username ? `${site}/signup?ref=${u.username}` : null,
       }),
     });
     if (res.ok) {

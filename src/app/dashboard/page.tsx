@@ -133,6 +133,16 @@ export default async function DashboardPage() {
   // Lesson XP = 10 + 1 per streak-day, capped at 20 (max 2x). Show the multiplier.
   const xpMultiplier = (1 + Math.min(10, Math.max(0, streak - 1)) / 10).toFixed(1);
 
+  // "Streak at risk": has an active streak but hasn't done a lesson today yet —
+  // one lesson before midnight keeps it alive. Drives a return nudge.
+  const dayKey = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+  const todayKey = dayKey(new Date());
+  const didToday = progressRows.some((r) => {
+    const d = new Date(r.completed_at);
+    return !Number.isNaN(d.getTime()) && dayKey(d) === todayKey;
+  });
+  const streakAtRisk = streak > 0 && !didToday;
+
   // lesson -> department id
   const lessonRows = (lessonMapRes.data ?? []) as {
     id: string;
@@ -382,6 +392,44 @@ export default async function DashboardPage() {
             nextLevel={nextLevel}
           />
         </section>
+
+        {/* ============================ STREAK AT RISK ============================ */}
+        {streakAtRisk && continueLesson && cm && (
+          <Reveal className="mt-8">
+            <Hover lift={-3} className="block">
+              <Link
+                href={`/guides/${continueLesson.deptSlug}/${continueLesson.moduleSlug}/${continueLesson.lessonSlug}`}
+                className="ac-tile group flex items-center justify-between gap-4 p-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:p-5"
+                style={{ "--a": "#ff8a3d" } as CSSProperties}
+              >
+                <div className="flex min-w-0 items-center gap-3">
+                  <span
+                    className="ac-badge flex h-11 w-11 shrink-0 items-center justify-center"
+                    style={{ "--a": "#ff8a3d" } as CSSProperties}
+                  >
+                    <Flame className="h-5 w-5" aria-hidden />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-[15px] font-bold text-foreground">
+                      Keep your {streak}-day streak alive 🔥
+                    </p>
+                    <p className="text-sm leading-snug text-foreground/70">
+                      One lesson today keeps it going — it resets at midnight. Next up:{" "}
+                      <span className="font-semibold text-foreground">
+                        {continueLesson.lessonTitle}
+                      </span>
+                      .
+                    </p>
+                  </div>
+                </div>
+                <span className="ac-btn inline-flex shrink-0 self-center text-sm">
+                  <Play className="h-4 w-4 fill-current" aria-hidden />
+                  <span className="hidden sm:inline">1 lesson</span>
+                </span>
+              </Link>
+            </Hover>
+          </Reveal>
+        )}
 
         {/* ============================ WHAT'S NEW ============================ */}
         <WhatsNew

@@ -98,11 +98,19 @@ export function lifecycleEmailHtml({
   completed,
   streak,
   unsubscribeUrl,
+  nextLessonTitle,
+  nextLessonHref,
+  inviteUrl,
 }: {
   name?: string | null;
   completed: number;
   streak: number;
   unsubscribeUrl: string;
+  /** The user's actual next lesson — named + deep-linked when known. */
+  nextLessonTitle?: string | null;
+  nextLessonHref?: string | null;
+  /** The user's personal referral link — adds a soft "bring a teammate" ask. */
+  inviteUrl?: string | null;
 }) {
   const site = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com";
   const greeting = name ? `Hey ${esc(name)},` : "Hey,";
@@ -110,13 +118,34 @@ export function lifecycleEmailHtml({
     streak > 1
       ? `You're on a <strong>${streak}-day streak</strong> — do one lesson today to keep it alive. 🔥`
       : `Off-season is the best time to get ahead before build season.`;
+
+  // Name the specific next lesson (strongest re-engagement hook) and deep-link
+  // straight to it; fall back to the dashboard when it isn't known.
+  const ctaHref =
+    nextLessonHref && nextLessonHref.startsWith("/")
+      ? `${site}${nextLessonHref}`
+      : `${site}/dashboard`;
+  const nextBlock = nextLessonTitle
+    ? `<p style="margin:0 0 6px;color:#64748b;font-size:13px;text-transform:uppercase;letter-spacing:.04em">Your next lesson</p>
+       <p style="margin:0 0 22px;font-size:18px;font-weight:700;color:#0f1c33">${esc(nextLessonTitle)}</p>`
+    : `<p style="margin:0 0 22px">Your next lesson is waiting on your dashboard — pick up right where you left off:</p>`;
+  const ctaLabel = nextLessonTitle ? "Continue this lesson →" : "Continue learning →";
+
+  const inviteBlock = inviteUrl
+    ? `<p style="margin:26px 0 0;padding-top:16px;border-top:1px solid #eef2f9;color:#64748b;font-size:13px">
+         Learning with a team? Bring a teammate and you <strong>both get +25 XP</strong> —
+         <a href="${inviteUrl}" style="color:#2560e6;font-weight:600">share your invite link</a>.
+       </p>`
+    : "";
+
   return marketingShell(
     `
     <p style="margin:0 0 14px">${greeting}</p>
-    <p style="margin:0 0 14px">You've completed <strong>${completed} ${completed === 1 ? "lesson" : "lessons"}</strong> on LearnFRC. ${streakLine}</p>
-    <p style="margin:0 0 22px">Your next lesson is waiting on your dashboard — pick up right where you left off:</p>
-    <a href="${site}/dashboard"
-       style="display:inline-block;background:linear-gradient(110deg,#2560e6,#1aa9d6);color:#fff;text-decoration:none;padding:12px 22px;border-radius:12px;font-weight:600">Continue learning →</a>
+    <p style="margin:0 0 16px">You've completed <strong>${completed} ${completed === 1 ? "lesson" : "lessons"}</strong> on LearnFRC. ${streakLine}</p>
+    ${nextBlock}
+    <a href="${ctaHref}"
+       style="display:inline-block;background:linear-gradient(110deg,#2560e6,#1aa9d6);color:#fff;text-decoration:none;padding:12px 22px;border-radius:12px;font-weight:600">${ctaLabel}</a>
+    ${inviteBlock}
     <p style="margin:22px 0 0;color:#64748b">Gracious professionalism, always. 🤖</p>
   `,
     unsubscribeUrl
