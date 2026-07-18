@@ -17,6 +17,7 @@ import { getArticles } from "@/lib/queries";
 import { Markdown } from "@/components/markdown";
 import { ArticleSuggestEdit } from "@/components/blog/article-suggest-edit";
 import { JsonLd } from "@/components/json-ld";
+import { parseFaqs } from "@/lib/faq";
 import { ShareButton } from "@/components/share-button";
 import { ArticleViewBeacon } from "@/components/article-view-beacon";
 import { AnimatedCounter } from "@/components/animated-counter";
@@ -147,6 +148,10 @@ export default async function ArticlePage({
     keywords: a.keywords.join(", "),
   };
 
+  // Emit FAQ rich-result schema only when the article actually has an FAQ
+  // section with a real list of questions (Google requires ≥1; we want ≥2).
+  const faqs = parseFaqs(a.content);
+
   const stats = [
     { icon: Clock, value: a.readMins, suffix: " min", label: "to read" },
     { icon: FileText, value: wordCount, suffix: "", label: "words" },
@@ -168,6 +173,19 @@ export default async function ArticlePage({
           ],
         }}
       />
+      {faqs.length >= 2 && (
+        <JsonLd
+          data={{
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            mainEntity: faqs.map((f) => ({
+              "@type": "Question",
+              name: f.question,
+              acceptedAnswer: { "@type": "Answer", text: f.answer },
+            })),
+          }}
+        />
+      )}
 
       <Glow
         blobs={[
