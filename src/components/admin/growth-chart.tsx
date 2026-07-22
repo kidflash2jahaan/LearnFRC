@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
 import { motion } from "framer-motion";
 import { TrendingUp } from "lucide-react";
@@ -24,15 +24,17 @@ const TOGGLES: { value: Metric; label: string }[] = [
   { value: "completions", label: "Completions" },
 ];
 
-// Fixed viewBox coordinate space; the SVG scales to the container width.
-const VB_W = 720;
+// The viewBox width is set to the MEASURED container width (see `w` below) so the
+// SVG never letterboxes — screen-x then maps 1:1 to viewBox-x and the hover
+// indicator stays exactly under the cursor at every position, not just center.
+const VB_W_DEFAULT = 720; // used before the container is measured (SSR/first paint)
 const VB_H = 220;
 const PAD_T = 16;
 const PAD_B = 28;
 const PAD_L = 8;
 const PAD_R = 8;
-const PLOT_W = VB_W - PAD_L - PAD_R;
 const PLOT_H = VB_H - PAD_T - PAD_B;
+const REVEAL_W = 4000; // draw-in clip sweep, wider than any real container
 
 function formatDay(raw: string): string {
   // Accepts ISO-ish "YYYY-MM-DD" (or anything Date can parse); falls back to raw.
@@ -45,6 +47,23 @@ export function GrowthChart({ daily }: { daily: DailyPoint[] }) {
   const [metric, setMetric] = useState<Metric>("all");
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  // Measure the container so the viewBox width == rendered width (no letterbox).
+  const [w, setW] = useState(VB_W_DEFAULT);
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const measure = () => {
+      const cw = el.clientWidth;
+      if (cw > 0) setW(Math.round(cw));
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const PLOT_W = w - PAD_L - PAD_R;
 
   const points = daily ?? [];
   const n = points.length;
@@ -101,7 +120,7 @@ export function GrowthChart({ daily }: { daily: DailyPoint[] }) {
     const rightX = n === 1 ? PAD_L + PLOT_W : xAt(n - 1);
     return `${top} L ${rightX.toFixed(2)} ${baseY} L ${PAD_L} ${baseY} Z`;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [points, n, yMax]);
+  }, [points, n, yMax, w]);
 
   // Gridlines: 4 horizontal bands with value labels.
   const gridLines = useMemo(() => {
@@ -126,7 +145,7 @@ export function GrowthChart({ daily }: { daily: DailyPoint[] }) {
     }
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [points, n]);
+  }, [points, n, w]);
 
   const seriesShown = (key: "views" | "signups" | "completions") =>
     metric === "all" || metric === key;
@@ -138,7 +157,7 @@ export function GrowthChart({ daily }: { daily: DailyPoint[] }) {
     const svg = svgRef.current;
     if (!svg) return;
     const rect = svg.getBoundingClientRect();
-    const relX = ((e.clientX - rect.left) / rect.width) * VB_W;
+    const relX = ((e.clientX - rect.left) / rect.width) * w;
     // Map pixel-x back to nearest index.
     const raw = n <= 1 ? 0 : ((relX - PAD_L) / PLOT_W) * (n - 1);
     const idx = Math.max(0, Math.min(n - 1, Math.round(raw)));
@@ -150,7 +169,7 @@ export function GrowthChart({ daily }: { daily: DailyPoint[] }) {
   const active = hoverIdx != null ? points[hoverIdx] : null;
   const activeX = hoverIdx != null ? xAt(hoverIdx) : 0;
   // Tooltip horizontal placement (percentage of width), clamped away from edges.
-  const tipLeftPct = hoverIdx != null ? Math.min(88, Math.max(12, (activeX / VB_W) * 100)) : 50;
+  const tipLeftPct = hoverIdx != null ? Math.min(88, Math.max(12, (activeX / w) * 100)) : 50;
 
   return (
     <Reveal>
@@ -227,7 +246,7 @@ export function GrowthChart({ daily }: { daily: DailyPoint[] }) {
 
         {/* Chart */}
         <div className="relative w-full overflow-x-auto">
-          <div className="relative min-w-[320px]">
+          <div ref={wrapRef} className="relative min-w-[320px]">
             {isEmpty ? (
               <div className="flex h-[220px] items-center justify-center px-4 text-center text-sm text-muted-foreground">
                 No activity yet — data will appear as people visit.
@@ -235,7 +254,7 @@ export function GrowthChart({ daily }: { daily: DailyPoint[] }) {
             ) : (
               <svg
                 ref={svgRef}
-                viewBox={`0 0 ${VB_W} ${VB_H}`}
+                viewBox={`0 0 ${w} ${VB_H}`}
                 width="100%"
                 height={220}
                 role="img"
@@ -258,7 +277,7 @@ export function GrowthChart({ daily }: { daily: DailyPoint[] }) {
                       y={0}
                       height={VB_H}
                       initial={{ width: 0 }}
-                      animate={{ width: VB_W }}
+                      animate={{ width: REVEAL_W }}
                       transition={{ duration: 1, ease: "easeInOut" }}
                     />
                   </clipPath>
