@@ -47,6 +47,7 @@ export type DailyPoint = {
   signups: number;
   verified: number;
   completions: number;
+  views: number;
 };
 
 export type AdminStats = {
@@ -92,10 +93,21 @@ export type AdminStats = {
   articleViews7d: number;
   /** Per-article view counts, most read first, incl. zero-view articles. */
   articleViews: { slug: string; title: string; views: number }[];
+  /** Site-wide pageviews (all pages) — all-time / 7d / 30d, seeded with real history. */
+  pageViewsTotal: number;
+  pageViews7d: number;
+  pageViews30d: number;
+  /** Distinct first-party visitor ids (unique visitors). */
+  uniqueVisitors: number;
+  uniqueVisitors30d: number;
+  /** Most-viewed pages across the whole site (+ trailing 7d). */
+  topPages: { path: string; views: number; views7d: number }[];
+  /** Most-completed lessons. */
+  topLessons: { slug: string; title: string; completions: number }[];
 };
 
 /** Number of trailing calendar days rendered in the activity chart. */
-const DAILY_WINDOW = 14;
+const DAILY_WINDOW = 30;
 
 /** Format a Date as a UTC `YYYY-MM-DD` key (matches the daily views). */
 function dayKey(d: Date): string {
@@ -134,6 +146,10 @@ export async function getAdminStats(): Promise<AdminStats> {
     dailySignupsRes,
     dailyCompletionsRes,
     articleViewsRes,
+    pageSummaryRes,
+    dailyPageViewsRes,
+    topPagesRes,
+    topLessonsRes,
   ] = await Promise.all([
     supabase.from("profiles").select("*", { count: "exact", head: true }),
     supabase.from("lesson_progress").select("*", { count: "exact", head: true }),
@@ -165,6 +181,11 @@ export async function getAdminStats(): Promise<AdminStats> {
     supabase.from("admin_daily_completions").select("day, count"),
     // Aggregated in SQL (one row per slug) so we never fetch raw view rows.
     supabase.rpc("article_view_counts"),
+    // Site-wide pageview aggregates — all computed SQL-side.
+    supabase.rpc("page_view_summary"),
+    supabase.rpc("page_views_daily", { days: DAILY_WINDOW }),
+    supabase.rpc("top_pages", { lim: 12 }),
+    supabase.rpc("top_lessons", { lim: 8 }),
   ]);
 
   const subscribersRes = await supabase
@@ -198,6 +219,14 @@ export async function getAdminStats(): Promise<AdminStats> {
   const completionsByDay = toMap(
     dailyCompletionsRes.data as { day: string | null; count: number | null }[]
   );
+  // page_views_daily returns (day, views) — build its own map.
+  const pageViewsByDay = new Map<string, number>();
+  for (const r of (dailyPageViewsRes.data as
+    | { day: string | null; views: number | string | null }[]
+    | null) ?? []) {
+    if (!r.day) continue;
+    pageViewsByDay.set(String(r.day).slice(0, 10), Number(r.views ?? 0));
+  }
 
   // Last DAILY_WINDOW calendar days, oldest → newest, missing days filled with 0.
   const daily: DailyPoint[] = [];
@@ -208,6 +237,7 @@ export async function getAdminStats(): Promise<AdminStats> {
       signups: signupsByDay.get(key) ?? 0,
       verified: 0, // filled from auth list below
       completions: completionsByDay.get(key) ?? 0,
+      views: pageViewsByDay.get(key) ?? 0,
     });
   }
 
@@ -442,6 +472,30 @@ export async function getAdminStats(): Promise<AdminStats> {
   const articleViewsTotal = avRows.reduce((s, r) => s + Number(r.views ?? 0), 0);
   const articleViews7d = avRows.reduce((s, r) => s + Number(r.views_7d ?? 0), 0);
 
+  // ── Site-wide pageviews + top pages / lessons (SQL-aggregated) ─────
+  const pvs = ((pageSummaryRes.data as
+    | { total: number | string; views_7d: number | string; views_30d: number | string; visitors: number | string; visitors_30d: number | string }[]
+    | null) ?? [])[0];
+  const pageViewsTotal = Number(pvs?.total ?? 0);
+  const pageViews7d = Number(pvs?.views_7d ?? 0);
+  const pageViews30d = Number(pvs?.views_30d ?? 0);
+  const uniqueVisitors = Number(pvs?.visitors ?? 0);
+  const uniqueVisitors30d = Number(pvs?.visitors_30d ?? 0);
+  const topPages = ((topPagesRes.data as
+    | { path: string; views: number | string; views_7d: number | string }[]
+    | null) ?? []).map((r) => ({
+    path: r.path,
+    views: Number(r.views),
+    views7d: Number(r.views_7d),
+  }));
+  const topLessons = ((topLessonsRes.data as
+    | { slug: string; title: string; completions: number | string }[]
+    | null) ?? []).map((r) => ({
+    slug: r.slug,
+    title: r.title,
+    completions: Number(r.completions),
+  }));
+
   return {
     totals: {
       users: countOf(usersRes),
@@ -475,6 +529,13 @@ export async function getAdminStats(): Promise<AdminStats> {
     articleViewsTotal,
     articleViews7d,
     articleViews,
+    pageViewsTotal,
+    pageViews7d,
+    pageViews30d,
+    uniqueVisitors,
+    uniqueVisitors30d,
+    topPages,
+    topLessons,
   };
 }
 
