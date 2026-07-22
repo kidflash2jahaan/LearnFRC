@@ -194,8 +194,13 @@ export default async function AdminPage() {
         <div className="mt-6 grid gap-6 lg:grid-cols-2">
           <Reveal>
             <section className="ac-card p-5 sm:p-6">
-              <h2 className="mb-4 font-display text-lg font-semibold">Where users come from</h2>
-              <SourceBreakdown week={stats.sources7d} allTime={stats.sources} />
+              <h2 className="mb-4 font-display text-lg font-semibold">Where they come from</h2>
+              <SourceBreakdown
+                userWeek={stats.sources7d}
+                userAllTime={stats.sources}
+                visitorWeek={stats.visitorSources7d}
+                visitorAllTime={stats.visitorSources}
+              />
             </section>
           </Reveal>
           <Reveal delay={0.05}>

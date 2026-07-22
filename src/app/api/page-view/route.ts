@@ -29,10 +29,23 @@ export async function POST(req: Request) {
       ? body.visitorId
       : null;
 
+  // First-touch acquisition source — the beacon's request carries the lf_src
+  // cookie (set by <SourceCapture/>), so we read it here without any client work.
+  let source: string | null = null;
+  const cookie = req.headers.get("cookie") || "";
+  const m = cookie.match(/(?:^|;\s*)lf_src=([^;]+)/);
+  if (m) {
+    try {
+      source = decodeURIComponent(m[1]).slice(0, 40);
+    } catch {
+      source = m[1].slice(0, 40);
+    }
+  }
+
   // Generous cap — a real browsing session legitimately hits many pages.
   const ok = await rateLimit("page-view", 600, 3600);
   if (!ok) return new NextResponse(null, { status: 204 });
 
-  await createAdminClient().from("page_views").insert({ path, visitor });
+  await createAdminClient().from("page_views").insert({ path, visitor, source });
   return new NextResponse(null, { status: 204 });
 }

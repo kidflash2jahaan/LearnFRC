@@ -104,6 +104,9 @@ export type AdminStats = {
   topPages: { path: string; views: number; views7d: number }[];
   /** Most-completed lessons. */
   topLessons: { slug: string; title: string; completions: number }[];
+  /** Where UNIQUE VISITORS came from — first-touch source (all-time / last 7d). */
+  visitorSources: { name: string; count: number }[];
+  visitorSources7d: { name: string; count: number }[];
 };
 
 /** Number of trailing calendar days rendered in the activity chart. */
@@ -150,6 +153,7 @@ export async function getAdminStats(): Promise<AdminStats> {
     dailyPageViewsRes,
     topPagesRes,
     topLessonsRes,
+    visitorSourcesRes,
   ] = await Promise.all([
     supabase.from("profiles").select("*", { count: "exact", head: true }),
     supabase.from("lesson_progress").select("*", { count: "exact", head: true }),
@@ -186,6 +190,7 @@ export async function getAdminStats(): Promise<AdminStats> {
     supabase.rpc("page_views_daily", { days: DAILY_WINDOW }),
     supabase.rpc("top_pages", { lim: 12 }),
     supabase.rpc("top_lessons", { lim: 8 }),
+    supabase.rpc("visitor_sources"),
   ]);
 
   const subscribersRes = await supabase
@@ -496,6 +501,19 @@ export async function getAdminStats(): Promise<AdminStats> {
     completions: Number(r.completions),
   }));
 
+  // Where UNIQUE VISITORS came from (one first-touch source per visitor).
+  const vsRows = (visitorSourcesRes.data as
+    | { source: string; all_time: number | string; last_7d: number | string }[]
+    | null) ?? [];
+  const visitorSources = vsRows
+    .map((r) => ({ name: r.source, count: Number(r.all_time) }))
+    .filter((r) => r.count > 0)
+    .sort((a, b) => b.count - a.count);
+  const visitorSources7d = vsRows
+    .map((r) => ({ name: r.source, count: Number(r.last_7d) }))
+    .filter((r) => r.count > 0)
+    .sort((a, b) => b.count - a.count);
+
   return {
     totals: {
       users: countOf(usersRes),
@@ -536,6 +554,8 @@ export async function getAdminStats(): Promise<AdminStats> {
     uniqueVisitors30d,
     topPages,
     topLessons,
+    visitorSources,
+    visitorSources7d,
   };
 }
 
