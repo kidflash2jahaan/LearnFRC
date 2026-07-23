@@ -76,16 +76,12 @@ export function KpiStrip({ s }: { s: Stats }) {
       className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4"
       stagger={0.05}
     >
-      {/* 1. Total page views — gradient text number */}
+      {/* 1. Unique visitors — gradient hero */}
       <KpiCard
         accent="#2560e6"
-        icon={<Eye className="h-5 w-5" />}
-        label="Total page views"
-        subtext={
-          <>
-            +<AnimatedCounter value={s.pageViews7d} /> this week
-          </>
-        }
+        icon={<UsersRound className="h-5 w-5" />}
+        label="Unique visitors"
+        subtext="distinct people"
       >
         <span
           style={
@@ -97,18 +93,23 @@ export function KpiStrip({ s }: { s: Stats }) {
             } as CSSProperties
           }
         >
-          <AnimatedCounter value={s.pageViewsTotal} />
+          <AnimatedCounter value={s.uniqueVisitors} />
         </span>
       </KpiCard>
 
-      {/* 2. Unique visitors */}
+      {/* 2. Total page views */}
       <KpiCard
         accent="#1aa9d6"
-        icon={<UsersRound className="h-5 w-5" />}
-        label="Unique visitors"
+        icon={<Eye className="h-5 w-5" />}
+        label="Total page views"
+        subtext={
+          <>
+            +<AnimatedCounter value={s.pageViews7d} /> this week
+          </>
+        }
       >
         <span style={{ color: "#1aa9d6" }}>
-          <AnimatedCounter value={s.uniqueVisitors} />
+          <AnimatedCounter value={s.pageViewsTotal} />
         </span>
       </KpiCard>
 

@@ -1,7 +1,7 @@
 "use client";
 
 import type { CSSProperties } from "react";
-import { Globe, Users, CalendarClock } from "lucide-react";
+import { Globe, Eye, CalendarClock } from "lucide-react";
 
 import { AnimatedCounter } from "@/components/animated-counter";
 import { Reveal, RevealGroup, RevealItem, Hover } from "@/components/motion/primitives";
@@ -58,10 +58,13 @@ export function TrafficPanel({
               className="font-display text-4xl font-extrabold tabular-nums leading-none"
               style={gradientText}
             >
-              <AnimatedCounter value={s.pageViewsTotal} />
+              <AnimatedCounter value={s.uniqueVisitors} />
             </div>
             <p className="mt-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              total page views
+              unique visitors
+            </p>
+            <p className="mt-0.5 text-xs text-muted-foreground tabular-nums">
+              <AnimatedCounter value={s.uniqueVisitors30d} /> in the last 30 days
             </p>
           </div>
 
@@ -75,14 +78,14 @@ export function TrafficPanel({
                 className="ac-badge flex h-10 w-10 shrink-0 items-center justify-center"
                 style={{ "--a": PRIMARY } as CSSProperties}
               >
-                <Users className="h-5 w-5" />
+                <Eye className="h-5 w-5" />
               </div>
               <div className="min-w-0">
                 <div className="font-display text-xl font-bold tabular-nums text-foreground">
-                  <AnimatedCounter value={s.uniqueVisitors} />
+                  <AnimatedCounter value={s.pageViewsTotal} />
                 </div>
                 <p className="truncate text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Unique visitors
+                  Total page views
                 </p>
               </div>
             </div>

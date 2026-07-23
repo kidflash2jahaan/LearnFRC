@@ -48,6 +48,7 @@ export type DailyPoint = {
   verified: number;
   completions: number;
   views: number;
+  visitors: number;
 };
 
 export type AdminStats = {
@@ -226,11 +227,14 @@ export async function getAdminStats(): Promise<AdminStats> {
   );
   // page_views_daily returns (day, views) — build its own map.
   const pageViewsByDay = new Map<string, number>();
+  const visitorsByDay = new Map<string, number>();
   for (const r of (dailyPageViewsRes.data as
-    | { day: string | null; views: number | string | null }[]
+    | { day: string | null; views: number | string | null; visitors: number | string | null }[]
     | null) ?? []) {
     if (!r.day) continue;
-    pageViewsByDay.set(String(r.day).slice(0, 10), Number(r.views ?? 0));
+    const k = String(r.day).slice(0, 10);
+    pageViewsByDay.set(k, Number(r.views ?? 0));
+    visitorsByDay.set(k, Number(r.visitors ?? 0));
   }
 
   // Last DAILY_WINDOW calendar days, oldest → newest, missing days filled with 0.
@@ -243,6 +247,7 @@ export async function getAdminStats(): Promise<AdminStats> {
       verified: 0, // filled from auth list below
       completions: completionsByDay.get(key) ?? 0,
       views: pageViewsByDay.get(key) ?? 0,
+      visitors: visitorsByDay.get(key) ?? 0,
     });
   }
 

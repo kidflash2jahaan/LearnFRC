@@ -8,17 +8,20 @@ import { Reveal } from "@/components/motion/primitives";
 import { AnimatedCounter } from "@/components/animated-counter";
 import { cn } from "@/lib/utils";
 
-type DailyPoint = { day: string; signups: number; completions: number; views: number };
-type Metric = "all" | "views" | "signups" | "completions";
+type DailyPoint = { day: string; signups: number; completions: number; views: number; visitors: number };
+type Metric = "all" | "visitors" | "views" | "signups" | "completions";
+type SeriesKey = "visitors" | "views" | "signups" | "completions";
 
-const SERIES: { key: "views" | "signups" | "completions"; label: string; color: string }[] = [
-  { key: "views", label: "Views", color: "#2560e6" },
-  { key: "signups", label: "Signups", color: "#1aa9d6" },
-  { key: "completions", label: "Completions", color: "#7c5cff" },
+const SERIES: { key: SeriesKey; label: string; color: string }[] = [
+  { key: "visitors", label: "Visitors", color: "#2560e6" },
+  { key: "views", label: "Views", color: "#1aa9d6" },
+  { key: "signups", label: "Signups", color: "#7c5cff" },
+  { key: "completions", label: "Completions", color: "#12a150" },
 ];
 
 const TOGGLES: { value: Metric; label: string }[] = [
   { value: "all", label: "All" },
+  { value: "visitors", label: "Visitors" },
   { value: "views", label: "Views" },
   { value: "signups", label: "Signups" },
   { value: "completions", label: "Completions" },
@@ -71,7 +74,7 @@ export function GrowthChart({ daily }: { daily: DailyPoint[] }) {
   const maxVal = useMemo(() => {
     let m = 0;
     for (const p of points) {
-      m = Math.max(m, p.views || 0, p.signups || 0, p.completions || 0);
+      m = Math.max(m, p.visitors || 0, p.views || 0, p.signups || 0, p.completions || 0);
     }
     return m;
   }, [points]);
@@ -79,12 +82,13 @@ export function GrowthChart({ daily }: { daily: DailyPoint[] }) {
   const totals = useMemo(() => {
     return points.reduce(
       (acc, p) => {
+        acc.visitors += p.visitors || 0;
         acc.views += p.views || 0;
         acc.signups += p.signups || 0;
         acc.completions += p.completions || 0;
         return acc;
       },
-      { views: 0, signups: 0, completions: 0 },
+      { visitors: 0, views: 0, signups: 0, completions: 0 },
     );
   }, [points]);
 
@@ -96,7 +100,7 @@ export function GrowthChart({ daily }: { daily: DailyPoint[] }) {
   const yMax = maxVal === 0 ? 1 : maxVal;
   const yAt = (v: number) => PAD_T + PLOT_H - (PLOT_H * (v || 0)) / yMax;
 
-  const linePath = (key: "views" | "signups" | "completions") => {
+  const linePath = (key: SeriesKey) => {
     if (n === 0) return "";
     if (n === 1) {
       const x = xAt(0);
@@ -112,9 +116,9 @@ export function GrowthChart({ daily }: { daily: DailyPoint[] }) {
     if (n === 0) return "";
     const top =
       n === 1
-        ? `M ${PAD_L} ${yAt(points[0].views)} L ${PAD_L + PLOT_W} ${yAt(points[0].views)}`
+        ? `M ${PAD_L} ${yAt(points[0].visitors)} L ${PAD_L + PLOT_W} ${yAt(points[0].visitors)}`
         : points
-            .map((p, i) => `${i === 0 ? "M" : "L"} ${xAt(i).toFixed(2)} ${yAt(p.views).toFixed(2)}`)
+            .map((p, i) => `${i === 0 ? "M" : "L"} ${xAt(i).toFixed(2)} ${yAt(p.visitors).toFixed(2)}`)
             .join(" ");
     const baseY = PAD_T + PLOT_H;
     const rightX = n === 1 ? PAD_L + PLOT_W : xAt(n - 1);
@@ -147,9 +151,9 @@ export function GrowthChart({ daily }: { daily: DailyPoint[] }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [points, n, w]);
 
-  const seriesShown = (key: "views" | "signups" | "completions") =>
+  const seriesShown = (key: SeriesKey) =>
     metric === "all" || metric === key;
-  const seriesDim = (key: "views" | "signups" | "completions") =>
+  const seriesDim = (key: SeriesKey) =>
     metric !== "all" && metric !== key;
 
   const handleMove = (e: ReactPointerEvent<SVGSVGElement>) => {
@@ -311,12 +315,12 @@ export function GrowthChart({ daily }: { daily: DailyPoint[] }) {
                 {/* Everything that draws in, under the reveal clip */}
                 <g clipPath="url(#gc-reveal)">
                   {/* Views area */}
-                  {seriesShown("views") && (
+                  {seriesShown("visitors") && (
                     <motion.path
                       d={areaPath}
                       fill="url(#gc-area)"
                       initial={{ opacity: 0 }}
-                      animate={{ opacity: metric === "all" || metric === "views" ? 1 : 0.25 }}
+                      animate={{ opacity: metric === "all" || metric === "visitors" ? 1 : 0.25 }}
                       transition={{ duration: 0.4 }}
                     />
                   )}
