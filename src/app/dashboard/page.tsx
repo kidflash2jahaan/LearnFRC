@@ -20,6 +20,7 @@ import { Progress } from "@/components/ui/progress";
 import { DepartmentCard } from "@/components/department-card";
 import { InviteCard } from "@/components/leaderboard/invite-card";
 import { FirstRunGuide } from "@/components/dashboard/first-run-guide";
+import { GuestMigration } from "@/components/guest-migration";
 import {
   Reveal,
   RevealGroup,
@@ -295,6 +296,8 @@ export default async function DashboardPage() {
       />
 
       <div className="mx-auto max-w-7xl px-4 pt-28 pb-20 sm:px-6 lg:px-8">
+        {/* Migrate any guest (pre-signup) progress into this account, once. */}
+        <GuestMigration />
         {/* First-run guide — only for brand-new (zero-progress) learners. */}
         {completedCount === 0 && continueLesson && cm && (
           <Reveal className="mb-8">

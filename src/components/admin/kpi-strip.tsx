@@ -9,6 +9,7 @@ import {
   Zap,
   Repeat,
   BookOpenCheck,
+  Ghost,
 } from "lucide-react";
 import { RevealGroup, RevealItem, Hover } from "@/components/motion/primitives";
 import { AnimatedCounter } from "@/components/animated-counter";
@@ -25,6 +26,8 @@ type Stats = {
   returnPct: number;
   completions: number;
   onlineNow: number;
+  guestLearners: number;
+  guestCompletions: number;
 };
 
 const LABEL_KICKER =
@@ -164,14 +167,33 @@ export function KpiStrip({ s }: { s: Stats }) {
         </span>
       </KpiCard>
 
-      {/* 7. Lessons completed */}
+      {/* 7. Lessons completed (incl. guests) */}
       <KpiCard
         accent="#2560e6"
         icon={<BookOpenCheck className="h-5 w-5" />}
         label="Lessons completed"
+        subtext={
+          s.guestCompletions > 0 ? (
+            <>
+              incl <AnimatedCounter value={s.guestCompletions} /> by guests
+            </>
+          ) : undefined
+        }
       >
         <span style={{ color: "#2560e6" }}>
           <AnimatedCounter value={s.completions} />
+        </span>
+      </KpiCard>
+
+      {/* 8. Guest learners */}
+      <KpiCard
+        accent="#0ea5a3"
+        icon={<Ghost className="h-5 w-5" />}
+        label="Guest learners"
+        subtext="learning, no account"
+      >
+        <span style={{ color: "#0ea5a3" }}>
+          <AnimatedCounter value={s.guestLearners} />
         </span>
       </KpiCard>
 

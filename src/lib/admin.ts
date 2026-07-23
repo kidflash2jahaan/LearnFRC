@@ -108,6 +108,11 @@ export type AdminStats = {
   /** Where UNIQUE VISITORS came from — first-touch source (all-time / last 7d). */
   visitorSources: { name: string; count: number }[];
   visitorSources7d: { name: string; count: number }[];
+  /** Guest (no-account) learning — completions + distinct learners. */
+  guestCompletions: number;
+  guestLearners: number;
+  guestCompletions7d: number;
+  guestLearners7d: number;
 };
 
 /** Number of trailing calendar days rendered in the activity chart. */
@@ -155,6 +160,7 @@ export async function getAdminStats(): Promise<AdminStats> {
     topPagesRes,
     topLessonsRes,
     visitorSourcesRes,
+    guestStatsRes,
   ] = await Promise.all([
     supabase.from("profiles").select("*", { count: "exact", head: true }),
     supabase.from("lesson_progress").select("*", { count: "exact", head: true }),
@@ -192,6 +198,7 @@ export async function getAdminStats(): Promise<AdminStats> {
     supabase.rpc("top_pages", { lim: 12 }),
     supabase.rpc("top_lessons", { lim: 8 }),
     supabase.rpc("visitor_sources"),
+    supabase.rpc("guest_progress_stats"),
   ]);
 
   const subscribersRes = await supabase
@@ -420,7 +427,12 @@ export async function getAdminStats(): Promise<AdminStats> {
     username: p.username,
     lastSeen: p.last_seen_at,
   }));
-  const onlineNow = onlineUsers.length;
+  // Include anonymous/guest browsers active in the last 10 minutes — everyone
+  // fires the page-view beacon, so this reflects ALL active visitors, not just
+  // signed-in members (who remain the named list in onlineUsers).
+  const onlineVisitorsRes = await supabase.rpc("online_visitors", { minutes: 10 });
+  const onlineVisitors = Number((onlineVisitorsRes.data as number | null) ?? 0);
+  const onlineNow = Math.max(onlineUsers.length, onlineVisitors);
 
   // ── Acquisition sources + referrals (from the profiles we already fetched) ──
   type ProfRow = {
@@ -519,6 +531,15 @@ export async function getAdminStats(): Promise<AdminStats> {
     .filter((r) => r.count > 0)
     .sort((a, b) => b.count - a.count);
 
+  // Guest (no-account) learning.
+  const gs = ((guestStatsRes.data as
+    | { guest_completions: number | string; guest_learners: number | string; guest_completions_7d: number | string; guest_learners_7d: number | string }[]
+    | null) ?? [])[0];
+  const guestCompletions = Number(gs?.guest_completions ?? 0);
+  const guestLearners = Number(gs?.guest_learners ?? 0);
+  const guestCompletions7d = Number(gs?.guest_completions_7d ?? 0);
+  const guestLearners7d = Number(gs?.guest_learners_7d ?? 0);
+
   return {
     totals: {
       users: countOf(usersRes),
@@ -561,6 +582,10 @@ export async function getAdminStats(): Promise<AdminStats> {
     topLessons,
     visitorSources,
     visitorSources7d,
+    guestCompletions,
+    guestLearners,
+    guestCompletions7d,
+    guestLearners7d,
   };
 }
 

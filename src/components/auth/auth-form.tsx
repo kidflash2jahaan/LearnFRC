@@ -17,6 +17,7 @@ import {
   Hash,
 } from "lucide-react";
 import { signIn, signUp, type AuthState } from "@/app/actions/auth";
+import { GoogleSignInButton } from "@/components/auth/google-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -130,6 +131,16 @@ export function AuthForm({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Google — one-tap sign in, then the email form below */}
+      <motion.div variants={item} className="space-y-3">
+        <GoogleSignInButton next={nextValue} />
+        <div className="flex items-center gap-3 text-xs font-medium text-muted-foreground">
+          <span className="h-px flex-1 bg-border" />
+          or continue with email
+          <span className="h-px flex-1 bg-border" />
+        </div>
+      </motion.div>
 
       {isSignup && (
         <motion.div variants={item}>

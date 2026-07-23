@@ -118,8 +118,11 @@ export default async function AdminPage() {
     signups7d: stats.signups7d,
     activationPct: retention.activationPct,
     returnPct: retention.returnPct,
-    completions: stats.totals.completions,
+    // Total lessons completed now includes no-account guest completions.
+    completions: stats.totals.completions + stats.guestCompletions,
     onlineNow: stats.onlineNow,
+    guestLearners: stats.guestLearners,
+    guestCompletions: stats.guestCompletions,
   };
 
   const topTeams = stats.teams.slice(0, 6);

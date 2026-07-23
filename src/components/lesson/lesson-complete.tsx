@@ -23,6 +23,40 @@ import { LessonNewsletter } from "@/components/lesson/lesson-newsletter";
 import { cn } from "@/lib/utils";
 import type { QuizQuestion } from "@/lib/types";
 
+// ---- Guest (no-account) progress: localStorage + a server mirror keyed to the
+// anonymous visitor id (lf_vid). Lets people learn without signing up; migrated
+// into a real account on signup (see the auth actions). ----
+const GUEST_KEY = "lf_guest_lessons";
+function getVisitorId(): string {
+  try {
+    let v = localStorage.getItem("lf_vid");
+    if (!v) {
+      v = crypto.randomUUID();
+      localStorage.setItem("lf_vid", v);
+    }
+    return v;
+  } catch {
+    return "";
+  }
+}
+function readGuestLessons(): Record<string, boolean> {
+  try {
+    return JSON.parse(localStorage.getItem(GUEST_KEY) || "{}");
+  } catch {
+    return {};
+  }
+}
+function writeGuestLesson(lessonId: string, done: boolean) {
+  try {
+    const m = readGuestLessons();
+    if (done) m[lessonId] = true;
+    else delete m[lessonId];
+    localStorage.setItem(GUEST_KEY, JSON.stringify(m));
+  } catch {
+    /* storage blocked — the in-page state still reflects the completion */
+  }
+}
+
 export function LessonComplete({
   lessonId,
   deptSlug,
@@ -72,19 +106,38 @@ export function LessonComplete({
     : 0;
   const passed = hasQuiz && correctCount === quiz.length;
 
-  const requireAuth = () => {
-    // Just passed a quiz = peak intent. Send them to signup (has a login link
-    // for returning users), not the returning-user login screen.
-    toast("Create a free account to save your progress", {
-      action: {
-        label: "Sign up free",
-        onClick: () => router.push(`/signup?next=${encodeURIComponent(lessonPath)}`),
-      },
-    });
-  };
+  // Guests: reflect any completion they saved on this device.
+  React.useEffect(() => {
+    if (authed) return;
+    if (readGuestLessons()[lessonId]) setCompleted(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authed, lessonId]);
 
   const persist = (value: boolean) => {
-    if (!authed) return requireAuth();
+    // Guests learn without an account: save on this device + mirror to the
+    // server (keyed to the anonymous visitor id). No sign-up required.
+    if (!authed) {
+      setCompleted(value);
+      if (value) setBurst((b) => b + 1);
+      writeGuestLesson(lessonId, value);
+      const visitorId = getVisitorId();
+      if (visitorId) {
+        fetch("/api/guest-progress", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            visitorId,
+            lessonId,
+            complete: value,
+            quizPassed: value && hasQuiz,
+          }),
+          keepalive: true,
+        }).catch(() => {});
+      }
+      if (value) toast.success("Lesson complete! Saved on this device.");
+      return;
+    }
+
     setCompleted(value);
     if (value) setBurst((b) => b + 1);
     // Send the quiz answers so the server can verify the pass (the gate is
@@ -106,7 +159,6 @@ export function LessonComplete({
   const onSubmitQuiz = () => {
     setGraded(true);
     if (correctCount === quiz.length) {
-      if (!authed) return requireAuth();
       persist(true);
     }
   };
@@ -130,8 +182,24 @@ export function LessonComplete({
         <CheckCircle2 className="mx-auto h-10 w-10 text-success" aria-hidden />
         <h2 className="mt-3 font-display text-xl font-bold">Lesson complete</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Nice work — your progress is saved.
+          {authed
+            ? "Nice work — your progress is saved."
+            : "Nice work — saved on this device."}
         </p>
+
+        {!authed && (
+          <div className="mx-auto mt-4 max-w-md rounded-xl border border-primary/25 bg-primary/[0.06] p-3.5 text-left text-sm">
+            <p className="leading-relaxed text-foreground">
+              Want to keep it? <strong>Sign up free</strong> to save your progress
+              forever, sync across devices, earn XP, and climb the leaderboard.
+            </p>
+            <Button asChild variant="brand" size="sm" className="mt-3">
+              <Link href={`/signup?next=${encodeURIComponent(lessonPath)}`}>
+                Save my progress <ArrowRight className="h-4 w-4" aria-hidden />
+              </Link>
+            </Button>
+          </div>
+        )}
         <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
           {nextHref && (
             <Button asChild variant="brand">
