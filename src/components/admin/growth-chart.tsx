@@ -9,12 +9,11 @@ import { AnimatedCounter } from "@/components/animated-counter";
 import { cn } from "@/lib/utils";
 
 type DailyPoint = { day: string; signups: number; completions: number; views: number; visitors: number };
-type Metric = "all" | "visitors" | "views" | "signups" | "completions";
-type SeriesKey = "visitors" | "views" | "signups" | "completions";
+type Metric = "all" | "visitors" | "signups" | "completions";
+type SeriesKey = "visitors" | "signups" | "completions";
 
 const SERIES: { key: SeriesKey; label: string; color: string }[] = [
   { key: "visitors", label: "Visitors", color: "#2560e6" },
-  { key: "views", label: "Views", color: "#1aa9d6" },
   { key: "signups", label: "Signups", color: "#7c5cff" },
   { key: "completions", label: "Completions", color: "#12a150" },
 ];
@@ -22,7 +21,6 @@ const SERIES: { key: SeriesKey; label: string; color: string }[] = [
 const TOGGLES: { value: Metric; label: string }[] = [
   { value: "all", label: "All" },
   { value: "visitors", label: "Visitors" },
-  { value: "views", label: "Views" },
   { value: "signups", label: "Signups" },
   { value: "completions", label: "Completions" },
 ];
@@ -74,7 +72,7 @@ export function GrowthChart({ daily }: { daily: DailyPoint[] }) {
   const maxVal = useMemo(() => {
     let m = 0;
     for (const p of points) {
-      m = Math.max(m, p.visitors || 0, p.views || 0, p.signups || 0, p.completions || 0);
+      m = Math.max(m, p.visitors || 0, p.signups || 0, p.completions || 0);
     }
     return m;
   }, [points]);
@@ -332,7 +330,7 @@ export function GrowthChart({ daily }: { daily: DailyPoint[] }) {
                       d={linePath(s.key)}
                       fill="none"
                       stroke={s.color}
-                      strokeWidth={s.key === "views" ? 2.5 : 2}
+                      strokeWidth={s.key === "visitors" ? 2.5 : 2}
                       strokeLinecap="round"
                       strokeLinejoin="round"
                       initial={{ opacity: 0 }}
