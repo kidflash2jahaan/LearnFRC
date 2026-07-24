@@ -8,7 +8,6 @@ import {
   Lightbulb,
   ExternalLink,
   CheckCircle2,
-  Circle,
   ChevronRight,
   Info,
   Zap,
@@ -19,18 +18,12 @@ import {
 import {
   getDepartmentBySlug,
   getLessonContent,
-  getCompletedLessonIds,
-  getBookmarkedLessonIds,
+  getAllDepartmentSlugs,
   flattenLessons,
-  isEmailSubscribed,
 } from "@/lib/queries";
-import { getSession } from "@/lib/auth";
 import { deptMeta, inkFor } from "@/lib/departments";
 import { Icon } from "@/lib/icon-map";
 import { Markdown, extractHeadings } from "@/components/markdown";
-import { SuggestEdit } from "@/components/lesson/suggest-edit";
-import { LessonActions } from "@/components/lesson/lesson-actions";
-import { LessonComplete } from "@/components/lesson/lesson-complete";
 import {
   Rise,
   RiseGroup,
@@ -45,7 +38,17 @@ import { AnimatedCounter } from "@/components/animated-counter";
 import { JsonLd } from "@/components/json-ld";
 import { cn } from "@/lib/utils";
 import type { Resource, QuizQuestion } from "@/lib/types";
-import { ReadingRail } from "./_reading-rail";
+import { MyProgressProvider } from "@/components/progress/my-progress";
+import {
+  LessonStatusChip,
+  LessonActionsIsland,
+  SignupPrompt,
+  ReadingRailIsland,
+  LessonCompleteIsland,
+  MobileProgressCard,
+  LessonStatusDot,
+  SuggestEditIsland,
+} from "./_progress-islands";
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com";
 
@@ -56,7 +59,28 @@ const BRAND_GRADIENT: CSSProperties = {
   color: "transparent",
 };
 
-export const dynamic = "force-dynamic";
+// Static/ISR: the lesson body is identical for everyone and crawlers, so this
+// page is prerendered and revalidated on the catalog window. Per-user progress
+// (completed state, bookmarks, mastery rail, mark-complete/quiz) hydrates
+// client-side from /api/me/progress — see the `Lesson*` islands below.
+// (Previously force-dynamic only to read the session; that read is now client.)
+export const revalidate = 3600; // CATALOG_TTL — matches the content-layer cache
+export const dynamicParams = true; // lessons not prebuilt still render on-demand
+
+export async function generateStaticParams() {
+  const slugs = await getAllDepartmentSlugs();
+  const out: { department: string; module: string; lesson: string }[] = [];
+  for (const department of slugs) {
+    const dept = await getDepartmentBySlug(department);
+    if (!dept) continue;
+    for (const m of dept.modules) {
+      for (const l of m.lessons) {
+        out.push({ department, module: m.slug, lesson: l.slug });
+      }
+    }
+  }
+  return out;
+}
 
 /** Strip common markdown syntax down to plain prose for meta descriptions. */
 function stripMarkdown(md: string): string {
@@ -132,20 +156,15 @@ export default async function LessonPage({
   const idx = flat.findIndex((l) => l.id === les.id);
   const prev = idx > 0 ? flat[idx - 1] : null;
   const next = idx < flat.length - 1 ? flat[idx + 1] : null;
+  // Every lesson id in the department — the client islands derive per-dept
+  // progress (reading rail + mobile card) from these + the fetched completion set.
+  const flatIds = flat.map((l) => l.id);
 
   // The heavy lesson body (markdown, takeaways, resources, quiz) is fetched and
-  // cached separately so list/nav queries never carry lesson content.
-  const [body, { user, profile }] = await Promise.all([
-    getLessonContent(les.id),
-    getSession(),
-  ]);
-  const completed = user ? await getCompletedLessonIds(user.id) : new Set<string>();
-  const bookmarks = user ? await getBookmarkedLessonIds(user.id) : new Set<string>();
-  // Skip the post-lesson newsletter prompt for people already on the list.
-  const alreadySubscribed = user?.email
-    ? await isEmailSubscribed(user.email)
-    : false;
-  const isCompleted = completed.has(les.id);
+  // cached separately so list/nav queries never carry lesson content. It's the
+  // same for everyone, so it stays server-rendered; per-user progress hydrates
+  // client-side (see the Lesson* islands below).
+  const body = await getLessonContent(les.id);
   const lessonPath = `/guides/${dept.slug}/${mod.slug}/${les.slug}`;
 
   const content = body?.content ?? "";
@@ -156,10 +175,6 @@ export default async function LessonPage({
     ? `/guides/${dept.slug}/${next.moduleSlug}/${next.slug}`
     : `/guides/${dept.slug}`;
 
-  // Real per-department progress (drives the reading rail + mobile card).
-  const doneInDept = flat.filter((l) => completed.has(l.id)).length;
-  const total = flat.length;
-  const pct = total ? Math.round((doneInDept / total) * 100) : 0;
   const readMins = Math.max(1, Math.round((content?.split(/\s+/).length ?? 0) / 200));
   const deptGradient = `linear-gradient(135deg, ${meta.color}, ${meta.to})`;
   // --a: bright accent (fills/badges); --ai: darker same-hue tone for text.
@@ -173,6 +188,7 @@ export default async function LessonPage({
   const ARTICLE_ID = "lesson-body";
 
   return (
+    <MyProgressProvider>
     <div className="relative overflow-x-clip">
       <Glow
         blobs={[
@@ -270,21 +286,7 @@ export default async function LessonPage({
               </span>
             </RiseItem>
             <RiseItem>
-              <span
-                className="ac-chip inline-flex items-center gap-1.5 text-xs font-semibold"
-                style={{ color: isCompleted ? "var(--success)" : ink }}
-              >
-                {isCompleted ? (
-                  <CheckCircle2 className="h-3.5 w-3.5" aria-hidden />
-                ) : (
-                  <span
-                    className="inline-block h-2 w-2 animate-pulse rounded-full"
-                    style={{ background: meta.color }}
-                    aria-hidden
-                  />
-                )}
-                {isCompleted ? "Completed" : "In progress"}
-              </span>
+              <LessonStatusChip lessonId={les.id} ink={ink} accentColor={meta.color} />
             </RiseItem>
           </RiseGroup>
 
@@ -340,18 +342,15 @@ export default async function LessonPage({
 
                   {/* actions */}
                   <div className="sm:justify-self-end">
-                    <LessonActions
+                    <LessonActionsIsland
                       lessonId={les.id}
                       deptSlug={dept.slug}
                       lessonPath={lessonPath}
-                      authed={!!user}
-                      initialCompleted={isCompleted}
-                      initialBookmarked={bookmarks.has(les.id)}
                       quizRequired={quiz.length > 0}
                     />
                   </div>
                 </div>
-                {!user && (
+                <SignupPrompt lessonPath={lessonPath}>
                   <p className="relative mt-4 flex items-center gap-1.5 border-t border-white/40 pt-4 text-sm text-muted-foreground">
                     <Info className="h-4 w-4 shrink-0 text-primary" aria-hidden />
                     <span>
@@ -364,7 +363,7 @@ export default async function LessonPage({
                       to track progress, earn XP, and save lessons.
                     </span>
                   </p>
-                )}
+                </SignupPrompt>
               </div>
             </div>
           </Rise>
@@ -375,15 +374,12 @@ export default async function LessonPage({
           {/* signature: sticky live contents/progress rail (desktop) */}
           <aside className="hidden lg:block">
             <div className="sticky top-24">
-              <ReadingRail
+              <ReadingRailIsland
                 deptName={dept.name}
                 deptIcon={meta.icon}
                 accent={meta.color}
                 headings={headings}
-                authed={!!user}
-                pct={pct}
-                doneInDept={doneInDept}
-                totalInDept={total}
+                lessonIds={flatIds}
                 lessonPath={lessonPath}
               />
             </div>
@@ -395,13 +391,12 @@ export default async function LessonPage({
               <Markdown content={content} />
             </Reveal>
 
-            <SuggestEdit
+            <SuggestEditIsland
               contentType="lesson"
               targetId={les.id}
               title={les.title}
               path={lessonPath}
               content={content}
-              isLoggedIn={!!user}
             />
 
             {/* key takeaways */}
@@ -465,41 +460,20 @@ export default async function LessonPage({
             )}
 
             {/* completion / quiz */}
-            <LessonComplete
+            <LessonCompleteIsland
               lessonId={les.id}
               deptSlug={dept.slug}
               lessonPath={lessonPath}
-              authed={!!user}
-              initialCompleted={isCompleted}
               quiz={quiz}
               nextHref={nextHref}
-              referrerUsername={profile?.username ?? null}
-              alreadySubscribed={alreadySubscribed}
             />
 
             {/* mobile: reading progress + dept progress card */}
-            {user && (
-              <Reveal>
-                <div className="mt-10 lg:hidden">
-                  <div className="ac-card p-5">
-                    <div className="ac-eyebrow">Your progress</div>
-                    <div className="mt-3 flex items-baseline gap-2">
-                      <span className="font-display text-3xl font-bold tabular-nums text-foreground">{pct}%</span>
-                      <span className="text-sm text-muted-foreground">through {dept.name}</span>
-                    </div>
-                    <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
-                      <div
-                        className="h-full rounded-full"
-                        style={{ width: `${pct}%`, backgroundImage: deptGradient }}
-                      />
-                    </div>
-                    <div className="mt-2 text-xs tabular-nums text-muted-foreground">
-                      {doneInDept} / {total} lessons complete
-                    </div>
-                  </div>
-                </div>
-              </Reveal>
-            )}
+            <MobileProgressCard
+              deptName={dept.name}
+              deptGradient={deptGradient}
+              lessonIds={flatIds}
+            />
 
             {/* prev / next */}
             <RevealGroup className="mt-10 grid gap-4 sm:grid-cols-2">
@@ -590,7 +564,6 @@ export default async function LessonPage({
                       <ul className="mt-1 space-y-0.5">
                         {m.lessons.map((l) => {
                           const active = l.id === les.id;
-                          const done = completed.has(l.id);
                           return (
                             <li key={l.id}>
                               <Link
@@ -603,12 +576,7 @@ export default async function LessonPage({
                                     : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
                                 )}
                               >
-                                {done ? (
-                                  <CheckCircle2 className="h-4 w-4 shrink-0 text-primary" aria-hidden />
-                                ) : (
-                                  <Circle className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
-                                )}
-                                <span className="sr-only">{done ? "Completed:" : "Not started:"}</span>
+                                <LessonStatusDot lessonId={l.id} />
                                 <span className="line-clamp-1">{l.title}</span>
                               </Link>
                             </li>
@@ -624,5 +592,6 @@ export default async function LessonPage({
         </div>
       </div>
     </div>
+    </MyProgressProvider>
   );
 }

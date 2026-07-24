@@ -3,7 +3,6 @@ import type { CSSProperties } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
-  ArrowRight,
   ArrowLeft,
   BookOpen,
   Layers,
@@ -12,17 +11,12 @@ import {
   ListChecks,
   ExternalLink,
   Sparkles,
-  Award,
   Clock,
   Route as RouteIcon,
-  GraduationCap,
 } from "lucide-react";
-import { getDepartmentBySlug, getCompletedLessonIds, flattenLessons } from "@/lib/queries";
-import { getSession } from "@/lib/auth";
+import { getDepartmentBySlug, getAllDepartmentSlugs, flattenLessons } from "@/lib/queries";
 import { deptMeta, inkFor } from "@/lib/departments";
 import { Icon } from "@/lib/icon-map";
-import { DepartmentModules } from "@/components/guides/department-modules";
-import { SuggestNewContent } from "@/components/guides/suggest-new-content";
 import { AnimatedCounter } from "@/components/animated-counter";
 import { JsonLd } from "@/components/json-ld";
 import type { Resource } from "@/lib/types";
@@ -33,14 +27,32 @@ import {
   Reveal,
   RevealGroup,
   RevealItem,
-  Hover,
   Glow,
 } from "@/components/motion/primitives";
-import { MasteryPanel } from "./_mastery-panel";
+import { MyProgressProvider } from "@/components/progress/my-progress";
+import {
+  DeptMastery,
+  DeptStatStrip,
+  DeptCtaRow,
+  DeptFooterHeading,
+  DeptModules,
+  DeptSuggest,
+} from "./_progress-islands";
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com";
 
-export const dynamic = "force-dynamic";
+// Static/ISR: the catalog is identical for everyone and crawlers, so this page
+// is prerendered and revalidated on the catalog window. Per-user progress
+// (checkmarks, continue state, mastery) hydrates client-side from
+// /api/me/progress — see the `Dept*` islands below. (Previously force-dynamic
+// only to read the session; that read now lives entirely on the client.)
+export const revalidate = 3600; // CATALOG_TTL — matches the content-layer cache
+export const dynamicParams = true; // unknown slugs still render on-demand → notFound
+
+export async function generateStaticParams() {
+  const slugs = await getAllDepartmentSlugs();
+  return slugs.map((department) => ({ department }));
+}
 
 export async function generateMetadata({
   params,
@@ -83,22 +95,13 @@ export default async function DepartmentPage({
   const dept = await getDepartmentBySlug(department);
   if (!dept) notFound();
 
-  const { user } = await getSession();
-  const completed = user ? await getCompletedLessonIds(user.id) : new Set<string>();
-
   const meta = deptMeta(dept.slug);
   const flat = flattenLessons(dept);
   const totalLessons = flat.length;
   const totalModules = dept.modules.length;
-  const doneCount = flat.filter((l) => completed.has(l.id)).length;
-  const pct = totalLessons ? Math.round((doneCount / totalLessons) * 100) : 0;
-
-  const firstLesson = flat[0];
-  const nextLesson = flat.find((l) => !completed.has(l.id)) ?? firstLesson;
-  const ctaLabel = doneCount === 0 ? "Start learning" : doneCount === totalLessons ? "Review" : "Continue";
-  const ctaHref = nextLesson
-    ? `/guides/${dept.slug}/${nextLesson.moduleSlug}/${nextLesson.slug}`
-    : `/guides/${dept.slug}`;
+  // Ordered lesson refs the client islands use to derive progress (completed
+  // set → counts, mastery %, and the continue/next destination) after hydration.
+  const lessons = flat.map((l) => ({ id: l.id, moduleSlug: l.moduleSlug, slug: l.slug }));
 
   const learn = (dept.what_youll_learn ?? []) as string[];
   const tools = (dept.tools ?? []) as string[];
@@ -116,37 +119,8 @@ export default async function DepartmentPage({
   // Whole-hour workload for the Course schema (ISO-8601 duration, rounded up).
   const workloadHours = Math.max(1, Math.ceil(totalMinutes / 60));
 
-  // Journey stat strip — animated counters that summarize the whole path.
-  const stats: {
-    icon: typeof Layers;
-    value: number;
-    suffix?: string;
-    label: string;
-  }[] = [
-    { icon: Layers, value: totalModules, label: totalModules === 1 ? "module" : "modules" },
-    { icon: BookOpen, value: totalLessons, label: "lessons" },
-    { icon: Clock, value: totalHours, suffix: "h", label: "of reading" },
-    {
-      icon: GraduationCap,
-      value: pct,
-      suffix: "%",
-      label: user ? "mastered" : "start free",
-    },
-  ];
-
-  const sidebarBlocks: {
-    key: string;
-    icon: typeof Sparkles;
-    title: string;
-    delay: number;
-  }[] = [
-    { key: "learn", icon: Sparkles, title: "What you'll learn", delay: 0.06 },
-    { key: "tools", icon: Wrench, title: "Tools & tech", delay: 0.12 },
-    { key: "prereqs", icon: ListChecks, title: "Before you start", delay: 0.18 },
-    { key: "sources", icon: BookOpen, title: "Sources", delay: 0.24 },
-  ];
-
   return (
+    <MyProgressProvider>
     <div className="relative overflow-x-clip">
       <JsonLd
         data={{
@@ -281,59 +255,23 @@ export default async function DepartmentPage({
             </RiseItem>
 
             <RiseItem>
-              <div className="mt-7 flex flex-wrap items-center gap-3">
-                <Link href={ctaHref} className="ac-btn text-sm">
-                  {ctaLabel}
-                  <ArrowRight className="h-4 w-4" aria-hidden />
-                </Link>
-                {pct === 100 && (
-                  <Link href={`/certificate/${dept.slug}`} className="ac-btn-ghost text-sm">
-                    <Award className="h-4 w-4" aria-hidden /> Get certificate
-                  </Link>
-                )}
-              </div>
+              <DeptCtaRow variant="hero" deptSlug={dept.slug} lessons={lessons} />
             </RiseItem>
           </RiseGroup>
 
           {/* SIGNATURE: mission-progress mastery ring */}
-          <MasteryPanel
-            pct={pct}
-            doneCount={doneCount}
-            totalLessons={totalLessons}
-            accent={accent}
-            ink={ink}
-            loggedIn={!!user}
-          />
+          <DeptMastery lessons={lessons} accent={accent} ink={ink} />
         </div>
 
         {/* stat strip */}
-        <RevealGroup className="mt-10 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
-          {stats.map((s) => (
-            <RevealItem key={s.label}>
-              <Hover lift={-3} className="h-full">
-                <div className="ac-card flex h-full items-center gap-3 p-4">
-                  <span
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
-                    style={{
-                      background: `color-mix(in srgb, ${accent} 14%, transparent)`,
-                      color: ink,
-                    }}
-                  >
-                    <s.icon className="h-5 w-5" aria-hidden />
-                  </span>
-                  <div className="min-w-0">
-                    <div className="font-display text-2xl font-extrabold leading-none" style={{ color: ink }}>
-                      <AnimatedCounter value={s.value} suffix={s.suffix} />
-                    </div>
-                    <div className="mt-0.5 truncate text-xs font-medium text-muted-foreground">
-                      {s.label}
-                    </div>
-                  </div>
-                </div>
-              </Hover>
-            </RevealItem>
-          ))}
-        </RevealGroup>
+        <DeptStatStrip
+          lessons={lessons}
+          totalModules={totalModules}
+          totalLessons={totalLessons}
+          totalHours={totalHours}
+          accent={accent}
+          ink={ink}
+        />
       </section>
 
       {/* ======================= THE CURRICULUM ======================= */}
@@ -371,10 +309,9 @@ export default async function DepartmentPage({
                 background: `linear-gradient(180deg, ${accent}, color-mix(in srgb, ${accent} 10%, transparent))`,
               }}
             />
-            <DepartmentModules
+            <DeptModules
               departmentSlug={dept.slug}
               modules={dept.modules}
-              completedIds={[...completed]}
               accent={accent}
             />
           </div>
@@ -382,11 +319,10 @@ export default async function DepartmentPage({
           {/* community authoring: contribute a whole new lesson */}
           <div className="mt-6 flex flex-wrap items-center gap-2 border-t border-border pt-6 text-sm text-muted-foreground">
             <span>Know something this department is missing?</span>
-            <SuggestNewContent
+            <DeptSuggest
               departmentId={dept.id}
               departmentName={dept.name}
               modules={dept.modules.map((m) => ({ id: m.id, title: m.title }))}
-              isLoggedIn={!!user}
               loginPath={`/signup?next=${encodeURIComponent(`/guides/${dept.slug}`)}`}
             />
           </div>
@@ -531,36 +467,17 @@ export default async function DepartmentPage({
             >
               <Icon name={meta.icon} className="h-7 w-7" aria-hidden />
             </span>
-            <h2 className="relative text-balance font-display text-3xl font-bold sm:text-4xl">
-              {pct === 100
-                ? "You've mastered this department."
-                : doneCount > 0
-                  ? "Pick up where you left off."
-                  : `Ready to own ${dept.name}?`}
-            </h2>
+            <DeptFooterHeading deptName={dept.name} lessons={lessons} />
             <p className="relative mx-auto mt-3 max-w-xl text-pretty text-base text-muted-foreground">
               {totalModules} modules, {totalLessons} lessons, all free — grounded in
               the real Game Manual and WPILib docs. Read now, track your mastery
               when you sign up.
             </p>
-            <div className="relative mt-7 flex flex-wrap items-center justify-center gap-3">
-              <Link href={ctaHref} className="ac-btn text-sm">
-                {ctaLabel}
-                <ArrowRight className="h-4 w-4" aria-hidden />
-              </Link>
-              {pct === 100 ? (
-                <Link href={`/certificate/${dept.slug}`} className="ac-btn-ghost text-sm">
-                  <Award className="h-4 w-4" aria-hidden /> Get certificate
-                </Link>
-              ) : (
-                <Link href="/guides" className="ac-btn-ghost text-sm">
-                  Explore other departments
-                </Link>
-              )}
-            </div>
+            <DeptCtaRow variant="footer" deptSlug={dept.slug} lessons={lessons} />
           </div>
         </Reveal>
       </section>
     </div>
+    </MyProgressProvider>
   );
 }

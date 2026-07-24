@@ -17,6 +17,9 @@ export function LessonActions({
   initialCompleted,
   initialBookmarked,
   quizRequired = false,
+  ready = true,
+  onCompletedChange,
+  onBookmarkedChange,
 }: {
   lessonId: string;
   deptSlug: string;
@@ -25,6 +28,16 @@ export function LessonActions({
   initialCompleted: boolean;
   initialBookmarked: boolean;
   quizRequired?: boolean;
+  // False until the client progress store has loaded (/api/me/progress). While
+  // false the true auth state is unknown, so the controls are disabled and the
+  // handlers no-op — a click must NOT prematurely fire requireAuth (which would
+  // wrongly prompt a signed-in user to sign up).
+  ready?: boolean;
+  // Optional hooks so the (client-fetched) progress store on the static lesson
+  // page can stay in lockstep with completions/bookmarks made here — replacing
+  // what a server round-trip used to keep in sync.
+  onCompletedChange?: (completed: boolean) => void;
+  onBookmarkedChange?: (bookmarked: boolean) => void;
 }) {
   const router = useRouter();
   const [completed, setCompleted] = React.useState(initialCompleted);
@@ -33,6 +46,8 @@ export function LessonActions({
   const [burst, setBurst] = React.useState(0);
 
   React.useEffect(() => setCompleted(initialCompleted), [initialCompleted]);
+  // Sync bookmark state once progress hydrates client-side on the static page.
+  React.useEffect(() => setBookmarked(initialBookmarked), [initialBookmarked]);
 
   const requireAuth = (verb: string) => {
     // First-time FRC readers dominate this path — send them to signup (which
@@ -49,6 +64,8 @@ export function LessonActions({
   };
 
   const onComplete = () => {
+    // Auth state not yet known — ignore the click rather than misroute it.
+    if (!ready) return;
     if (!authed) return requireAuth("track your progress");
     // A required quiz can't be bypassed — send them to it.
     if (quizRequired && !completed) {
@@ -59,31 +76,35 @@ export function LessonActions({
     }
     const next = !completed;
     setCompleted(next);
+    onCompletedChange?.(next);
     if (next) setBurst((b) => b + 1);
     startTransition(async () => {
       const r = await setLessonComplete(lessonId, deptSlug, next);
       if (r?.error) {
         setCompleted(!next);
+        onCompletedChange?.(!next);
         toast.error(r.error);
       } else {
         if (next) toast.success("Lesson complete! +10 XP");
-        router.refresh();
       }
     });
   };
 
   const onBookmark = () => {
+    // Auth state not yet known — ignore the click rather than misroute it.
+    if (!ready) return;
     if (!authed) return requireAuth("save lessons");
     const next = !bookmarked;
     setBookmarked(next);
+    onBookmarkedChange?.(next);
     startTransition(async () => {
       const r = await toggleBookmark(lessonId, next);
       if (r?.error) {
         setBookmarked(!next);
+        onBookmarkedChange?.(!next);
         toast.error(r.error);
       } else {
         toast(next ? "Saved to bookmarks" : "Removed from bookmarks");
-        router.refresh();
       }
     });
   };
@@ -96,7 +117,7 @@ export function LessonActions({
       </span>
       <Button
         onClick={onComplete}
-        disabled={pending}
+        disabled={pending || !ready}
         aria-busy={pending}
         variant={completed ? "secondary" : quizRequired ? "outline" : "brand"}
         size="lg"
@@ -114,7 +135,7 @@ export function LessonActions({
       </Button>
       <button
         onClick={onBookmark}
-        disabled={pending}
+        disabled={pending || !ready}
         aria-busy={pending}
         aria-label={bookmarked ? "Remove bookmark" : "Bookmark lesson"}
         className={cn(

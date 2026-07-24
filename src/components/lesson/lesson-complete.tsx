@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   CheckCircle2,
@@ -67,6 +66,8 @@ export function LessonComplete({
   nextHref,
   referrerUsername,
   alreadySubscribed = false,
+  ready = true,
+  onCompletedChange,
 }: {
   lessonId: string;
   deptSlug: string;
@@ -77,8 +78,15 @@ export function LessonComplete({
   nextHref?: string | null;
   referrerUsername?: string | null;
   alreadySubscribed?: boolean;
+  // False until the client progress store has loaded (/api/me/progress). While
+  // false the true auth state is unknown, so completion is disabled and persist
+  // no-ops — critical so a signed-in user's completion is never written to the
+  // guest bucket (localStorage / /api/guest-progress) during the fetch window.
+  ready?: boolean;
+  // Keeps the static lesson page's client progress store in sync with an
+  // authed completion made here (chip, rail, contents list, mobile card).
+  onCompletedChange?: (completed: boolean) => void;
 }) {
-  const router = useRouter();
   const [completed, setCompleted] = React.useState(initialCompleted);
   const [pending, startTransition] = React.useTransition();
   const [burst, setBurst] = React.useState(0);
@@ -114,6 +122,9 @@ export function LessonComplete({
   }, [authed, lessonId]);
 
   const persist = (value: boolean) => {
+    // Auth state not yet known (store still loading) — no-op so a signed-in
+    // user's completion is never misrouted into the guest bucket below.
+    if (!ready) return;
     // Guests learn without an account: save on this device + mirror to the
     // server (keyed to the anonymous visitor id). No sign-up required.
     if (!authed) {
@@ -139,6 +150,7 @@ export function LessonComplete({
     }
 
     setCompleted(value);
+    onCompletedChange?.(value);
     if (value) setBurst((b) => b + 1);
     // Send the quiz answers so the server can verify the pass (the gate is
     // enforced server-side, not just here).
@@ -148,15 +160,17 @@ export function LessonComplete({
       const r = await setLessonComplete(lessonId, deptSlug, value, answerArr);
       if (r?.error) {
         setCompleted(!value);
+        onCompletedChange?.(!value);
         toast.error(r.error);
       } else {
         if (value) toast.success("Lesson complete!  +10 XP");
-        router.refresh();
       }
     });
   };
 
   const onSubmitQuiz = () => {
+    // Auth state not yet known — ignore the submit until the store loads.
+    if (!ready) return;
     setGraded(true);
     if (correctCount === quiz.length) {
       persist(true);
@@ -208,7 +222,7 @@ export function LessonComplete({
               </Link>
             </Button>
           )}
-          <Button variant="ghost" onClick={() => persist(false)} disabled={pending}>
+          <Button variant="ghost" onClick={() => persist(false)} disabled={pending || !ready}>
             {pending ? (
               <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
             ) : (
@@ -346,7 +360,7 @@ export function LessonComplete({
               <Button
                 variant="brand"
                 size="lg"
-                disabled={!allAnswered || pending}
+                disabled={!allAnswered || pending || !ready}
                 onClick={onSubmitQuiz}
               >
                 {pending ? (
@@ -385,7 +399,7 @@ export function LessonComplete({
         variant="brand"
         size="lg"
         onClick={() => persist(true)}
-        disabled={pending}
+        disabled={pending || !ready}
       >
         {pending ? (
           <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
