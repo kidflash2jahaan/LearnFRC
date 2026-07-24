@@ -38,6 +38,54 @@ export default async function Page() {
           publisher: { "@type": "Organization", name: "LearnFRC", url: SITE },
         }}
       />
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "BreadcrumbList",
+          itemListElement: [
+            { "@type": "ListItem", position: 1, name: "Home", item: SITE },
+            { "@type": "ListItem", position: 2, name: "Tools", item: `${SITE}/tools` },
+            {
+              "@type": "ListItem",
+              position: 3,
+              name: "Tip-Over & Stability",
+              item: `${SITE}/tools/frc-tipping-calculator`,
+            },
+          ],
+        }}
+      />
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          mainEntity: [
+            {
+              "@type": "Question",
+              name: "What makes an FRC robot tip over?",
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: "A robot tips when the horizontal force on it — from hard turning, a sudden stop, or an incline — pushes its effective center of gravity past the edge of its wheelbase. A higher center of gravity, a narrower track width, and higher acceleration all lower the threshold. This calculator turns your geometry into the maximum turning acceleration and ramp angle before that happens.",
+              },
+            },
+            {
+              "@type": "Question",
+              name: "How do I lower my robot's center of gravity?",
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: "Mount the heaviest components — the battery, motors, and gearboxes — as low and as centered as possible, keep tall mechanisms retracted while driving, and avoid unnecessary height. Even a few inches of CoG height meaningfully changes how hard you can turn or how steep a ramp you can climb before tipping.",
+              },
+            },
+            {
+              "@type": "Question",
+              name: "Does a wider robot resist tipping better?",
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: "Yes. Tipping resistance scales with the ratio of half the track width (or wheelbase) to the center-of-gravity height. A wider or longer wheelbase, or a lower CoG, raises the acceleration and incline angle the robot can handle before it tips — try different values above to see the effect.",
+              },
+            },
+          ],
+        }}
+      />
       <Calculator authed={!!user} />
       <ToolCTA
         related={[

@@ -38,6 +38,54 @@ export default async function Page() {
           publisher: { "@type": "Organization", name: "LearnFRC", url: SITE },
         }}
       />
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "BreadcrumbList",
+          itemListElement: [
+            { "@type": "ListItem", position: 1, name: "Home", item: SITE },
+            { "@type": "ListItem", position: 2, name: "Tools", item: `${SITE}/tools` },
+            {
+              "@type": "ListItem",
+              position: 3,
+              name: "Wire Gauge & Voltage Drop",
+              item: `${SITE}/tools/frc-wire-gauge-calculator`,
+            },
+          ],
+        }}
+      />
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          mainEntity: [
+            {
+              "@type": "Question",
+              name: "What wire gauge do FRC rules require?",
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: "FRC's rules set a minimum wire gauge for each branch-circuit breaker size. As a common guideline, a 40 A circuit needs at least 12 AWG, a 30 A circuit at least 14 AWG, and a 20 A circuit at least 18 AWG, while the main battery and PDH/PDP leads use 6 AWG. Exact minimum-AWG values can change year to year, so always check the current game manual's wiring rules — which this tool does for you.",
+              },
+            },
+            {
+              "@type": "Question",
+              name: "How much voltage drop is acceptable on an FRC robot?",
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: "There is no single legal limit, but keeping voltage drop under roughly 3–5% of battery voltage on a run is a good target. Excessive drop on long, thin runs wastes power as heat and can contribute to brownouts under high current. Enter your current, run length, and gauge to see the drop and decide whether to size up.",
+              },
+            },
+            {
+              "@type": "Question",
+              name: "Why does wire length matter for voltage drop?",
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: "Voltage drop equals current × resistance, and a wire's resistance is proportional to its length. Doubling a run doubles its resistance and its voltage drop, so long runs to distant mechanisms often need a thicker gauge than a short run carrying the same current.",
+              },
+            },
+          ],
+        }}
+      />
       <Calculator authed={!!user} />
       <ToolCTA
         related={[

@@ -18,6 +18,7 @@ import {
   Hover,
   Glow,
 } from "@/components/motion/primitives";
+import { JsonLd } from "@/components/json-ld";
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com";
 
@@ -86,8 +87,22 @@ const TOOLS = [
 ];
 
 export default function ToolsPage() {
+  // Collection structured data — the five calculators as an ordered list.
+  const collectionLd = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name: "Free FRC tools & calculators",
+    itemListElement: TOOLS.map((t, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      url: `${SITE}${t.href}`,
+      name: t.title,
+    })),
+  };
+
   return (
     <div className="relative overflow-x-clip">
+      <JsonLd data={collectionLd} />
       <Glow
         blobs={[
           { size: "560px", pos: { left: "-160px", top: "-200px" }, color: "#8bbcff", opacity: 0.6 },

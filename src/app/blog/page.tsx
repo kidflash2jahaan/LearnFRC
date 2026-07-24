@@ -23,6 +23,7 @@ import {
   Glow,
 } from "@/components/motion/primitives";
 import { AnimatedCounter } from "@/components/animated-counter";
+import { JsonLd } from "@/components/json-ld";
 import { DeskIndex, type DeskCount } from "./_desk-index";
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com";
@@ -90,8 +91,22 @@ export default async function BlogPage() {
   const desks = [...deskCounts.values()].sort((a, b) => b.count - a.count).slice(0, 4);
   const deskCount = deskCounts.size;
 
+  // Collection structured data — the full article library as an ordered list.
+  const collectionLd = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name: "FRC guides & articles",
+    itemListElement: articles.map((a, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      url: `${SITE}/blog/${a.slug}`,
+      name: a.title,
+    })),
+  };
+
   return (
     <div className="relative overflow-x-clip">
+      <JsonLd data={collectionLd} />
       <Glow
         blobs={[
           { size: "620px", pos: { left: "-180px", top: "-200px" }, color: "#8bbcff", opacity: 0.65 },

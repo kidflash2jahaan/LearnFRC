@@ -58,6 +58,19 @@ const BRAND_GRADIENT: CSSProperties = {
 
 export const dynamic = "force-dynamic";
 
+/** Strip common markdown syntax down to plain prose for meta descriptions. */
+function stripMarkdown(md: string): string {
+  return md
+    .replace(/```[\s\S]*?```/g, " ")
+    .replace(/`[^`]*`/g, " ")
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, " ")
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
+    .replace(/^\s{0,3}#{1,6}\s+/gm, "")
+    .replace(/[*_>#~|]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 export async function generateMetadata({
   params,
 }: {
@@ -70,15 +83,33 @@ export async function generateMetadata({
     ?.lessons.find((l) => l.slug === lesson);
   if (!les) return { title: "Lesson" };
   const url = `${SITE}/guides/${department}/${moduleSlug}/${lesson}`;
+  const ogImage = `${SITE}/guides/${department}/opengraph-image`;
+  // Description falls back to the department tagline, then a plain-text excerpt
+  // of the lesson body, when the lesson has no summary of its own.
+  const stripped = les.content ? stripMarkdown(les.content) : "";
+  const excerpt = stripped
+    ? `${stripped.slice(0, 155).trim()}${stripped.length > 155 ? "…" : ""}`
+    : undefined;
+  const description =
+    (les.summary && les.summary.trim()) ||
+    (dept?.tagline ?? undefined) ||
+    excerpt;
   return {
     title: les.title,
-    description: les.summary ?? undefined,
+    description,
     alternates: { canonical: url },
     openGraph: {
       title: les.title,
-      description: les.summary ?? undefined,
+      description,
       url,
       type: "article",
+      images: [{ url: ogImage, width: 1200, height: 630 }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: les.title,
+      description,
+      images: [ogImage],
     },
   };
 }
@@ -161,6 +192,10 @@ export default async function LessonPage({
           url: `${SITE}${lessonPath}`,
           inLanguage: "en",
           isAccessibleForFree: true,
+          timeRequired: `PT${readMins}M`,
+          educationalLevel: "Beginner",
+          about: "FIRST Robotics Competition",
+          image: `${SITE}/guides/${dept.slug}/opengraph-image`,
           isPartOf: {
             "@type": "Course",
             name: dept.name,

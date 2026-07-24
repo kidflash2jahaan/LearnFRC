@@ -141,11 +141,12 @@ export default async function ArticlePage({
     description: a.description,
     datePublished: a.date,
     dateModified: a.date,
-    author: { "@type": "Organization", name: "LearnFRC", url: SITE },
+    author: { "@type": "Person", name: "Jahaan Pardhanani", url: SITE },
     publisher: { "@type": "Organization", name: "LearnFRC", url: SITE },
     mainEntityOfPage: url,
     image: `${SITE}/opengraph-image`,
     keywords: a.keywords.join(", "),
+    wordCount,
   };
 
   // Emit FAQ rich-result schema only when the article actually has an FAQ

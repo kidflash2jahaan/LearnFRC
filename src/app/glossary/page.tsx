@@ -5,7 +5,10 @@ import { ArrowRight, BookA, Search, Sparkles, Tags } from "lucide-react";
 import { GLOSSARY, GLOSSARY_CATEGORIES } from "@/lib/glossary-data";
 import { GlossaryBrowser } from "@/components/glossary/glossary-browser";
 import { AnimatedCounter } from "@/components/animated-counter";
+import { JsonLd } from "@/components/json-ld";
 import { RiseGroup, RiseItem, Reveal, Glow } from "@/components/motion/primitives";
+
+const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com";
 
 export const metadata: Metadata = {
   title: "FRC Glossary",
@@ -36,6 +39,23 @@ export default function GlossaryPage() {
 
   return (
     <div className="relative overflow-x-clip">
+      {/* DefinedTermSet — every glossary entry as a machine-readable term, so
+          search engines can surface the glossary as a structured vocabulary. */}
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "DefinedTermSet",
+          "@id": `${SITE}/glossary`,
+          name: "FRC Glossary",
+          url: `${SITE}/glossary`,
+          hasDefinedTerm: GLOSSARY.map((t) => ({
+            "@type": "DefinedTerm",
+            name: t.term,
+            description: t.definition,
+            inDefinedTermSet: { "@id": `${SITE}/glossary` },
+          })),
+        }}
+      />
       <Glow
         blobs={[
           { size: "560px", pos: { left: "calc(50% - 280px)", top: "-260px" }, color: "#8bbcff", opacity: 0.55 },

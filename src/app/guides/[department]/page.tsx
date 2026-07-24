@@ -51,7 +51,16 @@ export async function generateMetadata({
   const dept = await getDepartmentBySlug(department).catch(() => null);
   if (!dept) return { title: "Department" };
   const url = `${SITE}/guides/${department}`;
-  const description = dept.tagline ?? dept.description ?? undefined;
+  // Richer meta description: prefer a real, already-substantial description;
+  // otherwise synthesize a keyword-rich fallback from the curriculum size.
+  const mods = dept.modules ?? [];
+  const totalModules = mods.length;
+  const totalLessons = mods.reduce((s, m) => s + (m.lessons?.length ?? 0), 0);
+  const richFallback = `Learn ${dept.name} for FRC — ${totalLessons} free lessons across ${totalModules} modules. ${dept.tagline ?? ""}`.trim();
+  const description =
+    dept.description && dept.description.trim().length >= 140
+      ? dept.description.trim()
+      : richFallback;
   return {
     title: dept.name,
     description,
@@ -104,6 +113,8 @@ export default async function DepartmentPage({
   // Estimated total time across every lesson, surfaced as an at-a-glance stat.
   const totalMinutes = flat.reduce((sum, l) => sum + (l.estimated_minutes ?? 0), 0);
   const totalHours = Math.max(1, Math.round(totalMinutes / 60));
+  // Whole-hour workload for the Course schema (ISO-8601 duration, rounded up).
+  const workloadHours = Math.max(1, Math.ceil(totalMinutes / 60));
 
   // Journey stat strip — animated counters that summarize the whole path.
   const stats: {
@@ -151,6 +162,19 @@ export default async function DepartmentPage({
             name: "LearnFRC",
             url: SITE,
           },
+          hasCourseInstance: {
+            "@type": "CourseInstance",
+            courseMode: "online",
+            courseWorkload: `PT${workloadHours}H`,
+          },
+          offers: {
+            "@type": "Offer",
+            price: "0",
+            priceCurrency: "USD",
+            availability: "https://schema.org/InStock",
+          },
+          educationalCredentialAwarded: `${dept.name} certificate`,
+          ...(learn.length > 0 ? { teaches: learn } : {}),
         }}
       />
       <JsonLd

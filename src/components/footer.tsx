@@ -8,7 +8,9 @@ const LEARN = [
   { label: "Learning Paths", href: "/paths" },
   { label: "Articles", href: "/blog" },
   { label: "Glossary", href: "/glossary" },
+  { label: "Tools & Calculators", href: "/tools" },
   { label: "Resources", href: "/resources" },
+  { label: "For Teams", href: "/for-teams" },
   { label: "Contributions", href: "/contributions" },
 ];
 
