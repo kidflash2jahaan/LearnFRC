@@ -2,10 +2,11 @@
 
 import * as React from "react";
 import type { CSSProperties } from "react";
+import Link from "next/link";
 import { AnimatePresence, motion, LayoutGroup } from "framer-motion";
 import {
   Search,
-  ExternalLink,
+  ArrowRight,
   BookA,
   Info,
   Trophy,
@@ -18,7 +19,7 @@ import {
   Users,
   X,
 } from "lucide-react";
-import type { GlossaryTerm } from "@/lib/glossary-data";
+import { glossarySlug, type GlossaryTerm } from "@/lib/glossary-data";
 import { AnimatedCounter } from "@/components/animated-counter";
 import { Hover } from "@/components/motion/primitives";
 import { inkFor } from "@/lib/departments";
@@ -204,7 +205,10 @@ export function GlossaryBrowser({
                   transition={{ duration: 0.25 }}
                 >
                   <Hover className="h-full" lift={-4} scale={1.01}>
-                    <div className="ac-card flex h-full flex-col p-5">
+                    <Link
+                      href={`/glossary/${glossarySlug(t.term)}`}
+                      className="ac-card group flex h-full flex-col p-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                    >
                       <div className="flex items-start justify-between gap-2">
                         <span
                           className="ac-badge flex h-10 w-10 shrink-0 items-center justify-center"
@@ -218,7 +222,7 @@ export function GlossaryBrowser({
                           </span>
                         )}
                       </div>
-                      <h3 className="mt-3 font-display text-lg font-bold leading-tight text-foreground">
+                      <h3 className="mt-3 font-display text-lg font-bold leading-tight text-foreground transition-colors group-hover:text-primary">
                         {t.term}
                       </h3>
                       <span
@@ -230,17 +234,14 @@ export function GlossaryBrowser({
                       <p className="mt-2 flex-1 text-sm leading-relaxed text-muted-foreground">
                         {t.definition}
                       </p>
-                      {t.link && (
-                        <a
-                          href={t.link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="mt-3 inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-primary transition-colors hover:text-accent"
-                        >
-                          Learn more <ExternalLink className="h-3.5 w-3.5" aria-hidden />
-                        </a>
-                      )}
-                    </div>
+                      <span className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-primary">
+                        View term
+                        <ArrowRight
+                          className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5"
+                          aria-hidden
+                        />
+                      </span>
+                    </Link>
                   </Hover>
                 </motion.div>
               );

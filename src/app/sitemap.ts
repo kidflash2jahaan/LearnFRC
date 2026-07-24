@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 import { getAllDepartmentSlugs, getDepartmentBySlug } from "@/lib/queries";
 import { getArticles } from "@/lib/queries";
 import { PATHS } from "@/lib/paths-data";
+import { GLOSSARY, glossarySlug } from "@/lib/glossary-data";
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com";
 
@@ -54,6 +55,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.6,
   }));
 
+  // Per-term glossary pages — one indexable URL per defined term.
+  const glossaryRoutes: MetadataRoute.Sitemap = GLOSSARY.map((t) => ({
+    url: `${SITE}/glossary/${glossarySlug(t.term)}`,
+    lastModified: now,
+    changeFrequency: "monthly",
+    priority: 0.5,
+  }));
+
   try {
     // Reuse the durably-cached content-layer functions (anon public client, no
     // cookies) so the sitemap never adds fresh DB egress on the hot path.
@@ -88,10 +97,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       ...staticRoutes,
       ...blogRoutes,
       ...pathRoutes,
+      ...glossaryRoutes,
       ...deptRoutes,
       ...lessonRoutes,
     ];
   } catch {
-    return [...staticRoutes, ...blogRoutes, ...pathRoutes];
+    return [...staticRoutes, ...blogRoutes, ...pathRoutes, ...glossaryRoutes];
   }
 }
