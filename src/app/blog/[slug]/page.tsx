@@ -20,6 +20,7 @@ import { JsonLd } from "@/components/json-ld";
 import { parseFaqs } from "@/lib/faq";
 import { ShareButton } from "@/components/share-button";
 import { ArticleViewBeacon } from "@/components/article-view-beacon";
+import { ArticleSignupHook } from "@/components/blog/article-signup-hook";
 import { AnimatedCounter } from "@/components/animated-counter";
 import {
   RiseGroup,
@@ -309,6 +310,9 @@ export default async function ArticlePage({
           <ReadingRail items={toc} />
         </aside>
       </div>
+
+      {/* logged-out conversion hook — contextual "continue the path" */}
+      <ArticleSignupHook articleCount={articles.length} slug={a.slug} />
 
       {/* ======================== KEEP READING ======================= */}
       {related.length > 0 && (

@@ -42,13 +42,13 @@ import { MyProgressProvider } from "@/components/progress/my-progress";
 import {
   LessonStatusChip,
   LessonActionsIsland,
-  SignupPrompt,
   ReadingRailIsland,
   LessonCompleteIsland,
   MobileProgressCard,
   LessonStatusDot,
   SuggestEditIsland,
 } from "./_progress-islands";
+import { LessonSignupHook } from "@/components/lesson/lesson-signup-hook";
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com";
 
@@ -350,20 +350,6 @@ export default async function LessonPage({
                     />
                   </div>
                 </div>
-                <SignupPrompt lessonPath={lessonPath}>
-                  <p className="relative mt-4 flex items-center gap-1.5 border-t border-white/40 pt-4 text-sm text-muted-foreground">
-                    <Info className="h-4 w-4 shrink-0 text-primary" aria-hidden />
-                    <span>
-                      <Link
-                        href={`/signup?next=${encodeURIComponent(lessonPath)}`}
-                        className="font-medium text-primary hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                      >
-                        Create a free account
-                      </Link>{" "}
-                      to track progress, earn XP, and save lessons.
-                    </span>
-                  </p>
-                </SignupPrompt>
               </div>
             </div>
           </Rise>
@@ -466,6 +452,14 @@ export default async function LessonPage({
               lessonPath={lessonPath}
               quiz={quiz}
               nextHref={nextHref}
+            />
+
+            {/* logged-out conversion: save progress / continue the path */}
+            <LessonSignupHook
+              department={dept.name}
+              count={flat.length}
+              position={idx + 1}
+              lessonPath={lessonPath}
             />
 
             {/* mobile: reading progress + dept progress card */}

@@ -6,6 +6,7 @@ import { cookies, headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { firstProfaneField } from "@/lib/profanity";
+import { hookSourceFor } from "@/lib/signup-source";
 
 export type AuthState = { error?: string } | undefined;
 
@@ -64,10 +65,12 @@ export async function signUp(
   const usernameRaw = String(formData.get("username") || "").trim();
   const teamNumber = String(formData.get("team_number") || "").trim();
   const next = String(formData.get("next") || "/dashboard");
-  const ref = String(formData.get("ref") || "")
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9_]/g, "");
+  // A `ref` is normally a referrer's username. Conversion hooks (lesson/article
+  // signup CTAs) instead pass a known hook token that names the surface — those
+  // are recorded as a last-touch `source`, not treated as a referral.
+  const rawRef = String(formData.get("ref") || "").trim().toLowerCase();
+  const hookSource = hookSourceFor(rawRef);
+  const ref = hookSource ? "" : rawRef.replace(/[^a-z0-9_]/g, "");
 
   if (!email || !password)
     return { error: "Email and password are required." };
@@ -169,8 +172,10 @@ export async function signUp(
   if (data.user) {
     const admin = createAdminClient();
     const cookieStore = await cookies();
+    // Hook conversions take last-touch precedence; otherwise a referral link
+    // wins, then the first-touch cookie set by <SourceCapture/>, then Direct.
     const source = (
-      ref ? "Referral" : cookieStore.get("lf_src")?.value || "Direct"
+      hookSource ?? (ref ? "Referral" : cookieStore.get("lf_src")?.value || "Direct")
     ).slice(0, 40);
     const update: { source: string; referred_by?: string; signup_ip?: string } = {
       source,
