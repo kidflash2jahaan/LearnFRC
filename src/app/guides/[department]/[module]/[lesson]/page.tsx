@@ -64,7 +64,7 @@ const BRAND_GRADIENT: CSSProperties = {
 // (completed state, bookmarks, mastery rail, mark-complete/quiz) hydrates
 // client-side from /api/me/progress — see the `Lesson*` islands below.
 // (Previously force-dynamic only to read the session; that read is now client.)
-export const revalidate = 3600; // CATALOG_TTL — matches the content-layer cache
+export const revalidate = 86400; // daily background ISR floor; content edits push live via /api/revalidate (hourly was needless ISR-write churn)
 export const dynamicParams = true; // lessons not prebuilt still render on-demand
 
 export async function generateStaticParams() {

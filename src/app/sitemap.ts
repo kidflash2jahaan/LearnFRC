@@ -6,10 +6,10 @@ import { GLOSSARY, glossarySlug } from "@/lib/glossary-data";
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com";
 
-// ISR: regenerate hourly so DB-inserted articles/lessons surface in the sitemap
-// without a redeploy. (A plain static sitemap is baked at build time and never
-// sees new content — which is how new articles were missing from it.)
-export const revalidate = 3600;
+// ISR: regenerate daily as a slow background floor. New DB content is pushed
+// into the sitemap immediately on publish via /api/revalidate?paths=/sitemap.xml,
+// so the interval only needs to be a safety net — hourly was needless ISR churn.
+export const revalidate = 86400;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();

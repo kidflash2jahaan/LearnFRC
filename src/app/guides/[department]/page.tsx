@@ -46,7 +46,7 @@ const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com";
 // (checkmarks, continue state, mastery) hydrates client-side from
 // /api/me/progress — see the `Dept*` islands below. (Previously force-dynamic
 // only to read the session; that read now lives entirely on the client.)
-export const revalidate = 3600; // CATALOG_TTL — matches the content-layer cache
+export const revalidate = 86400; // daily background ISR floor; content edits push live via /api/revalidate (hourly was needless ISR-write churn)
 export const dynamicParams = true; // unknown slugs still render on-demand → notFound
 
 export async function generateStaticParams() {
