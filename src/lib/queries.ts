@@ -20,7 +20,7 @@ type DeptWithModules = Department & { modules: Module[] };
 // changes only via the admin panel, so an hour is plenty; the leaderboard is a
 // live-ish aggregate that's identical for every anonymous viewer, so a short
 // window keeps it fresh without re-querying every profile on every page view.
-const CATALOG_TTL = 3600; // 1 hour
+const CATALOG_TTL = 86400; // 24h — content edits push live on-demand via /api/revalidate (revalidateTag), so this is only a slow background floor. Was 1h, which forced hourly page ISR-writes + DB refetches for content that rarely changes.
 const LEADERBOARD_TTL = 300; // 5 minutes
 
 // Explicit column lists — never `select("*")`. List views in particular must
