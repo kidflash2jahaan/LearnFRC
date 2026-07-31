@@ -84,7 +84,7 @@ export function KpiStrip({ s }: { s: Stats }) {
         accent="#2560e6"
         icon={<UsersRound className="h-5 w-5" />}
         label="Unique visitors"
-        subtext="distinct people"
+        subtext="distinct visitor IDs"
       >
         <span
           style={

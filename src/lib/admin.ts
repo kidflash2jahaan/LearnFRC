@@ -67,6 +67,7 @@ export type AdminStats = {
   signups7d: number;
   signups30d: number;
   completions7d: number;
+  completions30d: number;
   topDepartments: DepartmentStat[];
   recentSignups: RecentSignup[];
   users: AdminUser[];
@@ -150,6 +151,7 @@ export async function getAdminStats(): Promise<AdminStats> {
     signups7dRes,
     signups30dRes,
     completions7dRes,
+    completions30dRes,
     deptStatsRes,
     recentRes,
     dailySignupsRes,
@@ -182,6 +184,10 @@ export async function getAdminStats(): Promise<AdminStats> {
       .from("lesson_progress")
       .select("*", { count: "exact", head: true })
       .gte("completed_at", since7d),
+    supabase
+      .from("lesson_progress")
+      .select("*", { count: "exact", head: true })
+      .gte("completed_at", since30d),
     supabase.from("admin_department_stats").select("*"),
     supabase
       .from("profiles")
@@ -427,10 +433,13 @@ export async function getAdminStats(): Promise<AdminStats> {
     username: p.username,
     lastSeen: p.last_seen_at,
   }));
-  // Include anonymous/guest browsers active in the last 10 minutes — everyone
-  // fires the page-view beacon, so this reflects ALL active visitors, not just
-  // signed-in members (who remain the named list in onlineUsers).
-  const onlineVisitorsRes = await supabase.rpc("online_visitors", { minutes: 10 });
+  // Anonymous/guest browsers active in the SAME 5-minute window used for the
+  // signed-in list above — everyone (members included) fires the page-view
+  // beacon, so online_visitors is normally a superset of onlineUsers. Using one
+  // consistent window means the two components can't disagree on their window;
+  // max() then just guarantees a floor (a member whose heartbeat landed without
+  // a beacon in the window still counts).
+  const onlineVisitorsRes = await supabase.rpc("online_visitors", { minutes: 5 });
   const onlineVisitors = Number((onlineVisitorsRes.data as number | null) ?? 0);
   const onlineNow = Math.max(onlineUsers.length, onlineVisitors);
 
@@ -555,6 +564,7 @@ export async function getAdminStats(): Promise<AdminStats> {
     signups7d: countOf(signups7dRes),
     signups30d: countOf(signups30dRes),
     completions7d: countOf(completions7dRes),
+    completions30d: countOf(completions30dRes),
     topDepartments,
     recentSignups,
     users,

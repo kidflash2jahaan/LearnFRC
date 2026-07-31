@@ -176,7 +176,17 @@ export default async function AdminPage() {
 
         {/* ============ GROWTH CHART ============ */}
         <Reveal className="mt-6">
-          <GrowthChart daily={stats.daily} />
+          {/* Chip totals are TRUE 30-day-window figures (visitors =
+              count(distinct) over the window, = the Traffic panel's "in the
+              last 30 days"), not a sum of the per-day series. */}
+          <GrowthChart
+            daily={stats.daily}
+            totals={{
+              visitors: stats.uniqueVisitors30d,
+              signups: stats.signups30d,
+              completions: stats.completions30d,
+            }}
+          />
         </Reveal>
 
         {/* ============ TRAFFIC ============ */}

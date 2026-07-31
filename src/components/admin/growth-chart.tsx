@@ -44,7 +44,24 @@ function formatDay(raw: string): string {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-export function GrowthChart({ daily }: { daily: DailyPoint[] }) {
+/**
+ * True 30-day-window totals for the summary chips. These are computed
+ * server-side as count(distinct visitor) / count(*) OVER the window — NOT by
+ * summing the per-day series. Summing per-day distinct-visitor counts
+ * double-counts anyone who returns on multiple days (it yields "visitor-days",
+ * which can exceed the all-time unique total), so the headline "Visitors" chip
+ * must never be a sum of the daily line. The daily line itself still plots
+ * per-day distinct visitors — that's a legitimate daily series.
+ */
+type WindowTotals = { visitors: number; signups: number; completions: number };
+
+export function GrowthChart({
+  daily,
+  totals,
+}: {
+  daily: DailyPoint[];
+  totals?: WindowTotals;
+}) {
   const [metric, setMetric] = useState<Metric>("all");
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -77,18 +94,27 @@ export function GrowthChart({ daily }: { daily: DailyPoint[] }) {
     return m;
   }, [points]);
 
-  const totals = useMemo(() => {
+  // Fallback only: a naive sum of the per-day series. Used just for the signups
+  // and completions chips (both additive, so a sum IS the window total) and as a
+  // safety net when no server-computed `totals` prop is supplied. The Visitors
+  // chip must NOT use this sum (per-day distinct counts double-count returning
+  // visitors) — it always prefers the true distinct-over-window value.
+  const summed = useMemo(() => {
     return points.reduce(
       (acc, p) => {
         acc.visitors += p.visitors || 0;
-        acc.views += p.views || 0;
         acc.signups += p.signups || 0;
         acc.completions += p.completions || 0;
         return acc;
       },
-      { visitors: 0, views: 0, signups: 0, completions: 0 },
+      { visitors: 0, signups: 0, completions: 0 },
     );
   }, [points]);
+
+  // Chip values: true 30-day-window totals when provided (visitors =
+  // count(distinct) over the window, reconciling with the Traffic panel &
+  // KPI hero), else the additive fallback.
+  const chipTotals: WindowTotals = totals ?? summed;
 
   const isEmpty = n === 0 || maxVal === 0;
 
@@ -238,7 +264,7 @@ export function GrowthChart({ daily }: { daily: DailyPoint[] }) {
                 </span>
               </div>
               <div className="mt-0.5 font-display text-xl font-semibold tabular-nums text-foreground">
-                <AnimatedCounter value={totals[s.key]} />
+                <AnimatedCounter value={chipTotals[s.key]} />
               </div>
             </div>
           ))}

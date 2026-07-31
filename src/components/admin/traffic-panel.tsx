@@ -120,7 +120,7 @@ export function TrafficPanel({
       <div className="flex items-baseline justify-between gap-3">
         <span className="ac-eyebrow text-muted-foreground">Top pages</span>
         <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-          Views
+          All-time views
         </span>
       </div>
 
