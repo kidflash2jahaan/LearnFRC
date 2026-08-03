@@ -249,32 +249,6 @@ export function feedbackReplyHtml({
   `);
 }
 
-export function errorEmailHtml({
-  message,
-  stack,
-  url,
-  kind,
-  digest,
-  userAgent,
-}: {
-  message: string;
-  stack?: string;
-  url?: string;
-  kind?: string;
-  digest?: string;
-  userAgent?: string;
-}) {
-  const esc = (s: string) => s.replace(/</g, "&lt;");
-  return shell(`
-    <p style="margin:0 0 10px;font-weight:600;color:#ff6b6b">⚠️ ${esc(kind || "Error")} on LearnFRC</p>
-    <p style="margin:0 0 12px;white-space:pre-wrap;font-family:ui-monospace,monospace;font-size:13px">${esc(message)}</p>
-    ${url ? `<p style="margin:0 0 6px;color:#64748b;font-size:13px">URL: ${esc(url)}</p>` : ""}
-    ${digest ? `<p style="margin:0 0 6px;color:#64748b;font-size:13px">Digest: ${esc(digest)}</p>` : ""}
-    ${userAgent ? `<p style="margin:0 0 12px;color:#64748b;font-size:12px">UA: ${esc(userAgent)}</p>` : ""}
-    ${stack ? `<pre style="margin:8px 0 0;padding:12px;background:#070b14;border:1px solid #1d2740;border-radius:10px;color:#64748b;font-size:11px;overflow:auto;white-space:pre-wrap">${esc(stack).slice(0, 4000)}</pre>` : ""}
-  `);
-}
-
 export function subscribeEmailHtml() {
   return shell(`
     <p style="margin:0 0 14px">Thanks for joining the LearnFRC list! 🤖</p>

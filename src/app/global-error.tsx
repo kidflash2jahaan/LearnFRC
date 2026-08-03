@@ -10,22 +10,8 @@ export default function GlobalError({
   reset: () => void;
 }) {
   React.useEffect(() => {
-    try {
-      fetch("/api/report-error", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: error?.message || "Error",
-          stack: error?.stack,
-          digest: error?.digest,
-          url: typeof window !== "undefined" ? window.location.href : undefined,
-          kind: "Global error",
-        }),
-        keepalive: true,
-      }).catch(() => {});
-    } catch {
-      /* ignore */
-    }
+    // Error emails are disabled — log locally only.
+    console.error(error);
   }, [error]);
 
   return (
