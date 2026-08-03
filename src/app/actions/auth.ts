@@ -8,7 +8,15 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { firstProfaneField } from "@/lib/profanity";
 import { hookSourceFor } from "@/lib/signup-source";
 
-export type AuthState = { error?: string } | undefined;
+export type AuthState =
+  | {
+      error?: string;
+      /** On success, the client performs a FULL page load to this path so
+          every layout/navbar picks up the new auth cookies immediately
+          (a soft client transition leaves "Log in" showing until refresh). */
+      redirectTo?: string;
+    }
+  | undefined;
 
 /** Only allow same-origin relative paths (blocks //evil.com, /\evil.com). */
 function safeNext(n: string): string {
@@ -51,8 +59,11 @@ export async function signIn(
   const { error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) return { error: error.message };
 
-  revalidatePath("/", "layout");
-  redirect(safeNext(next));
+  // No revalidatePath here — it would rebuild /login inside the action
+  // response, whose authed-redirect then soft-navigates and unmounts the form
+  // before the client can run window.location.assign(redirectTo). The full
+  // page load the client performs makes revalidation redundant anyway.
+  return { redirectTo: safeNext(next) };
 }
 
 export async function signUp(
@@ -201,8 +212,8 @@ export async function signUp(
 export async function signOut() {
   const supabase = await createClient();
   await supabase.auth.signOut();
-  revalidatePath("/", "layout");
-  redirect("/");
+  // No redirect/revalidate here: callers do a FULL page load (window.location)
+  // after this resolves, which re-renders everything with the cleared session.
 }
 
 export async function resendConfirmation(

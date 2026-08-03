@@ -222,9 +222,14 @@ export function Navbar() {
                 )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
-                  onSelect={(e) => {
+                  onSelect={async (e) => {
                     e.preventDefault();
-                    void signOut();
+                    try {
+                      await signOut();
+                    } finally {
+                      // Full reload so the whole app drops the session at once.
+                      window.location.assign("/");
+                    }
                   }}
                   className="text-destructive focus:text-destructive"
                 >

@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
 import { AuthForm } from "@/components/auth/auth-form";
+import { HardRedirect } from "@/components/auth/hard-redirect";
 import { deptMeta } from "@/lib/departments";
 import { getSession } from "@/lib/auth";
 import { Glow } from "@/components/motion/primitives";
@@ -33,10 +33,12 @@ export default async function LoginPage({
   searchParams: Promise<{ next?: string; notice?: string; email?: string }>;
 }) {
   const { next, notice, email } = await searchParams;
-  const { user } = await getSession();
-  if (user) redirect("/dashboard");
-
   const safeNext = next && next.startsWith("/") ? next : undefined;
+  const { user } = await getSession();
+  // Already signed in (incl. right after the sign-in action sets cookies and
+  // Next refreshes this route): HARD redirect so every layout picks up the
+  // session — an RSC redirect() here would only soft-navigate. See HardRedirect.
+  if (user) return <HardRedirect to={safeNext ?? "/dashboard"} />;
   const noticeExists = notice === "exists" ? "exists" : undefined;
 
   const orbit: OrbitDept[] = ORBIT_SLUGS.map((slug) => {

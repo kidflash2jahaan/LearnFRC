@@ -2,7 +2,6 @@ import type { CSSProperties } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
-  LogOut,
   UserRound,
   ExternalLink,
   ShieldCheck,
@@ -10,7 +9,7 @@ import {
   SlidersHorizontal,
 } from "lucide-react";
 import { getSession } from "@/lib/auth";
-import { signOut } from "@/app/actions/auth";
+import { SignOutButton } from "@/components/auth/sign-out-button";
 import { Button } from "@/components/ui/button";
 import { SettingsForm } from "@/components/settings/settings-form";
 import { PerfModeCard } from "@/components/perf-mode";
@@ -215,12 +214,7 @@ export default async function SettingsPage() {
                   Sign out of LearnFRC on this device. You can always jump back
                   in before the next build season.
                 </p>
-                <form action={signOut}>
-                  <Button type="submit" variant="destructive" size="md" className="shrink-0">
-                    <LogOut className="h-4 w-4" aria-hidden />
-                    Sign out
-                  </Button>
-                </form>
+                <SignOutButton className="shrink-0" />
               </div>
             </div>
           </Reveal>

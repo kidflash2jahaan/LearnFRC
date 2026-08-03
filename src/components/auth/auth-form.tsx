@@ -53,6 +53,15 @@ export function AuthForm({
     undefined
   );
 
+  // On success the action returns redirectTo and we do a FULL page load —
+  // a soft client transition would leave the navbar showing "Log in" until
+  // the user manually refreshed.
+  const redirecting = !!state?.redirectTo;
+  React.useEffect(() => {
+    if (state?.redirectTo) window.location.assign(state.redirectTo);
+  }, [state?.redirectTo]);
+  const busy = isPending || redirecting;
+
   const [showPassword, setShowPassword] = React.useState(false);
 
   const nextValue = next && next.startsWith("/") ? next : "";
@@ -155,7 +164,7 @@ export function AuthForm({
               autoComplete="name"
               placeholder="Jane Builder"
               className="pl-10"
-              disabled={isPending}
+              disabled={busy}
             />
           </Field>
           <p className="mt-1.5 text-xs text-muted-foreground">
@@ -180,7 +189,7 @@ export function AuthForm({
             defaultValue={!isSignup ? defaultEmail : undefined}
             placeholder={isSignup ? "you@team.org" : "you@team.org or janebuilds"}
             className="pl-10"
-            disabled={isPending}
+            disabled={busy}
           />
         </Field>
       </motion.div>
@@ -204,7 +213,7 @@ export function AuthForm({
                 pattern="[A-Za-z0-9_]+"
                 placeholder="janebuilds"
                 className="pl-10"
-                disabled={isPending}
+                disabled={busy}
               />
             </Field>
             <p className="mt-1.5 text-xs text-muted-foreground">
@@ -227,7 +236,7 @@ export function AuthForm({
                 min={1}
                 placeholder="254"
                 className="pl-10"
-                disabled={isPending}
+                disabled={busy}
               />
             </Field>
           </div>
@@ -258,12 +267,12 @@ export function AuthForm({
             minLength={isSignup ? 8 : undefined}
             placeholder={isSignup ? "At least 8 characters" : "••••••••"}
             className="pl-10 pr-11"
-            disabled={isPending}
+            disabled={busy}
           />
           <button
             type="button"
             onClick={() => setShowPassword((s) => !s)}
-            disabled={isPending}
+            disabled={busy}
             className={cn(
               "absolute inset-y-0 right-0 flex w-11 items-center justify-center rounded-r-xl text-muted-foreground",
               "transition-colors hover:text-foreground cursor-pointer",
@@ -293,7 +302,7 @@ export function AuthForm({
           variant="brand"
           size="lg"
           className="w-full"
-          disabled={isPending}
+          disabled={busy}
           aria-busy={isPending}
         >
           {isPending ? (
