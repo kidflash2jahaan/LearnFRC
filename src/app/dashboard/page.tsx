@@ -21,6 +21,7 @@ import { DepartmentCard } from "@/components/department-card";
 import { InviteCard } from "@/components/leaderboard/invite-card";
 import { FirstRunGuide } from "@/components/dashboard/first-run-guide";
 import { GuestMigration } from "@/components/guest-migration";
+import { UsernameClaim } from "@/components/onboarding/username-claim";
 import {
   Reveal,
   RevealGroup,
@@ -298,6 +299,18 @@ export default async function DashboardPage() {
       <div className="mx-auto max-w-7xl px-4 pt-28 pb-20 sm:px-6 lg:px-8">
         {/* Migrate any guest (pre-signup) progress into this account, once. */}
         <GuestMigration />
+        {/* Google sign-ins have no handle — one-time claim, top of the page. */}
+        {!profile?.username && (
+          <Reveal className="mb-8">
+            <UsernameClaim
+              suggested={user.email
+                ?.split("@")[0]
+                .toLowerCase()
+                .replace(/[^a-z0-9_]/g, "")
+                .slice(0, 20)}
+            />
+          </Reveal>
+        )}
         {/* First-run guide — only for brand-new (zero-progress) learners. */}
         {completedCount === 0 && continueLesson && cm && (
           <Reveal className="mb-8">
@@ -441,7 +454,9 @@ export default async function DashboardPage() {
         />
 
         {/* ============================ PROFILE NUDGE ============================ */}
-        {(!profile?.username || !profile?.team_number) && (
+        {/* Username is handled by the UsernameClaim card up top — this nudge is
+            only for the remaining gap (team number). */}
+        {profile?.username && !profile?.team_number && (
           <Reveal className="mt-8">
             <Hover lift={-3}>
               <Link
@@ -460,9 +475,8 @@ export default async function DashboardPage() {
                       Complete your profile
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      Add a username
-                      {!profile?.team_number ? " and your FRC team number" : ""} to show
-                      up on the leaderboard.
+                      Add your FRC team number to rep your team on the
+                      leaderboard.
                     </p>
                   </div>
                 </div>

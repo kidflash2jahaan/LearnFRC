@@ -81,6 +81,56 @@ export async function updateProfile(
 }
 
 /**
+ * One-time username claim for accounts created without one (Google sign-in
+ * skips the signup form, so those profiles have no handle and render as
+ * "Learner" everywhere). Only fills an EMPTY username — renames go through
+ * Settings. Same rules as signup: a–z/0–9/_, ≥3 chars, profanity + uniqueness.
+ */
+export async function claimUsername(
+  _prev: ProfileState,
+  formData: FormData
+): Promise<ProfileState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "You must be signed in." };
+
+  const raw = String(formData.get("username") || "").trim();
+  const username = raw.toLowerCase().replace(/[^a-z0-9_]/g, "");
+  if (username.length < 3)
+    return { error: "Username must be at least 3 characters (a–z, 0–9, _)." };
+  if (firstProfaneField({ username }))
+    return { error: "That username isn't allowed — please choose another." };
+
+  const { data: taken } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("username", username)
+    .neq("id", user.id)
+    .maybeSingle();
+  if (taken) return { error: "That username is already taken." };
+
+  const { data: updated, error } = await supabase
+    .from("profiles")
+    .update({ username })
+    .eq("id", user.id)
+    .is("username", null)
+    .select("id")
+    .maybeSingle();
+  if (error)
+    // Unique-index race (someone grabbed it between check and write).
+    return error.code === "23505"
+      ? { error: "That username is already taken." }
+      : { error: error.message };
+  if (!updated)
+    return { error: "You already have a username — change it in Settings." };
+
+  revalidatePath("/", "layout");
+  return { success: true };
+}
+
+/**
  * Permanently delete the signed-in user's own account and all their data.
  * Deletes child rows explicitly (no cascade FK to auth.users), then the auth user.
  */
