@@ -114,6 +114,13 @@ export type AdminStats = {
   guestLearners: number;
   guestCompletions7d: number;
   guestLearners7d: number;
+  /** Per-guide (department) audience: distinct people + raw views across the
+      department page and all its lessons; most-viewed first. */
+  guideViews: { slug: string; name: string; viewers: number; views: number; views7d: number }[];
+  /** All-time raw views across every /guides page. */
+  guideViewsTotal: number;
+  /** Distinct people who viewed any guide (can't be summed per-dept). */
+  guideViewersTotal: number;
 };
 
 /** Number of trailing calendar days rendered in the activity chart. */
@@ -163,6 +170,8 @@ export async function getAdminStats(): Promise<AdminStats> {
     topLessonsRes,
     visitorSourcesRes,
     guestStatsRes,
+    guideViewsRes,
+    guideViewsSummaryRes,
   ] = await Promise.all([
     supabase.from("profiles").select("*", { count: "exact", head: true }),
     supabase.from("lesson_progress").select("*", { count: "exact", head: true }),
@@ -205,6 +214,8 @@ export async function getAdminStats(): Promise<AdminStats> {
     supabase.rpc("top_lessons", { lim: 8 }),
     supabase.rpc("visitor_sources"),
     supabase.rpc("guest_progress_stats"),
+    supabase.from("admin_guide_views").select("*"),
+    supabase.from("admin_guide_views_summary").select("*"),
   ]);
 
   const subscribersRes = await supabase
@@ -549,6 +560,26 @@ export async function getAdminStats(): Promise<AdminStats> {
   const guestCompletions7d = Number(gs?.guest_completions_7d ?? 0);
   const guestLearners7d = Number(gs?.guest_learners_7d ?? 0);
 
+  // Per-guide audience (admin_guide_views): join slugs to department names via
+  // the department stats already fetched; bigints arrive as strings.
+  type GVRow = { slug: string; views: number | string; viewers: number | string; views_7d: number | string };
+  const deptNameBySlug = new Map(
+    (((deptStatsRes.data as { slug: string; name: string }[] | null) ?? [])).map((d) => [d.slug, d.name])
+  );
+  const guideViews = (((guideViewsRes.data as GVRow[] | null) ?? []))
+    .filter((r) => deptNameBySlug.has(r.slug))
+    .map((r) => ({
+      slug: r.slug,
+      name: deptNameBySlug.get(r.slug) ?? r.slug,
+      viewers: Number(r.viewers ?? 0),
+      views: Number(r.views ?? 0),
+      views7d: Number(r.views_7d ?? 0),
+    }))
+    .sort((a, b) => b.viewers - a.viewers);
+  const gvSummary = (((guideViewsSummaryRes.data as { views: number | string; viewers: number | string }[] | null) ?? []))[0];
+  const guideViewsTotal = Number(gvSummary?.views ?? 0);
+  const guideViewersTotal = Number(gvSummary?.viewers ?? 0);
+
   return {
     totals: {
       users: countOf(usersRes),
@@ -596,6 +627,9 @@ export async function getAdminStats(): Promise<AdminStats> {
     guestLearners,
     guestCompletions7d,
     guestLearners7d,
+    guideViews,
+    guideViewsTotal,
+    guideViewersTotal,
   };
 }
 

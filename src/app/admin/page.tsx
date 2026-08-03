@@ -20,6 +20,7 @@ import { getFeedback } from "@/lib/feedback";
 import { KpiStrip } from "@/components/admin/kpi-strip";
 import { GrowthChart } from "@/components/admin/growth-chart";
 import { TrafficPanel } from "@/components/admin/traffic-panel";
+import { GuideViewsPanel } from "@/components/admin/guide-views-panel";
 import { EngagementPanel } from "@/components/admin/engagement-panel";
 import { RetentionPanel } from "@/components/admin/retention-panel";
 import { SourceBreakdown } from "@/components/admin/source-breakdown";
@@ -200,6 +201,15 @@ export default async function AdminPage() {
               uniqueVisitors30d: stats.uniqueVisitors30d,
               topPages: stats.topPages,
             }}
+          />
+        </Reveal>
+
+        {/* ============ GUIDE AUDIENCE ============ */}
+        <Reveal className="mt-6">
+          <GuideViewsPanel
+            guides={stats.guideViews}
+            viewersTotal={stats.guideViewersTotal}
+            viewsTotal={stats.guideViewsTotal}
           />
         </Reveal>
 
