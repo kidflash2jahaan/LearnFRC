@@ -451,7 +451,7 @@ export default function DeflectionCalculator({
         <span className="ac-chip inline-flex items-center gap-2">
           <span className="ac-eyebrow">STRUCTURES</span>
         </span>
-        <h2 className="font-display mt-3 text-2xl font-bold tracking-tight sm:text-3xl">
+        <h1 className="font-display mt-3 text-2xl font-bold tracking-tight sm:text-3xl">
           Structural{" "}
           <span
             style={{
@@ -464,7 +464,7 @@ export default function DeflectionCalculator({
             Deflection
           </span>{" "}
           Calculator
-        </h2>
+        </h1>
         <p className="mt-2 max-w-2xl text-sm text-foreground/70">
           How far will your aluminum (or steel / polycarb) arm tube, rail, or plate bend under load —
           and will it yield? Pick a support, load case, material and FRC-stock section; deflection,

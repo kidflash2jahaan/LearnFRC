@@ -12,6 +12,7 @@ export const metadata: Metadata = {
     "Free FRC deflection calculator. Enter beam type, material (6061-T6 aluminum or steel), cross-section, length, and load to get tip/center sag, bending stress, and a safety factor — for arms, elevators, and drivetrain rails. Beam-mechanics formulas, sourced material properties.",
   alternates: { canonical: `${SITE}/tools/frc-deflection-calculator` },
   openGraph: {
+    images: [{ url: `${SITE}/opengraph-image`, width: 1200, height: 630 }],
     title: "FRC Structural Deflection Calculator (Free) — LearnFRC",
     description:
       "Will your arm or rail sag? Enter geometry + load for deflection, bending stress, and a safety factor.",

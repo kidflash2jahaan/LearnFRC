@@ -69,13 +69,24 @@ export const metadata: Metadata = {
       "Structured, web-grounded guides for every FRC department. Build robots, write code, win awards.",
     siteName: "LearnFRC",
   },
+  // Card type only — leaving title/description unset lets every page's own
+  // OpenGraph values mirror into its Twitter card (hard-coding them here made
+  // all 578 pages share the homepage card).
   twitter: {
     card: "summary_large_image",
-    title: "LearnFRC — Master FIRST Robotics Competition",
-    description:
-      "Structured, web-grounded guides for every FRC department. Build robots, write code, win awards.",
   },
-  robots: { index: true, follow: true },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      // Discover large-card eligibility + unclamped snippets.
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
+  },
   verification: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION
     ? { google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION }
     : undefined,

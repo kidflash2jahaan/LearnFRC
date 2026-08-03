@@ -12,6 +12,7 @@ export const metadata: Metadata = {
     "Free interactive FRC team budget calculator. Estimate registration, the Kit of Parts, drivetrain, electronics, tools, and travel for a rookie or veteran season — with a sponsor-ready summary. Figures from official FIRST 2025–26 pricing and current vendor listings.",
   alternates: { canonical: `${SITE}/tools/frc-budget-calculator` },
   openGraph: {
+    images: [{ url: `${SITE}/opengraph-image`, width: 1200, height: 630 }],
     title: "FRC Team Budget Calculator (Free) — LearnFRC",
     description:
       "Estimate what your FRC season will cost — registration, robot, tools, travel — itemized and sponsor-ready.",

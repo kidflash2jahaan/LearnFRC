@@ -316,7 +316,7 @@ export default function WireGaugeCalculator({
           <Cable className="h-3.5 w-3.5" aria-hidden />
           <span className="ac-eyebrow">FRC ELECTRICAL</span>
         </span>
-        <h2 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">
+        <h1 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">
           Wire Gauge &amp; Voltage-Drop{" "}
           <span
             style={{
@@ -328,7 +328,7 @@ export default function WireGaugeCalculator({
           >
             Calculator
           </span>
-        </h2>
+        </h1>
         <p className="max-w-2xl text-sm text-foreground/70">
           Size a wire run, see the round-trip voltage drop, and check it against the
           FRC-mandated minimum gauge (R609 / R622 Table 8-4). Provable copper physics

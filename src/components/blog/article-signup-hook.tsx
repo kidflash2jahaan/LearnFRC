@@ -22,6 +22,45 @@ const GRADIENT_TEXT: CSSProperties = {
  * only until the probe resolves, then it unmounts. Distinct from the generic
  * footer CTA: this one is about continuing *this* path and saving progress.
  */
+/** Match the ask to the search intent that brought the reader here — a
+    mid-panic troubleshooting visit and a budget-planning visit convert on
+    different promises. Order matters: first matching cluster wins. */
+const INTENT_COPY: {
+  match: RegExp;
+  headline: [string, string]; // [plain, gradient] halves of the h2
+  body: (count: number) => string;
+  cta: string;
+}[] = [
+  {
+    match: /grant|cost|budget|sponsor|registration|calendar|start-an|scholarship/,
+    headline: ["Don't miss a", "2027 deadline"],
+    body: () =>
+      "Registration rounds, grant windows, and the payment cliff sneak up fast. A free account saves your team's checklists and progress through the business guides.",
+    cta: "Track it free",
+  },
+  {
+    match: /swerve|cad|onshape|design|drivetrain|elevator|intake|mechanism|gear/,
+    headline: ["Keep building —", "the full course is free"],
+    body: () =>
+      "This article pairs with a full structured design course — swerve layout, assemblies, worked mini-projects. A free account saves your progress lesson by lesson.",
+    cta: "Save my progress",
+  },
+  {
+    match: /troubleshoot|brownout|deploy|can-bus|no-robot-code|blink|status|error|wiring|radio/,
+    headline: ["Bookmark the fix", "before you need it again"],
+    body: () =>
+      "Pit problems repeat. A free account lets you bookmark troubleshooting guides and checklists so they're one tap away at competition.",
+    cta: "Create a free account",
+  },
+  {
+    match: /mentor|preseason|training|onboarding|rookie|joining|first-team/,
+    headline: ["Turn this into", "a training plan"],
+    body: (count) =>
+      `LearnFRC's ${count}+ free lessons are a ready-made curriculum — assign a path, track who finished what, and hand out certificates.`,
+    cta: "Set up your team free",
+  },
+];
+
 export function ArticleSignupHook({
   articleCount,
   slug,
@@ -47,6 +86,12 @@ export function ArticleSignupHook({
   if (authed) return null;
 
   const encoded = encodeURIComponent(`/blog/${slug}`);
+  const intent = INTENT_COPY.find((c) => c.match.test(slug));
+  const headline = intent?.headline ?? (["Want the whole path, not just", "this article?"] as [string, string]);
+  const body =
+    intent?.body(articleCount) ??
+    `LearnFRC has ${articleCount}+ free FRC lessons and guides across every department. Create a free account to save your place, track your progress, and earn a certificate.`;
+  const cta = intent?.cta ?? "Create a free account";
 
   return (
     <section className="mx-auto max-w-3xl px-4 pt-14 sm:px-6 lg:px-8">
@@ -66,19 +111,16 @@ export function ArticleSignupHook({
             <div className="min-w-0">
               <p className="ac-eyebrow">Go deeper</p>
               <h2 className="mt-1.5 text-balance font-display text-xl font-bold leading-tight tracking-tight sm:text-2xl">
-                Want the whole path, not just{" "}
-                <span style={GRADIENT_TEXT}>this article</span>?
+                {headline[0]} <span style={GRADIENT_TEXT}>{headline[1]}</span>
               </h2>
               <p className="mt-2 max-w-xl text-pretty text-[15px] leading-relaxed text-foreground/70">
-                LearnFRC has {articleCount}+ free FRC lessons and guides across
-                every department. Create a free account to save your place,
-                track your progress, and earn a certificate.
+                {body}
               </p>
               <Link
                 href={`/signup?next=${encoded}&ref=article-hook`}
                 className="ac-btn mt-5 text-sm"
               >
-                Create a free account
+                {cta}
                 <ArrowRight className="h-4 w-4" aria-hidden />
               </Link>
             </div>

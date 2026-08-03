@@ -97,7 +97,7 @@ export function Markdown({
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[[rehypeHighlight, { detect: true, ignoreMissing: true }]]}
         components={{
-          h1: ({ children, ...p }) => {
+          h1: ({ node: _node, children, ...p }) => {
             const h = nextHeading();
             return (
               <h2
@@ -110,7 +110,7 @@ export function Markdown({
               </h2>
             );
           },
-          h2: ({ children, ...p }) => {
+          h2: ({ node: _node, children, ...p }) => {
             const h = nextHeading();
             return (
               <h2
@@ -123,7 +123,7 @@ export function Markdown({
               </h2>
             );
           },
-          h3: ({ children, ...p }) => {
+          h3: ({ node: _node, children, ...p }) => {
             const h = nextHeading();
             return (
               <h3
@@ -136,42 +136,49 @@ export function Markdown({
               </h3>
             );
           },
-          h4: ({ ...p }) => (
+          h4: ({ node: _node, ...p }) => (
             <h4
               className="mt-6 mb-2 scroll-mt-24 font-display text-lg font-semibold text-foreground"
               {...p}
             />
           ),
-          p: ({ ...p }) => (
+          p: ({ node: _node, ...p }) => (
             <p className="my-4 text-[1.05rem] leading-7 text-foreground/90" {...p} />
           ),
-          a: ({ ...p }) => (
-            <a
-              className="break-words font-medium text-primary underline decoration-primary/30 underline-offset-2 transition-colors hover:text-accent hover:decoration-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-              target="_blank"
-              rel="noopener noreferrer"
-              {...p}
-            />
-          ),
-          ul: ({ ...p }) => (
+          a: ({ node: _node, href, ...p }) => {
+            // Internal links (same-origin paths/anchors) must stay internal —
+            // rendering them target=_blank made crawlers count our own lesson
+            // cross-links as outbound external links. External links keep the
+            // new-tab + noopener treatment.
+            const h = href ?? "";
+            const external = /^https?:\/\//i.test(h) && !h.startsWith("https://learnfrc.com");
+            const cls =
+              "break-words font-medium text-primary underline decoration-primary/30 underline-offset-2 transition-colors hover:text-accent hover:decoration-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary";
+            return external ? (
+              <a className={cls} href={h} target="_blank" rel="noopener noreferrer" {...p} />
+            ) : (
+              <a className={cls} href={h.replace(/^https:\/\/learnfrc\.com/, "") || "#"} {...p} />
+            );
+          },
+          ul: ({ node: _node, ...p }) => (
             <ul
               className="my-4 list-disc space-y-2 pl-6 text-foreground/90 marker:text-primary"
               {...p}
             />
           ),
-          ol: ({ ...p }) => (
+          ol: ({ node: _node, ...p }) => (
             <ol
               className="my-4 list-decimal space-y-2 pl-6 text-foreground/90 marker:font-semibold marker:text-primary"
               {...p}
             />
           ),
-          li: ({ ...p }) => <li className="pl-1 leading-7" {...p} />,
-          strong: ({ ...p }) => (
+          li: ({ node: _node, ...p }) => <li className="pl-1 leading-7" {...p} />,
+          strong: ({ node: _node, ...p }) => (
             <strong className="font-semibold text-foreground" {...p} />
           ),
-          em: ({ ...p }) => <em className="italic text-foreground/90" {...p} />,
+          em: ({ node: _node, ...p }) => <em className="italic text-foreground/90" {...p} />,
           // Soft glass "note" callout — replaces the old cyan neon quote.
-          blockquote: ({ ...p }) => (
+          blockquote: ({ node: _node, ...p }) => (
             <blockquote
               className="ac-glass my-6 rounded-2xl border-l-4 border-primary py-1 pl-5 pr-5 text-foreground/90 [&>p]:my-3 [&>p:first-child]:mt-0 [&>p:last-child]:mb-0 [&_strong]:text-primary"
               {...p}
@@ -200,7 +207,7 @@ export function Markdown({
           },
           // Fenced code blocks live in a clean dark clay panel (no fake
           // terminal chrome) so the neon syntax tokens keep their contrast.
-          pre: ({ children, ...p }) => (
+          pre: ({ node: _node, children, ...p }) => (
             <figure className="my-6 overflow-hidden rounded-2xl border border-white/10 bg-[#0b1220] shadow-[var(--shadow-md)] transition-shadow hover:shadow-[var(--shadow-lg)]">
               <pre
                 className="overflow-x-auto p-4 leading-6 text-white/90"
@@ -210,24 +217,24 @@ export function Markdown({
               </pre>
             </figure>
           ),
-          table: ({ ...p }) => (
+          table: ({ node: _node, ...p }) => (
             <div className="ac-card my-6 overflow-x-auto rounded-2xl p-0">
               <table className="w-full border-collapse text-sm" {...p} />
             </div>
           ),
-          th: ({ ...p }) => (
+          th: ({ node: _node, ...p }) => (
             <th
               className="border-b border-border bg-primary/[0.06] px-4 py-2.5 text-left font-mono text-xs font-semibold uppercase tracking-wide text-primary"
               {...p}
             />
           ),
-          td: ({ ...p }) => (
+          td: ({ node: _node, ...p }) => (
             <td
               className="border-b border-border px-4 py-2.5 align-top text-foreground/90"
               {...p}
             />
           ),
-          img: ({ ...p }) => (
+          img: ({ node: _node, ...p }) => (
             // eslint-disable-next-line @next/next/no-img-element
             <img className="my-6 rounded-2xl border border-border shadow-[var(--shadow-md)]" alt="" {...p} />
           ),

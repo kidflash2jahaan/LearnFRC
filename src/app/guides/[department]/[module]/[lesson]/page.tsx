@@ -52,6 +52,22 @@ import { LessonSignupHook } from "@/components/lesson/lesson-signup-hook";
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com";
 
+/** Short topic qualifier appended to lesson <title>s ("… — FRC CAD in
+    Onshape") so lessons can match FRC-modified searches. */
+const DEPT_TITLE_KEYWORD: Record<string, string> = {
+  "getting-started": "Rookie Guide",
+  "mechanical-build": "Mechanical",
+  "programming-software": "Programming",
+  "electrical-wiring": "Electrical",
+  "cad-design": "CAD in Onshape",
+  "scouting-strategy": "Scouting",
+  "drive-team": "Drive Team",
+  "business-operations": "Team Business",
+  "media-outreach": "Outreach",
+  "impact-award": "Impact Award",
+  safety: "Safety",
+};
+
 const BRAND_GRADIENT: CSSProperties = {
   background: "linear-gradient(120deg, #2560e6, #1aa9d6)",
   WebkitBackgroundClip: "text",
@@ -118,12 +134,18 @@ export async function generateMetadata({
     (les.summary && les.summary.trim()) ||
     (dept?.tagline ?? undefined) ||
     excerpt;
+  // Qualify the title with "FRC <department topic>" so the page can match the
+  // FRC-modified queries people actually type ("Assemblies and Mates" alone
+  // matches nothing). Skip the qualifier when it would blow past ~60 chars.
+  const keyword = DEPT_TITLE_KEYWORD[department];
+  const qualified = keyword ? `${les.title} — FRC ${keyword}` : les.title;
+  const pageTitle = qualified.length <= 62 ? qualified : les.title;
   return {
-    title: les.title,
+    title: { absolute: pageTitle },
     description,
     alternates: { canonical: url },
     openGraph: {
-      title: les.title,
+      title: pageTitle,
       description,
       url,
       type: "article",
@@ -131,7 +153,7 @@ export async function generateMetadata({
     },
     twitter: {
       card: "summary_large_image",
-      title: les.title,
+      title: pageTitle,
       description,
       images: [ogImage],
     },

@@ -12,6 +12,7 @@ export const metadata: Metadata = {
     "Free FRC tip-over and traction-stability calculator. Enter your track width, wheelbase, and center-of-gravity height to find the maximum turning acceleration and ramp/incline angle before your robot tips — plus a traction-limited pushing-force estimate. Exact rigid-body statics.",
   alternates: { canonical: `${SITE}/tools/frc-tipping-calculator` },
   openGraph: {
+    images: [{ url: `${SITE}/opengraph-image`, width: 1200, height: 630 }],
     title: "FRC Tip-Over & Stability Calculator (Free) — LearnFRC",
     description:
       "Will your robot tip? Enter track width, wheelbase, and CoG height for tip acceleration and ramp angle.",

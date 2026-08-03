@@ -312,7 +312,7 @@ export default function TippingCalculator({
         <span className="ac-chip inline-flex items-center gap-2">
           <span className="ac-eyebrow">STABILITY</span>
         </span>
-        <h2 className="font-display mt-3 text-2xl font-bold tracking-tight sm:text-3xl">
+        <h1 className="font-display mt-3 text-2xl font-bold tracking-tight sm:text-3xl">
           Tip-Over &amp; Traction{" "}
           <span
             style={{
@@ -325,7 +325,7 @@ export default function TippingCalculator({
             Stability
           </span>{" "}
           Calculator
-        </h2>
+        </h1>
         <p className="mt-2 max-w-2xl text-sm text-foreground/70">
           Rigid-body statics for your drivetrain: how hard you can turn or accelerate before two
           wheels lift, the tip angle on a ramp or cross-slope, whether you slide or tip first, and

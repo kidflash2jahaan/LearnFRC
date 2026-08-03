@@ -12,6 +12,7 @@ export const metadata: Metadata = {
     "Free FRC current-budget and brownout calculator. Add each mechanism's motor current against the 120 A main breaker and the roboRIO brownout thresholds to see what can safely run at once — before you brown out at competition. Uses official FIRST figures and vendor motor specs.",
   alternates: { canonical: `${SITE}/tools/frc-current-budget` },
   openGraph: {
+    images: [{ url: `${SITE}/opengraph-image`, width: 1200, height: 630 }],
     title: "FRC Current Budget & Brownout Checker (Free) — LearnFRC",
     description:
       "Total motor current vs the 120 A main breaker and roboRIO brownout thresholds — avoid browning out.",

@@ -627,7 +627,7 @@ export default function BudgetCalculator({ authed }: { authed: boolean }) {
         <span className="ac-chip inline-flex items-center gap-2">
           <span className="ac-eyebrow">FRC PLANNING</span>
         </span>
-        <h2 className="mt-3 font-display text-2xl font-bold tracking-tight sm:text-3xl">
+        <h1 className="mt-3 font-display text-2xl font-bold tracking-tight sm:text-3xl">
           Team Budget &amp; Startup Cost{" "}
           <span
             style={{
@@ -639,7 +639,7 @@ export default function BudgetCalculator({ authed }: { authed: boolean }) {
           >
             Calculator
           </span>
-        </h2>
+        </h1>
         <p className="mt-2 max-w-2xl text-sm text-foreground/70">
           Build a transparent, itemized season budget for your FRC team — registration,
           drivetrain, control system, motors, travel and more. Every default is

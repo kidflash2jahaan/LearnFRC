@@ -438,7 +438,7 @@ export default function CurrentBudgetCalculator({ authed }: { authed: boolean })
         <span className="ac-chip inline-flex items-center gap-2">
           <span className="ac-eyebrow">FRC ELECTRICAL</span>
         </span>
-        <h2 className="font-display mt-3 text-2xl font-bold tracking-tight sm:text-3xl">
+        <h1 className="font-display mt-3 text-2xl font-bold tracking-tight sm:text-3xl">
           Current Budget &amp;{" "}
           <span
             style={{
@@ -451,7 +451,7 @@ export default function CurrentBudgetCalculator({ authed }: { authed: boolean })
             Brownout
           </span>{" "}
           Checker
-        </h2>
+        </h1>
         <p className="mt-2 max-w-2xl text-sm text-foreground/70">
           Add your mechanisms and motors, set your smart-current limits, and see whether your
           branch breakers, the 120&nbsp;A main, and the roboRIO brownout line hold up when

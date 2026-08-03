@@ -12,6 +12,7 @@ export const metadata: Metadata = {
     "Free FRC wire gauge and voltage-drop calculator. Enter current, run length, and gauge to get voltage drop, and check it against FRC's minimum-AWG wiring rules for each breaker size. Built from Ohm's law and the official copper AWG resistance table.",
   alternates: { canonical: `${SITE}/tools/frc-wire-gauge-calculator` },
   openGraph: {
+    images: [{ url: `${SITE}/opengraph-image`, width: 1200, height: 630 }],
     title: "FRC Wire Gauge & Voltage-Drop Calculator (Free) — LearnFRC",
     description:
       "Voltage drop over a run, plus a check against FRC's minimum-AWG rules for each breaker size.",

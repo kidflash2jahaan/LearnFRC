@@ -33,9 +33,36 @@ async function run(req: Request) {
   // The custom Next fork's revalidateTag takes a profile as the 2nd arg.
   for (const t of tags) revalidateTag(t, "max");
   for (const p of paths) revalidatePath(p);
+
+  // IndexNow: tell Bing (which also feeds Copilot + ChatGPT search — already a
+  // converting channel) about the refreshed URLs immediately instead of
+  // waiting for a recrawl. Key file is served from /public. Best-effort only.
+  let indexnow = "skipped";
+  const urlList = [
+    ...paths.map((p) => `https://learnfrc.com${p}`),
+    "https://learnfrc.com/sitemap.xml",
+  ];
+  try {
+    const res = await fetch("https://api.indexnow.org/IndexNow", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        host: "learnfrc.com",
+        key: "4b7943d207e8cc0430ce5784a7114824",
+        keyLocation:
+          "https://learnfrc.com/4b7943d207e8cc0430ce5784a7114824.txt",
+        urlList,
+      }),
+    });
+    indexnow = `HTTP ${res.status}`;
+  } catch {
+    indexnow = "failed";
+  }
+
   return NextResponse.json({
     revalidated: tags,
     paths,
+    indexnow,
     at: new Date().toISOString(),
   });
 }
