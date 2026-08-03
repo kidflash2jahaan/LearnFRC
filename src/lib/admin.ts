@@ -102,6 +102,7 @@ export type AdminStats = {
   /** Distinct first-party visitor ids (unique visitors). */
   uniqueVisitors: number;
   uniqueVisitors30d: number;
+  uniqueVisitors7d: number;
   /** Most-viewed pages across the whole site (+ trailing 7d). */
   topPages: { path: string; views: number; views7d: number }[];
   /** Most-completed lessons. */
@@ -511,13 +512,14 @@ export async function getAdminStats(): Promise<AdminStats> {
 
   // ── Site-wide pageviews + top pages / lessons (SQL-aggregated) ─────
   const pvs = ((pageSummaryRes.data as
-    | { total: number | string; views_7d: number | string; views_30d: number | string; visitors: number | string; visitors_30d: number | string }[]
+    | { total: number | string; views_7d: number | string; views_30d: number | string; visitors: number | string; visitors_30d: number | string; visitors_7d: number | string }[]
     | null) ?? [])[0];
   const pageViewsTotal = Number(pvs?.total ?? 0);
   const pageViews7d = Number(pvs?.views_7d ?? 0);
   const pageViews30d = Number(pvs?.views_30d ?? 0);
   const uniqueVisitors = Number(pvs?.visitors ?? 0);
   const uniqueVisitors30d = Number(pvs?.visitors_30d ?? 0);
+  const uniqueVisitors7d = Number(pvs?.visitors_7d ?? 0);
   const topPages = ((topPagesRes.data as
     | { path: string; views: number | string; views_7d: number | string }[]
     | null) ?? []).map((r) => ({
@@ -599,6 +601,7 @@ export async function getAdminStats(): Promise<AdminStats> {
     pageViews30d,
     uniqueVisitors,
     uniqueVisitors30d,
+    uniqueVisitors7d,
     topPages,
     topLessons,
     visitorSources,

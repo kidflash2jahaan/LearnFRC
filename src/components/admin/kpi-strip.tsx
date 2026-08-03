@@ -5,7 +5,7 @@ import {
   Eye,
   UsersRound,
   Users,
-  UserPlus,
+  TrendingUp,
   BookOpenCheck,
   BookOpen,
 } from "lucide-react";
@@ -19,6 +19,7 @@ type Stats = {
   users: number;
   verifiedUsers: number;
   signups7d: number;
+  uniqueVisitors7d: number;
   completions: number;
   guestCompletions: number;
   guideViewers: number;
@@ -120,13 +121,19 @@ export function KpiStrip({ s }: { s: Stats }) {
         </span>
       </KpiCard>
 
+      {/* This week's pulse: reach first, with signups as the payoff line. */}
       <KpiCard
         accent="#12a150"
-        icon={<UserPlus className="h-4 w-4" />}
-        label="Signups · 7d"
+        icon={<TrendingUp className="h-4 w-4" />}
+        label="Visitors · 7d"
+        subtext={
+          <>
+            <AnimatedCounter value={s.signups7d} /> signed up
+          </>
+        }
       >
         <span style={{ color: "#12a150" }}>
-          <AnimatedCounter value={s.signups7d} />
+          <AnimatedCounter value={s.uniqueVisitors7d} />
         </span>
       </KpiCard>
 
