@@ -14,7 +14,6 @@ import {
 } from "lucide-react";
 import { RevealGroup, RevealItem, Hover } from "@/components/motion/primitives";
 import { AnimatedCounter } from "@/components/animated-counter";
-import { cn } from "@/lib/utils";
 
 type Stats = {
   pageViewsTotal: number;
@@ -51,22 +50,24 @@ function KpiCard({
 }) {
   return (
     <RevealItem>
-      <Hover lift={-4} className="h-full">
-        <div className="ac-card group h-full p-4">
-          <div
-            className="ac-badge flex h-10 w-10 items-center justify-center"
-            style={{ "--a": accent } as CSSProperties}
-          >
-            {icon}
+      <Hover lift={-2} className="h-full">
+        <div className="ac-card group h-full p-2.5">
+          <div className="flex items-center gap-1.5">
+            <span
+              className="flex shrink-0 items-center justify-center"
+              style={{ color: accent } as CSSProperties}
+            >
+              {icon}
+            </span>
+            <span className={`${LABEL_KICKER} truncate`} title={label}>
+              {label}
+            </span>
           </div>
-          <div className="mt-3 font-display text-2xl font-bold tabular-nums sm:text-3xl">
+          <div className="mt-0.5 font-display text-xl font-bold leading-tight tabular-nums">
             {children}
           </div>
-          <div className="mt-1 text-[13px] font-medium text-muted-foreground">
-            {label}
-          </div>
           {subtext ? (
-            <div className="mt-0.5 text-[11px] text-muted-foreground">
+            <div className="truncate text-[10px] leading-tight text-muted-foreground">
               {subtext}
             </div>
           ) : null}
@@ -79,13 +80,13 @@ function KpiCard({
 export function KpiStrip({ s }: { s: Stats }) {
   return (
     <RevealGroup
-      className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4"
-      stagger={0.05}
+      className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5"
+      stagger={0.03}
     >
       {/* 1. Unique visitors — gradient hero */}
       <KpiCard
         accent="#2560e6"
-        icon={<UsersRound className="h-5 w-5" />}
+        icon={<UsersRound className="h-3.5 w-3.5" />}
         label="Unique visitors"
         subtext="distinct visitor IDs"
       >
@@ -106,7 +107,7 @@ export function KpiStrip({ s }: { s: Stats }) {
       {/* 2. Total page views */}
       <KpiCard
         accent="#1aa9d6"
-        icon={<Eye className="h-5 w-5" />}
+        icon={<Eye className="h-3.5 w-3.5" />}
         label="Total page views"
         subtext={
           <>
@@ -122,7 +123,7 @@ export function KpiStrip({ s }: { s: Stats }) {
       {/* 3. Total users */}
       <KpiCard
         accent="#7c5cff"
-        icon={<Users className="h-5 w-5" />}
+        icon={<Users className="h-3.5 w-3.5" />}
         label="Total users"
         subtext={
           <>
@@ -138,7 +139,7 @@ export function KpiStrip({ s }: { s: Stats }) {
       {/* 4. New signups · 7d */}
       <KpiCard
         accent="#12a150"
-        icon={<UserPlus className="h-5 w-5" />}
+        icon={<UserPlus className="h-3.5 w-3.5" />}
         label="New signups · 7d"
       >
         <span style={{ color: "#12a150" }}>
@@ -149,7 +150,7 @@ export function KpiStrip({ s }: { s: Stats }) {
       {/* 5. Activation */}
       <KpiCard
         accent="#f5a623"
-        icon={<Zap className="h-5 w-5" />}
+        icon={<Zap className="h-3.5 w-3.5" />}
         label="Activation"
         subtext="did a lesson"
       >
@@ -161,7 +162,7 @@ export function KpiStrip({ s }: { s: Stats }) {
       {/* 6. Return rate */}
       <KpiCard
         accent="#d64b8a"
-        icon={<Repeat className="h-5 w-5" />}
+        icon={<Repeat className="h-3.5 w-3.5" />}
         label="Return rate"
         subtext="came back"
       >
@@ -173,7 +174,7 @@ export function KpiStrip({ s }: { s: Stats }) {
       {/* 7. Lessons completed (incl. guests) */}
       <KpiCard
         accent="#2560e6"
-        icon={<BookOpenCheck className="h-5 w-5" />}
+        icon={<BookOpenCheck className="h-3.5 w-3.5" />}
         label="Lessons completed"
         subtext={
           s.guestCompletions > 0 ? (
@@ -191,7 +192,7 @@ export function KpiStrip({ s }: { s: Stats }) {
       {/* 8. Guide viewers — people who opened any guide (completers included) */}
       <KpiCard
         accent="#7c5cff"
-        icon={<BookOpen className="h-5 w-5" />}
+        icon={<BookOpen className="h-3.5 w-3.5" />}
         label="Guide viewers"
         subtext={
           <>
@@ -207,7 +208,7 @@ export function KpiStrip({ s }: { s: Stats }) {
       {/* 9. Guest learners */}
       <KpiCard
         accent="#0ea5a3"
-        icon={<Ghost className="h-5 w-5" />}
+        icon={<Ghost className="h-3.5 w-3.5" />}
         label="Guest learners"
         subtext="learning, no account"
       >
@@ -216,25 +217,8 @@ export function KpiStrip({ s }: { s: Stats }) {
         </span>
       </KpiCard>
 
-      {/* 8. Online now — pulsing dot */}
-      <KpiCard
-        accent="#2560e6"
-        icon={
-          <span className="relative flex h-3 w-3">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
-            <span className="relative inline-flex h-3 w-3 rounded-full bg-primary" />
-          </span>
-        }
-        label="online now"
-      >
-        <span className={cn("inline-flex items-center gap-2 text-primary")}>
-          <span className="relative flex h-2.5 w-2.5">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
-            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-primary" />
-          </span>
-          <AnimatedCounter value={s.onlineNow} />
-        </span>
-      </KpiCard>
+      {/* "Online now" intentionally has NO tile — it lives in the page header
+          chip; duplicating it here was showing the same number twice. */}
     </RevealGroup>
   );
 }

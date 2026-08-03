@@ -30,6 +30,9 @@ const PALETTE = [
   "#4d5b78",
 ];
 
+/** Legend rows shown before collapsing the tail into a "+N more" line. */
+const MAX_ROWS = 7;
+
 export function SourcePie({
   data,
 }: {
@@ -49,9 +52,13 @@ export function SourcePie({
     return seg;
   });
 
+  const visible = segs.slice(0, MAX_ROWS);
+  const hidden = segs.slice(MAX_ROWS);
+  const hiddenCount = hidden.reduce((s, d) => s + d.count, 0);
+
   return (
-    <div className="flex flex-col items-center gap-6 sm:flex-row sm:gap-8">
-      <svg viewBox="0 0 160 160" className="h-40 w-40 shrink-0">
+    <div className="flex flex-col items-center gap-3 sm:flex-row sm:gap-4">
+      <svg viewBox="0 0 160 160" className="h-28 w-28 shrink-0">
         <g transform="rotate(-90 80 80)">
           <circle cx="80" cy="80" r={r} fill="none" stroke="var(--muted)" strokeWidth="20" />
           {segs.map((s, i) => (
@@ -75,32 +82,39 @@ export function SourcePie({
             />
           ))}
         </g>
-        <text x="80" y="77" textAnchor="middle" className="fill-foreground font-display" fontSize="24" fontWeight="700">
+        <text x="80" y="78" textAnchor="middle" className="fill-foreground font-display" fontSize="26" fontWeight="700">
           {total}
         </text>
-        <text x="80" y="95" textAnchor="middle" className="fill-muted-foreground" fontSize="10">
-          users
+        <text x="80" y="96" textAnchor="middle" className="fill-muted-foreground" fontSize="11">
+          total
         </text>
       </svg>
 
-      <ul className="w-full space-y-2">
-        {segs.map((s) => (
-          <li
-            key={s.name}
-            className="flex items-center gap-2.5 rounded-lg px-1.5 py-1 text-sm transition-colors hover:bg-primary/[0.04]"
-          >
-            <span
-              className="h-3 w-3 shrink-0 rounded-sm ring-1 ring-black/5"
-              style={{ background: s.color }}
-            />
-            <span className="flex-1 truncate text-foreground">{s.name}</span>
-            <span className="text-xs text-muted-foreground">{s.count}</span>
-            <span className="w-11 text-right font-mono font-semibold tabular-nums text-primary">
-              {Math.round(s.frac * 100)}%
-            </span>
-          </li>
-        ))}
-      </ul>
+      <div className="w-full">
+        <ul>
+          {visible.map((s) => (
+            <li
+              key={s.name}
+              className="flex items-center gap-2 rounded-md px-1 py-1 text-[13px] transition-colors hover:bg-primary/[0.04]"
+            >
+              <span
+                className="h-2 w-2 shrink-0 rounded-[3px] ring-1 ring-black/5"
+                style={{ background: s.color }}
+              />
+              <span className="flex-1 truncate text-foreground">{s.name}</span>
+              <span className="text-[11px] tabular-nums text-muted-foreground">{s.count}</span>
+              <span className="w-9 text-right font-mono text-[11px] font-semibold tabular-nums text-primary">
+                {Math.round(s.frac * 100)}%
+              </span>
+            </li>
+          ))}
+        </ul>
+        {hidden.length > 0 && (
+          <p className="px-1 pt-0.5 text-[11px] tabular-nums text-muted-foreground">
+            +{hidden.length} more · {hiddenCount}
+          </p>
+        )}
+      </div>
     </div>
   );
 }

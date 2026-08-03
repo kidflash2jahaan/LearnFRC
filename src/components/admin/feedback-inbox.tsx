@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import type { CSSProperties } from "react";
 import { useActionState } from "react";
 import { toast } from "sonner";
 import {
@@ -17,6 +16,9 @@ import { Textarea } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import type { FeedbackItem } from "@/lib/feedback";
 
+/** Rows rendered before the "+N more" line. */
+const MAX_ROWS = 6;
+
 function timeAgo(iso: string): string {
   const d = Date.now() - new Date(iso).getTime();
   const m = Math.round(d / 60000);
@@ -30,33 +32,36 @@ function timeAgo(iso: string): string {
 
 export function FeedbackInbox({ items }: { items: FeedbackItem[] }) {
   const open = items.filter((i) => i.status !== "replied").length;
+  const shown = items.slice(0, MAX_ROWS);
+  const more = items.length - shown.length;
 
   return (
-    <section className="ac-card rounded-2xl p-5 sm:p-6">
-      <div className="mb-5 flex items-center justify-between gap-3">
-        <h2 className="flex items-center gap-2 text-lg font-semibold">
-          <span
-            className="ac-badge flex h-9 w-9 items-center justify-center"
-            style={{ "--a": "var(--primary)" } as CSSProperties}
-          >
-            <Inbox className="h-[18px] w-[18px]" aria-hidden />
-          </span>
+    <section className="ac-card rounded-2xl p-4">
+      <div className="mb-2.5 flex items-center justify-between gap-2">
+        <h2 className="flex items-center gap-1.5 text-sm font-semibold">
+          <Inbox className="h-4 w-4 text-primary" aria-hidden />
           Feedback inbox
         </h2>
-        <span className="ac-chip text-xs tabular-nums">{open} open</span>
+        <span className="ac-chip text-[11px] tabular-nums">{open} open</span>
       </div>
 
       {items.length === 0 ? (
-        <p className="rounded-xl border border-border bg-secondary/40 px-4 py-6 text-center text-sm text-muted-foreground">
-          No feedback yet. Suggestions and topic requests from across the site
-          land here.
+        <p className="py-2 text-[11px] text-muted-foreground">
+          No feedback yet.
         </p>
       ) : (
-        <div className="space-y-3">
-          {items.map((item) => (
-            <FeedbackRow key={item.id} item={item} />
-          ))}
-        </div>
+        <>
+          <div className="divide-y divide-border/70">
+            {shown.map((item) => (
+              <FeedbackRow key={item.id} item={item} />
+            ))}
+          </div>
+          {more > 0 && (
+            <p className="pt-1.5 text-[11px] text-muted-foreground">
+              +{more} more
+            </p>
+          )}
+        </>
       )}
     </section>
   );
@@ -67,6 +72,7 @@ function FeedbackRow({ item }: { item: FeedbackItem }) {
     replyToFeedback,
     undefined
   );
+  const [composing, setComposing] = React.useState(false);
 
   React.useEffect(() => {
     if (state?.error) toast.error(state.error);
@@ -76,45 +82,57 @@ function FeedbackRow({ item }: { item: FeedbackItem }) {
   const replied = item.status === "replied" || state?.success;
 
   return (
-    <div className="rounded-xl border border-border bg-white/60 p-4">
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+    <div className="py-1.5">
+      <div className="flex flex-wrap items-center gap-x-1.5 text-[11px] text-muted-foreground">
         {item.fromEmail ? (
           <span className="inline-flex items-center gap-1 font-medium text-foreground">
-            <Mail className="h-3.5 w-3.5 text-primary" aria-hidden />
+            <Mail className="h-3 w-3 text-primary" aria-hidden />
             {item.fromEmail}
           </span>
         ) : (
           <span className="inline-flex items-center gap-1">
-            <MailX className="h-3.5 w-3.5" aria-hidden />
-            anonymous — no reply address
+            <MailX className="h-3 w-3" aria-hidden />
+            anonymous
           </span>
         )}
         {item.page && <span>· {item.page}</span>}
         <span>· {timeAgo(item.createdAt)}</span>
         {replied && (
           <span className="inline-flex items-center gap-1 font-medium text-success">
-            <MailCheck className="h-3.5 w-3.5" aria-hidden /> replied
+            <MailCheck className="h-3 w-3" aria-hidden /> replied
           </span>
+        )}
+        {!replied && item.fromEmail && (
+          <button
+            type="button"
+            onClick={() => setComposing((v) => !v)}
+            aria-expanded={composing}
+            className="ml-auto cursor-pointer font-medium text-primary hover:underline"
+          >
+            {composing ? "Cancel" : "Reply"}
+          </button>
         )}
       </div>
 
-      <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-foreground">
+      <p
+        className="mt-0.5 line-clamp-2 text-[13px] leading-snug text-foreground"
+        title={item.message}
+      >
         {item.message}
       </p>
 
-      {replied ? (
-        item.replyBody ? (
-          <div className="mt-3 rounded-lg border border-success/25 bg-success/5 p-3 text-sm">
-            <div className="mb-1 text-xs font-medium text-muted-foreground">
-              Your reply
-            </div>
-            <p className="whitespace-pre-wrap leading-relaxed text-foreground/90">
-              {item.replyBody}
-            </p>
-          </div>
-        ) : null
-      ) : item.fromEmail ? (
-        <form action={action} className="mt-3 space-y-2">
+      {replied && item.replyBody && (
+        <p
+          className="mt-0.5 line-clamp-2 text-[11px] leading-snug text-muted-foreground"
+          title={item.replyBody}
+        >
+          <span className="font-medium text-success">Your reply:</span>{" "}
+          {item.replyBody}
+        </p>
+      )}
+
+      {!replied && item.fromEmail && composing && (
+        <form action={action} className="mt-1.5 flex items-start gap-1.5">
           <input type="hidden" name="id" value={item.id} />
           <Textarea
             name="reply"
@@ -123,7 +141,7 @@ function FeedbackRow({ item }: { item: FeedbackItem }) {
             rows={2}
             placeholder={`Reply to ${item.fromEmail}…`}
             aria-label="Reply"
-            className="text-sm"
+            className="min-h-14 flex-1 py-1.5 text-[13px]"
           />
           <Button
             type="submit"
@@ -131,19 +149,16 @@ function FeedbackRow({ item }: { item: FeedbackItem }) {
             size="sm"
             disabled={pending}
             aria-busy={pending}
+            className="min-h-8 shrink-0 px-2.5 py-1.5 text-[12px]"
           >
             {pending ? (
-              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+              <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
             ) : (
-              <Send className="h-4 w-4" aria-hidden />
+              <Send className="h-3.5 w-3.5" aria-hidden />
             )}
-            Send reply
+            Send
           </Button>
         </form>
-      ) : (
-        <p className="mt-3 text-xs text-muted-foreground">
-          No reply address on this one — nothing to send to.
-        </p>
       )}
     </div>
   );

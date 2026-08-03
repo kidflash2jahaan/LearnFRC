@@ -8,6 +8,9 @@ type Range = "7d" | "all";
 type Metric = "users" | "visitors";
 type Series = { name: string; count: number }[];
 
+const PILL =
+  "cursor-pointer rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
+
 /**
  * "Where they come from" — toggle between signed-up USERS and all UNIQUE
  * VISITORS, each with a Last-7-days / All-time range.
@@ -40,12 +43,12 @@ export function SourceBreakdown({
 
   return (
     <div>
-      <div className="mb-5 flex flex-wrap items-center gap-2">
+      <div className="mb-2.5 flex flex-wrap items-center gap-1.5">
         {/* Metric toggle */}
-        <div className="ac-chip inline-flex items-center gap-1 p-1 text-sm">
+        <div className="ac-chip inline-flex items-center gap-0.5 p-0.5" role="group" aria-label="Metric">
           {(
             [
-              ["visitors", "Unique visitors"],
+              ["visitors", "Visitors"],
               ["users", "Users"],
             ] as const
           ).map(([key, label]) => (
@@ -55,7 +58,7 @@ export function SourceBreakdown({
               onClick={() => setMetric(key)}
               aria-pressed={metric === key}
               className={cn(
-                "min-h-11 cursor-pointer rounded-full px-4 py-1.5 font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+                PILL,
                 metric === key
                   ? "bg-primary/15 text-primary"
                   : "text-muted-foreground hover:text-foreground"
@@ -67,10 +70,10 @@ export function SourceBreakdown({
         </div>
 
         {/* Range toggle */}
-        <div className="ac-chip inline-flex items-center gap-1 p-1 text-sm">
+        <div className="ac-chip inline-flex items-center gap-0.5 p-0.5" role="group" aria-label="Range">
           {(
             [
-              ["7d", "7 days"],
+              ["7d", "7d"],
               ["all", "All-time"],
             ] as const
           ).map(([key, label]) => (
@@ -80,7 +83,7 @@ export function SourceBreakdown({
               onClick={() => setRange(key)}
               aria-pressed={range === key}
               className={cn(
-                "min-h-11 cursor-pointer rounded-full px-4 py-1.5 font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+                PILL,
                 range === key
                   ? "bg-primary/15 text-primary"
                   : "text-muted-foreground hover:text-foreground"
@@ -93,15 +96,10 @@ export function SourceBreakdown({
       </div>
 
       {total === 0 ? (
-        <p className="py-10 text-center text-sm text-muted-foreground">
+        <p className="py-6 text-center text-[11px] text-muted-foreground">
           {range === "7d"
             ? `No ${noun} in the last 7 days yet.`
             : `No ${noun} attributed yet.`}
-          {metric === "visitors" && (
-            <span className="mt-1 block text-xs">
-              Visitor sources are captured from now on — earlier views predate it.
-            </span>
-          )}
         </p>
       ) : (
         <SourcePie data={data} />

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
+import type { PointerEvent as ReactPointerEvent } from "react";
 import { motion } from "framer-motion";
 import { TrendingUp } from "lucide-react";
 import { Reveal } from "@/components/motion/primitives";
@@ -28,12 +28,14 @@ const TOGGLES: { value: Metric; label: string }[] = [
 // The viewBox width is set to the MEASURED container width (see `w` below) so the
 // SVG never letterboxes — screen-x then maps 1:1 to viewBox-x and the hover
 // indicator stays exactly under the cursor at every position, not just center.
-const VB_W_DEFAULT = 720; // used before the container is measured (SSR/first paint)
-const VB_H = 220;
-const PAD_T = 16;
-const PAD_B = 28;
-const PAD_L = 8;
-const PAD_R = 8;
+// The default is sized for the half-width admin column so the pre-measure frame
+// is already close to the real width (the ResizeObserver corrects it either way).
+const VB_W_DEFAULT = 560; // used before the container is measured (SSR/first paint)
+const VB_H = 144; // compact: rendered px height == viewBox height (no letterbox)
+const PAD_T = 10;
+const PAD_B = 18;
+const PAD_L = 6;
+const PAD_R = 6;
 const PLOT_H = VB_H - PAD_T - PAD_B;
 const REVEAL_W = 4000; // draw-in clip sweep, wider than any real container
 
@@ -150,9 +152,9 @@ export function GrowthChart({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [points, n, yMax, w]);
 
-  // Gridlines: 4 horizontal bands with value labels.
+  // Gridlines: 3 horizontal bands with value labels (compact height).
   const gridLines = useMemo(() => {
-    const rows = 4;
+    const rows = 3;
     return Array.from({ length: rows + 1 }, (_, i) => {
       const frac = i / rows;
       const y = PAD_T + PLOT_H * frac;
@@ -161,10 +163,10 @@ export function GrowthChart({
     });
   }, [yMax]);
 
-  // X-axis labels: roughly every 6th day, always including the last.
+  // X-axis labels: sparse (the panel is a narrow column), always including the last.
   const xLabels = useMemo(() => {
     if (n === 0) return [] as { x: number; text: string }[];
-    const step = Math.max(1, Math.round(n / 5));
+    const step = Math.max(1, Math.round(n / 4));
     const out: { x: number; text: string }[] = [];
     for (let i = 0; i < n; i += step) out.push({ x: xAt(i), text: formatDay(points[i].day) });
     const lastX = xAt(n - 1);
@@ -196,31 +198,24 @@ export function GrowthChart({
 
   const active = hoverIdx != null ? points[hoverIdx] : null;
   const activeX = hoverIdx != null ? xAt(hoverIdx) : 0;
-  // Tooltip horizontal placement (percentage of width), clamped away from edges.
-  const tipLeftPct = hoverIdx != null ? Math.min(88, Math.max(12, (activeX / w) * 100)) : 50;
+  // Tooltip horizontal placement (percentage of width), clamped away from edges
+  // (tighter than before: the panel now sits in a ~550px half-width column).
+  const tipLeftPct = hoverIdx != null ? Math.min(84, Math.max(16, (activeX / w) * 100)) : 50;
 
   return (
     <Reveal>
-      <div className="ac-card p-5 sm:p-6">
-        {/* Heading row */}
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <span
-              className="ac-badge flex h-10 w-10 items-center justify-center"
-              style={{ "--a": "#2560e6" } as CSSProperties}
-            >
-              <TrendingUp className="h-5 w-5" />
+      <div className="ac-card p-4">
+        {/* Heading row + segmented toggle */}
+        <div className="mb-2.5 flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
+          <h3 className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+            <TrendingUp className="h-4 w-4 shrink-0 text-primary" />
+            Growth
+            <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+              Last 30d
             </span>
-            <div>
-              <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Last 30 days
-              </div>
-              <h3 className="font-display text-lg font-semibold text-foreground">Growth</h3>
-            </div>
-          </div>
+          </h3>
 
-          {/* Segmented toggle */}
-          <div className="ac-chip flex flex-wrap gap-1 p-1" role="group" aria-label="Emphasize metric">
+          <div className="ac-chip flex flex-wrap gap-0.5 p-0.5" role="group" aria-label="Emphasize metric">
             {TOGGLES.map((t) => {
               const activeToggle = metric === t.value;
               return (
@@ -230,7 +225,7 @@ export function GrowthChart({
                   aria-pressed={activeToggle}
                   onClick={() => setMetric(t.value)}
                   className={cn(
-                    "rounded-full px-3 py-1 text-xs font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+                    "rounded-full px-2 py-0.5 text-[11px] font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
                     activeToggle
                       ? "bg-primary text-white shadow-sm"
                       : "text-muted-foreground hover:text-foreground",
@@ -243,40 +238,37 @@ export function GrowthChart({
           </div>
         </div>
 
-        {/* Metric summary chips */}
-        <div className="mt-4 grid grid-cols-3 gap-2 sm:gap-3">
+        {/* Metric summary pills (double as the series legend) */}
+        <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
           {SERIES.map((s) => (
             <div
               key={s.key}
               className={cn(
-                "rounded-xl border border-border bg-muted/40 px-3 py-2 transition-opacity",
+                "flex items-center gap-1.5 rounded-full border border-border bg-muted/40 px-2 py-1 transition-opacity",
                 seriesDim(s.key) && "opacity-45",
               )}
             >
-              <div className="flex items-center gap-1.5">
-                <span
-                  className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
-                  style={{ background: s.color }}
-                  aria-hidden
-                />
-                <span className="truncate text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  {s.label}
-                </span>
-              </div>
-              <div className="mt-0.5 font-display text-xl font-semibold tabular-nums text-foreground">
-                <AnimatedCounter value={chipTotals[s.key]} />
-              </div>
+              <span
+                className="inline-block h-2 w-2 shrink-0 rounded-full"
+                style={{ background: s.color }}
+                aria-hidden
+              />
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                {s.label}
+              </span>
+              <AnimatedCounter
+                value={chipTotals[s.key]}
+                className="font-display text-[13px] font-semibold tabular-nums text-foreground"
+              />
             </div>
           ))}
         </div>
 
-        <div className="ac-divider my-4" />
-
         {/* Chart */}
         <div className="relative w-full overflow-x-auto">
-          <div ref={wrapRef} className="relative min-w-[320px]">
+          <div ref={wrapRef} className="relative min-w-[260px]">
             {isEmpty ? (
-              <div className="flex h-[220px] items-center justify-center px-4 text-center text-sm text-muted-foreground">
+              <div className="flex h-[144px] items-center justify-center px-4 text-center text-[11px] text-muted-foreground">
                 No activity yet — data will appear as people visit.
               </div>
             ) : (
@@ -284,7 +276,7 @@ export function GrowthChart({
                 ref={svgRef}
                 viewBox={`0 0 ${w} ${VB_H}`}
                 width="100%"
-                height={220}
+                height={VB_H}
                 role="img"
                 aria-label="Growth over the last 30 days"
                 className="block touch-none select-none"
@@ -325,10 +317,10 @@ export function GrowthChart({
                     />
                     <text
                       x={PAD_L + PLOT_W}
-                      y={g.y - 3}
+                      y={g.y - 2.5}
                       textAnchor="end"
                       className="tabular-nums"
-                      fontSize={10}
+                      fontSize={9}
                       fill="#4d5b78"
                     >
                       {g.value}
@@ -356,7 +348,7 @@ export function GrowthChart({
                       d={linePath(s.key)}
                       fill="none"
                       stroke={s.color}
-                      strokeWidth={s.key === "visitors" ? 2.5 : 2}
+                      strokeWidth={s.key === "visitors" ? 2 : 1.5}
                       strokeLinecap="round"
                       strokeLinejoin="round"
                       initial={{ opacity: 0 }}
@@ -373,10 +365,10 @@ export function GrowthChart({
                 {xLabels.map((l, i) => (
                   <text
                     key={i}
-                    x={Math.max(PAD_L + 14, Math.min(PAD_L + PLOT_W - 14, l.x))}
-                    y={VB_H - 8}
+                    x={Math.max(PAD_L + 16, Math.min(PAD_L + PLOT_W - 16, l.x))}
+                    y={VB_H - 5}
                     textAnchor="middle"
-                    fontSize={10}
+                    fontSize={9}
                     fill="#4d5b78"
                   >
                     {l.text}
@@ -401,7 +393,7 @@ export function GrowthChart({
                         key={s.key}
                         cx={activeX}
                         cy={yAt(active[s.key])}
-                        r={3.5}
+                        r={3}
                         fill="#ffffff"
                         stroke={s.color}
                         strokeWidth={2}
@@ -415,18 +407,18 @@ export function GrowthChart({
             {/* Tooltip */}
             {active && hoverIdx != null && (
               <div
-                className="pointer-events-none absolute top-2 z-10 -translate-x-1/2 rounded-xl border border-border bg-white/95 px-3 py-2 shadow-lg backdrop-blur"
+                className="pointer-events-none absolute top-1 z-10 -translate-x-1/2 rounded-lg border border-border bg-white/95 px-2 py-1 shadow-lg backdrop-blur"
                 style={{ left: `${tipLeftPct}%` }}
               >
-                <div className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                <div className="mb-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                   {formatDay(active.day)}
                 </div>
                 <div className="space-y-0.5">
                   {SERIES.map((s) => (
-                    <div key={s.key} className="flex items-center justify-between gap-4 text-xs">
-                      <span className="flex items-center gap-1.5 text-muted-foreground">
+                    <div key={s.key} className="flex items-center justify-between gap-3 text-[11px]">
+                      <span className="flex items-center gap-1 text-muted-foreground">
                         <span
-                          className="inline-block h-2 w-2 rounded-full"
+                          className="inline-block h-1.5 w-1.5 rounded-full"
                           style={{ background: s.color }}
                           aria-hidden
                         />

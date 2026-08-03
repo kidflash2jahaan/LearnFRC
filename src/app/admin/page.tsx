@@ -6,12 +6,9 @@ import {
   ShieldAlert,
   ShieldCheck,
   Users2,
-  Trophy,
   UserPlus,
   CheckCircle2,
-  Inbox,
   FileClock,
-  Sparkles,
 } from "lucide-react";
 import { getSession } from "@/lib/auth";
 import { getAdminStats, getPendingEdits, getPendingSubmissions } from "@/lib/admin";
@@ -28,12 +25,9 @@ import { AutoRefresh } from "@/components/admin/auto-refresh";
 import { AnimatedCounter } from "@/components/animated-counter";
 import {
   Rise,
-  RiseGroup,
-  RiseItem,
   Reveal,
   RevealGroup,
   RevealItem,
-  Hover,
   Glow,
 } from "@/components/motion/primitives";
 
@@ -140,76 +134,58 @@ export default async function AdminPage() {
         ]}
       />
 
-      <div className="relative mx-auto max-w-7xl px-4 pt-24 pb-24 sm:px-6 lg:px-8 lg:pt-28">
-        {/* ============ HERO ============ */}
-        <RiseGroup>
-          <RiseItem>
-            <span className="ac-chip inline-flex items-center gap-2">
-              <ShieldCheck className="h-3.5 w-3.5 text-primary" aria-hidden />
-              <span className="ac-eyebrow">Mission control</span>
-            </span>
-          </RiseItem>
-          <RiseItem>
-            <h1 className="mt-4 text-balance font-display text-4xl font-extrabold leading-[1.03] sm:text-5xl">
-              LearnFRC <span style={GRADIENT}>dashboard</span>
+      <div className="relative mx-auto max-w-7xl px-4 pt-20 pb-16 sm:px-6 lg:px-8 lg:pt-24">
+        {/* ============ HEADER (slim) ============ */}
+        <Rise>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+            <h1 className="flex items-center gap-2 font-display text-2xl font-extrabold">
+              <ShieldCheck className="h-5 w-5 text-primary" aria-hidden />
+              <span style={GRADIENT}>Dashboard</span>
             </h1>
-          </RiseItem>
-          <RiseItem>
-            <div className="mt-4 flex flex-wrap items-center gap-3">
-              <AutoRefresh seconds={30} />
-              <span className="ac-chip inline-flex items-center gap-1.5 text-xs">
-                <span className="relative flex h-2 w-2">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-70" />
-                  <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
-                </span>
-                <span className="font-semibold tabular-nums">{stats.onlineNow}</span> online now
+            <AutoRefresh seconds={30} />
+            <span className="ac-chip inline-flex items-center gap-1.5 text-xs">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-70" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
               </span>
-              <span className="ac-chip max-w-full text-xs">
-                <span className="break-all font-mono">{user.email}</span>
-              </span>
-            </div>
-          </RiseItem>
-        </RiseGroup>
+              <span className="font-semibold tabular-nums">{stats.onlineNow}</span> online
+            </span>
+            <span className="ac-chip hidden text-xs sm:inline-flex">
+              <span className="break-all font-mono">{user.email}</span>
+            </span>
+          </div>
+        </Rise>
 
         {/* ============ NORTH-STAR KPIs ============ */}
-        <div className="mt-8">
+        <div className="mt-4">
           <KpiStrip s={kpi} />
         </div>
 
-        {/* ============ GROWTH CHART ============ */}
-        <Reveal className="mt-6">
-          {/* Chip totals are TRUE 30-day-window figures (visitors =
-              count(distinct) over the window, = the Traffic panel's "in the
-              last 30 days"), not a sum of the per-day series. */}
-          <GrowthChart
-            daily={stats.daily}
-            totals={{
-              visitors: stats.uniqueVisitors30d,
-              signups: stats.signups30d,
-              completions: stats.completions30d,
-            }}
-          />
-        </Reveal>
-
-        {/* ============ TRAFFIC ============ */}
-        <Reveal className="mt-6">
-          <TrafficPanel
-            s={{
-              pageViewsTotal: stats.pageViewsTotal,
-              pageViews7d: stats.pageViews7d,
-              pageViews30d: stats.pageViews30d,
-              uniqueVisitors: stats.uniqueVisitors,
-              uniqueVisitors30d: stats.uniqueVisitors30d,
-              topPages: stats.topPages,
-            }}
-          />
-        </Reveal>
-
-        {/* ============ ACQUISITION + RETENTION ============ */}
-        <div className="mt-6 grid gap-6 lg:grid-cols-2">
+        {/* ============ GROWTH + TRAFFIC (side by side) ============ */}
+        <div className="mt-4 grid gap-4 lg:grid-cols-2">
           <Reveal>
-            <section className="ac-card p-5 sm:p-6">
-              <h2 className="mb-4 font-display text-lg font-semibold">Where they come from</h2>
+            {/* Chip totals are TRUE 30-day-window figures (visitors =
+                count(distinct) over the window, = the Traffic panel's "in the
+                last 30 days"), not a sum of the per-day series. */}
+            <GrowthChart
+              daily={stats.daily}
+              totals={{
+                visitors: stats.uniqueVisitors30d,
+                signups: stats.signups30d,
+                completions: stats.completions30d,
+              }}
+            />
+          </Reveal>
+          <Reveal delay={0.05}>
+            <TrafficPanel s={{ topPages: stats.topPages }} />
+          </Reveal>
+        </div>
+
+        {/* ============ ACQUISITION + RETENTION + ENGAGEMENT ============ */}
+        <div className="mt-4 grid gap-4 lg:grid-cols-3">
+          <Reveal>
+            <section className="ac-card p-4">
+              <h2 className="mb-2.5 text-sm font-semibold">Where they come from</h2>
               <SourceBreakdown
                 userWeek={stats.sources7d}
                 userAllTime={stats.sources}
@@ -218,50 +194,72 @@ export default async function AdminPage() {
               />
             </section>
           </Reveal>
-          <Reveal delay={0.05}>
+          <Reveal delay={0.04}>
             <RetentionPanel s={retention} />
+          </Reveal>
+          <Reveal delay={0.08}>
+            <section className="ac-card flex h-full flex-col p-4">
+              <h2 className="mb-2.5 flex items-center gap-1.5 text-sm font-semibold">
+                <FileClock className="h-4 w-4 text-primary" aria-hidden />
+                Moderation queue
+              </h2>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="rounded-lg border border-border bg-white/60 p-2.5 text-center">
+                  <div className="font-display text-xl font-bold tabular-nums text-foreground">
+                    <AnimatedCounter value={pendingEdits.length} />
+                  </div>
+                  <div className="text-[11px] font-medium text-muted-foreground">pending edits</div>
+                </div>
+                <div className="rounded-lg border border-border bg-white/60 p-2.5 text-center">
+                  <div className="font-display text-xl font-bold tabular-nums text-foreground">
+                    <AnimatedCounter value={pendingSubmissions.length} />
+                  </div>
+                  <div className="text-[11px] font-medium text-muted-foreground">submissions</div>
+                </div>
+              </div>
+              <p className="mt-auto pt-2.5 text-[11px] leading-snug text-muted-foreground">
+                Auto-reviewed by the fact-checking cron every 3h.
+              </p>
+            </section>
           </Reveal>
         </div>
 
-        {/* ============ ENGAGEMENT ============ */}
-        <Reveal className="mt-6">
-          <EngagementPanel
-            topLessons={stats.topLessons}
-            topDepartments={stats.topDepartments.map((d) => ({
-              name: d.name,
-              completions: d.completions ?? 0,
-            }))}
-          />
-        </Reveal>
-
-        {/* ============ TEAMS + REVIEW QUEUE ============ */}
-        <div className="mt-6 grid gap-6 lg:grid-cols-[1.4fr_1fr]">
+        {/* ============ ENGAGEMENT + TEAMS ============ */}
+        <div className="mt-4 grid gap-4 lg:grid-cols-2">
           <Reveal>
-            <section className="ac-card p-5 sm:p-6">
-              <div className="mb-4 flex items-center justify-between gap-3">
-                <h2 className="flex items-center gap-2 font-display text-lg font-semibold">
-                  <span className="ac-badge flex h-9 w-9 items-center justify-center" style={{ "--a": "#2560e6" } as CSSProperties}>
-                    <Users2 className="h-[18px] w-[18px]" aria-hidden />
-                  </span>
+            <EngagementPanel
+              topLessons={stats.topLessons}
+              topDepartments={stats.topDepartments.map((d) => ({
+                name: d.name,
+                completions: d.completions ?? 0,
+              }))}
+            />
+          </Reveal>
+
+          <Reveal delay={0.05}>
+            <section className="ac-card h-full p-4">
+              <div className="mb-2.5 flex items-center justify-between gap-3">
+                <h2 className="flex items-center gap-1.5 text-sm font-semibold">
+                  <Users2 className="h-4 w-4 text-primary" aria-hidden />
                   Top teams
                 </h2>
-                <span className="ac-chip text-xs tabular-nums">{stats.totalUniqueTeams} teams</span>
+                <span className="ac-chip text-[11px] tabular-nums">{stats.totalUniqueTeams} teams</span>
               </div>
               {topTeams.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No teams yet.</p>
+                <p className="text-[13px] text-muted-foreground">No teams yet.</p>
               ) : (
-                <RevealGroup className="space-y-3" stagger={0.05}>
+                <RevealGroup className="space-y-2" stagger={0.03}>
                   {topTeams.map((t) => (
                     <RevealItem key={t.teamNumber}>
                       <div>
-                        <div className="mb-1 flex items-center justify-between text-sm">
+                        <div className="mb-0.5 flex items-center justify-between text-[13px]">
                           <span className="font-semibold text-foreground">#{t.teamNumber}</span>
-                          <span className="tabular-nums text-muted-foreground">
+                          <span className="tabular-nums text-[11px] text-muted-foreground">
                             {t.members} {t.members === 1 ? "member" : "members"} ·{" "}
                             <span className="font-semibold text-primary">{t.completed}</span> lessons
                           </span>
                         </div>
-                        <div className="h-2 overflow-hidden rounded-full bg-muted">
+                        <div className="h-1.5 overflow-hidden rounded-full bg-muted">
                           <div
                             className="h-full rounded-full transition-[width] duration-700"
                             style={{ width: `${(t.completed / maxTeam) * 100}%`, background: "linear-gradient(90deg,var(--accent),var(--primary))" }}
@@ -274,103 +272,62 @@ export default async function AdminPage() {
               )}
             </section>
           </Reveal>
+        </div>
+
+        {/* ============ RECENT ACTIVITY + FEEDBACK ============ */}
+        <div className="mt-4 grid gap-4 lg:grid-cols-2">
+          <Reveal>
+            <section className="ac-card p-4">
+              <h2 className="mb-2.5 flex items-center gap-1.5 text-sm font-semibold">
+                <UserPlus className="h-4 w-4 text-primary" aria-hidden />
+                Newest members
+              </h2>
+              {stats.recentSignups.length === 0 ? (
+                <p className="text-[13px] text-muted-foreground">No signups yet.</p>
+              ) : (
+                <ul className="divide-y divide-border">
+                  {stats.recentSignups.slice(0, 6).map((u) => (
+                    <li key={u.id} className="flex items-center justify-between gap-3 py-1.5 text-[13px]">
+                      <span className="min-w-0 truncate font-medium text-foreground">
+                        {u.username ? `@${u.username}` : u.full_name || "New member"}
+                        {u.team_number ? <span className="ml-1.5 text-[11px] text-muted-foreground">#{u.team_number}</span> : null}
+                      </span>
+                      <span className="shrink-0 text-[11px] text-muted-foreground tabular-nums">{timeAgo(u.created_at)}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          </Reveal>
 
           <Reveal delay={0.05}>
-            <section className="ac-card flex h-full flex-col p-5 sm:p-6">
-              <h2 className="mb-4 flex items-center gap-2 font-display text-lg font-semibold">
-                <span className="ac-badge flex h-9 w-9 items-center justify-center" style={{ "--a": "#f5a623" } as CSSProperties}>
-                  <FileClock className="h-[18px] w-[18px]" aria-hidden />
-                </span>
-                Moderation queue
+            <section className="ac-card p-4">
+              <h2 className="mb-2.5 flex items-center gap-1.5 text-sm font-semibold">
+                <CheckCircle2 className="h-4 w-4 text-primary" aria-hidden />
+                Recent completions
               </h2>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="rounded-xl border border-border bg-white/60 p-4 text-center">
-                  <div className="font-display text-3xl font-extrabold tabular-nums text-foreground">
-                    <AnimatedCounter value={pendingEdits.length} />
-                  </div>
-                  <div className="mt-1 text-xs font-medium text-muted-foreground">pending edits</div>
-                </div>
-                <div className="rounded-xl border border-border bg-white/60 p-4 text-center">
-                  <div className="font-display text-3xl font-extrabold tabular-nums text-foreground">
-                    <AnimatedCounter value={pendingSubmissions.length} />
-                  </div>
-                  <div className="mt-1 text-xs font-medium text-muted-foreground">submissions</div>
-                </div>
-              </div>
-              <p className="mt-auto pt-4 text-xs leading-relaxed text-muted-foreground">
-                Community edits &amp; submissions are auto-reviewed by the
-                fact-checking cron every 3 hours — these are what&rsquo;s still in
-                flight.
-              </p>
+              {stats.recentCompletions.length === 0 ? (
+                <p className="text-[13px] text-muted-foreground">No completions yet.</p>
+              ) : (
+                <ul className="divide-y divide-border">
+                  {stats.recentCompletions.slice(0, 6).map((c, i) => (
+                    <li key={i} className="flex items-center justify-between gap-3 py-1.5 text-[13px]">
+                      <span className="min-w-0 truncate">
+                        <span className="font-medium text-foreground">{c.user}</span>
+                        <span className="text-muted-foreground"> · {c.lesson}</span>
+                      </span>
+                      <span className="shrink-0 text-[11px] text-muted-foreground tabular-nums">{timeAgo(c.at)}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </section>
           </Reveal>
         </div>
 
         {/* ============ FEEDBACK INBOX ============ */}
-        <Reveal className="mt-6">
+        <Reveal className="mt-4">
           <FeedbackInbox items={feedback} />
-        </Reveal>
-
-        {/* ============ RECENT ACTIVITY ============ */}
-        <div className="mt-6 grid gap-6 lg:grid-cols-2">
-          <Reveal>
-            <section className="ac-card p-5 sm:p-6">
-              <h2 className="mb-4 flex items-center gap-2 font-display text-lg font-semibold">
-                <span className="ac-badge flex h-9 w-9 items-center justify-center" style={{ "--a": "#12a150" } as CSSProperties}>
-                  <UserPlus className="h-[18px] w-[18px]" aria-hidden />
-                </span>
-                Newest members
-              </h2>
-              {stats.recentSignups.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No signups yet.</p>
-              ) : (
-                <ul className="divide-y divide-border">
-                  {stats.recentSignups.map((u) => (
-                    <li key={u.id} className="flex items-center justify-between gap-3 py-2.5 text-sm">
-                      <span className="min-w-0 truncate font-medium text-foreground">
-                        {u.username ? `@${u.username}` : u.full_name || "New member"}
-                        {u.team_number ? <span className="ml-1.5 text-xs text-muted-foreground">#{u.team_number}</span> : null}
-                      </span>
-                      <span className="shrink-0 text-xs text-muted-foreground tabular-nums">{timeAgo(u.created_at)}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
-          </Reveal>
-
-          <Reveal delay={0.05}>
-            <section className="ac-card p-5 sm:p-6">
-              <h2 className="mb-4 flex items-center gap-2 font-display text-lg font-semibold">
-                <span className="ac-badge flex h-9 w-9 items-center justify-center" style={{ "--a": "#7c5cff" } as CSSProperties}>
-                  <CheckCircle2 className="h-[18px] w-[18px]" aria-hidden />
-                </span>
-                Recent completions
-              </h2>
-              {stats.recentCompletions.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No completions yet.</p>
-              ) : (
-                <ul className="divide-y divide-border">
-                  {stats.recentCompletions.slice(0, 8).map((c, i) => (
-                    <li key={i} className="flex items-center justify-between gap-3 py-2.5 text-sm">
-                      <span className="min-w-0 truncate">
-                        <span className="font-medium text-foreground">{c.user}</span>
-                        <span className="text-muted-foreground"> · {c.lesson}</span>
-                      </span>
-                      <span className="shrink-0 text-xs text-muted-foreground tabular-nums">{timeAgo(c.at)}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
-          </Reveal>
-        </div>
-
-        <Reveal className="mt-8">
-          <p className="flex items-center justify-center gap-1.5 text-center text-xs text-muted-foreground">
-            <Sparkles className="h-3.5 w-3.5 text-primary" aria-hidden />
-            Live data · refreshes every 30s · {stats.totals.lessons} lessons across {stats.totals.departments} departments
-          </p>
         </Reveal>
       </div>
     </div>
