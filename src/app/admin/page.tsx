@@ -74,8 +74,7 @@ export default async function AdminPage() {
     uniqueVisitors: stats.uniqueVisitors,
     users: stats.totals.users,
     verifiedUsers: stats.verifiedUsers,
-    signups7d: stats.signups7d,
-    uniqueVisitors7d: stats.uniqueVisitors7d,
+    teams: stats.totalUniqueTeams,
     // Total lessons completed includes no-account guest completions.
     completions: stats.totals.completions + stats.guestCompletions,
     guestCompletions: stats.guestCompletions,

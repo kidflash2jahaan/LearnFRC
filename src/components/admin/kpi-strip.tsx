@@ -5,7 +5,7 @@ import {
   Eye,
   UsersRound,
   Users,
-  TrendingUp,
+  Flag,
   BookOpenCheck,
   BookOpen,
 } from "lucide-react";
@@ -18,8 +18,7 @@ type Stats = {
   uniqueVisitors: number;
   users: number;
   verifiedUsers: number;
-  signups7d: number;
-  uniqueVisitors7d: number;
+  teams: number;
   completions: number;
   guestCompletions: number;
   guideViewers: number;
@@ -121,19 +120,15 @@ export function KpiStrip({ s }: { s: Stats }) {
         </span>
       </KpiCard>
 
-      {/* This week's pulse: reach first, with signups as the payoff line. */}
+      {/* Community reach: how many real FRC teams have members here. */}
       <KpiCard
         accent="#12a150"
-        icon={<TrendingUp className="h-4 w-4" />}
-        label="Visitors · 7d"
-        subtext={
-          <>
-            <AnimatedCounter value={s.signups7d} /> signed up
-          </>
-        }
+        icon={<Flag className="h-4 w-4" />}
+        label="Teams"
+        subtext="FRC teams represented"
       >
         <span style={{ color: "#12a150" }}>
-          <AnimatedCounter value={s.uniqueVisitors7d} />
+          <AnimatedCounter value={s.teams} />
         </span>
       </KpiCard>
 
