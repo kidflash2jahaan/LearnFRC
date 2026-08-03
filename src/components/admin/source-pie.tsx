@@ -58,7 +58,7 @@ export function SourcePie({
 
   return (
     <div className="flex flex-col items-center gap-3 sm:flex-row sm:gap-4">
-      <svg viewBox="0 0 160 160" className="h-28 w-28 shrink-0">
+      <svg viewBox="0 0 160 160" className="h-36 w-36 shrink-0">
         <g transform="rotate(-90 80 80)">
           <circle cx="80" cy="80" r={r} fill="none" stroke="var(--muted)" strokeWidth="20" />
           {segs.map((s, i) => (
@@ -95,22 +95,22 @@ export function SourcePie({
           {visible.map((s) => (
             <li
               key={s.name}
-              className="flex items-center gap-2 rounded-md px-1 py-1 text-[13px] transition-colors hover:bg-primary/[0.04]"
+              className="flex items-center gap-2 rounded-md px-1 py-1.5 text-sm transition-colors hover:bg-primary/[0.04]"
             >
               <span
-                className="h-2 w-2 shrink-0 rounded-[3px] ring-1 ring-black/5"
+                className="h-2.5 w-2.5 shrink-0 rounded-[3px] ring-1 ring-black/5"
                 style={{ background: s.color }}
               />
               <span className="flex-1 truncate text-foreground">{s.name}</span>
-              <span className="text-[11px] tabular-nums text-muted-foreground">{s.count}</span>
-              <span className="w-9 text-right font-mono text-[11px] font-semibold tabular-nums text-primary">
+              <span className="text-xs tabular-nums text-muted-foreground">{s.count}</span>
+              <span className="w-10 text-right font-mono text-xs font-semibold tabular-nums text-primary">
                 {Math.round(s.frac * 100)}%
               </span>
             </li>
           ))}
         </ul>
         {hidden.length > 0 && (
-          <p className="px-1 pt-0.5 text-[11px] tabular-nums text-muted-foreground">
+          <p className="px-1 pt-1 text-xs tabular-nums text-muted-foreground">
             +{hidden.length} more · {hiddenCount}
           </p>
         )}

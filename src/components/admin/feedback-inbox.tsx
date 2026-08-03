@@ -36,17 +36,17 @@ export function FeedbackInbox({ items }: { items: FeedbackItem[] }) {
   const more = items.length - shown.length;
 
   return (
-    <section className="ac-card rounded-2xl p-4">
-      <div className="mb-2.5 flex items-center justify-between gap-2">
-        <h2 className="flex items-center gap-1.5 text-sm font-semibold">
+    <section className="ac-card rounded-2xl p-5">
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <h2 className="flex items-center gap-2 font-display text-base font-semibold">
           <Inbox className="h-4 w-4 text-primary" aria-hidden />
           Feedback inbox
         </h2>
-        <span className="ac-chip text-[11px] tabular-nums">{open} open</span>
+        <span className="ac-chip text-xs tabular-nums">{open} open</span>
       </div>
 
       {items.length === 0 ? (
-        <p className="py-2 text-[11px] text-muted-foreground">
+        <p className="py-2 text-sm text-muted-foreground">
           No feedback yet.
         </p>
       ) : (
@@ -57,7 +57,7 @@ export function FeedbackInbox({ items }: { items: FeedbackItem[] }) {
             ))}
           </div>
           {more > 0 && (
-            <p className="pt-1.5 text-[11px] text-muted-foreground">
+            <p className="pt-2 text-xs text-muted-foreground">
               +{more} more
             </p>
           )}
@@ -82,16 +82,16 @@ function FeedbackRow({ item }: { item: FeedbackItem }) {
   const replied = item.status === "replied" || state?.success;
 
   return (
-    <div className="py-1.5">
-      <div className="flex flex-wrap items-center gap-x-1.5 text-[11px] text-muted-foreground">
+    <div className="py-2.5">
+      <div className="flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
         {item.fromEmail ? (
           <span className="inline-flex items-center gap-1 font-medium text-foreground">
-            <Mail className="h-3 w-3 text-primary" aria-hidden />
+            <Mail className="h-3.5 w-3.5 text-primary" aria-hidden />
             {item.fromEmail}
           </span>
         ) : (
           <span className="inline-flex items-center gap-1">
-            <MailX className="h-3 w-3" aria-hidden />
+            <MailX className="h-3.5 w-3.5" aria-hidden />
             anonymous
           </span>
         )}
@@ -99,7 +99,7 @@ function FeedbackRow({ item }: { item: FeedbackItem }) {
         <span>· {timeAgo(item.createdAt)}</span>
         {replied && (
           <span className="inline-flex items-center gap-1 font-medium text-success">
-            <MailCheck className="h-3 w-3" aria-hidden /> replied
+            <MailCheck className="h-3.5 w-3.5" aria-hidden /> replied
           </span>
         )}
         {!replied && item.fromEmail && (
@@ -115,7 +115,7 @@ function FeedbackRow({ item }: { item: FeedbackItem }) {
       </div>
 
       <p
-        className="mt-0.5 line-clamp-2 text-[13px] leading-snug text-foreground"
+        className="mt-1 line-clamp-2 text-sm leading-snug text-foreground"
         title={item.message}
       >
         {item.message}
@@ -123,7 +123,7 @@ function FeedbackRow({ item }: { item: FeedbackItem }) {
 
       {replied && item.replyBody && (
         <p
-          className="mt-0.5 line-clamp-2 text-[11px] leading-snug text-muted-foreground"
+          className="mt-1 line-clamp-2 text-xs leading-snug text-muted-foreground"
           title={item.replyBody}
         >
           <span className="font-medium text-success">Your reply:</span>{" "}
@@ -132,7 +132,7 @@ function FeedbackRow({ item }: { item: FeedbackItem }) {
       )}
 
       {!replied && item.fromEmail && composing && (
-        <form action={action} className="mt-1.5 flex items-start gap-1.5">
+        <form action={action} className="mt-2 flex items-start gap-2">
           <input type="hidden" name="id" value={item.id} />
           <Textarea
             name="reply"
@@ -141,7 +141,7 @@ function FeedbackRow({ item }: { item: FeedbackItem }) {
             rows={2}
             placeholder={`Reply to ${item.fromEmail}…`}
             aria-label="Reply"
-            className="min-h-14 flex-1 py-1.5 text-[13px]"
+            className="min-h-14 flex-1 py-2 text-sm"
           />
           <Button
             type="submit"
@@ -149,7 +149,7 @@ function FeedbackRow({ item }: { item: FeedbackItem }) {
             size="sm"
             disabled={pending}
             aria-busy={pending}
-            className="min-h-8 shrink-0 px-2.5 py-1.5 text-[12px]"
+            className="min-h-9 shrink-0 px-3 py-2 text-xs"
           >
             {pending ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />

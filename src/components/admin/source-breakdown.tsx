@@ -9,7 +9,7 @@ type Metric = "users" | "visitors";
 type Series = { name: string; count: number }[];
 
 const PILL =
-  "cursor-pointer rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
+  "cursor-pointer rounded-full px-2.5 py-1 text-xs font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
 
 /**
  * "Where they come from" — toggle between signed-up USERS and all UNIQUE
@@ -43,7 +43,7 @@ export function SourceBreakdown({
 
   return (
     <div>
-      <div className="mb-2.5 flex flex-wrap items-center gap-1.5">
+      <div className="mb-3 flex flex-wrap items-center gap-2">
         {/* Metric toggle */}
         <div className="ac-chip inline-flex items-center gap-0.5 p-0.5" role="group" aria-label="Metric">
           {(
@@ -96,7 +96,7 @@ export function SourceBreakdown({
       </div>
 
       {total === 0 ? (
-        <p className="py-6 text-center text-[11px] text-muted-foreground">
+        <p className="py-6 text-center text-sm text-muted-foreground">
           {range === "7d"
             ? `No ${noun} in the last 7 days yet.`
             : `No ${noun} attributed yet.`}

@@ -30,8 +30,8 @@ const TOGGLES: { value: Metric; label: string }[] = [
 // indicator stays exactly under the cursor at every position, not just center.
 // The default is sized for the half-width admin column so the pre-measure frame
 // is already close to the real width (the ResizeObserver corrects it either way).
-const VB_W_DEFAULT = 560; // used before the container is measured (SSR/first paint)
-const VB_H = 144; // compact: rendered px height == viewBox height (no letterbox)
+const VB_W_DEFAULT = 720; // used before the container is measured (SSR/first paint)
+const VB_H = 200; // compact: rendered px height == viewBox height (no letterbox)
 const PAD_T = 10;
 const PAD_B = 18;
 const PAD_L = 6;
@@ -200,14 +200,14 @@ export function GrowthChart({
   const activeX = hoverIdx != null ? xAt(hoverIdx) : 0;
   // Tooltip horizontal placement (percentage of width), clamped away from edges
   // (tighter than before: the panel now sits in a ~550px half-width column).
-  const tipLeftPct = hoverIdx != null ? Math.min(84, Math.max(16, (activeX / w) * 100)) : 50;
+  const tipLeftPct = hoverIdx != null ? Math.min(88, Math.max(12, (activeX / w) * 100)) : 50;
 
   return (
     <Reveal>
-      <div className="ac-card p-4">
+      <div className="ac-card p-5">
         {/* Heading row + segmented toggle */}
-        <div className="mb-2.5 flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
-          <h3 className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+          <h3 className="flex items-center gap-2 font-display text-base font-semibold text-foreground">
             <TrendingUp className="h-4 w-4 shrink-0 text-primary" />
             Growth
             <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
@@ -225,7 +225,7 @@ export function GrowthChart({
                   aria-pressed={activeToggle}
                   onClick={() => setMetric(t.value)}
                   className={cn(
-                    "rounded-full px-2 py-0.5 text-[11px] font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+                    "rounded-full px-2.5 py-1 text-xs font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
                     activeToggle
                       ? "bg-primary text-white shadow-sm"
                       : "text-muted-foreground hover:text-foreground",
@@ -239,12 +239,12 @@ export function GrowthChart({
         </div>
 
         {/* Metric summary pills (double as the series legend) */}
-        <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
+        <div className="mb-2 flex flex-wrap items-center gap-2">
           {SERIES.map((s) => (
             <div
               key={s.key}
               className={cn(
-                "flex items-center gap-1.5 rounded-full border border-border bg-muted/40 px-2 py-1 transition-opacity",
+                "flex items-center gap-1.5 rounded-full border border-border bg-muted/40 px-2.5 py-1 transition-opacity",
                 seriesDim(s.key) && "opacity-45",
               )}
             >
@@ -253,12 +253,12 @@ export function GrowthChart({
                 style={{ background: s.color }}
                 aria-hidden
               />
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 {s.label}
               </span>
               <AnimatedCounter
                 value={chipTotals[s.key]}
-                className="font-display text-[13px] font-semibold tabular-nums text-foreground"
+                className="font-display text-sm font-semibold tabular-nums text-foreground"
               />
             </div>
           ))}
@@ -266,9 +266,9 @@ export function GrowthChart({
 
         {/* Chart */}
         <div className="relative w-full overflow-x-auto">
-          <div ref={wrapRef} className="relative min-w-[260px]">
+          <div ref={wrapRef} className="relative min-w-[320px]">
             {isEmpty ? (
-              <div className="flex h-[144px] items-center justify-center px-4 text-center text-[11px] text-muted-foreground">
+              <div className="flex h-[200px] items-center justify-center px-4 text-center text-[11px] text-muted-foreground">
                 No activity yet — data will appear as people visit.
               </div>
             ) : (

@@ -10,15 +10,7 @@ function prettyPath(path: string) {
   return path.replace(/^\//, "");
 }
 
-/** Individual lesson pages (3 path segments under /guides) are ranked in the
-    Engagement panel by completions — excluding them here keeps the same lesson
-    from showing up in two lists. */
-function isLessonPath(path: string) {
-  return /^\/guides\/[^/]+\/[^/]+\/[^/]+/.test(path);
-}
-
-/** Headline traffic stats (visitors, page views) live in the KPI strip — this
-    panel is only the top-pages ranking, so nothing is shown twice. */
+/** Top pages ranking only — headline traffic numbers live in the KPI strip. */
 export function TrafficPanel({
   s,
 }: {
@@ -26,23 +18,21 @@ export function TrafficPanel({
     topPages: { path: string; views: number; views7d: number }[];
   };
 }) {
-  const rows = s.topPages.filter((p) => !isLessonPath(p.path)).slice(0, 6);
+  const rows = s.topPages.slice(0, 8);
   const maxViews = Math.max(1, ...rows.map((p) => p.views));
 
   return (
-    <section className="ac-card p-4">
-      <div className="mb-2.5 flex items-baseline justify-between gap-2">
-        <h2 className="flex items-center gap-2 font-display text-sm font-semibold text-foreground">
+    <section className="ac-card h-full p-5">
+      <div className="mb-3 flex items-baseline justify-between gap-2">
+        <h2 className="flex items-center gap-2 font-display text-base font-semibold text-foreground">
           <Globe className="h-4 w-4 self-center text-primary" />
           Top pages
         </h2>
-        <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-          All-time views
-        </span>
+        <span className="text-xs text-muted-foreground">all-time views</span>
       </div>
 
       {rows.length === 0 ? (
-        <p className="mt-1.5 text-[13px] text-muted-foreground">No page views yet.</p>
+        <p className="text-sm text-muted-foreground">No page views yet.</p>
       ) : (
         <RevealGroup className="flex flex-col" stagger={0.04}>
           {rows.map((p, i) => {
@@ -51,21 +41,21 @@ export function TrafficPanel({
             return (
               <RevealItem key={p.path + i}>
                 <Hover lift={-1}>
-                  <div className="flex items-center gap-2 rounded-lg py-1.5">
+                  <div className="flex items-center gap-3 rounded-lg py-2">
                     <span
-                      className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-muted text-[10px] font-bold tabular-nums text-muted-foreground"
+                      className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-muted text-[11px] font-bold tabular-nums text-muted-foreground"
                       aria-hidden
                     >
                       {i + 1}
                     </span>
                     <div className="min-w-0 flex-1">
                       <div
-                        className="truncate font-sans text-[13px] font-medium text-foreground"
+                        className="truncate text-sm font-medium text-foreground"
                         title={p.path}
                       >
                         {label}
                       </div>
-                      <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-muted">
+                      <div className="mt-1 h-2 overflow-hidden rounded-full bg-muted">
                         <div
                           className="h-full rounded-full"
                           style={{
@@ -77,7 +67,7 @@ export function TrafficPanel({
                         />
                       </div>
                     </div>
-                    <span className="shrink-0 text-right text-[13px] font-semibold tabular-nums text-primary">
+                    <span className="shrink-0 text-right text-sm font-semibold tabular-nums text-primary">
                       <AnimatedCounter value={p.views} />
                     </span>
                   </div>
