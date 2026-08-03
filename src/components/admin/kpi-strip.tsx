@@ -9,6 +9,7 @@ import {
   Zap,
   Repeat,
   BookOpenCheck,
+  BookOpen,
   Ghost,
 } from "lucide-react";
 import { RevealGroup, RevealItem, Hover } from "@/components/motion/primitives";
@@ -28,6 +29,8 @@ type Stats = {
   onlineNow: number;
   guestLearners: number;
   guestCompletions: number;
+  guideViewers: number;
+  guideViews: number;
 };
 
 const LABEL_KICKER =
@@ -185,7 +188,23 @@ export function KpiStrip({ s }: { s: Stats }) {
         </span>
       </KpiCard>
 
-      {/* 8. Guest learners */}
+      {/* 8. Guide viewers — people who opened any guide (completers included) */}
+      <KpiCard
+        accent="#7c5cff"
+        icon={<BookOpen className="h-5 w-5" />}
+        label="Guide viewers"
+        subtext={
+          <>
+            <AnimatedCounter value={s.guideViews} /> total guide views
+          </>
+        }
+      >
+        <span style={{ color: "#7c5cff" }}>
+          <AnimatedCounter value={s.guideViewers} />
+        </span>
+      </KpiCard>
+
+      {/* 9. Guest learners */}
       <KpiCard
         accent="#0ea5a3"
         icon={<Ghost className="h-5 w-5" />}
