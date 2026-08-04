@@ -103,6 +103,16 @@ export async function claimUsername(
   if (firstProfaneField({ username }))
     return { error: "That username isn't allowed — please choose another." };
 
+  // Optional extras so a Google sign-in can fill in everything the normal
+  // signup form asks for (full name already comes from the Google account).
+  const teamStr = String(formData.get("team_number") || "").trim();
+  let team_number: number | null = null;
+  if (teamStr) {
+    team_number = parseInt(teamStr, 10);
+    if (Number.isNaN(team_number) || team_number < 1 || team_number > 99999)
+      return { error: "Enter a valid FRC team number." };
+  }
+
   const { data: taken } = await supabase
     .from("profiles")
     .select("id")
@@ -113,7 +123,7 @@ export async function claimUsername(
 
   const { data: updated, error } = await supabase
     .from("profiles")
-    .update({ username })
+    .update({ username, ...(team_number !== null ? { team_number } : {}) })
     .eq("id", user.id)
     .is("username", null)
     .select("id")

@@ -28,7 +28,10 @@ export function HeroPanel({
   depts: HeroDept[];
 }) {
   const reduce = useReducedMotion();
-  const max = Math.max(1, ...depts.map((d) => d.lessons));
+  // Bar width and label are the SAME number (share of the whole catalog) so a
+  // bar never looks "full" while its label says 13%.
+  const pctOf = (lessons: number) =>
+    Math.round((lessons / Math.max(1, lessonCount)) * 100);
 
   return (
     <motion.div
@@ -85,7 +88,7 @@ export function HeroPanel({
                 <span className="truncate">{d.name}</span>
               </span>
               <span className="shrink-0 text-xs font-semibold tabular-nums text-muted-foreground">
-                {Math.round((d.lessons / Math.max(1, lessonCount)) * 100)}% of lessons
+                {pctOf(d.lessons)}% of lessons
               </span>
             </div>
             <div className="h-2 overflow-hidden rounded-full bg-[rgba(120,145,190,0.18)]">
@@ -93,7 +96,7 @@ export function HeroPanel({
                 className="h-full origin-left rounded-full"
                 style={{
                   background: `linear-gradient(90deg, ${d.color}, #1aa9d6)`,
-                  width: `${Math.round((d.lessons / max) * 100)}%`,
+                  width: `${pctOf(d.lessons)}%`,
                 }}
                 initial={{ scaleX: 0 }}
                 animate={{ scaleX: 1 }}
