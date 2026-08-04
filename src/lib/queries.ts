@@ -14,7 +14,21 @@ import type {
 } from "@/lib/types";
 import type { Article } from "@/lib/blog-data";
 
-type DeptWithModules = Department & { modules: Module[] };
+/**
+ * Catalog rows as Postgres returns them. The shared content types are the
+ * render-facing shape and omit `created_at`, but `departments` / `modules` /
+ * `lessons` all have one — the sitemap needs it to emit a real `<lastmod>` that
+ * doesn't move on every regeneration.
+ */
+export type LessonRow = Lesson & { created_at?: string };
+export type ModuleRow = Omit<Module, "lessons"> & {
+  created_at?: string;
+  lessons: LessonRow[];
+};
+export type DeptWithModules = Department & {
+  created_at?: string;
+  modules: ModuleRow[];
+};
 
 // Revalidation windows (seconds). The catalog (departments / modules / lessons)
 // changes only via the admin panel, so an hour is plenty; the leaderboard is a
@@ -25,22 +39,24 @@ const LEADERBOARD_TTL = 300; // 5 minutes
 
 // Explicit column lists — never `select("*")`. List views in particular must
 // never pull `lessons.content` (the heavy per-lesson markdown).
+// `created_at` rides along on all three catalog tables: it's the only real
+// per-row timestamp they carry, and the sitemap uses it for `<lastmod>`.
 const DEPT_COLS =
-  "id, slug, name, tagline, description, difficulty, estimated_hours, what_youll_learn, prerequisites, tools, sources, accent, icon, sort_order";
+  "id, slug, name, tagline, description, difficulty, estimated_hours, what_youll_learn, prerequisites, tools, sources, accent, icon, sort_order, created_at";
 const MODULE_COLS =
-  "id, department_id, slug, title, overview, sort_order, is_prerequisite";
+  "id, department_id, slug, title, overview, sort_order, is_prerequisite, created_at";
 // Lessons WITHOUT `content` / `key_takeaways` / `resources` / `quiz` — enough to
 // render module/lesson lists and build lesson navigation. The heavy fields are
 // fetched per-lesson on demand via getLessonContent().
 const LESSON_LIST_COLS =
-  "id, module_id, slug, title, summary, estimated_minutes, sort_order";
+  "id, module_id, slug, title, summary, estimated_minutes, sort_order, created_at";
 // Profile columns needed by the leaderboard/podium (drops the free-text `bio`).
 // No `full_name`: the board shows usernames only, and full_name is PII the
 // public/anon API role can no longer read anyway.
 const PROFILE_BOARD_COLS =
   "id, username, avatar_url, team_number, role, xp, hide_name, created_at";
 
-function sortModules(modules: Module[]): Module[] {
+function sortModules(modules: ModuleRow[]): ModuleRow[] {
   return [...(modules ?? [])]
     .sort((a, b) => {
       // Prerequisite modules always come first.
@@ -163,9 +179,9 @@ export const getDepartmentBySlug = cache(
       if (error) throw error;
       if (!data) return null;
       return {
-        ...(data as unknown as Department),
+        ...(data as unknown as Department & { created_at?: string }),
         modules: sortModules(
-          (data as unknown as { modules: Module[] }).modules ?? []
+          (data as unknown as { modules: ModuleRow[] }).modules ?? []
         ),
       };
     },

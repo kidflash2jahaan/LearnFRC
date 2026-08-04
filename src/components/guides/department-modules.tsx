@@ -3,7 +3,7 @@
 import * as React from "react";
 import type { CSSProperties } from "react";
 import Link from "next/link";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import {
   ChevronDown,
   CheckCircle2,
@@ -97,6 +97,7 @@ export function DepartmentModules({
               onClick={() => setOpen((o) => ({ ...o, [m.id]: !o[m.id] }))}
               className="flex min-h-11 w-full cursor-pointer items-center gap-4 rounded-[20px] p-5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               aria-expanded={isOpen}
+              aria-controls={`mod-panel-${m.id}`}
             >
               <span
                 className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border font-display text-sm font-semibold transition-transform duration-300 group-hover/mod:scale-105"
@@ -165,81 +166,77 @@ export function DepartmentModules({
               />
             </button>
 
-            <AnimatePresence initial={false}>
-              {isOpen && (
-                <motion.div
-                  initial={
-                    prefersReducedMotion
-                      ? { height: "auto", opacity: 1 }
-                      : { height: 0, opacity: 0 }
-                  }
-                  animate={{ height: "auto", opacity: 1 }}
-                  exit={
-                    prefersReducedMotion
-                      ? { opacity: 0 }
-                      : { height: 0, opacity: 0 }
-                  }
-                  transition={
-                    prefersReducedMotion
-                      ? { duration: 0 }
-                      : { duration: 0.3, ease: [0.21, 0.47, 0.32, 0.98] }
-                  }
-                  className="overflow-hidden"
-                >
-                  <div className="border-t border-border px-3 pb-3 pt-1">
-                    {m.overview && (
-                      <p className="px-2 py-3 text-sm leading-relaxed text-muted-foreground">
-                        {m.overview}
-                      </p>
-                    )}
-                    <ul className="space-y-1">
-                      {m.lessons.map((l, li) => {
-                        const isDone = completed.has(l.id);
-                        return (
-                          <li key={l.id}>
-                            <Link
-                              href={`/guides/${departmentSlug}/${m.slug}/${l.slug}`}
-                              className="group/les flex min-h-11 items-center gap-3 rounded-lg px-2.5 py-3 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                            >
-                              {isDone ? (
-                                <CheckCircle2
-                                  className="h-5 w-5 shrink-0"
-                                  style={{ color: ink }}
-                                  aria-hidden="true"
-                                />
-                              ) : (
-                                <Circle className="h-5 w-5 shrink-0 text-muted-foreground/70 transition-colors group-hover/les:text-foreground" aria-hidden="true" />
-                              )}
-                              <span className="min-w-0 flex-1">
-                                <span className="block truncate text-sm font-medium text-foreground/90 group-hover/les:text-foreground">
-                                  <span
-                                    className="mr-2 text-xs tabular-nums"
-                                    style={{ color: ink }}
-                                  >
-                                    {isPre ? "P" : label}.{li + 1}
-                                  </span>
-                                  {l.title}
-                                </span>
-                              </span>
-                              {l.estimated_minutes ? (
-                                <span className="hidden shrink-0 items-center gap-1 text-xs text-muted-foreground sm:inline-flex">
-                                  <Clock className="h-3 w-3" aria-hidden="true" />
-                                  <span className="tabular-nums">{l.estimated_minutes}</span>m
-                                </span>
-                              ) : null}
-                              <ArrowRight
-                                aria-hidden="true"
-                                className="h-4 w-4 shrink-0 -translate-x-1 text-muted-foreground opacity-0 transition-all group-hover/les:translate-x-0 group-hover/les:opacity-100"
-                              />
-                            </Link>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  </div>
-                </motion.div>
+            {/* SEO: the lesson list is ALWAYS mounted — collapsing animates it
+                shut instead of unmounting it — so every lesson <a href> ships
+                in the server HTML. These are the only crawl paths from the 11
+                department hubs to the ~394 lesson pages; conditionally mounting
+                the panel (the old AnimatePresence) hid all but module 1 from
+                crawlers. The 0fr→1fr grid row is the CSS height:auto transition
+                — deterministic, no measurement, no hydration branch — and
+                `inert` keeps collapsed rows out of the tab order and the a11y
+                tree without removing them from the document. */}
+            <div
+              id={`mod-panel-${m.id}`}
+              inert={!isOpen}
+              className={cn(
+                "grid transition-[grid-template-rows,opacity] duration-300 ease-[cubic-bezier(0.21,0.47,0.32,0.98)] motion-reduce:transition-none",
+                isOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
               )}
-            </AnimatePresence>
+            >
+              <div className="overflow-hidden">
+                <div className="border-t border-border px-3 pb-3 pt-1">
+                  {m.overview && (
+                    <p className="px-2 py-3 text-sm leading-relaxed text-muted-foreground">
+                      {m.overview}
+                    </p>
+                  )}
+                  <ul className="space-y-1">
+                    {m.lessons.map((l, li) => {
+                      const isDone = completed.has(l.id);
+                      return (
+                        <li key={l.id}>
+                          <Link
+                            href={`/guides/${departmentSlug}/${m.slug}/${l.slug}`}
+                            className="group/les flex min-h-11 items-center gap-3 rounded-lg px-2.5 py-3 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                          >
+                            {isDone ? (
+                              <CheckCircle2
+                                className="h-5 w-5 shrink-0"
+                                style={{ color: ink }}
+                                aria-hidden="true"
+                              />
+                            ) : (
+                              <Circle className="h-5 w-5 shrink-0 text-muted-foreground/70 transition-colors group-hover/les:text-foreground" aria-hidden="true" />
+                            )}
+                            <span className="min-w-0 flex-1">
+                              <span className="block truncate text-sm font-medium text-foreground/90 group-hover/les:text-foreground">
+                                <span
+                                  className="mr-2 text-xs tabular-nums"
+                                  style={{ color: ink }}
+                                >
+                                  {isPre ? "P" : label}.{li + 1}
+                                </span>
+                                {l.title}
+                              </span>
+                            </span>
+                            {l.estimated_minutes ? (
+                              <span className="hidden shrink-0 items-center gap-1 text-xs text-muted-foreground sm:inline-flex">
+                                <Clock className="h-3 w-3" aria-hidden="true" />
+                                <span className="tabular-nums">{l.estimated_minutes}</span>m
+                              </span>
+                            ) : null}
+                            <ArrowRight
+                              aria-hidden="true"
+                              className="h-4 w-4 shrink-0 -translate-x-1 text-muted-foreground opacity-0 transition-all group-hover/les:translate-x-0 group-hover/les:opacity-100"
+                            />
+                          </Link>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              </div>
+            </div>
           </motion.div>
         );
       })}

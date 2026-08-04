@@ -110,6 +110,7 @@ const SECTIONS: Section[] = [
         items={[
           "Create and operate your account and save your progress.",
           "Send essential emails (email verification, welcome, password reset).",
+          "Send occasional learning reminders to account holders — e.g. your next lesson or a streak about to end. These are on by default and every one includes a one-click unsubscribe; opting out stops them permanently.",
           "Send product updates only if you subscribed to the newsletter.",
           "Prevent abuse, spam, and security incidents.",
         ]}

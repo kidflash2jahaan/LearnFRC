@@ -89,7 +89,9 @@ export async function generateMetadata({
   const a = (await getArticles()).find((x) => x.slug === slug);
   if (!a) return { title: "Article not found" };
   const url = `${SITE}/blog/${a.slug}`;
-  const img = `${SITE}/opengraph-image`;
+  // No `images` override here on purpose: the per-article
+  // `blog/[slug]/opengraph-image.tsx` file convention supplies og:image, and
+  // Next auto-fills twitter:image from it as long as neither sets `images`.
   return {
     title: a.title,
     description: a.description,
@@ -101,13 +103,11 @@ export async function generateMetadata({
       url,
       type: "article",
       publishedTime: a.date,
-      images: [{ url: img, width: 1200, height: 630 }],
     },
     twitter: {
       card: "summary_large_image",
       title: a.title,
       description: a.description,
-      images: [img],
     },
   };
 }

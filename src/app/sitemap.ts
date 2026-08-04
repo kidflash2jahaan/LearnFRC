@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import type { DeptWithModules } from "@/lib/queries";
 import { getAllDepartmentSlugs, getDepartmentBySlug } from "@/lib/queries";
 import { getArticles } from "@/lib/queries";
 import { PATHS } from "@/lib/paths-data";
@@ -11,56 +12,85 @@ const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com";
 // so the interval only needs to be a safety net — hourly was needless ISR churn.
 export const revalidate = 86400;
 
-export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const now = new Date();
+// ─── lastmod ───────────────────────────────────────────────────────────────
+// `lastmod` is only worth emitting if it's honest. Stamping `new Date()` on
+// every URL made the whole sitemap look like it changed on every regeneration,
+// which teaches crawlers to ignore the field entirely. Catalog URLs now carry
+// their real row timestamp; everything hand-authored carries a fixed date that
+// only moves when a human bumps the constant below.
 
-  // Public, non-catalog routes. Home is top priority; legal pages are indexable
-  // but low priority.
+/** Site launch — the floor for any URL with no real per-row timestamp. */
+const LAUNCH = new Date("2026-06-20T00:00:00Z");
+
+// Bump these by hand when that section's content actually changes. They are
+// deliberately coarse: one date per group of hand-authored pages.
+const STATIC_UPDATED = new Date("2026-08-03T00:00:00Z");
+const TOOLS_UPDATED = new Date("2026-08-03T00:00:00Z");
+const PATHS_UPDATED = new Date("2026-08-03T00:00:00Z");
+const GLOSSARY_UPDATED = new Date("2026-08-03T00:00:00Z");
+
+/** A DB timestamp, or the launch date if the row somehow has none. */
+function rowDate(ts?: string | null): Date {
+  if (!ts) return LAUNCH;
+  const d = new Date(ts);
+  return Number.isNaN(d.getTime()) ? LAUNCH : d;
+}
+
+/**
+ * A department page lists its modules and lessons, so it's genuinely modified
+ * whenever any of them is added — take the newest timestamp in the subtree.
+ */
+function deptLastModified(d: DeptWithModules): Date {
+  let newest = rowDate(d.created_at).getTime();
+  for (const m of d.modules) {
+    newest = Math.max(newest, rowDate(m.created_at).getTime());
+    for (const l of m.lessons) {
+      newest = Math.max(newest, rowDate(l.created_at).getTime());
+    }
+  }
+  return new Date(newest);
+}
+
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  // Public, non-catalog routes. `changeFrequency` and `priority` are omitted
+  // throughout — Google ignores both.
   const staticRoutes: MetadataRoute.Sitemap = [
-    { path: "", priority: 1, freq: "weekly" as const },
-    { path: "/guides", priority: 0.9, freq: "weekly" as const },
-    { path: "/paths", priority: 0.7, freq: "weekly" as const },
-    { path: "/glossary", priority: 0.7, freq: "monthly" as const },
-    { path: "/resources", priority: 0.6, freq: "monthly" as const },
-    { path: "/tools", priority: 0.8, freq: "monthly" as const },
-    { path: "/tools/frc-budget-calculator", priority: 0.8, freq: "monthly" as const },
-    { path: "/tools/frc-wire-gauge-calculator", priority: 0.8, freq: "monthly" as const },
-    { path: "/tools/frc-tipping-calculator", priority: 0.8, freq: "monthly" as const },
-    { path: "/tools/frc-current-budget", priority: 0.8, freq: "monthly" as const },
-    { path: "/tools/frc-deflection-calculator", priority: 0.8, freq: "monthly" as const },
-    { path: "/leaderboard", priority: 0.5, freq: "daily" as const },
-    { path: "/blog", priority: 0.8, freq: "weekly" as const },
-    { path: "/for-teams", priority: 0.7, freq: "monthly" as const },
-    { path: "/contributions", priority: 0.4, freq: "daily" as const },
-    { path: "/terms", priority: 0.2, freq: "yearly" as const },
-    { path: "/privacy", priority: 0.2, freq: "yearly" as const },
+    { path: "", lastModified: STATIC_UPDATED },
+    { path: "/guides", lastModified: STATIC_UPDATED },
+    { path: "/paths", lastModified: PATHS_UPDATED },
+    { path: "/glossary", lastModified: GLOSSARY_UPDATED },
+    { path: "/resources", lastModified: STATIC_UPDATED },
+    { path: "/tools", lastModified: TOOLS_UPDATED },
+    { path: "/tools/frc-budget-calculator", lastModified: TOOLS_UPDATED },
+    { path: "/tools/frc-wire-gauge-calculator", lastModified: TOOLS_UPDATED },
+    { path: "/tools/frc-tipping-calculator", lastModified: TOOLS_UPDATED },
+    { path: "/tools/frc-current-budget", lastModified: TOOLS_UPDATED },
+    { path: "/tools/frc-deflection-calculator", lastModified: TOOLS_UPDATED },
+    { path: "/leaderboard", lastModified: STATIC_UPDATED },
+    { path: "/blog", lastModified: STATIC_UPDATED },
+    { path: "/for-teams", lastModified: STATIC_UPDATED },
+    { path: "/contributions", lastModified: STATIC_UPDATED },
+    { path: "/terms", lastModified: LAUNCH },
+    { path: "/privacy", lastModified: LAUNCH },
   ].map((r) => ({
     url: `${SITE}${r.path}`,
-    lastModified: now,
-    changeFrequency: r.freq,
-    priority: r.priority,
+    lastModified: r.lastModified,
   }));
 
   const blogRoutes: MetadataRoute.Sitemap = (await getArticles()).map((a) => ({
     url: `${SITE}/blog/${a.slug}`,
     lastModified: new Date(`${a.date}T12:00:00`),
-    changeFrequency: "monthly",
-    priority: 0.7,
   }));
 
   const pathRoutes: MetadataRoute.Sitemap = PATHS.map((p) => ({
     url: `${SITE}/paths/${p.slug}`,
-    lastModified: now,
-    changeFrequency: "monthly",
-    priority: 0.6,
+    lastModified: PATHS_UPDATED,
   }));
 
   // Per-term glossary pages — one indexable URL per defined term.
   const glossaryRoutes: MetadataRoute.Sitemap = GLOSSARY.map((t) => ({
     url: `${SITE}/glossary/${glossarySlug(t.term)}`,
-    lastModified: now,
-    changeFrequency: "monthly",
-    priority: 0.5,
+    lastModified: GLOSSARY_UPDATED,
   }));
 
   try {
@@ -71,12 +101,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       slugs.map((s) => getDepartmentBySlug(s).catch(() => null))
     );
 
-    const deptRoutes: MetadataRoute.Sitemap = slugs.map((slug) => ({
-      url: `${SITE}/guides/${slug}`,
-      lastModified: now,
-      changeFrequency: "weekly",
-      priority: 0.8,
-    }));
+    // Index-aligned with `slugs`, so a department that failed to load still
+    // gets its URL — just with the launch-date floor instead of a real one.
+    const deptRoutes: MetadataRoute.Sitemap = slugs.map((slug, i) => {
+      const d = depts[i];
+      return {
+        url: `${SITE}/guides/${slug}`,
+        lastModified: d ? deptLastModified(d) : LAUNCH,
+      };
+    });
 
     const lessonRoutes: MetadataRoute.Sitemap = [];
     for (const d of depts) {
@@ -85,9 +118,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         for (const l of m.lessons) {
           lessonRoutes.push({
             url: `${SITE}/guides/${d.slug}/${m.slug}/${l.slug}`,
-            lastModified: now,
-            changeFrequency: "monthly",
-            priority: 0.6,
+            lastModified: rowDate(l.created_at),
           });
         }
       }

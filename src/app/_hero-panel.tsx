@@ -85,7 +85,7 @@ export function HeroPanel({
                 <span className="truncate">{d.name}</span>
               </span>
               <span className="shrink-0 text-xs font-semibold tabular-nums text-muted-foreground">
-                {d.lessons} lessons
+                {Math.round((d.lessons / Math.max(1, lessonCount)) * 100)}% of lessons
               </span>
             </div>
             <div className="h-2 overflow-hidden rounded-full bg-[rgba(120,145,190,0.18)]">
