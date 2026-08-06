@@ -35,7 +35,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-export const ICONS: Record<string, LucideIcon> = {
+const ICONS: Record<string, LucideIcon> = {
   Rocket,
   Wrench,
   Box,
@@ -71,7 +71,7 @@ export const ICONS: Record<string, LucideIcon> = {
   CheckCircle2,
 };
 
-export function getIcon(name?: string | null): LucideIcon {
+function getIcon(name?: string | null): LucideIcon {
   return (name && ICONS[name]) || BookOpen;
 }
 

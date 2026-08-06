@@ -53,26 +53,22 @@ export const metadata: Metadata = {
 
 const XP_PER_LEVEL = 100;
 
-/** Distinct local calendar days, descending, from completion timestamps. */
+/** Consecutive local calendar days of activity, counted back from today. */
 function streakFromDates(timestamps: string[]): number {
-  const days = new Set<string>();
-  for (const ts of timestamps) {
-    const d = new Date(ts);
-    if (Number.isNaN(d.getTime())) continue;
-    days.add(
-      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
-        d.getDate()
-      ).padStart(2, "0")}`
-    );
-  }
-  if (days.size === 0) return 0;
-
-  const dayMs = 86_400_000;
   const keyOf = (d: Date) =>
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
       d.getDate()
     ).padStart(2, "0")}`;
 
+  const days = new Set<string>();
+  for (const ts of timestamps) {
+    const d = new Date(ts);
+    if (Number.isNaN(d.getTime())) continue;
+    days.add(keyOf(d));
+  }
+  if (days.size === 0) return 0;
+
+  const dayMs = 86_400_000;
   const today = new Date();
   const yesterday = new Date(today.getTime() - dayMs);
   // Streak only counts if the most recent activity was today or yesterday.

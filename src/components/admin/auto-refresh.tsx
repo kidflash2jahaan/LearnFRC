@@ -14,18 +14,15 @@ export function AutoRefresh({ seconds = 30 }: { seconds?: number }) {
   const router = useRouter();
 
   React.useEffect(() => {
-    const tick = () => {
+    const refreshIfVisible = () => {
       if (document.visibilityState === "visible") router.refresh();
     };
-    const id = setInterval(tick, seconds * 1000);
-    // Refresh immediately when the tab is re-focused after being away.
-    const onVisible = () => {
-      if (document.visibilityState === "visible") router.refresh();
-    };
-    document.addEventListener("visibilitychange", onVisible);
+    const id = setInterval(refreshIfVisible, seconds * 1000);
+    // Also refresh immediately when the tab is re-focused after being away.
+    document.addEventListener("visibilitychange", refreshIfVisible);
     return () => {
       clearInterval(id);
-      document.removeEventListener("visibilitychange", onVisible);
+      document.removeEventListener("visibilitychange", refreshIfVisible);
     };
   }, [router, seconds]);
 

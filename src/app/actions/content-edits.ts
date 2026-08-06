@@ -1,14 +1,12 @@
 "use server";
 
-import { revalidatePath, revalidateTag } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { getSession } from "@/lib/auth";
 import { rateLimit } from "@/lib/rate-limit";
 
 /**
- * A signed-in user proposes a new version of a lesson's markdown. Stored as a
- * pending suggestion; the admin is emailed and reviews it in /admin.
+ * A signed-in user proposes a new version of a lesson's or article's markdown.
+ * Stored as a pending suggestion; the scheduled moderation routine reviews the
+ * queue through /api/moderation and the result shows up on /contributions.
  */
 export async function submitContentEdit(input: {
   contentType?: "lesson" | "article";
@@ -55,56 +53,5 @@ export async function submitContentEdit(input: {
 
   // No admin notification on submit — the daily moderation routine reviews the
   // queue and emails a digest only when it actually acts on something.
-  return { ok: true };
-}
-
-/** Admin-only: accept (apply to the lesson) or reject a suggested edit. */
-export async function reviewContentEdit(
-  editId: string,
-  decision: "accepted" | "rejected",
-  overrideContent?: string
-): Promise<{ ok?: boolean; error?: string }> {
-  const { user, isAdmin } = await getSession();
-  if (!isAdmin) return { error: "Not authorized." };
-
-  const admin = createAdminClient();
-  const { data: edit } = await admin
-    .from("content_edits")
-    .select("id, content_type, lesson_id, article_id, proposed_content, status")
-    .eq("id", editId)
-    .maybeSingle();
-  if (!edit) return { error: "Suggestion not found." };
-  if (edit.status !== "pending") return { error: "This suggestion was already reviewed." };
-
-  if (decision === "accepted") {
-    const isArticle = edit.content_type === "article";
-    // The admin can tweak the proposed content before publishing it
-    // (edit-before-accept). Fall back to the submitter's version if untouched.
-    const content =
-      typeof overrideContent === "string" && overrideContent.trim().length
-        ? overrideContent
-        : (edit.proposed_content as string);
-    if (content.trim().length < 20)
-      return { error: "The edited content is too short to publish." };
-    const { error } = await admin
-      .from(isArticle ? "articles" : "lessons")
-      .update({ content })
-      .eq("id", (isArticle ? edit.article_id : edit.lesson_id) as string);
-    if (error) return { error: error.message };
-    // Bust the cached content layer so the change goes live (this fork's
-    // revalidateTag takes a stale-while-revalidate window; "max" per docs).
-    revalidateTag("catalog", "max");
-  }
-
-  await admin
-    .from("content_edits")
-    .update({
-      status: decision,
-      reviewed_at: new Date().toISOString(),
-      reviewed_by: user?.id ?? null,
-    })
-    .eq("id", editId);
-
-  revalidatePath("/admin");
   return { ok: true };
 }

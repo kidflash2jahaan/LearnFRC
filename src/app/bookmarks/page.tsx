@@ -4,7 +4,6 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { BookmarkX, Compass, Library, Sparkles } from "lucide-react";
 import {
-  Rise,
   RiseGroup,
   RiseItem,
   Reveal,

@@ -111,7 +111,7 @@ export function DeptStatStrip({
   );
 }
 
-function ctaFor(deptSlug: string, lessons: NavLesson[], done: number, total: number, nextLesson: NavLesson | undefined) {
+function ctaFor(deptSlug: string, done: number, total: number, nextLesson: NavLesson | undefined) {
   const label = done === 0 ? "Start learning" : done === total ? "Review" : "Continue";
   const href = nextLesson
     ? `/guides/${deptSlug}/${nextLesson.moduleSlug}/${nextLesson.slug}`
@@ -130,7 +130,7 @@ export function DeptCtaRow({
   lessons: NavLesson[];
 }) {
   const { total, done, pct, nextLesson } = useDeptProgress(lessons);
-  const { label, href } = ctaFor(deptSlug, lessons, done, total, nextLesson);
+  const { label, href } = ctaFor(deptSlug, done, total, nextLesson);
   const complete = total > 0 && pct === 100;
   return (
     <div

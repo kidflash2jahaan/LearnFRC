@@ -335,25 +335,3 @@ export function StatGrid({
     </RevealGroup>
   );
 }
-
-/* ------------------------------------------------------------------ */
-/*  StatSection                                                        */
-/* ------------------------------------------------------------------ */
-
-/** A labelled band of tiles. Owns the vertical rhythm between groups. */
-export function StatSection({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}): React.JSX.Element {
-  return (
-    <section className="mt-5">
-      <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-        {title}
-      </h2>
-      {children}
-    </section>
-  );
-}

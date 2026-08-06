@@ -12,7 +12,7 @@ export type DeptMeta = {
 // magenta #ff3dcb / green #5dff9b / gold #ffd23d). Per-department identity
 // comes from the dominant hue + gradient pairing — no off-brand blue/orange/
 // violet/red, so the whole site reads as one neon system.
-export const DEPARTMENT_META: Record<string, DeptMeta> = {
+const DEPARTMENT_META: Record<string, DeptMeta> = {
   "getting-started": { color: "#c6ff3d", to: "#22d3ee", icon: "Rocket" },
   "mechanical-build": { color: "#ff8a3d", to: "#ffd23d", icon: "Cog" },
   "cad-design": { color: "#b16bff", to: "#ff3dcb", icon: "PenTool" },
@@ -60,9 +60,4 @@ export function inkFor(hex: string): string {
 /** Legible-on-light text color for a department. */
 export function deptInk(slug: string): string {
   return inkFor(deptMeta(slug).color);
-}
-
-export function deptGradient(slug: string, angle = 135) {
-  const m = deptMeta(slug);
-  return `linear-gradient(${angle}deg, ${m.color}, ${m.to})`;
 }

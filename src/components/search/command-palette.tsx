@@ -38,7 +38,6 @@ export function CommandPalette() {
   const [loaded, setLoaded] = React.useState(false);
   const [depts, setDepts] = React.useState<Dept[]>([]);
   const [lessons, setLessons] = React.useState<LessonHit[]>([]);
-  const listRef = React.useRef<HTMLDivElement>(null);
 
   // open via ⌘K / Ctrl+K or custom event
   React.useEffect(() => {
@@ -169,7 +168,7 @@ export function CommandPalette() {
             />
           </div>
 
-          <div ref={listRef} id="cmdk-list" role="listbox" aria-label="Search results" className="max-h-[52vh] overflow-y-auto p-2">
+          <div id="cmdk-list" role="listbox" aria-label="Search results" className="max-h-[52vh] overflow-y-auto p-2">
             {!loaded && (
               <div className="flex items-center justify-center gap-2 px-3 py-8 text-sm text-muted-foreground">
                 <Loader2 aria-hidden className="h-4 w-4 animate-spin" />

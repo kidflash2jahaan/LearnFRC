@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils";
 
 const KEY = "perf-mode";
 
-export function setPerfMode(on: boolean) {
+function setPerfMode(on: boolean) {
   if (typeof document === "undefined") return;
   document.documentElement.dataset.perf = on ? "on" : "off";
   try {
@@ -25,7 +25,7 @@ export function setPerfMode(on: boolean) {
   window.dispatchEvent(new Event("perf-mode-change"));
 }
 
-export function usePerfMode(): boolean {
+function usePerfMode(): boolean {
   const [on, setOn] = React.useState(false);
   React.useEffect(() => {
     const read = () => setOn(document.documentElement.dataset.perf === "on");

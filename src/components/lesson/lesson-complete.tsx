@@ -118,7 +118,6 @@ export function LessonComplete({
   React.useEffect(() => {
     if (authed) return;
     if (readGuestLessons()[lessonId]) setCompleted(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authed, lessonId]);
 
   const persist = (value: boolean) => {

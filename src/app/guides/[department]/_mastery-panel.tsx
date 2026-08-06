@@ -1,6 +1,5 @@
 "use client";
 
-import * as React from "react";
 import type { CSSProperties } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { AnimatedCounter } from "@/components/animated-counter";

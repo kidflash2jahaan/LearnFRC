@@ -9,7 +9,6 @@ import {
   ExternalLink,
   CheckCircle2,
   ChevronRight,
-  Info,
   Zap,
   BookOpen,
   ListTree,

@@ -1,7 +1,6 @@
 "use client";
 
 import type { CSSProperties } from "react";
-import * as React from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { Crown, Flame, Medal } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";

@@ -9,7 +9,7 @@
  * Keyed by the ref value after the same `[^a-z0-9_]` sanitisation the signup
  * form and action apply, so "lesson-hook" and "lessonhook" both resolve.
  */
-export const HOOK_SOURCES: Record<string, string> = {
+const HOOK_SOURCES: Record<string, string> = {
   lessonhook: "Lesson hook",
   articlehook: "Article hook",
 };

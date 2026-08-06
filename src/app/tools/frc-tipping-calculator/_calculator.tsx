@@ -31,12 +31,6 @@ const IN_TO_MM = 25.4;
 // NIST exact: 1 lb = 0.45359237 kg.
 const LB_TO_KG = 0.45359237;
 
-// 2026 REBUILT legal bounds (Game Manual R103 / R104).
-const ROBOT_WEIGHT_LIMIT_LB = 115.0; // R103, excludes bumpers & battery
-const ROBOT_PLUS_BUMPERS_LIMIT_LB = 135.0; // R408, robot + bumpers (battery excl.)
-const ROBOT_PERIMETER_MAX_IN = 110.0; // R104
-const ROBOT_HEIGHT_MAX_IN = 30.0; // R104
-
 /* ------------------------------------------------------------------ *
  * Coefficient-of-friction presets.
  * refutes[]: "unverifiable" — these come from a personal blog + Chief

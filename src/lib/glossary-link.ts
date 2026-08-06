@@ -237,9 +237,6 @@ function buildAliases(): Alias[] {
 /** Built once at module load — the glossary is a static import. */
 const ALIASES = buildAliases();
 
-/** Exported for tests / QA: how many terms are eligible for auto-linking. */
-export const GLOSSARY_AUTOLINK_ALIAS_COUNT = ALIASES.length;
-
 function boundaryOk(value: string, start: number, end: number): boolean {
   const before = start > 0 ? value[start - 1] : "";
   const after = end < value.length ? value[end] : "";

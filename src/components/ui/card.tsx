@@ -3,15 +3,14 @@ import { cn } from "@/lib/utils";
 
 /**
  * Arena Clay 2 card family — clay-glass skins, same exported API.
- * `interactive` adds a hover lift; `reveal` is accepted for compat (scroll
- * reveals are done with the framer <Reveal> primitive at the usage site).
+ * `interactive` adds a hover lift; scroll reveals are NOT done here — wrap the
+ * card in the framer <Reveal> primitive at the usage site instead.
  */
 export function Card({
   className,
-  reveal: _reveal = false,
   interactive = false,
   ...props
-}: React.HTMLAttributes<HTMLDivElement> & { reveal?: boolean; interactive?: boolean }) {
+}: React.HTMLAttributes<HTMLDivElement> & { interactive?: boolean }) {
   return (
     <div
       className={cn(

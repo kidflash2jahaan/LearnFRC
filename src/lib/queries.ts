@@ -486,42 +486,6 @@ export async function getTeamByNumber(
   return { teamNumber, totalLessons: totalLessons ?? 0, members };
 }
 
-export type Recruiter = {
-  id: string;
-  name: string;
-  username: string | null;
-  avatarUrl: string | null;
-  referrals: number;
-};
-
-/** Members ranked by how many people they've referred (the recruiter board). */
-export async function getTopRecruiters(limit = 10): Promise<Recruiter[]> {
-  const admin = createAdminClient();
-  const { data } = await admin
-    .from("profiles")
-    .select("referred_by")
-    .not("referred_by", "is", null);
-  const counts: Record<string, number> = {};
-  for (const r of (data ?? []) as { referred_by: string }[])
-    counts[r.referred_by] = (counts[r.referred_by] ?? 0) + 1;
-  const ids = Object.keys(counts);
-  if (!ids.length) return [];
-  const { data: profs } = await admin
-    .from("profiles")
-    .select("id, username, full_name, avatar_url, hide_name")
-    .in("id", ids);
-  return ((profs as Profile[]) ?? [])
-    .map((p) => ({
-      id: p.id,
-      name: p.username || "Learner",
-      username: p.username,
-      avatarUrl: p.avatar_url,
-      referrals: counts[p.id] ?? 0,
-    }))
-    .sort((a, b) => b.referrals - a.referrals)
-    .slice(0, limit);
-}
-
 // ── Public contributions feed ────────────────────────────────────────────────
 // A read-only, public view of community edit/lesson suggestions — what's open
 // and what's been resolved — so anyone can see what's being improved (no more

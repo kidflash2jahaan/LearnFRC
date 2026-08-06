@@ -1,6 +1,5 @@
 import * as React from "react";
-import { cn } from "@/lib/utils";
-import { clampPct } from "@/lib/utils";
+import { cn, clampPct } from "@/lib/utils";
 
 export function Progress({
   value,

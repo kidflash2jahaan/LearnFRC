@@ -12,14 +12,6 @@ import type { FeedbackItem } from "@/lib/feedback";
 /** Rows rendered before the "+N more" tail. Lives in a dropdown now, so we show more. */
 const MAX_ROWS = 12;
 
-/**
- * How many feedback items are still awaiting a reply. Exported so a panel can
- * badge the count without pulling in the list itself.
- */
-export function openFeedbackCount(items: FeedbackItem[]): number {
-  return items.filter((i) => i.status !== "replied").length;
-}
-
 function timeAgo(iso: string): string {
   const d = Date.now() - new Date(iso).getTime();
   const m = Math.round(d / 60000);

@@ -19,7 +19,7 @@ const matcher = new RegExpMatcher({
 });
 
 /** True if the text contains profanity or a slur (obfuscation-aware). */
-export function isProfane(text: string | null | undefined): boolean {
+function isProfane(text: string | null | undefined): boolean {
   if (!text) return false;
   if (matcher.hasMatch(text)) return true;
   // Also catch separator-obfuscation the matcher misses, e.g. "f u c k",

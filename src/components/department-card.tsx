@@ -81,7 +81,7 @@ export function DepartmentCard({
               <span>{progressPct}%</span>
             </div>
             <Progress
-              value={progressPct as number}
+              value={progressPct}
               className="h-2 bg-white/50"
               barClassName="bg-[color-mix(in_srgb,var(--a)_78%,#141f2c)]"
             />

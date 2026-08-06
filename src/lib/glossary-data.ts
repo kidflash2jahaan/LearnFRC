@@ -65,7 +65,7 @@ export function glossarySlug(term: string): string {
  * Minimum words of hand-written `inMatch` copy before a term page is
  * considered substantive enough to deserve a slot in the index.
  */
-export const MIN_INMATCH_WORDS = 35;
+const MIN_INMATCH_WORDS = 35;
 
 /**
  * Does this term have enough hand-written depth to be worth indexing?

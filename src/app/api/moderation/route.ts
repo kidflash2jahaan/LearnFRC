@@ -186,7 +186,7 @@ export async function POST(req: Request) {
               .order("sort_order", { ascending: false })
               .limit(1)
               .maybeSingle();
-            let base = slugify(modTitle);
+            const base = slugify(modTitle);
             let slug = base;
             for (let i = 2; ; i++) {
               const { data: clash } = await admin
@@ -217,7 +217,7 @@ export async function POST(req: Request) {
             .order("sort_order", { ascending: false })
             .limit(1)
             .maybeSingle();
-          let base = slugify(title);
+          const base = slugify(title);
           let slug = base;
           for (let i = 2; ; i++) {
             const { data: clash } = await admin

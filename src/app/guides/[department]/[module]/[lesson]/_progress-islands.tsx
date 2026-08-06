@@ -90,15 +90,6 @@ export function LessonActionsIsland({
   );
 }
 
-/** The "create a free account to track progress" note — shown when logged out. */
-export function SignupPrompt({ lessonPath, children }: { lessonPath: string; children: React.ReactNode }) {
-  const { authed } = useMyProgress();
-  if (authed) return null;
-  return <>{children}</>;
-  // `lessonPath` is embedded in `children` by the server so the link is present
-  // in static HTML; this island only decides whether to keep it after hydration.
-}
-
 /** Sticky live contents + department mastery rail (desktop). */
 export function ReadingRailIsland({
   deptName,

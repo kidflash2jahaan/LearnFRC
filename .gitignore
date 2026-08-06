@@ -39,13 +39,3 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-
-content/enrichment.json
-content/lessons-manifest.json
-content/structure.json
-content/quizzes.json
-content/quiz-modules.json
-
-# QA screenshots + scaffolds (not source)
-design-gallery/qa/
-design-gallery/qa_*.html

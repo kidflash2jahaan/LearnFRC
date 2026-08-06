@@ -10,7 +10,6 @@ import {
 } from "lucide-react";
 import { getSession } from "@/lib/auth";
 import { SignOutButton } from "@/components/auth/sign-out-button";
-import { Button } from "@/components/ui/button";
 import { SettingsForm } from "@/components/settings/settings-form";
 import { PerfModeCard } from "@/components/perf-mode";
 import { RiseGroup, RiseItem, Reveal, Glow } from "@/components/motion/primitives";

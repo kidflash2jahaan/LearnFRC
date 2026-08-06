@@ -23,17 +23,6 @@ export type RecentSignup = {
   created_at: string;
 };
 
-export type AdminUser = {
-  id: string;
-  email: string;
-  full_name: string | null;
-  username: string | null;
-  team_number: number | null;
-  xp: number;
-  confirmed: boolean;
-  created_at: string;
-};
-
 /** A team (grouped by FRC team number) for the admin Teams table. */
 export type AdminTeam = {
   teamNumber: number;
@@ -45,7 +34,6 @@ export type AdminTeam = {
 export type DailyPoint = {
   day: string; // YYYY-MM-DD
   signups: number;
-  verified: number;
   completions: number;
   views: number;
   visitors: number;
@@ -64,22 +52,17 @@ export type AdminStats = {
   totalXP: number;
   /** Total signups whose email is confirmed. */
   verifiedUsers: number;
-  signups7d: number;
   signups30d: number;
-  completions7d: number;
   completions30d: number;
   topDepartments: DepartmentStat[];
   recentSignups: RecentSignup[];
-  users: AdminUser[];
   teams: AdminTeam[];
   /** Distinct FRC team numbers represented across all user profiles. */
   totalUniqueTeams: number;
   recentCompletions: { user: string; lesson: string; dept: string; at: string }[];
-  subscriberList: { email: string; created_at: string }[];
   achievementBreakdown: { name: string; icon: string; earned: number }[];
-  /** Signed-in users active within the last few minutes. */
+  /** Signed-in users (or anonymous visitors) active in the last few minutes. */
   onlineNow: number;
-  onlineUsers: { name: string; username: string | null; lastSeen: string }[];
   /** Acquisition-source breakdown for the pie chart. */
   sources: { name: string; count: number }[];
   /** Acquisition-source breakdown for signups in the last 7 days. */
@@ -91,20 +74,13 @@ export type AdminStats = {
   daily: DailyPoint[];
   /** Combined blog-article views, all-time. */
   articleViewsTotal: number;
-  /** Combined blog-article views in the trailing 7 days. */
-  articleViews7d: number;
   /** Per-article view counts, most read first, incl. zero-view articles. */
   articleViews: { slug: string; title: string; views: number }[];
-  /** Site-wide pageviews (all pages) — all-time / 7d / 30d, seeded with real history. */
+  /** Site-wide pageviews (all pages), all-time. */
   pageViewsTotal: number;
-  pageViews7d: number;
-  pageViews30d: number;
   /** Distinct first-party visitor ids (unique visitors). */
   uniqueVisitors: number;
   uniqueVisitors30d: number;
-  uniqueVisitors7d: number;
-  /** Most-viewed pages across the whole site (+ trailing 7d). */
-  topPages: { path: string; views: number; views7d: number }[];
   /** Most-completed lessons. */
   topLessons: { slug: string; title: string; completions: number }[];
   /** Where UNIQUE VISITORS came from — first-touch source (all-time / last 7d). */
@@ -113,8 +89,6 @@ export type AdminStats = {
   /** Guest (no-account) learning — completions + distinct learners. */
   guestCompletions: number;
   guestLearners: number;
-  guestCompletions7d: number;
-  guestLearners7d: number;
   /** All-time raw views across every /guides page. */
   guideViewsTotal: number;
   /** Distinct people who viewed any guide (can't be summed per-dept). */
@@ -141,7 +115,6 @@ export async function getAdminStats(): Promise<AdminStats> {
   const now = Date.now();
   const iso = (msAgo: number) => new Date(now - msAgo).toISOString();
   const DAY = 24 * 60 * 60 * 1000;
-  const since7d = iso(7 * DAY);
   const since30d = iso(30 * DAY);
 
   const countOf = (rows: { count: number | null }) => rows.count ?? 0;
@@ -153,9 +126,7 @@ export async function getAdminStats(): Promise<AdminStats> {
     lessonsRes,
     departmentsRes,
     achievementsEarnedRes,
-    signups7dRes,
     signups30dRes,
-    completions7dRes,
     completions30dRes,
     deptStatsRes,
     recentRes,
@@ -164,7 +135,6 @@ export async function getAdminStats(): Promise<AdminStats> {
     articleViewsRes,
     pageSummaryRes,
     dailyPageViewsRes,
-    topPagesRes,
     topLessonsRes,
     visitorSourcesRes,
     guestStatsRes,
@@ -181,15 +151,7 @@ export async function getAdminStats(): Promise<AdminStats> {
     supabase
       .from("profiles")
       .select("*", { count: "exact", head: true })
-      .gte("created_at", since7d),
-    supabase
-      .from("profiles")
-      .select("*", { count: "exact", head: true })
       .gte("created_at", since30d),
-    supabase
-      .from("lesson_progress")
-      .select("*", { count: "exact", head: true })
-      .gte("completed_at", since7d),
     supabase
       .from("lesson_progress")
       .select("*", { count: "exact", head: true })
@@ -207,7 +169,6 @@ export async function getAdminStats(): Promise<AdminStats> {
     // Site-wide pageview aggregates — all computed SQL-side.
     supabase.rpc("page_view_summary"),
     supabase.rpc("page_views_daily", { days: DAILY_WINDOW }),
-    supabase.rpc("top_pages", { lim: 12 }),
     supabase.rpc("top_lessons", { lim: 8 }),
     supabase.rpc("visitor_sources"),
     supabase.rpc("guest_progress_stats"),
@@ -264,7 +225,6 @@ export async function getAdminStats(): Promise<AdminStats> {
     daily.push({
       day: key,
       signups: signupsByDay.get(key) ?? 0,
-      verified: 0, // filled from auth list below
       completions: completionsByDay.get(key) ?? 0,
       views: pageViewsByDay.get(key) ?? 0,
       visitors: visitorsByDay.get(key) ?? 0,
@@ -273,16 +233,11 @@ export async function getAdminStats(): Promise<AdminStats> {
 
   const authList = await supabase.auth.admin.listUsers({ perPage: 1000 });
 
-  // Verified-user totals + per-day, derived from auth (email_confirmed_at).
-  const verifiedByDay = new Map<string, number>();
+  // Verified-user total, derived from auth (email_confirmed_at).
   let verifiedUsers = 0;
   for (const u of authList.data?.users ?? []) {
-    if (!u.email_confirmed_at) continue;
-    verifiedUsers++;
-    const k = dayKey(new Date(u.created_at));
-    verifiedByDay.set(k, (verifiedByDay.get(k) ?? 0) + 1);
+    if (u.email_confirmed_at) verifiedUsers++;
   }
-  for (const d of daily) d.verified = verifiedByDay.get(d.day) ?? 0;
 
   // Page through profiles — the table can exceed PostgREST's 1000-row response
   // cap as the user base grows, and a plain .select() would silently truncate
@@ -307,23 +262,6 @@ export async function getAdminStats(): Promise<AdminStats> {
     (s, p) => s + (p.xp ?? 0),
     0
   );
-  const users: AdminUser[] = (authList.data?.users ?? [])
-    .map((u) => {
-      const p = (pmap.get(u.id) ?? {}) as Record<string, unknown>;
-      return {
-        id: u.id,
-        email: u.email ?? "",
-        full_name:
-          (p.full_name as string) ??
-          ((u.user_metadata?.full_name as string) || null),
-        username: (p.username as string) ?? null,
-        team_number: (p.team_number as number) ?? null,
-        xp: (p.xp as number) ?? 0,
-        confirmed: !!u.email_confirmed_at,
-        created_at: u.created_at,
-      };
-    })
-    .sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at));
 
   // ── Teams (grouped by FRC team number from profiles) ───────────
   const teamAgg = new Map<number, { members: number; completed: number }>();
@@ -399,14 +337,6 @@ export async function getAdminStats(): Promise<AdminStats> {
     };
   });
 
-  // Subscriber list (under the "Email subscribers" card).
-  const subsListRes = await supabase
-    .from("subscribers")
-    .select("email, created_at")
-    .order("created_at", { ascending: false });
-  const subscriberList =
-    (subsListRes.data as { email: string; created_at: string }[]) ?? [];
-
   // Achievement distribution (under the "Achievements earned" card).
   const [achListRes, uaListRes] = await Promise.all([
     supabase.from("achievements").select("id, name, icon, sort_order").order("sort_order"),
@@ -428,27 +358,16 @@ export async function getAdminStats(): Promise<AdminStats> {
     .select("full_name, username, hide_name, last_seen_at")
     .gte("last_seen_at", onlineSince)
     .order("last_seen_at", { ascending: false });
-  const onlineUsers = (
-    (onlineRes.data as {
-      full_name: string | null;
-      username: string | null;
-      hide_name: boolean | null;
-      last_seen_at: string;
-    }[]) ?? []
-  ).map((p) => ({
-    name: (!p.hide_name && (p.full_name || p.username)) || p.username || "Member",
-    username: p.username,
-    lastSeen: p.last_seen_at,
-  }));
+  const onlineMembers = (onlineRes.data ?? []).length;
   // Anonymous/guest browsers active in the SAME 5-minute window used for the
-  // signed-in list above — everyone (members included) fires the page-view
-  // beacon, so online_visitors is normally a superset of onlineUsers. Using one
-  // consistent window means the two components can't disagree on their window;
+  // member count above — everyone (members included) fires the page-view
+  // beacon, so online_visitors is normally a superset of onlineMembers. Using
+  // one consistent window means the two counts can't disagree on their window;
   // max() then just guarantees a floor (a member whose heartbeat landed without
   // a beacon in the window still counts).
   const onlineVisitorsRes = await supabase.rpc("online_visitors", { minutes: 5 });
   const onlineVisitors = Number((onlineVisitorsRes.data as number | null) ?? 0);
-  const onlineNow = Math.max(onlineUsers.length, onlineVisitors);
+  const onlineNow = Math.max(onlineMembers, onlineVisitors);
 
   // ── Acquisition sources + referrals (from the profiles we already fetched) ──
   type ProfRow = {
@@ -508,25 +427,14 @@ export async function getAdminStats(): Promise<AdminStats> {
     views: Number(avMap.get(a.slug)?.views ?? 0),
   })).sort((x, y) => y.views - x.views);
   const articleViewsTotal = avRows.reduce((s, r) => s + Number(r.views ?? 0), 0);
-  const articleViews7d = avRows.reduce((s, r) => s + Number(r.views_7d ?? 0), 0);
 
   // ── Site-wide pageviews + top pages / lessons (SQL-aggregated) ─────
   const pvs = ((pageSummaryRes.data as
     | { total: number | string; views_7d: number | string; views_30d: number | string; visitors: number | string; visitors_30d: number | string; visitors_7d: number | string }[]
     | null) ?? [])[0];
   const pageViewsTotal = Number(pvs?.total ?? 0);
-  const pageViews7d = Number(pvs?.views_7d ?? 0);
-  const pageViews30d = Number(pvs?.views_30d ?? 0);
   const uniqueVisitors = Number(pvs?.visitors ?? 0);
   const uniqueVisitors30d = Number(pvs?.visitors_30d ?? 0);
-  const uniqueVisitors7d = Number(pvs?.visitors_7d ?? 0);
-  const topPages = ((topPagesRes.data as
-    | { path: string; views: number | string; views_7d: number | string }[]
-    | null) ?? []).map((r) => ({
-    path: r.path,
-    views: Number(r.views),
-    views7d: Number(r.views_7d),
-  }));
   const topLessons = ((topLessonsRes.data as
     | { slug: string; title: string; completions: number | string }[]
     | null) ?? []).map((r) => ({
@@ -554,8 +462,6 @@ export async function getAdminStats(): Promise<AdminStats> {
     | null) ?? [])[0];
   const guestCompletions = Number(gs?.guest_completions ?? 0);
   const guestLearners = Number(gs?.guest_learners ?? 0);
-  const guestCompletions7d = Number(gs?.guest_completions_7d ?? 0);
-  const guestLearners7d = Number(gs?.guest_learners_7d ?? 0);
 
   // Guide audience rollup (admin_guide_views_summary); bigints arrive as strings.
   const gvSummary = (((guideViewsSummaryRes.data as { views: number | string; viewers: number | string }[] | null) ?? []))[0];
@@ -574,42 +480,30 @@ export async function getAdminStats(): Promise<AdminStats> {
     },
     totalXP,
     verifiedUsers,
-    signups7d: countOf(signups7dRes),
     signups30d: countOf(signups30dRes),
-    completions7d: countOf(completions7dRes),
     completions30d: countOf(completions30dRes),
     topDepartments,
     recentSignups,
-    users,
     teams,
     totalUniqueTeams,
     recentCompletions,
-    subscriberList,
     achievementBreakdown,
     onlineNow,
-    onlineUsers,
     sources,
     sources7d,
     referralUsers,
     recruiters,
     daily,
     articleViewsTotal,
-    articleViews7d,
     articleViews,
     pageViewsTotal,
-    pageViews7d,
-    pageViews30d,
     uniqueVisitors,
     uniqueVisitors30d,
-    uniqueVisitors7d,
-    topPages,
     topLessons,
     visitorSources,
     visitorSources7d,
     guestCompletions,
     guestLearners,
-    guestCompletions7d,
-    guestLearners7d,
     guideViewsTotal,
     guideViewersTotal,
   };

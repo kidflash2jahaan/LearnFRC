@@ -33,7 +33,6 @@ import { DEPT_CATALOG } from "@/lib/dept-catalog";
 import { PATHS } from "@/lib/paths-data";
 import { AnimatedCounter } from "@/components/animated-counter";
 import {
-  Rise,
   RiseGroup,
   RiseItem,
   Reveal,
