@@ -7,10 +7,12 @@ import { GLOSSARY, glossarySlug } from "@/lib/glossary-data";
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com";
 
-// ISR: regenerate daily as a slow background floor. New DB content is pushed
-// into the sitemap immediately on publish via /api/revalidate?paths=/sitemap.xml,
-// so the interval only needs to be a safety net — hourly was needless ISR churn.
-export const revalidate = 86400;
+// ISR: hourly. revalidatePath('/sitemap.xml') does NOT invalidate this route in
+// this Next fork (metadata routes aren't matched by path revalidation), which
+// silently left newly published articles out of the sitemap. An hourly floor is
+// the reliable fix and costs one small route regeneration per hour; fast
+// discovery is already handled by the IndexNow ping in /api/revalidate.
+export const revalidate = 3600;
 
 // ─── lastmod ───────────────────────────────────────────────────────────────
 // `lastmod` is only worth emitting if it's honest. Stamping `new Date()` on
