@@ -274,7 +274,7 @@ export function StatTile({
           {hint ? (
             <div
               title={hint}
-              className="mt-0.5 truncate text-[11px] text-foreground/75"
+              className="mt-0.5 line-clamp-2 text-[11px] leading-snug text-foreground/75"
             >
               {hint}
             </div>

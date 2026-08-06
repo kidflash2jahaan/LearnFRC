@@ -154,15 +154,18 @@ export default async function AdminPage() {
             panel below, which is built for it. */}
         <StatGrid className="mt-5">
           <StatTile label="Unique visitors" value={stats.uniqueVisitors} icon="UsersRound" accent="#2560e6" hero />
-          <StatTile label="Page views" value={stats.pageViewsTotal} icon="Eye" accent="#1aa9d6" />
+          <StatTile label="Page views" value={stats.pageViewsTotal} hint={`${stats.articleViewsTotal.toLocaleString()} on articles`} icon="Eye" accent="#1aa9d6" />
           <StatTile label="Online now" value={stats.onlineNow} icon="Activity" accent="#0ea5a3" live />
           <StatTile label="Teams" value={stats.totalUniqueTeams} hint="FRC teams represented" icon="Flag" accent="#12a150" />
 
-          {/* No "N verified" hint here — Verified is its own tile; showing it
-              twice was the kind of duplication this dashboard already dropped. */}
-          <StatTile label="Total users" value={stats.totals.users} icon="Users" accent="#7c5cff" hero />
-          <StatTile label="Verified" value={stats.verifiedUsers} icon="UserCheck" accent="#7c5cff" />
-          <StatTile label="Referral signups" value={stats.referralUsers} hint="joined via a friend" icon="Share2" accent="#1aa9d6" />
+          <StatTile
+            label="Total users"
+            value={stats.totals.users}
+            hint={`${stats.verifiedUsers.toLocaleString()} verified · ${stats.referralUsers.toLocaleString()} referred`}
+            icon="Users"
+            accent="#7c5cff"
+            hero
+          />
           <StatTile label="Guest learners" value={stats.guestLearners} hint="learning, no account" icon="Ghost" accent="#0ea5a3" />
 
           <StatTile
@@ -174,24 +177,23 @@ export default async function AdminPage() {
             hero
           />
           <StatTile label="Guide viewers" value={stats.guideViewersTotal} hint={`${stats.guideViewsTotal.toLocaleString()} guide views`} icon="BookOpen" accent="#d64b8a" />
-          <StatTile label="Article views" value={stats.articleViewsTotal} icon="Newspaper" accent="#1aa9d6" />
           <StatTile label="Bookmarks" value={stats.totals.bookmarks} icon="Bookmark" accent="#7c5cff" />
 
           <StatTile label="Activation" value={retention.activationPct} suffix="%" hint={`${retention.activated}/${retention.totalUsers} did a lesson`} icon="Percent" accent="#f5a623" />
           <StatTile label="Return rate" value={retention.returnPct} suffix="%" hint="of activated users" icon="Repeat" accent="#d64b8a" />
-          <StatTile label="Power users" value={retention.powerUsers} hint="most active learners" icon="Flame" accent="#f5a623" />
-          <StatTile label="Median lessons" value={retention.medianLessons} hint="per activated user" icon="Target" accent="#2560e6" />
-          <StatTile label="Achievements" value={stats.totals.achievementsEarned} hint="earned by members" icon="Trophy" accent="#f5a623" />
-          <StatTile label="Total XP" value={stats.totalXP} hint="awarded to members" icon="Sparkles" accent="#7c5cff" />
+          <StatTile label="Power users" value={retention.powerUsers} hint={`median ${retention.medianLessons} lessons each`} icon="Flame" accent="#f5a623" />
+          <StatTile label="Achievements" value={stats.totals.achievementsEarned} hint={`${stats.totalXP.toLocaleString()} XP awarded`} icon="Trophy" accent="#f5a623" />
 
-          <StatTile label="Lessons" value={stats.totals.lessons} icon="Layers" accent="#2560e6" />
-          <StatTile label="Departments" value={stats.totals.departments} icon="GraduationCap" accent="#1aa9d6" />
-          <StatTile label="Subscribers" value={stats.totals.subscribers} hint="newsletter" icon="Mail" accent="#12a150" />
-          <StatTile label="Email queue" value={retention.lifecycleEligible} hint="queued to send" icon="Send" accent="#1aa9d6" />
-          <StatTile label="Opted out" value={retention.optedOut} hint="of lifecycle email" icon="MailX" accent="#8a97ad" />
+          <StatTile label="Lessons" value={stats.totals.lessons} hint={`across ${stats.totals.departments} departments`} icon="Layers" accent="#2560e6" />
+          <StatTile
+            label="Email queue"
+            value={retention.lifecycleEligible}
+            hint={`${stats.totals.subscribers.toLocaleString()} subscribers · ${retention.optedOut} opted out`}
+            icon="Send"
+            accent="#1aa9d6"
+          />
           <StatTile label="Open feedback" value={openFeedback} hint={`${feedback.length} received`} icon="Inbox" accent="#d64b8a" />
-          <StatTile label="Pending edits" value={pendingEdits.length} hint="community suggestions" icon="FileClock" accent="#f5a623" />
-          <StatTile label="Submissions" value={pendingSubmissions.length} hint="awaiting review" icon="FileText" accent="#f5a623" />
+          <StatTile label="Pending edits" value={pendingEdits.length} hint={`${pendingSubmissions.length} pending submissions`} icon="FileClock" accent="#f5a623" />
         </StatGrid>
 
         {/* ===================== DETAIL — COLLAPSED BY DEFAULT ===================== */}
