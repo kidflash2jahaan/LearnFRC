@@ -27,6 +27,14 @@ const nextConfig: NextConfig = {
         destination: "/guides/programming-software/:path*",
         permanent: true,
       },
+      // Truncated external link (the trailing "first" was lost when the URL
+      // was shared). It is not generated anywhere in this repo or in the
+      // content database, so a redirect is the only place it can be fixed.
+      {
+        source: "/guides/getting-started/what-first-and-frc-are/what-is-",
+        destination: "/guides/getting-started/what-first-and-frc-are/what-is-first",
+        permanent: true,
+      },
     ];
   },
 };

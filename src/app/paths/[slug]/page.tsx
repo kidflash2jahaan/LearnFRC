@@ -13,10 +13,11 @@ import {
   Sparkles,
 } from "lucide-react";
 import { getPathBySlug, getAllPathSlugs } from "@/lib/paths-data";
-import { getDepartments } from "@/lib/queries";
+import { getDepartmentBySlug } from "@/lib/queries";
 import { deptMeta, deptInk, inkFor } from "@/lib/departments";
 import { Icon } from "@/lib/icon-map";
 import { Button } from "@/components/ui/button";
+import { JsonLd } from "@/components/json-ld";
 import { AnimatedCounter } from "@/components/animated-counter";
 import {
   RiseGroup,
@@ -27,9 +28,42 @@ import {
 } from "@/components/motion/primitives";
 import { RouteLine } from "./_route-line";
 
+const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com";
+
 export function generateStaticParams() {
   return getAllPathSlugs().map((slug) => ({ slug }));
 }
+
+/** Query-matching title tags + ≤160-char meta descriptions per path.
+    The bare route name ("Game Day Ready") matches nothing anyone searches;
+    these mirror how people actually phrase the goal. */
+const SEO_META: Record<string, { title: string; description: string }> = {
+  "new-member-onboarding": {
+    title: "How to Start on an FRC Team: Free Onboarding Path",
+    description:
+      "A guided route for brand-new FRC members — how the season works, shop safety, your first build, wiring basics, and picking a department. Free, no login.",
+  },
+  "become-a-robot-programmer": {
+    title: "How to Become an FRC Robot Programmer: Free Path",
+    description:
+      "A guided route from zero code to competition-ready FRC software — WPILib setup, command-based subsystems, sensors, PID, and autonomous. Free, no login.",
+  },
+  "build-and-design-track": {
+    title: "How to Design and Build an FRC Robot: Free Path",
+    description:
+      "A guided route through the FRC build pipeline — CAD in Onshape, fabrication and fasteners, gearboxes, wiring your mechanism, and shop safety. Free.",
+  },
+  "win-the-impact-award": {
+    title: "How to Win the FIRST Impact Award: Free Path",
+    description:
+      "A guided route to a winning FIRST Impact Award entry — team sustainability, funding, outreach and media, then the essay and presentation. Free, no login.",
+  },
+  "game-day-ready": {
+    title: "How to Prepare for an FRC Competition: Free Path",
+    description:
+      "A guided route to competition day — scouting and picklists, match strategy, drive team roles, and running a safe, inspection-ready pit. Free, no login.",
+  },
+};
 
 export async function generateMetadata({
   params,
@@ -39,13 +73,18 @@ export async function generateMetadata({
   const { slug } = await params;
   const path = getPathBySlug(slug);
   if (!path) return { title: "Path" };
+  const seo = SEO_META[slug];
+  const title = seo?.title ?? `${path.title}: Free FRC Learning Path`;
+  const description = seo?.description ?? path.description;
   return {
-    title: path.title,
-    description: path.description,
+    // The root template appends " · LearnFRC"; these are already full-length
+    // title tags, so emit them as-is.
+    title: { absolute: title },
+    description,
     alternates: { canonical: `/paths/${slug}` },
     openGraph: {
-      title: `${path.title} · LearnFRC`,
-      description: path.description,
+      title,
+      description,
       url: `/paths/${slug}`,
       type: "website",
     },
@@ -61,8 +100,32 @@ export default async function PathPage({
   const path = getPathBySlug(slug);
   if (!path) notFound();
 
-  const departments = await getDepartments().catch(() => []);
-  const nameBySlug = new Map(departments.map((d) => [d.slug, d.name]));
+  // One cached fetch per department on the route — the same cache entries the
+  // department pages use, so these are warm in practice. They give us the real
+  // department names for the route AND the real lesson-minute total behind the
+  // Course schema, so the declared workload isn't invented.
+  const routeSlugs = [...new Set(path.steps.map((s) => s.deptSlug))];
+  const routeDepts = await Promise.all(
+    routeSlugs.map((s) => getDepartmentBySlug(s).catch(() => null)),
+  );
+  const nameBySlug = new Map(
+    routeDepts.flatMap((d) => (d ? ([[d.slug, d.name]] as const) : [])),
+  );
+  const totalMinutes = routeDepts.reduce(
+    (sum, d) =>
+      sum +
+      (d?.modules ?? []).reduce(
+        (mAcc, mod) =>
+          mAcc +
+          (mod.lessons ?? []).reduce(
+            (lAcc, lesson) => lAcc + (lesson.estimated_minutes ?? 0),
+            0,
+          ),
+        0,
+      ),
+    0,
+  );
+  const workloadHours = Math.max(1, Math.ceil(totalMinutes / 60));
 
   const firstStep = path.steps[0];
   const lastStep = path.steps[path.steps.length - 1];
@@ -80,6 +143,55 @@ export default async function PathPage({
 
   return (
     <div className="relative overflow-x-clip">
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "Course",
+          name: path.title,
+          description: path.description,
+          url: `${SITE}/paths/${path.slug}`,
+          isAccessibleForFree: true,
+          inLanguage: "en",
+          provider: {
+            "@type": "Organization",
+            name: "LearnFRC",
+            url: SITE,
+          },
+          hasCourseInstance: {
+            "@type": "CourseInstance",
+            courseMode: "online",
+            courseWorkload: `PT${workloadHours}H`,
+          },
+          offers: {
+            "@type": "Offer",
+            price: "0",
+            priceCurrency: "USD",
+            availability: "https://schema.org/InStock",
+          },
+          teaches: path.outcomes,
+        }}
+      />
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "BreadcrumbList",
+          itemListElement: [
+            { "@type": "ListItem", position: 1, name: "Home", item: SITE },
+            {
+              "@type": "ListItem",
+              position: 2,
+              name: "Learning paths",
+              item: `${SITE}/paths`,
+            },
+            {
+              "@type": "ListItem",
+              position: 3,
+              name: path.title,
+              item: `${SITE}/paths/${path.slug}`,
+            },
+          ],
+        }}
+      />
       <Glow
         blobs={[
           { size: "600px", pos: { left: "50%", top: "-220px" }, color: path.color, opacity: 0.4 },

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ArrowRight, Compass, Route, Layers, Target, MapPin, Flag } from "lucide-react";
 import { PATHS } from "@/lib/paths-data";
 import { Icon } from "@/lib/icon-map";
+import { JsonLd } from "@/components/json-ld";
 import { deptMeta, deptInk } from "@/lib/departments";
 import { AnimatedCounter } from "@/components/animated-counter";
 import {
@@ -17,11 +18,22 @@ import {
 } from "@/components/motion/primitives";
 import { RoutePreview } from "./_route-preview";
 
+const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com";
+
 export const metadata: Metadata = {
-  title: "FRC Learning Paths — Guided Tracks by Goal",
+  // The root template appends " · LearnFRC"; this is already a full-length
+  // title tag, so emit it as-is.
+  title: { absolute: "FRC Learning Paths: Guided Tracks by Goal" },
   description:
-    "Guided, multi-department journeys through FRC — onboarding, programming, build & design, the Impact Award, and game day.",
+    "Free, guided FRC learning paths — new-member onboarding, robot programming, build & design, the FIRST Impact Award, and competition day. No login needed.",
   alternates: { canonical: "/paths" },
+  openGraph: {
+    title: "FRC Learning Paths: Guided Tracks by Goal",
+    description:
+      "Free, guided FRC learning paths — onboarding, robot programming, build & design, the Impact Award, and competition day.",
+    url: "/paths",
+    type: "website",
+  },
 };
 
 const BRAND_GRADIENT: CSSProperties = {
@@ -59,6 +71,40 @@ export default function PathsPage() {
 
   return (
     <div className="relative overflow-x-clip">
+      {/* The hub is a list of the individual path Courses — each detail page
+          carries the full Course markup. */}
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "ItemList",
+          name: "FRC learning paths",
+          description:
+            "Guided, multi-department routes through the LearnFRC curriculum.",
+          url: `${SITE}/paths`,
+          numberOfItems: PATHS.length,
+          itemListElement: PATHS.map((p, i) => ({
+            "@type": "ListItem",
+            position: i + 1,
+            name: p.title,
+            url: `${SITE}/paths/${p.slug}`,
+          })),
+        }}
+      />
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "BreadcrumbList",
+          itemListElement: [
+            { "@type": "ListItem", position: 1, name: "Home", item: SITE },
+            {
+              "@type": "ListItem",
+              position: 2,
+              name: "Learning paths",
+              item: `${SITE}/paths`,
+            },
+          ],
+        }}
+      />
       <Glow
         blobs={[
           { size: "620px", pos: { left: "-160px", top: "-200px" }, color: "#8bbcff", opacity: 0.6 },

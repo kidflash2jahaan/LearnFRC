@@ -3,6 +3,11 @@ import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
 import { Hash } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  GLOSSARY_AUTOLINK_CLASS,
+  GLOSSARY_AUTOLINK_MAX,
+  rehypeGlossaryLinks,
+} from "@/lib/glossary-link";
 
 /* ================================================================== */
 /*  Arena Clay markdown renderer                                       */
@@ -18,6 +23,11 @@ import { cn } from "@/lib/utils";
 /* ================================================================== */
 
 export type TocHeading = { id: string; text: string; level: 2 | 3 };
+
+/** Derived from ReactMarkdown itself so we never import unified directly. */
+type RehypePlugins = NonNullable<
+  React.ComponentProps<typeof ReactMarkdown>["rehypePlugins"]
+>;
 
 function slugify(text: string): string {
   return text
@@ -80,9 +90,19 @@ function HeadingAnchor({ id, text }: { id?: string; text?: string }) {
 export function Markdown({
   content,
   className,
+  glossaryLinks = true,
+  glossaryLinkMax = GLOSSARY_AUTOLINK_MAX,
 }: {
   content: string;
   className?: string;
+  /**
+   * Auto-link the first mention of FRC jargon to its glossary entry.
+   * Pass `false` anywhere the extra links would be noise (previews,
+   * excerpts, the glossary itself).
+   */
+  glossaryLinks?: boolean;
+  /** Hard cap on auto-links for this document. */
+  glossaryLinkMax?: number;
 }) {
   // Recomputed per render (cheap — one lesson's worth of text) so the id
   // sequence always matches this exact content string; a mutable index
@@ -91,11 +111,20 @@ export function Markdown({
   let hIdx = 0;
   const nextHeading = () => headings[hIdx++];
 
+  // Glossary linking runs last so it sees the final tree (and therefore
+  // skips code blocks that rehype-highlight has already claimed).
+  const rehypePlugins: RehypePlugins = [
+    [rehypeHighlight, { detect: true, ignoreMissing: true }],
+  ];
+  if (glossaryLinks) {
+    rehypePlugins.push([rehypeGlossaryLinks, { max: glossaryLinkMax }]);
+  }
+
   return (
     <div className={cn("text-base leading-relaxed", className)}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
-        rehypePlugins={[[rehypeHighlight, { detect: true, ignoreMissing: true }]]}
+        rehypePlugins={rehypePlugins}
         components={{
           h1: ({ node: _node, children, ...p }) => {
             const h = nextHeading();
@@ -145,15 +174,27 @@ export function Markdown({
           p: ({ node: _node, ...p }) => (
             <p className="my-4 text-[1.05rem] leading-7 text-foreground/90" {...p} />
           ),
-          a: ({ node: _node, href, ...p }) => {
+          a: ({ node: _node, href, className: nodeClass, ...p }) => {
             // Internal links (same-origin paths/anchors) must stay internal —
             // rendering them target=_blank made crawlers count our own lesson
             // cross-links as outbound external links. External links keep the
             // new-tab + noopener treatment.
             const h = href ?? "";
             const external = /^https?:\/\//i.test(h) && !h.startsWith("https://learnfrc.com");
-            const cls =
+            // Glossary auto-links are ours, not the author's — they get a
+            // quieter treatment so a paragraph never looks like link spam.
+            const auto =
+              typeof nodeClass === "string" &&
+              nodeClass.split(/\s+/).includes(GLOSSARY_AUTOLINK_CLASS);
+            const base =
               "break-words font-medium text-primary underline decoration-primary/30 underline-offset-2 transition-colors hover:text-accent hover:decoration-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary";
+            const cls = auto
+              ? cn(
+                  base,
+                  "font-normal text-inherit no-underline border-b border-dotted border-primary/45 hover:text-primary hover:border-primary/80",
+                  nodeClass
+                )
+              : cn(base, nodeClass);
             return external ? (
               <a className={cls} href={h} target="_blank" rel="noopener noreferrer" {...p} />
             ) : (

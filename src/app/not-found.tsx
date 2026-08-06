@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 import Link from "next/link";
-import { ArrowRight, Home, BookOpen, Search, Compass } from "lucide-react";
+import { ArrowRight, Home, BookOpen, Search, Compass, Newspaper } from "lucide-react";
 import {
   Rise,
   RiseGroup,
@@ -11,6 +11,7 @@ import {
   Glow,
 } from "@/components/motion/primitives";
 import { FieldRadar } from "./_not-found/field-radar";
+import { RouteRecovery } from "./_not-found/route-recovery";
 
 const BRAND_GRADIENT: CSSProperties = {
   background: "linear-gradient(120deg, #2560e6, #1aa9d6)",
@@ -34,6 +35,13 @@ const ROUTES = [
     a: "#1aa9d6",
     title: "Browse the guides",
     body: "Every department, start to finish.",
+  },
+  {
+    href: "/blog",
+    icon: Newspaper,
+    a: "#f0803c",
+    title: "Read the blog",
+    body: "Deep dives on parts, code, and strategy.",
   },
   {
     href: "/glossary",
@@ -99,7 +107,13 @@ export default function NotFound() {
           <FieldRadar />
         </Rise>
 
-        <RevealGroup className="mt-12 grid w-full gap-3 sm:grid-cols-3">
+        {/* Closest real pages for the URL that was actually requested —
+            old Chief Delphi links get truncated and land here. */}
+        <Rise delay={0.28} className="w-full max-w-xl">
+          <RouteRecovery />
+        </Rise>
+
+        <RevealGroup className="mt-12 grid w-full gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {ROUTES.map((r) => (
             <RevealItem key={r.href}>
               <Hover className="h-full">

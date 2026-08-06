@@ -6,6 +6,7 @@ import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
 import {
   ChevronDown,
+  ChevronRight,
   CheckCircle2,
   Circle,
   Sparkles,
@@ -190,6 +191,19 @@ export function DepartmentModules({
                       {m.overview}
                     </p>
                   )}
+                  {/* The module hub page. The accordion header can't be this
+                      link (it's the disclosure button, and nesting a link in a
+                      button is invalid), so the overview links it instead —
+                      which also means every module hub has a real inbound
+                      link in the department page's server HTML. */}
+                  <Link
+                    href={`/guides/${departmentSlug}/${m.slug}`}
+                    className="mx-2 mb-2 inline-flex min-h-11 items-center gap-1.5 text-sm font-medium hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                    style={{ color: ink }}
+                  >
+                    Module overview: {m.title}
+                    <ChevronRight className="h-4 w-4" aria-hidden="true" />
+                  </Link>
                   <ul className="space-y-1">
                     {m.lessons.map((l, li) => {
                       const isDone = completed.has(l.id);

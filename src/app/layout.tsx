@@ -59,8 +59,18 @@ export const metadata: Metadata = {
     "learn robotics",
     "STEM",
   ],
-  authors: [{ name: "Jahaan Pardhanani" }],
+  // The author link points at /about, which is where the site's E-E-A-T lives
+  // (who writes the lessons, what they're drafted from, how they're checked).
+  authors: [{ name: "Jahaan Pardhanani", url: `${SITE_URL}/about` }],
   creator: "Jahaan Pardhanani",
+  publisher: "LearnFRC",
+  // NOTE: feed autodiscovery is deliberately NOT declared here as
+  // `alternates.types`. Metadata is *shallow* merged, so every page that sets
+  // its own `alternates` (all public pages do, for `canonical`) would replace
+  // the whole object and drop the feed link — verified: it never reached the
+  // homepage <head>. It's rendered as a real <link> in the body instead, which
+  // React hoists into <head> on every route. Declaring it in both places
+  // emits the tag twice on the pages that don't override `alternates`.
   openGraph: {
     type: "website",
     url: SITE_URL,
@@ -108,6 +118,16 @@ export default function RootLayout({
       className={`${grotesk.variable} ${inter.variable} ${jbmono.variable} ${baloo.variable} h-full`}
     >
       <body className="flex min-h-full flex-col antialiased">
+        {/* Feed autodiscovery. React hoists this into <head> on every route,
+            which the `alternates.types` metadata above cannot do on its own:
+            metadata is shallow-merged, so every page that declares its own
+            `alternates` (all of them, for canonical) would drop the feed link. */}
+        <link
+          rel="alternate"
+          type="application/rss+xml"
+          title="LearnFRC articles"
+          href={`${SITE_URL}/rss.xml`}
+        />
         <script
           dangerouslySetInnerHTML={{
             __html: `try{if(localStorage.getItem('perf-mode')==='on')document.documentElement.dataset.perf='on';}catch(e){}`,
@@ -134,6 +154,19 @@ export default function RootLayout({
                 logo: `${SITE_URL}/opengraph-image`,
                 description:
                   "A free, complete learning platform for the FIRST Robotics Competition.",
+                // Only URLs that are verifiably ours belong here — the public
+                // source repo. No invented social profiles.
+                sameAs: ["https://github.com/kidflash2jahaan/LearnFRC"],
+                founder: { "@id": `${SITE_URL}/#person` },
+              },
+              {
+                // Site-wide author identity, described in full on /about. Every
+                // Article's `author` should reference this @id.
+                "@type": "Person",
+                "@id": `${SITE_URL}/#person`,
+                name: "Jahaan Pardhanani",
+                url: `${SITE_URL}/about`,
+                sameAs: ["https://github.com/kidflash2jahaan"],
               },
             ],
           }}

@@ -14,7 +14,8 @@ import { Reveal, Glow } from "@/components/motion/primitives";
 import { getPublicContributions, type PublicContribution } from "@/lib/queries";
 
 export const metadata: Metadata = {
-  title: "Community contributions · LearnFRC",
+  // The root template appends " · LearnFRC" — don't repeat it here.
+  title: "Community contributions",
   description:
     "See what the LearnFRC community is improving in the open — pending edit suggestions and new-lesson proposals, plus what's recently been merged. Anyone with an account can suggest a change.",
   alternates: { canonical: "/contributions" },

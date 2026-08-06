@@ -246,8 +246,8 @@ export default async function LessonPage({
         data={{
           "@context": "https://schema.org",
           "@type": "BreadcrumbList",
-          // Mirrors the on-page breadcrumb. There is no standalone module route,
-          // so the module tier is omitted rather than linking a 404.
+          // Mirrors the on-page breadcrumb, module tier included — the
+          // standalone module route exists now, so this no longer skips a level.
           itemListElement: [
             { "@type": "ListItem", position: 1, name: "Home", item: SITE },
             { "@type": "ListItem", position: 2, name: "Guides", item: `${SITE}/guides` },
@@ -260,6 +260,12 @@ export default async function LessonPage({
             {
               "@type": "ListItem",
               position: 4,
+              name: mod.title,
+              item: `${SITE}/guides/${dept.slug}/${mod.slug}`,
+            },
+            {
+              "@type": "ListItem",
+              position: 5,
               name: les.title,
               item: `${SITE}${lessonPath}`,
             },
@@ -482,6 +488,7 @@ export default async function LessonPage({
               count={flat.length}
               position={idx + 1}
               lessonPath={lessonPath}
+              lessonIds={flatIds}
             />
 
             {/* mobile: reading progress + dept progress card */}

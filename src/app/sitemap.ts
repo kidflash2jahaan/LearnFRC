@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import type { DeptWithModules } from "@/lib/queries";
+import type { DeptWithModules, ModuleRow } from "@/lib/queries";
 import { getAllDepartmentSlugs, getDepartmentBySlug } from "@/lib/queries";
 import { getArticles } from "@/lib/queries";
 import { PATHS } from "@/lib/paths-data";
@@ -43,10 +43,20 @@ function rowDate(ts?: string | null): Date {
 function deptLastModified(d: DeptWithModules): Date {
   let newest = rowDate(d.created_at).getTime();
   for (const m of d.modules) {
-    newest = Math.max(newest, rowDate(m.created_at).getTime());
-    for (const l of m.lessons) {
-      newest = Math.max(newest, rowDate(l.created_at).getTime());
-    }
+    newest = Math.max(newest, moduleLastModified(m).getTime());
+  }
+  return new Date(newest);
+}
+
+/**
+ * Same idea one level down: a module hub page (/guides/<dept>/<module>) renders
+ * its own overview plus the title + summary of every lesson it contains, so it
+ * is genuinely modified whenever any of those rows is.
+ */
+function moduleLastModified(m: ModuleRow): Date {
+  let newest = rowDate(m.created_at).getTime();
+  for (const l of m.lessons ?? []) {
+    newest = Math.max(newest, rowDate(l.created_at).getTime());
   }
   return new Date(newest);
 }
@@ -111,10 +121,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       };
     });
 
+    // The middle tier: one hub per department+module. Every lesson URL already
+    // contained this path segment, but the segment had no page until now — so
+    // these ~100 URLs are brand new to crawlers and belong in the sitemap.
+    const moduleRoutes: MetadataRoute.Sitemap = [];
     const lessonRoutes: MetadataRoute.Sitemap = [];
     for (const d of depts) {
       if (!d) continue;
       for (const m of d.modules) {
+        moduleRoutes.push({
+          url: `${SITE}/guides/${d.slug}/${m.slug}`,
+          lastModified: moduleLastModified(m),
+        });
         for (const l of m.lessons) {
           lessonRoutes.push({
             url: `${SITE}/guides/${d.slug}/${m.slug}/${l.slug}`,
@@ -130,6 +148,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       ...pathRoutes,
       ...glossaryRoutes,
       ...deptRoutes,
+      ...moduleRoutes,
       ...lessonRoutes,
     ];
   } catch {

@@ -1,4 +1,4 @@
-import type { CSSProperties } from "react";
+import { cache, type CSSProperties } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -9,15 +9,28 @@ import {
   BookOpen,
   ChevronRight,
   ExternalLink,
+  GraduationCap,
   Sparkles,
   Tags,
+  Target,
 } from "lucide-react";
-import { GLOSSARY, glossarySlug, type GlossaryTerm } from "@/lib/glossary-data";
+import {
+  GLOSSARY,
+  glossarySlug,
+  hasGlossaryDepth,
+  type GlossaryTerm,
+} from "@/lib/glossary-data";
+import { getAllDepartmentSlugs, getDepartmentBySlug, flattenLessons } from "@/lib/queries";
 import { JsonLd } from "@/components/json-ld";
 import { inkFor } from "@/lib/departments";
 import { RiseGroup, RiseItem, Reveal, RevealGroup, RevealItem, Hover, Glow } from "@/components/motion/primitives";
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com";
+
+// Daily background ISR floor, matching the rest of the catalog-backed routes.
+// These pages now link into real lessons, so they have to re-render when the
+// catalog moves; content edits still push live via /api/revalidate.
+export const revalidate = 86400;
 
 const GRADIENT_TEXT: CSSProperties = {
   background: "linear-gradient(120deg,#2560e6,#1aa9d6)",
@@ -46,6 +59,95 @@ const DEFAULT_COLOR = "#2560e6";
 const BY_SLUG = new Map<string, GlossaryTerm>(
   GLOSSARY.map((t) => [glossarySlug(t.term), t])
 );
+const BY_TERM = new Map<string, GlossaryTerm>(GLOSSARY.map((t) => [t.term, t]));
+
+/* ───────────────────────── lesson matching ─────────────────────────── */
+
+type LessonMatch = {
+  path: string;
+  title: string;
+  summary: string | null;
+  departmentName: string;
+  moduleTitle: string;
+};
+
+/**
+ * Every published lesson, flattened to the fields needed for matching and for
+ * rendering a link. Built from the existing cached catalog helpers — no new
+ * query surface, and no lesson `content` (the list columns are enough, and
+ * pulling 400 markdown bodies to fuzzy-match a glossary term would be absurd).
+ *
+ * Sorted by path so the index — and therefore every tie-break below it — is
+ * deterministic regardless of what order Postgres hands back the departments.
+ */
+const lessonIndex = cache(async (): Promise<LessonMatch[]> => {
+  const slugs = await getAllDepartmentSlugs();
+  const depts = await Promise.all(slugs.map((s) => getDepartmentBySlug(s)));
+  const out: LessonMatch[] = [];
+  for (const d of depts) {
+    if (!d) continue;
+    for (const l of flattenLessons(d)) {
+      out.push({
+        path: `/guides/${l.departmentSlug}/${l.moduleSlug}/${l.slug}`,
+        title: l.title,
+        summary: l.summary,
+        departmentName: l.departmentName,
+        moduleTitle: l.moduleTitle,
+      });
+    }
+  }
+  return out.sort((a, b) => a.path.localeCompare(b.path));
+});
+
+// A cue only counts as a hit on a whole-token boundary, so "CAN" never matches
+// "can", and "PID" never matches "rapid".
+function cueRegex(phrase: string): RegExp {
+  const esc = phrase.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(^|[^a-z0-9])${esc}([^a-z0-9]|$)`, "i");
+}
+
+const TITLE_HIT = 6;
+const SUMMARY_HIT = 3;
+/** Multi-word cues are far less likely to be coincidental, so they weigh more. */
+const PHRASE_WEIGHT = 1.5;
+/**
+ * Floor for showing a lesson at all: one title hit, or two summary hits. Set
+ * deliberately high — on a page whose whole job is to send readers somewhere
+ * useful, a wrong link costs more than an empty section.
+ */
+const MIN_SCORE = 6;
+const MAX_LESSONS = 3;
+
+/**
+ * The 2–3 lessons that genuinely cover this term, scored against real lesson
+ * titles and summaries at build time. Returns [] when nothing clears the bar —
+ * several terms (KitBot, Rookie All-Star) have no lesson that actually
+ * discusses them, and an honest empty section beats a plausible-looking wrong
+ * link.
+ */
+function matchLessons(t: GlossaryTerm, index: LessonMatch[]): LessonMatch[] {
+  const cues = t.lessonCues ?? [];
+  if (!cues.length) return [];
+  const compiled = cues.map((c) => ({
+    re: cueRegex(c),
+    weight: c.includes(" ") ? PHRASE_WEIGHT : 1,
+  }));
+  return index
+    .map((l) => {
+      let score = 0;
+      for (const { re, weight } of compiled) {
+        if (re.test(l.title)) score += TITLE_HIT * weight;
+        if (l.summary && re.test(l.summary)) score += SUMMARY_HIT * weight;
+      }
+      return { score, l };
+    })
+    .filter((x) => x.score >= MIN_SCORE)
+    .sort((a, b) => b.score - a.score || a.l.title.localeCompare(b.l.title))
+    .slice(0, MAX_LESSONS)
+    .map((x) => x.l);
+}
+
+/* ───────────────────────── related terms ───────────────────────────── */
 
 /** Meaningful tokens for keyword-overlap scoring (drops short/stop words). */
 const STOP = new Set([
@@ -63,12 +165,24 @@ function tokens(s: string): Set<string> {
 }
 
 /**
- * Pick up to 4 related terms: same category and keyword overlap both count,
- * with a deterministic alphabetical tiebreak so the set is stable per build.
+ * Up to 4 related terms. Curated `related` entries lead (the heuristic is fine
+ * inside a category and poor across them, and the cross-category hops are the
+ * ones worth having); the existing category + keyword-overlap score then fills
+ * whatever slots are left, with a deterministic alphabetical tiebreak.
  */
 function relatedTerms(self: GlossaryTerm, n = 4): GlossaryTerm[] {
+  const picked: GlossaryTerm[] = [];
+  const seen = new Set<string>([self.term]);
+  for (const name of self.related ?? []) {
+    const t = BY_TERM.get(name);
+    if (!t || seen.has(t.term)) continue;
+    seen.add(t.term);
+    picked.push(t);
+    if (picked.length >= n) return picked;
+  }
+
   const mine = tokens(`${self.term} ${self.definition}`);
-  return GLOSSARY.filter((t) => t.term !== self.term)
+  const fill = GLOSSARY.filter((t) => !seen.has(t.term))
     .map((t) => {
       let score = t.category === self.category ? 3 : 0;
       const theirs = tokens(`${t.term} ${t.definition}`);
@@ -76,9 +190,12 @@ function relatedTerms(self: GlossaryTerm, n = 4): GlossaryTerm[] {
       return { t, score };
     })
     .sort((a, b) => b.score - a.score || a.t.term.localeCompare(b.t.term))
-    .slice(0, n)
+    .slice(0, n - picked.length)
     .map((r) => r.t);
+  return [...picked, ...fill];
 }
+
+/* ───────────────────────────── metadata ────────────────────────────── */
 
 /**
  * A clean 140–160 char meta description built only from the term + its real
@@ -95,6 +212,20 @@ function buildDescription(t: GlossaryTerm): string {
     d = (lastSpace > 120 ? cut.slice(0, lastSpace) : cut).replace(/[\s—:-]+$/, "") + "…";
   }
   return d;
+}
+
+/** Every genuine alternate name for the term, deduped against the term itself. */
+function alternateNames(t: GlossaryTerm): string[] {
+  const out: string[] = [];
+  const seen = new Set([t.term.toLowerCase()]);
+  for (const n of [t.abbr, ...(t.alsoCalled ?? [])]) {
+    if (!n) continue;
+    const k = n.toLowerCase();
+    if (seen.has(k)) continue;
+    seen.add(k);
+    out.push(n);
+  }
+  return out;
 }
 
 export function generateStaticParams() {
@@ -115,6 +246,10 @@ export async function generateMetadata({
     title: `${t.term} — FRC Glossary`,
     description,
     alternates: { canonical: url },
+    // A term with no hand-written "in a match" section is a definition and
+    // nothing more. It still renders for anyone who browses to it, but it
+    // doesn't go in the index — thin pages at this scale are a real liability.
+    ...(hasGlossaryDepth(t) ? {} : { robots: { index: false, follow: true } }),
     openGraph: {
       title: `${t.term} — FRC Glossary`,
       description,
@@ -138,6 +273,8 @@ export default async function GlossaryTermPage({
   const url = `${SITE}/glossary/${slug}`;
   const accent = CATEGORY_COLOR[t.category] ?? DEFAULT_COLOR;
   const related = relatedTerms(t);
+  const lessons = matchLessons(t, await lessonIndex());
+  const altNames = alternateNames(t);
 
   return (
     <div className="relative overflow-x-clip text-foreground">
@@ -149,7 +286,19 @@ export default async function GlossaryTermPage({
           description: t.definition,
           url,
           inDefinedTermSet: `${SITE}/glossary`,
-          ...(t.abbr && t.abbr !== t.term ? { alternateName: t.abbr } : {}),
+          ...(altNames.length ? { alternateName: altNames } : {}),
+          // The practical "where you meet it" copy is a disambiguating
+          // elaboration on the definition, not the definition itself.
+          ...(t.inMatch ? { disambiguatingDescription: t.inMatch } : {}),
+          ...(lessons.length
+            ? {
+                subjectOf: lessons.map((l) => ({
+                  "@type": "LearningResource",
+                  name: l.title,
+                  url: `${SITE}${l.path}`,
+                })),
+              }
+            : {}),
         }}
       />
       <JsonLd
@@ -231,6 +380,19 @@ export default async function GlossaryTermPage({
             </p>
           </RiseItem>
 
+          {t.alsoCalled && t.alsoCalled.length > 0 && (
+            <RiseItem>
+              <p className="mt-4 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                <span className="font-medium text-foreground/70">Also called</span>
+                {t.alsoCalled.map((n) => (
+                  <span key={n} className="ac-chip inline-flex items-center text-xs">
+                    {n}
+                  </span>
+                ))}
+              </p>
+            </RiseItem>
+          )}
+
           <RiseItem>
             <div className="mt-7 flex flex-wrap items-center gap-3">
               {t.internalLink && (
@@ -253,13 +415,102 @@ export default async function GlossaryTermPage({
         </RiseGroup>
       </header>
 
-      <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
+      {/* ======================= IN A MATCH ========================== */}
+      {/* The reason this page exists: what the term actually looks like from
+          the driver station, the pit, or the CAD review. Hand-written per
+          term; omitted entirely rather than filled with anything generic. */}
+      {t.inMatch && (
+        <section className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
+          <Reveal>
+            <div
+              className="ac-card relative overflow-hidden p-6 sm:p-8"
+              style={{ "--a": accent } as CSSProperties}
+            >
+              <span
+                aria-hidden
+                className="pointer-events-none absolute inset-y-0 left-0 w-1"
+                style={{ background: accent }}
+              />
+              <p className="ac-eyebrow flex items-center gap-1.5">
+                <Target aria-hidden className="h-3.5 w-3.5" /> Why it matters in a match
+              </p>
+              <h2 className="mt-2 font-display text-2xl font-bold tracking-tight">
+                Where you&apos;ll actually meet {t.abbr && t.abbr !== t.term ? t.abbr : t.term}
+              </h2>
+              <p className="mt-3 text-pretty text-base leading-relaxed text-foreground/80">
+                {t.inMatch}
+              </p>
+            </div>
+          </Reveal>
+        </section>
+      )}
+
+      <div className="mx-auto max-w-3xl px-4 pt-10 sm:px-6 lg:px-8">
         <hr aria-hidden className="ac-divider" />
       </div>
 
+      {/* ==================== WHERE YOU'LL SEE THIS =================== */}
+      {/* Real lessons from the catalog, matched at build time on titles and
+          summaries. Empty when nothing scores high enough — see matchLessons. */}
+      {lessons.length > 0 && (
+        <section className="mx-auto max-w-3xl px-4 pt-10 sm:px-6 lg:px-8">
+          <Reveal>
+            <p className="ac-eyebrow flex items-center gap-1.5">
+              <GraduationCap aria-hidden className="h-3.5 w-3.5" /> Where you&apos;ll see this
+            </p>
+            <h2 className="mt-2 font-display text-2xl font-bold tracking-tight">
+              Lessons that cover {t.term}
+            </h2>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+              Free, structured LearnFRC lessons where this comes up in practice.
+            </p>
+          </Reveal>
+          <RevealGroup className="mt-6 space-y-3">
+            {lessons.map((l) => (
+              <RevealItem key={l.path}>
+                <Hover lift={-3}>
+                  <Link
+                    href={l.path}
+                    className="ac-card group flex items-start gap-4 p-5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                  >
+                    <span
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border transition-transform duration-300 group-hover:scale-105"
+                      style={{
+                        color: inkFor(accent),
+                        borderColor: `color-mix(in srgb, ${accent} 40%, transparent)`,
+                        background: `color-mix(in srgb, ${accent} 12%, transparent)`,
+                      }}
+                    >
+                      <BookOpen aria-hidden className="h-[18px] w-[18px]" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <small className="ac-eyebrow block">
+                        {l.departmentName} · {l.moduleTitle}
+                      </small>
+                      <span className="mt-1 block font-display text-[17px] font-bold leading-snug tracking-tight text-foreground group-hover:text-primary">
+                        {l.title}
+                      </span>
+                      {l.summary && (
+                        <span className="mt-1.5 block text-pretty text-sm leading-relaxed text-muted-foreground">
+                          {l.summary}
+                        </span>
+                      )}
+                    </span>
+                    <ArrowRight
+                      aria-hidden
+                      className="mt-1 hidden h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-primary sm:block"
+                    />
+                  </Link>
+                </Hover>
+              </RevealItem>
+            ))}
+          </RevealGroup>
+        </section>
+      )}
+
       {/* ======================= RELATED TERMS ======================= */}
       {related.length > 0 && (
-        <section className="mx-auto max-w-6xl px-4 pt-10 sm:px-6 lg:px-8">
+        <section className="mx-auto max-w-6xl px-4 pt-14 sm:px-6 lg:px-8">
           <Reveal>
             <p className="ac-eyebrow flex items-center gap-1.5">
               <Tags aria-hidden className="h-3.5 w-3.5" /> Related terms

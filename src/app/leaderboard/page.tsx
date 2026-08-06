@@ -1,4 +1,5 @@
 import type { CSSProperties, ReactNode } from "react";
+import type { Metadata } from "next";
 import Link from "next/link";
 import {
   Trophy,
@@ -29,11 +30,20 @@ import { getSession } from "@/lib/auth";
 import type { Profile } from "@/lib/types";
 import { ChampionPanel } from "./_champion-panel";
 
-export const metadata = {
-  title: "Leaderboard · LearnFRC",
+export const metadata: Metadata = {
+  // The root template appends " · LearnFRC" — don't repeat it here.
+  title: "Leaderboard",
   description:
     "See the top FRC learners climbing the ranks — earn XP, level up, and represent your team on the global LearnFRC leaderboard.",
   alternates: { canonical: "/leaderboard" },
+  // This page lists usernames and team numbers of learners, many of whom are
+  // minors. It's user-generated personal data with no search value, so keep it
+  // out of the index entirely while leaving links crawlable.
+  robots: {
+    index: false,
+    follow: true,
+    googleBot: { index: false, follow: true },
+  },
 };
 
 const HEADLINE_GRADIENT: CSSProperties = {
