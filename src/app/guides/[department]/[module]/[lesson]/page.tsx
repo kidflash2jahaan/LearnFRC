@@ -49,6 +49,10 @@ import {
   SuggestEditIsland,
 } from "./_progress-islands";
 import { LessonSignupHook } from "@/components/lesson/lesson-signup-hook";
+import {
+  LessonNextStep,
+  type NextStepLink,
+} from "@/components/lesson/lesson-next-step";
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com";
 
@@ -207,6 +211,42 @@ export default async function LessonPage({
   // article's rendered heading ids exactly.
   const headings = extractHeadings(content);
 
+  // ---- end-of-lesson continuation data (see <LessonNextStep/>) -------------
+  // All derived server-side from the department tree we already loaded, so the
+  // whole block is static HTML — crawler-visible, zero extra queries, no CLS.
+  const moduleHref = `/guides/${dept.slug}/${mod.slug}`;
+  const posInModule = mod.lessons.findIndex((l) => l.id === les.id) + 1;
+  const toLink = (l: {
+    title: string;
+    summary: string | null;
+    slug: string;
+    moduleSlug?: string;
+  }): NextStepLink => ({
+    title: l.title,
+    summary: l.summary,
+    href: `/guides/${dept.slug}/${l.moduleSlug ?? mod.slug}/${l.slug}`,
+  });
+
+  // "Related" means same module first — those are genuinely adjacent in scope.
+  // Only if this module has nothing else to offer do we fall back to the
+  // nearest lessons in the department, and the label says so.
+  const skip = new Set([les.id, next?.id].filter(Boolean) as string[]);
+  const siblings = mod.lessons.filter((l) => !skip.has(l.id));
+  const related: NextStepLink[] = siblings.length
+    ? siblings.slice(0, 4).map((l) => toLink(l))
+    : flat
+        .filter((l) => !skip.has(l.id))
+        .slice(Math.max(0, idx - 2), Math.max(0, idx - 2) + 4)
+        .map((l) => toLink(l));
+  const relatedLabel = siblings.length
+    ? `More in ${mod.title}`
+    : `More in ${dept.name}`;
+
+  const first = flat[0];
+  const startHref = first
+    ? `/guides/${dept.slug}/${first.moduleSlug}/${first.slug}`
+    : `/guides/${dept.slug}`;
+
   const ARTICLE_ID = "lesson-body";
 
   return (
@@ -286,6 +326,15 @@ export default async function LessonPage({
             <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50" aria-hidden />
             <Link href={`/guides/${dept.slug}`} className="transition-colors hover:text-primary">
               {dept.name}
+            </Link>
+            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50" aria-hidden />
+            {/* Module tier: the rendered trail used to jump dept -> lesson while
+                the BreadcrumbList JSON-LD below asserted a 5-level trail that
+                included the module — a structured-data/on-page mismatch. It also
+                left every module hub with zero inbound links from the lessons it
+                indexes. Both are fixed by rendering the level we already claim. */}
+            <Link href={moduleHref} className="transition-colors hover:text-primary">
+              {mod.title}
             </Link>
             <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50" aria-hidden />
             <span className="truncate font-medium text-foreground">{les.title}</span>
@@ -434,6 +483,30 @@ export default async function LessonPage({
                 </section>
               </Reveal>
             )}
+
+            {/* Continuation FIRST. Measured: the old page put the only "next
+                lesson" link 2,305px below the end of the prose, behind a
+                1,102px quiz, and offered four outbound target="_blank" links
+                ("Go deeper") before it. The reader met the exit before the
+                continuation. This block is server-rendered and unanimated so
+                it is visible the instant the text ends. */}
+            <LessonNextStep
+              deptName={dept.name}
+              deptHref={`/guides/${dept.slug}`}
+              deptIcon={meta.icon}
+              moduleTitle={mod.title}
+              moduleHref={moduleHref}
+              moduleLessonCount={mod.lessons.length}
+              positionInModule={posInModule}
+              next={next ? { title: next.title, summary: next.summary, href: nextHref } : null}
+              nextIsNewModule={!!next && next.moduleSlug !== mod.slug}
+              related={related}
+              relatedLabel={relatedLabel}
+              startHref={startHref}
+              showStart={idx > 0}
+              accentColor={meta.color}
+              ink={ink}
+            />
 
             {/* resources */}
             {resources.length > 0 && (

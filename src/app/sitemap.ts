@@ -3,7 +3,7 @@ import type { DeptWithModules, ModuleRow } from "@/lib/queries";
 import { getAllDepartmentSlugs, getDepartmentBySlug } from "@/lib/queries";
 import { getArticles } from "@/lib/queries";
 import { PATHS } from "@/lib/paths-data";
-import { GLOSSARY, glossarySlug } from "@/lib/glossary-data";
+import { GLOSSARY, glossarySlug, hasGlossaryDepth } from "@/lib/glossary-data";
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com";
 
@@ -78,8 +78,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { path: "/tools/frc-tipping-calculator", lastModified: TOOLS_UPDATED },
     { path: "/tools/frc-current-budget", lastModified: TOOLS_UPDATED },
     { path: "/tools/frc-deflection-calculator", lastModified: TOOLS_UPDATED },
-    { path: "/leaderboard", lastModified: STATIC_UPDATED },
     { path: "/blog", lastModified: STATIC_UPDATED },
+    // Orphan rescue. /about is a 200, index/follow, self-canonical page, but
+    // the only references to it anywhere in the rendered HTML are
+    // `<link rel="author">` and the JSON-LD `Person.url` — not one crawlable
+    // <a href> on any of the 683 sitemap pages. Without this entry Google has
+    // no ordinary path to the page that says who writes this site and how it's
+    // reviewed, which is the exact signal an authority-starved domain needs.
+    { path: "/about", lastModified: STATIC_UPDATED },
     { path: "/for-teams", lastModified: STATIC_UPDATED },
     { path: "/contributions", lastModified: STATIC_UPDATED },
     { path: "/terms", lastModified: LAUNCH },
@@ -100,7 +106,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }));
 
   // Per-term glossary pages — one indexable URL per defined term.
-  const glossaryRoutes: MetadataRoute.Sitemap = GLOSSARY.map((t) => ({
+  //
+  // /glossary/[term] serves `robots: { index: false }` to any term that fails
+  // `hasGlossaryDepth` (no hand-written "in a match" section). Listing such a
+  // term here would ask Google to spend a crawl on a URL we then refuse to
+  // index — the purest form of wasted crawl budget. All 70 terms pass today,
+  // so this filter removes nothing right now; it exists so that adding a
+  // stub term can never silently reintroduce that waste.
+  const glossaryRoutes: MetadataRoute.Sitemap = GLOSSARY.filter(
+    hasGlossaryDepth
+  ).map((t) => ({
     url: `${SITE}/glossary/${glossarySlug(t.term)}`,
     lastModified: GLOSSARY_UPDATED,
   }));

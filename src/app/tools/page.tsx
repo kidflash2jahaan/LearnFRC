@@ -5,6 +5,7 @@ import {
   Wrench,
   Calculator,
   Cable,
+  Cog,
   Move3d,
   BatteryCharging,
   Ruler,
@@ -51,6 +52,14 @@ const TOOLS = [
     title: "Team Budget Calculator",
     desc: "What will your season actually cost? Itemize registration, drivetrain, electronics, tools, and travel — with a sponsor-ready summary.",
     tag: "Fundraising",
+  },
+  {
+    href: "/tools/frc-gear-ratio-calculator",
+    icon: Cog,
+    color: "#0f766e",
+    title: "Gear Ratio Calculator",
+    desc: "Overall reduction, free vs adjusted speed, wheel torque, pushing force against the traction limit, and a brownout check — with every formula shown.",
+    tag: "Drivetrain",
   },
   {
     href: "/tools/frc-wire-gauge-calculator",

@@ -68,23 +68,37 @@ function requestHostname(request: NextRequest): string {
 }
 
 export async function middleware(request: NextRequest) {
-  // Legacy staging host: permanent redirect to the apex with the same
-  // path/query, stamping utm_source (unless the link already carries
-  // attribution) so SourceCapture buckets the visit correctly even when the
-  // browser sends no Referer.
+  // Legacy staging host -> apex, same path/query, 308 (permanent, so the link
+  // equity transfers).
+  //
+  // Attribution rides in the lf_src COOKIE, not a utm_ query param, and that
+  // distinction matters more than it looks: Search Console shows 34 of this
+  // site's 38 external backlinks pointing at this legacy host — it is by far
+  // the most valuable inbound path we have. Redirecting those links to a
+  // parameterised URL would hand every crawler a non-canonical destination and
+  // muddy the consolidation of the one authority signal that counts. The
+  // cookie keeps first-touch attribution working (the page-view beacon and the
+  // signup action both read lf_src server-side) while crawlers and humans land
+  // on the clean canonical URL.
   const hostname = requestHostname(request);
   if (LEGACY_HOSTS.has(hostname)) {
     const url = new URL(
       request.nextUrl.pathname + request.nextUrl.search,
       "https://learnfrc.com"
     );
-    if (!url.searchParams.has("utm_source") && !url.searchParams.has("ref")) {
-      url.searchParams.set(
-        "utm_source",
-        referrerSource(request.headers.get("referer"))
-      );
+    const res = NextResponse.redirect(url, 308);
+    // Never overwrite an existing first-touch source, and let an explicit
+    // ?ref= referral win — SourceCapture treats that as "Referral".
+    if (!request.cookies.get("lf_src") && !url.searchParams.has("ref")) {
+      res.cookies.set("lf_src", referrerSource(request.headers.get("referer")), {
+        path: "/",
+        maxAge: 60 * 60 * 24 * 90,
+        sameSite: "lax",
+        // readable by SourceCapture, which short-circuits when it is present
+        httpOnly: false,
+      });
     }
-    return NextResponse.redirect(url, 308);
+    return res;
   }
 
   const response = await updateSession(request);

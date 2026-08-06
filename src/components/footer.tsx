@@ -12,6 +12,10 @@ const LEARN = [
   { label: "Resources", href: "/resources" },
   { label: "For Teams", href: "/for-teams" },
   { label: "Contributions", href: "/contributions" },
+  // /about carries the Person/Organization schema that backs authorship on
+  // every article. It shipped with nothing linking to it, so it was a hard
+  // orphan — reachable only via the sitemap.
+  { label: "About", href: "/about" },
 ];
 
 const ACCOUNT = [

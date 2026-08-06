@@ -14,11 +14,23 @@ import {
   Cable,
   Move3d,
   BatteryCharging,
+  Ruler,
+  Route,
+  LifeBuoy,
+  Terminal,
+  Lightbulb,
+  Network,
+  BatteryWarning,
+  Wifi,
+  Compass,
+  ScanLine,
+  AlertTriangle,
 } from "lucide-react";
 import { Icon } from "@/lib/icon-map";
 import { deptMeta, inkFor } from "@/lib/departments";
 import { getDepartments, getOverviewStats } from "@/lib/queries";
 import { DEPT_CATALOG } from "@/lib/dept-catalog";
+import { PATHS } from "@/lib/paths-data";
 import { AnimatedCounter } from "@/components/animated-counter";
 import {
   Rise,
@@ -63,6 +75,64 @@ const STEPS = [
     icon: Award,
     title: "Earn certificates",
     body: "Finish a department and print a certificate — real proof you learned the whole role, from your first day in the pit.",
+  },
+];
+
+/**
+ * The eight failure modes that actually stop an FRC robot on competition day,
+ * each pointed at the article that diagnoses it. Curated on purpose: these are
+ * the highest-intent pages we publish (someone searching "no robot code" needs
+ * an answer in the next ten minutes), and they are the ones a homepage link
+ * genuinely helps a human find. Slugs are verified against the articles table.
+ */
+const PIT_FIXES = [
+  {
+    href: "/blog/frc-no-robot-code-driver-station-troubleshooting",
+    icon: AlertTriangle,
+    symptom: "Driver Station says “No Robot Code”",
+    title: "Every cause of No Robot Code, in the order to check them",
+  },
+  {
+    href: "/blog/frc-wpilib-deploy-troubleshooting",
+    icon: Terminal,
+    symptom: "Your code won’t deploy",
+    title: "WPILib deploy failures: build errors, RIO comms, and Gradle",
+  },
+  {
+    href: "/blog/frc-status-lights-and-error-codes",
+    icon: Lightbulb,
+    symptom: "A light is blinking and nobody knows why",
+    title: "FRC status lights & blink codes: the complete decoder",
+  },
+  {
+    href: "/blog/frc-radio-networking-guide",
+    icon: Wifi,
+    symptom: "You can’t connect to the robot",
+    title: "Robot radio & networking: setup, IP addresses, and the 2026 change",
+  },
+  {
+    href: "/blog/frc-can-bus",
+    icon: Network,
+    symptom: "CAN devices keep dropping off the bus",
+    title: "FRC CAN bus explained — and how to fix common problems",
+  },
+  {
+    href: "/blog/frc-battery-guide",
+    icon: BatteryWarning,
+    symptom: "Batteries die halfway through a match",
+    title: "FRC battery guide: charging, care, testing, and safety",
+  },
+  {
+    href: "/blog/frc-swerve-module-offsets-calibration",
+    icon: Compass,
+    symptom: "Swerve wheels point the wrong way",
+    title: "Swerve module offsets: calibration and backwards wheels",
+  },
+  {
+    href: "/blog/frc-inspection-checklist-guide",
+    icon: ScanLine,
+    symptom: "You have to pass inspection today",
+    title: "How to pass FRC robot inspection: full walkthrough",
   },
 ];
 
@@ -236,6 +306,57 @@ export default async function HomePage() {
             );
           })}
         </RevealGroup>
+
+        {/* Ready-made routes through several departments, for people who don't
+            know which single tile to click. */}
+        <Reveal className="mt-6">
+          <div className="ac-glass p-6 sm:p-7">
+            <div className="flex flex-wrap items-end justify-between gap-4">
+              <div>
+                <p className="ac-eyebrow flex items-center gap-1.5">
+                  <Route className="h-3.5 w-3.5" aria-hidden /> Not sure which one?
+                </p>
+                <h3 className="mt-1.5 font-display text-xl font-bold sm:text-2xl">
+                  Follow a ready-made route
+                </h3>
+                <p className="mt-1.5 max-w-lg text-sm leading-relaxed text-muted-foreground">
+                  Each path strings several departments together in the order a
+                  real team actually learns them — so you always know what comes
+                  next.
+                </p>
+              </div>
+              <Link href="/paths" className="ac-btn-ghost shrink-0 text-sm">
+                All paths <ArrowRight className="h-4 w-4" aria-hidden />
+              </Link>
+            </div>
+
+            <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+              {PATHS.map((p) => (
+                <Hover key={p.slug} className="h-full" lift={-4}>
+                  <Link
+                    href={`/paths/${p.slug}`}
+                    className="ac-card group flex h-full items-start gap-3 rounded-2xl p-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring lg:flex-col lg:gap-2.5"
+                  >
+                    <span
+                      className="ac-badge flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
+                      style={{ "--a": p.color } as CSSProperties}
+                    >
+                      <Icon name={p.icon} className="h-[18px] w-[18px]" aria-hidden />
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block font-display text-[14px] font-bold leading-snug text-foreground transition-colors group-hover:text-primary">
+                        {p.title}
+                      </span>
+                      <span className="mt-1 block text-xs text-muted-foreground">
+                        {p.steps.length} departments
+                      </span>
+                    </span>
+                  </Link>
+                </Hover>
+              ))}
+            </div>
+          </div>
+        </Reveal>
       </section>
 
       {/* ========================= HOW IT WORKS ========================= */}
@@ -289,18 +410,19 @@ export default async function HomePage() {
             </Link>
           </div>
         </Reveal>
-        <RevealGroup className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <RevealGroup className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           {[
             { href: "/tools/frc-budget-calculator", icon: Calculator, title: "Team Budget", desc: "What your season will actually cost — itemized, sponsor-ready." },
             { href: "/tools/frc-wire-gauge-calculator", icon: Cable, title: "Wire Gauge", desc: "Voltage drop + a check against FRC's minimum-AWG rules." },
             { href: "/tools/frc-tipping-calculator", icon: Move3d, title: "Tip-Over", desc: "Will your robot tip? Enter track, wheelbase, CoG height." },
             { href: "/tools/frc-current-budget", icon: BatteryCharging, title: "Brownout", desc: "Total draw vs the 120 A main breaker + roboRIO threshold." },
+            { href: "/tools/frc-deflection-calculator", icon: Ruler, title: "Deflection", desc: "Will that arm or rail sag? Sag, bending stress, safety factor." },
           ].map((t) => (
             <RevealItem key={t.href}>
               <Hover className="h-full" lift={-5}>
                 <Link
                   href={t.href}
-                  className="ac-card group flex h-full flex-col gap-2.5 rounded-2xl p-5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                  className="ac-card group flex h-full flex-col gap-2.5 rounded-2xl p-[18px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                 >
                   <span className="ac-badge flex h-10 w-10 items-center justify-center rounded-2xl">
                     <t.icon className="h-5 w-5" aria-hidden />
@@ -312,6 +434,56 @@ export default async function HomePage() {
                   <span className="mt-auto inline-flex items-center gap-1 pt-1 text-sm font-semibold text-primary">
                     Open <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" aria-hidden />
                   </span>
+                </Link>
+              </Hover>
+            </RevealItem>
+          ))}
+        </RevealGroup>
+      </section>
+
+      {/* ======================== FIX IT IN THE PIT ======================== */}
+      <section className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
+        <Reveal>
+          <p className="ac-eyebrow flex items-center gap-1.5">
+            <LifeBuoy className="h-3.5 w-3.5" aria-hidden /> Fix it in the pit
+          </p>
+          <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
+            <h2 className="max-w-xl text-balance font-display text-3xl font-bold sm:text-4xl">
+              Forty minutes to your next match
+            </h2>
+            <Link href="/blog" className="ac-btn-ghost shrink-0 text-sm">
+              <BookOpen className="h-4 w-4" aria-hidden /> All articles
+            </Link>
+          </div>
+          <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-muted-foreground">
+            The failures that actually stop a robot on competition day, each with
+            a walkthrough that starts at the most likely cause.
+          </p>
+        </Reveal>
+
+        <RevealGroup className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {PIT_FIXES.map((f) => (
+            <RevealItem key={f.href} className="h-full">
+              <Hover className="h-full" lift={-4}>
+                <Link
+                  href={f.href}
+                  className="ac-card group flex h-full items-center gap-3.5 rounded-2xl p-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                >
+                  <span className="ac-badge flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
+                    <f.icon className="h-5 w-5" aria-hidden />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block font-display text-[15px] font-bold leading-snug text-foreground transition-colors group-hover:text-primary">
+                      {f.symptom}
+                    </span>
+                    <span className="mt-0.5 block text-[13px] leading-snug text-muted-foreground">
+                      {f.title}
+                    </span>
+                  </span>
+                  <ArrowUpRight
+                    className="h-4 w-4 shrink-0 text-foreground/40 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
+                    aria-hidden
+                  />
                 </Link>
               </Hover>
             </RevealItem>

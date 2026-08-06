@@ -319,6 +319,31 @@ export function AuthForm({
         </Button>
       </motion.div>
 
+      {/* Disclosure at the point of collection. Accounts are enrolled in
+          learning-reminder email by default (email_opt_in defaults true), and
+          until now nothing on this form said so — a real person reported
+          receiving mail he never knowingly opted into. Saying it plainly here
+          is the honest fix; the unsubscribe link in every email and the toggle
+          in Settings are the escape hatches. */}
+      {isSignup && (
+        <motion.p
+          variants={item}
+          className="text-center text-xs leading-relaxed text-muted-foreground"
+        >
+          We&apos;ll email you occasional learning reminders — your next lesson,
+          or a streak about to end. Every one has a one-click unsubscribe, and
+          you can turn them off any time in{" "}
+          <span className="font-medium text-foreground">Settings</span>. See our{" "}
+          <Link
+            href="/privacy"
+            className="font-medium text-primary underline-offset-4 transition-colors hover:underline"
+          >
+            privacy policy
+          </Link>
+          .
+        </motion.p>
+      )}
+
       <motion.p
         variants={item}
         className="pt-1 text-center text-sm text-muted-foreground"
