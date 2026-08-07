@@ -229,7 +229,11 @@ export default async function LeaderboardPage() {
         <div className="mx-auto max-w-5xl px-4 pb-24 sm:px-6 lg:px-8">
           {user && profile?.username && (
             <Reveal>
-              <InviteCard username={profile.username} count={referralCount} />
+              <InviteCard
+                username={profile.username}
+                count={referralCount}
+                via="leaderboard"
+              />
             </Reveal>
           )}
 

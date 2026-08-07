@@ -221,9 +221,12 @@ export default async function CertificatePage({
           <div className="flex items-center gap-2">
             <ShareButton
               text={`I just earned the ${dept.name} certificate on LearnFRC — free FRC training for every seat on the team. Earn yours 👇`}
+              // With a username this is a real referral, so tag the surface
+              // that earned it. Without one there is nothing to attribute —
+              // the plain homepage URL must stay bare (no ref, no via).
               url={
                 profile?.username
-                  ? `https://learnfrc.com/signup?ref=${profile.username}`
+                  ? `https://learnfrc.com/signup?ref=${profile.username}&via=certificate`
                   : "https://learnfrc.com"
               }
             />
@@ -399,7 +402,7 @@ export default async function CertificatePage({
 
         {profile?.username && (
           <Reveal delay={0.12} className="mt-6 print:hidden">
-            <TeamChallenge username={profile.username} />
+            <TeamChallenge username={profile.username} via="certificate" />
           </Reveal>
         )}
 

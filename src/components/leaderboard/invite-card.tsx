@@ -18,11 +18,18 @@ import { ShareButton } from "@/components/share-button";
 export function InviteCard({
   username,
   count,
+  via,
 }: {
   username: string;
   count: number;
+  /** Share surface for attribution — appended to the referral link as &via=. */
+  via?: "dashboard" | "leaderboard";
 }) {
-  const link = `https://learnfrc.com/signup?ref=${username}`;
+  // One URL for every control on this card: the copy button and the native
+  // share sheet must hand out the same link, or attribution splits in half.
+  const link = via
+    ? `https://learnfrc.com/signup?ref=${username}&via=${via}`
+    : `https://learnfrc.com/signup?ref=${username}`;
   const [copied, setCopied] = React.useState(false);
   const reduce = useReducedMotion();
 
@@ -54,7 +61,7 @@ export function InviteCard({
             <UserPlus className="h-5 w-5" aria-hidden />
           </span>
           <div className="min-w-0">
-            <p className="ac-eyebrow">Your referral link</p>
+            <p className="ac-eyebrow">Free for your team</p>
             <h2 className="font-display text-lg font-bold leading-tight text-foreground">
               Invite your pit crew
             </h2>
@@ -69,19 +76,18 @@ export function InviteCard({
       </div>
 
       <p className="relative mt-3 text-[15px] leading-relaxed text-foreground/70">
-        Your whole team learns free — you get the bragging rights.{" "}
-        {count > 0 ? (
+        Send this to someone on your team — they get every lesson on LearnFRC,
+        free.{" "}
+        {count > 0 && (
           <>
             <span className="font-semibold text-foreground">
               {count} {count === 1 ? "teammate has" : "teammates have"}
             </span>{" "}
             joined through you.{" "}
           </>
-        ) : (
-          "Be the reason your team levels up. "
         )}
-        You <span className="font-semibold text-foreground">both earn +25 XP</span>{" "}
-        when a teammate joins with your link.
+        You <span className="font-semibold text-foreground">both get +25 XP</span>{" "}
+        once they confirm their email.
       </p>
 
       <div className="relative mt-4 flex flex-col gap-2.5 sm:flex-row sm:items-center">

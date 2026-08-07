@@ -44,6 +44,18 @@ function withPct(rows: Omit<MiniRow, "pct">[]): MiniRow[] {
   return rows.map((r) => ({ ...r, pct: (r.value / max) * 100 }));
 }
 
+/**
+ * Every surface that can earn a referral (the `?via=` allow-list), in journey
+ * order. All four are rendered even at zero: a surface that shipped and earned
+ * nothing is a finding, and it can only be read as one if the row is present.
+ */
+const REFERRAL_SURFACES: { key: string; label: string }[] = [
+  { key: "lesson-milestone", label: "Lesson milestone" },
+  { key: "certificate", label: "Certificate" },
+  { key: "dashboard", label: "Dashboard" },
+  { key: "leaderboard", label: "Leaderboard" },
+];
+
 export default async function AdminPage() {
   const { user, isAdmin } = await getSession();
   if (!user) redirect("/login?next=/admin");
@@ -120,6 +132,45 @@ export default async function AdminPage() {
       value: r.referrals,
     }))
   );
+  // Referral signups by the surface that earned them. Two deliberate choices:
+  //  - The four known surfaces are scaled against EACH OTHER, so the bars
+  //    compare like with like.
+  //  - Referrals from before attribution existed get a labelled row with NO bar
+  //    (pct omitted), pinned last. They are real signups, so dropping them would
+  //    understate the referral total — but they are not a surface, and letting
+  //    them into the bar scale would make the historical bucket look like the
+  //    winning channel forever.
+  const bySurface = new Map(stats.referralSurfaces.map((s) => [s.surface ?? "", s]));
+  const untrackedReferrals = bySurface.get("")?.signups ?? 0;
+  const attributedReferrals = stats.referralSurfaces
+    .filter((s) => s.surface)
+    .reduce((n, s) => n + s.signups, 0);
+  // Any surface key the server has started sending that REFERRAL_SURFACES does
+  // not know about yet is rendered under its raw key rather than dropped —
+  // otherwise adding a `via` value server-side would silently delete real
+  // signups from this panel and stop the total reconciling with `referralUsers`.
+  const unknownSurfaces = stats.referralSurfaces
+    .map((s) => s.surface)
+    .filter((k): k is string => !!k && !REFERRAL_SURFACES.some((r) => r.key === k))
+    .map((key) => ({ key, label: key }));
+  const surfaceRows: MiniRow[] = [
+    ...withPct(
+      [...REFERRAL_SURFACES, ...unknownSurfaces]
+        .map(({ key, label }) => {
+          const s = bySurface.get(key);
+          return {
+            label,
+            sub: s && s.signups7d > 0 ? `${s.signups7d} this week` : undefined,
+            value: s?.signups ?? 0,
+          };
+        })
+        .sort((a, b) => b.value - a.value)
+    ),
+    ...(untrackedReferrals > 0
+      ? [{ label: "Before tracking", sub: "surface unknown", value: untrackedReferrals }]
+      : []),
+  ];
+
   const articleRows = withPct(
     stats.articleViews.slice(0, 10).map((a) => ({ label: a.title, value: a.views }))
   );
@@ -260,6 +311,25 @@ export default async function AdminPage() {
                   empty: "No referrals yet.",
                 }}
               />
+
+              <section
+                aria-labelledby="admin-referral-surfaces"
+                className="mt-4 min-w-0 border-t border-border/50 pt-3"
+              >
+                <h4
+                  id="admin-referral-surfaces"
+                  className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground"
+                >
+                  Referral signups by surface
+                </h4>
+                <MiniList rows={surfaceRows} accent="#7c5cff" empty="No referrals yet." />
+                {attributedReferrals === 0 && untrackedReferrals > 0 ? (
+                  <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
+                    Per-surface attribution only starts now, so every referral so
+                    far is unattributed — not missing.
+                  </p>
+                ) : null}
+              </section>
             </CollapsiblePanel>
           </Reveal>
 

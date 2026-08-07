@@ -30,6 +30,22 @@ export type AdminTeam = {
   completed: number;
 };
 
+/**
+ * Referral signups grouped by the surface that earned them — the `?via=` value
+ * on the referral link (`lesson-milestone`, `certificate`, `dashboard`,
+ * `leaderboard`).
+ */
+export type ReferralSurfaceStat = {
+  /**
+   * The allow-listed surface key, or `null` for referrals created BEFORE
+   * attribution shipped. Null is a real bucket, not missing data — those
+   * signups happened, we just can't say which surface earned them.
+   */
+  surface: string | null;
+  signups: number;
+  signups7d: number;
+};
+
 /** One calendar day of activity for the chart. */
 export type DailyPoint = {
   day: string; // YYYY-MM-DD
@@ -71,6 +87,11 @@ export type AdminStats = {
   referralUsers: number;
   /** Who referred how many people, most first. */
   recruiters: { name: string; username: string | null; referrals: number }[];
+  /**
+   * Which surface earned each referral signup. Sums to `referralUsers`; the
+   * `surface: null` row is everything that predates attribution.
+   */
+  referralSurfaces: ReferralSurfaceStat[];
   daily: DailyPoint[];
   /** Combined blog-article views, all-time. */
   articleViewsTotal: number;
@@ -139,6 +160,7 @@ export async function getAdminStats(): Promise<AdminStats> {
     visitorSourcesRes,
     guestStatsRes,
     guideViewsSummaryRes,
+    referralSurfacesRes,
   ] = await Promise.all([
     supabase.from("profiles").select("*", { count: "exact", head: true }),
     supabase.from("lesson_progress").select("*", { count: "exact", head: true }),
@@ -173,6 +195,9 @@ export async function getAdminStats(): Promise<AdminStats> {
     supabase.rpc("visitor_sources"),
     supabase.rpc("guest_progress_stats"),
     supabase.from("admin_guide_views_summary").select("*"),
+    // Referral signups per `?via=` surface — grouped SQL-side, and served by
+    // profiles_referred_by_idx, so it reads only the referral rows.
+    supabase.rpc("referral_surfaces"),
   ]);
 
   const subscribersRes = await supabase
@@ -415,6 +440,18 @@ export async function getAdminStats(): Promise<AdminStats> {
     })
     .sort((a, b) => b.referrals - a.referrals);
 
+  // Which surface earned each referral (SQL aggregate above). Postgres bigints
+  // arrive as strings. A null `surface` means the signup predates attribution —
+  // it is kept as its own bucket so the totals still reconcile with
+  // `referralUsers` above; the panel labels it rather than dropping it.
+  const referralSurfaces = ((referralSurfacesRes.data as
+    | { surface: string | null; signups: number | string; signups_7d: number | string }[]
+    | null) ?? []).map((r) => ({
+    surface: r.surface ?? null,
+    signups: Number(r.signups ?? 0),
+    signups7d: Number(r.signups_7d ?? 0),
+  }));
+
   // ── Blog-article views (from the SQL aggregate above) ─────────────
   // Postgres bigints arrive as strings, so coerce everything through Number().
   type AVRow = { slug: string; views: number | string; views_7d: number | string };
@@ -493,6 +530,7 @@ export async function getAdminStats(): Promise<AdminStats> {
     sources7d,
     referralUsers,
     recruiters,
+    referralSurfaces,
     daily,
     articleViewsTotal,
     articleViews,

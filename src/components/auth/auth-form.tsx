@@ -35,12 +35,15 @@ export function AuthForm({
   mode,
   next,
   referrer,
+  via,
   notice,
   defaultEmail,
 }: {
   mode: Mode;
   next?: string;
   referrer?: string;
+  /** Which share surface produced a referral link (?via=). */
+  via?: string;
   notice?: "exists";
   defaultEmail?: string;
 }) {
@@ -103,6 +106,11 @@ export function AuthForm({
       <input type="hidden" name="next" value={nextValue} />
       {isSignup && referrer && (
         <input type="hidden" name="ref" value={referrer} />
+      )}
+      {/* Which share surface produced the referral — only meaningful when a
+          referrer is present, and the server allow-lists the value. */}
+      {isSignup && referrer && via && (
+        <input type="hidden" name="via" value={via} />
       )}
 
       {/* Notice: arrived here because their email already has an account */}

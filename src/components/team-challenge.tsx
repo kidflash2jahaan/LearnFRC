@@ -17,11 +17,16 @@ import { cn } from "@/lib/utils";
 export function TeamChallenge({
   username,
   className,
+  via,
 }: {
   username: string;
   className?: string;
+  /** Share surface for attribution — appended as &via=. Without it a signup
+      earned here lands in the referral bucket with no surface, which is how
+      every referral before today ended up unattributed. */
+  via?: "certificate" | "lesson-milestone";
 }) {
-  const link = `https://learnfrc.com/signup?ref=${username}`;
+  const link = `https://learnfrc.com/signup?ref=${username}${via ? `&via=${via}` : ""}`;
 
   return (
     <div

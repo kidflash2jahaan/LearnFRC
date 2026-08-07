@@ -203,6 +203,57 @@ export default async function DashboardPage() {
 
   const referralCount = profile?.username ? await getReferralCount(user.id) : 0;
 
+  // ── Invite: ask in proportion to what the learner has actually done ──
+  // Referral converts far better than any other channel precisely because the
+  // sender has context to lend — they can vouch for the thing. So the ask is
+  // only worth making once there is something to vouch FOR.
+  //
+  // Threshold picked from production (Aug 2026, 186 learners with any
+  // progress). There is a steep trial cliff in the first few lessons —
+  // 34 learners stop at 1, 29 at 2, 14 at 3, 6 at 4 — and then a stable tail:
+  // 103 learners have cleared 5 or more, and the median among learners with
+  // any progress at all is 8. Five is the first point where someone has worked
+  // through a real chunk of a module rather than sampled the site, so five is
+  // where the ask is earned. Below it the card still exists, just far down the
+  // page where only someone deliberately looking for it will meet it.
+  const INVITE_EARNED_AT = 5;
+  const inviteEarned = completedCount >= INVITE_EARNED_AT;
+
+  // Framing reflects what they've done. No urgency, no guilt — for someone who
+  // has already referred people, the honest encouragement is that it worked.
+  // The card itself already prints the referral count twice (chip + body), so
+  // the lead-in acknowledges it qualitatively instead of stating it a third
+  // time, and spends its words on the only new thing: it worked, do it again.
+  const inviteLead =
+    referralCount > 0
+      ? `${
+          referralCount === 1 ? "A teammate is" : "Teammates are"
+        } already learning here because you sent them the link. If there's someone else on your team who'd use it, it's the same link below.`
+      : `You've cleared ${pluralize(completedCount, "lesson")}${
+          streak > 1 ? `, ${streak} days running` : ""
+        }${
+          departmentsCompleted > 0
+            ? ` and finished ${pluralize(departmentsCompleted, "department")}`
+            : ""
+        }. If someone on your team asks how you learned this, the link below is the short answer.`;
+
+  // One card, one anchor (#invite-card is the target of the What's New CTA) —
+  // only ever rendered in a single slot, chosen by engagement below.
+  const inviteNode = profile?.username ? (
+    <div id="invite-card" className="scroll-mt-28">
+      {inviteEarned && (
+        <p className="mb-3 max-w-2xl text-[15px] leading-relaxed text-foreground/70">
+          {inviteLead}
+        </p>
+      )}
+      <InviteCard
+        username={profile.username}
+        count={referralCount}
+        via="dashboard"
+      />
+    </div>
+  ) : null;
+
   // ── Continue learning target ──────────────────────────────────
   // Pick the started-but-not-finished department with the most progress;
   // otherwise the user hasn't started anything → suggest getting-started.
@@ -485,51 +536,11 @@ export default async function DashboardPage() {
           </Reveal>
         )}
 
-        {/* ============================ INVITE / REFERRALS ============================ */}
-        {profile?.username && (
-          <Reveal className="mt-8">
-            <div id="invite-card" className="scroll-mt-28">
-              <InviteCard username={profile.username} count={referralCount} />
-            </div>
-          </Reveal>
-        )}
-
-        {/* ============================ MISSION READOUT — STAT CARDS ============================ */}
-        <Reveal className="mt-12" delay={0.04}>
-          <p className="ac-eyebrow">Mission readout</p>
-          <h2 className="mt-2 font-display text-2xl font-bold text-foreground">
-            Every gauge on the board
-          </h2>
-        </Reveal>
-        <RevealGroup className="mt-5 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-6">
-          {stats.map((s) => (
-            <RevealItem key={s.label}>
-              <Hover lift={-4} className="h-full">
-                <div className="ac-card group h-full p-4">
-                  <span
-                    className="ac-badge mb-3 flex h-10 w-10 items-center justify-center transition-transform duration-300 group-hover:scale-110"
-                    style={{ "--a": s.accent } as CSSProperties}
-                  >
-                    <s.icon className="h-5 w-5" aria-hidden />
-                  </span>
-                  <div
-                    className="font-display text-3xl font-bold tabular-nums"
-                    style={{ color: inkFor(s.accent) }}
-                  >
-                    <AnimatedCounter value={s.value} />
-                  </div>
-                  <div className="mt-1 text-[13px] font-medium leading-snug text-muted-foreground">
-                    {s.label}
-                  </div>
-                </div>
-              </Hover>
-            </RevealItem>
-          ))}
-        </RevealGroup>
-
         {/* ============================ CONTINUE LEARNING ============================ */}
+        {/* Learning comes first: this used to sit below the stat grid and the
+            invite ask. It is the reason the page exists, so it leads. */}
         {continueLesson && cm && (
-          <Reveal className="mt-12">
+          <Reveal className="mt-8">
             <Hover lift={-3} className="block">
               <Link
                 href={`/guides/${continueLesson.deptSlug}/${continueLesson.moduleSlug}/${continueLesson.lessonSlug}`}
@@ -574,6 +585,46 @@ export default async function DashboardPage() {
             </Hover>
           </Reveal>
         )}
+
+        {/* ============================ INVITE — EARNED SLOT ============================ */}
+        {/* Directly after the lesson they're mid-way through: the one moment on
+            this page where "you actually use this" is self-evident. */}
+        {inviteNode && inviteEarned && (
+          <Reveal className="mt-8">{inviteNode}</Reveal>
+        )}
+
+        {/* ============================ MISSION READOUT — STAT CARDS ============================ */}
+        <Reveal className="mt-12" delay={0.04}>
+          <p className="ac-eyebrow">Mission readout</p>
+          <h2 className="mt-2 font-display text-2xl font-bold text-foreground">
+            Every gauge on the board
+          </h2>
+        </Reveal>
+        <RevealGroup className="mt-5 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-6">
+          {stats.map((s) => (
+            <RevealItem key={s.label}>
+              <Hover lift={-4} className="h-full">
+                <div className="ac-card group h-full p-4">
+                  <span
+                    className="ac-badge mb-3 flex h-10 w-10 items-center justify-center transition-transform duration-300 group-hover:scale-110"
+                    style={{ "--a": s.accent } as CSSProperties}
+                  >
+                    <s.icon className="h-5 w-5" aria-hidden />
+                  </span>
+                  <div
+                    className="font-display text-3xl font-bold tabular-nums"
+                    style={{ color: inkFor(s.accent) }}
+                  >
+                    <AnimatedCounter value={s.value} />
+                  </div>
+                  <div className="mt-1 text-[13px] font-medium leading-snug text-muted-foreground">
+                    {s.label}
+                  </div>
+                </div>
+              </Hover>
+            </RevealItem>
+          ))}
+        </RevealGroup>
 
         {/* ============================ YOUR DEPARTMENTS ============================ */}
         <section className="mt-14">
@@ -632,6 +683,14 @@ export default async function DashboardPage() {
             </Reveal>
           )}
         </section>
+
+        {/* ============================ INVITE — QUIET SLOT ============================ */}
+        {/* 1–4 lessons in: still deciding whether they like this. The card stays
+            reachable (and keeps #invite-card anchored for the What's New CTA)
+            but carries no personalised prompt and sits below the learning. */}
+        {inviteNode && !inviteEarned && completedCount > 0 && (
+          <Reveal className="mt-14">{inviteNode}</Reveal>
+        )}
 
         {/* ============================ ACHIEVEMENTS ============================ */}
         {achievements.length > 0 && (
@@ -703,6 +762,15 @@ export default async function DashboardPage() {
               </div>
             </div>
           </Reveal>
+        )}
+
+        {/* ============================ INVITE — DORMANT SLOT ============================ */}
+        {/* Zero lessons: nothing to vouch for yet, so nobody is asked to
+            recommend anything. The card renders last, purely so the What's New
+            "Invite teammates" link still has somewhere to land for a learner
+            who deliberately goes looking for it. */}
+        {inviteNode && completedCount === 0 && (
+          <Reveal className="mt-14">{inviteNode}</Reveal>
         )}
       </div>
     </div>

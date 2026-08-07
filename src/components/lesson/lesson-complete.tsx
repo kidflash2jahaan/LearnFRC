@@ -17,7 +17,12 @@ import { toast } from "sonner";
 import { setLessonComplete } from "@/app/actions/progress";
 import { Button } from "@/components/ui/button";
 import { Confetti } from "@/components/lesson/confetti";
-import { TeamChallenge } from "@/components/team-challenge";
+import {
+  LessonMilestoneShare,
+  rememberMilestone,
+  useLessonMilestone,
+  type LessonMilestone,
+} from "@/components/lesson/lesson-milestone-share";
 import { LessonNewsletter } from "@/components/lesson/lesson-newsletter";
 import { cn } from "@/lib/utils";
 import type { QuizQuestion } from "@/lib/types";
@@ -95,6 +100,14 @@ export function LessonComplete({
   const completedRef = React.useRef<HTMLDivElement>(null);
   const prevCompleted = React.useRef(initialCompleted);
 
+  // Referral ask, spent only on a one-time milestone (first lesson ever, or
+  // reaching 10 lifetime lessons) — see lesson-milestone-share.tsx for why it
+  // is NOT shown on every completion. Null except in the render immediately
+  // following a completion the reader just made in this session, so revisiting
+  // an already-complete lesson never shows it.
+  const resolveMilestone = useLessonMilestone(lessonId);
+  const [milestone, setMilestone] = React.useState<LessonMilestone | null>(null);
+
   React.useEffect(() => setCompleted(initialCompleted), [initialCompleted]);
 
   // When a quiz is passed the tall quiz collapses into a short panel, which
@@ -148,6 +161,12 @@ export function LessonComplete({
       return;
     }
 
+    // Resolved BEFORE the store is told about this completion (the resolver
+    // counts accordingly) and set in the same batch as `completed`, so the
+    // milestone card is present in the very first render of the completion
+    // panel rather than popping in and pushing the buttons down.
+    const earned = value ? resolveMilestone() : null;
+    setMilestone(earned);
     setCompleted(value);
     onCompletedChange?.(value);
     if (value) setBurst((b) => b + 1);
@@ -160,9 +179,16 @@ export function LessonComplete({
       if (r?.error) {
         setCompleted(!value);
         onCompletedChange?.(!value);
+        // The completion didn't stick, so don't spend the milestone on it.
+        setMilestone(null);
         toast.error(r.error);
       } else {
-        if (value) toast.success("Lesson complete!  +10 XP");
+        if (value) {
+          // Shown once, ever: spend the rung as soon as the completion is real,
+          // whether or not they act on it. It cannot return on reload.
+          if (earned) rememberMilestone(earned.key);
+          toast.success("Lesson complete!  +10 XP");
+        }
       }
     });
   };
@@ -231,10 +257,21 @@ export function LessonComplete({
           </Button>
         </div>
 
-        {referrerUsername && (
+        {/* The referral ask. Was a standing <TeamChallenge/> on EVERY completed
+            lesson — at 135–226 completions a day that asked a build-season
+            evening's worth of lessons over and over, which is how a suggestion
+            turns into spam. It now appears only on a one-time milestone, sits
+            below the primary actions so it never blocks the next lesson, and
+            is dismissible. `referrerUsername` is re-checked because a referral
+            link is meaningless without a username. */}
+        {milestone && referrerUsername && (
           <div className="mt-6">
             <hr className="ac-divider mb-5" />
-            <TeamChallenge username={referrerUsername} />
+            <LessonMilestoneShare
+              username={referrerUsername}
+              milestone={milestone}
+              onDismiss={() => setMilestone(null)}
+            />
           </div>
         )}
 

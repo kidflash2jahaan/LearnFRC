@@ -50,9 +50,9 @@ const STATS = [
 export default async function SignupPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string; ref?: string }>;
+  searchParams: Promise<{ next?: string; ref?: string; via?: string }>;
 }) {
-  const { next, ref } = await searchParams;
+  const { next, ref, via } = await searchParams;
   const { user } = await getSession();
   if (user) redirect("/dashboard");
 
@@ -135,7 +135,8 @@ export default async function SignupPage({
 
             <hr className="ac-divider my-6" />
 
-            <AuthForm mode="signup" next={safeNext} referrer={refValue} />
+            <AuthForm mode="signup" next={safeNext} referrer={refValue}
+            via={via} />
           </div>
         </Rise>
 

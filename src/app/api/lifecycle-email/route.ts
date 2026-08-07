@@ -252,7 +252,11 @@ async function run(req: Request) {
         unsubscribeUrl,
         nextLessonTitle: u.nextLessonTitle,
         nextLessonHref: u.nextLessonHref,
-        inviteUrl: u.username ? `${site}/signup?ref=${u.username}` : null,
+        inviteUrl: u.username
+          // &via=email: the lifecycle mail is the only invite surface that
+          // reaches LAPSED users, so it needs to be measurable separately.
+          ? `${site}/signup?ref=${u.username}&via=email`
+          : null,
       }),
     });
     if (res.ok) {
