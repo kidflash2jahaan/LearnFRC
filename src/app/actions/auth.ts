@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { firstProfaneField } from "@/lib/profanity";
 import { hookSourceFor } from "@/lib/signup-source";
+import { attributeSignup, normalizeVia } from "@/lib/signup-attribution";
 
 export type AuthState =
   | {
@@ -85,15 +86,7 @@ export async function signUp(
   // Which share surface produced this referral. Referral is by far the
   // highest-converting channel we have, so knowing WHICH surface earned each
   // one decides where to keep investing. Allow-listed, never free text.
-  const REFERRAL_SURFACES = new Set([
-    "lesson-milestone",
-    "certificate",
-    "dashboard",
-    "leaderboard",
-    "email",
-  ]);
-  const rawVia = String(formData.get("via") || "").trim().toLowerCase();
-  const via = REFERRAL_SURFACES.has(rawVia) ? rawVia : "";
+  const via = normalizeVia(formData.get("via") as string | null);
 
   if (!email || !password)
     return { error: "Email and password are required." };
@@ -193,34 +186,18 @@ export async function signUp(
   // is still paid out only on email verification (see /auth/confirm).
   // The profile row is created by a trigger. Self-referrals are blocked.
   if (data.user) {
-    const admin = createAdminClient();
     const cookieStore = await cookies();
-    // Hook conversions take last-touch precedence; otherwise a referral link
-    // wins, then the first-touch cookie set by <SourceCapture/>, then Direct.
-    const source = (
-      hookSource ?? (ref ? "Referral" : cookieStore.get("lf_src")?.value || "Direct")
-    ).slice(0, 40);
-    const update: {
-      source: string;
-      referred_by?: string;
-      signup_ip?: string;
-      referral_surface?: string;
-    } = { source };
-    if (signupIp) update.signup_ip = signupIp;
-    if (ref) {
-      const { data: referrer } = await admin
-        .from("profiles")
-        .select("id")
-        .eq("username", ref)
-        .maybeSingle();
-      if (referrer && referrer.id !== data.user.id) {
-        update.referred_by = referrer.id;
-        // Only meaningful on a real referral — recorded after the self-referral
-        // check so a self-invite can't pollute the surface stats.
-        if (via) update.referral_surface = via;
-      }
-    }
-    await admin.from("profiles").update(update).eq("id", data.user.id);
+    // Shared with the Google/OAuth path (/auth/callback) — see
+    // src/lib/signup-attribution.ts. The reward itself is paid later, on email
+    // confirmation, which is what keeps it farm-resistant here.
+    await attributeSignup({
+      userId: data.user.id,
+      ref,
+      via,
+      srcCookie: cookieStore.get("lf_src")?.value || null,
+      signupIp,
+      hookSource,
+    });
   }
 
   // Email confirmation is required — send them to a "check your inbox" screen.

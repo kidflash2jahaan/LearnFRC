@@ -151,7 +151,11 @@ export function AuthForm({
 
       {/* Google — one-tap sign in, then the email form below */}
       <motion.div variants={item} className="space-y-3">
-        <GoogleSignInButton next={nextValue} />
+        <GoogleSignInButton
+          next={nextValue}
+          referrer={isSignup ? referrer : undefined}
+          via={isSignup ? via : undefined}
+        />
         <div className="flex items-center gap-3 text-xs font-medium text-muted-foreground">
           <span className="h-px flex-1 bg-border" />
           or continue with email

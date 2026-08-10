@@ -1,7 +1,7 @@
 import { type EmailOtpType } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { payReferralReward } from "@/lib/signup-attribution";
 import { sendEmail, welcomeEmailHtml } from "@/lib/email";
 
 /**
@@ -38,41 +38,10 @@ export async function GET(request: Request) {
 
       // Pay out the referral reward exactly once, now that this user is
       // verified (farm-resistant — requires a real, confirmed inbox).
+      // Shared with the OAuth path (/auth/callback) so the two can't drift —
+      // see src/lib/signup-attribution.ts for why that matters.
       if (type === "signup" && data.user) {
-        const admin = createAdminClient();
-        const { data: prof } = await admin
-          .from("profiles")
-          .select("referred_by, referral_rewarded")
-          .eq("id", data.user.id)
-          .maybeSingle();
-        if (prof?.referred_by && !prof.referral_rewarded) {
-          const { data: refUser } = await admin
-            .from("profiles")
-            .select("id, xp")
-            .eq("id", prof.referred_by)
-            .maybeSingle();
-          if (refUser) {
-            await admin
-              .from("profiles")
-              .update({ xp: ((refUser.xp as number) ?? 0) + 25 })
-              .eq("id", refUser.id);
-          }
-          // Double-sided reward: the invited user also gets +25 XP as a
-          // welcome head-start, so joining through a teammate's link beats
-          // signing up cold. referral_rewarded gates this so it pays once.
-          const { data: self } = await admin
-            .from("profiles")
-            .select("xp")
-            .eq("id", data.user.id)
-            .maybeSingle();
-          await admin
-            .from("profiles")
-            .update({
-              xp: ((self?.xp as number) ?? 0) + 25,
-              referral_rewarded: true,
-            })
-            .eq("id", data.user.id);
-        }
+        await payReferralReward(data.user.id);
       }
 
       return NextResponse.redirect(new URL(next, origin));

@@ -18,7 +18,17 @@ function GoogleG({ className }: { className?: string }) {
   );
 }
 
-export function GoogleSignInButton({ next }: { next?: string }) {
+export function GoogleSignInButton({
+  next,
+  referrer,
+  via,
+}: {
+  next?: string;
+  /** Referrer's username from ?ref= — must survive the trip to Google. */
+  referrer?: string;
+  /** Share surface from ?via= — must survive the trip to Google. */
+  via?: string;
+}) {
   const [loading, setLoading] = React.useState(false);
 
   const onClick = async () => {
@@ -26,11 +36,17 @@ export function GoogleSignInButton({ next }: { next?: string }) {
     try {
       const supabase = createClient();
       const dest = next && next.startsWith("/") ? next : "/dashboard";
+      // ref/via ride along on the callback URL. Without this they are dropped
+      // the moment the browser leaves for Google, which is exactly how every
+      // referral through this button went unrecorded from 2026-07-17 onward —
+      // and this is the FIRST button on the form, so it is the common path.
+      const cb = new URL("/auth/callback", window.location.origin);
+      cb.searchParams.set("next", dest);
+      if (referrer) cb.searchParams.set("ref", referrer);
+      if (via) cb.searchParams.set("via", via);
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(dest)}`,
-        },
+        options: { redirectTo: cb.toString() },
       });
       if (error) {
         setLoading(false);
