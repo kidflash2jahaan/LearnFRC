@@ -66,7 +66,15 @@ const esc = (s: string) =>
  * postal address. We still include a one-click unsubscribe as courtesy + a
  * settings link. Do NOT add promotional content here or it changes category.
  */
-const marketingShell = (inner: string, unsubscribeUrl: string) => {
+const marketingShell = (
+  inner: string,
+  unsubscribeUrl: string,
+  /** Why this person is receiving THIS email. Must be true for the segment it
+   * is used with — a learner who has never opened a lesson does not have
+   * "lessons in progress", and telling them they do is the kind of small lie
+   * that earns a spam complaint. Defaults to the original wording. */
+  reason: string = "You're getting this because you have a LearnFRC account with lessons in progress."
+) => {
   const site = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com";
   const address = process.env.MAILING_ADDRESS; // optional; shown only if set
   return `
@@ -78,8 +86,7 @@ const marketingShell = (inner: string, unsubscribeUrl: string) => {
     </div>
     <div style="padding:30px 32px;color:#1e2a44;font-size:15px;line-height:1.6">${inner}</div>
     <div style="padding:18px 32px;border-top:1px solid #eef2f9;color:#64748b;font-size:12px;line-height:1.6">
-      You're getting this because you have a LearnFRC account with lessons in
-      progress. Manage emails in your
+      ${reason} Manage emails in your
       <a href="${site}/settings" style="color:#2560e6">settings</a> or
       <a href="${unsubscribeUrl}" style="color:#2560e6">turn these off</a>.${address ? `<br/>LearnFRC · ${esc(address)}` : ""}
     </div>
@@ -88,66 +95,209 @@ const marketingShell = (inner: string, unsubscribeUrl: string) => {
 };
 
 /**
- * Lifecycle "come back and keep going" email — RELATIONSHIP content only,
- * strictly about the learner's own progress (no promotion). Links them back to
- * their dashboard where their exact next lesson + streak live.
+ * Which win-back conversation this learner is actually in. The three are
+ * genuinely different situations and get genuinely different emails:
+ *   never_started — has an account, has never completed a lesson. Sent ONCE,
+ *                   ever. They need a starting point, not a reminder.
+ *   stalled_early — 1-4 lessons then stopped. They have context but never got
+ *                   deep enough for the product to be worth anything to them.
+ *   deep_churn    — 5+ lessons then stopped. Demonstrated affinity; the email
+ *                   can safely assume they know what LearnFRC is.
  */
-export function lifecycleEmailHtml({
-  name,
-  completed,
-  streak,
-  unsubscribeUrl,
-  nextLessonTitle,
-  nextLessonHref,
-  inviteUrl,
-}: {
+export type LifecycleSegment =
+  | "never_started"
+  | "stalled_early"
+  | "deep_churn";
+
+export type LifecycleEmailProps = {
+  segment: LifecycleSegment;
   name?: string | null;
-  completed: number;
-  streak: number;
   unsubscribeUrl: string;
-  /** The user's actual next lesson — named + deep-linked when known. */
+  /** The learner's real next lesson — named, summarised, deep-linked. */
   nextLessonTitle?: string | null;
   nextLessonHref?: string | null;
-  /** The user's personal referral link — adds a soft "bring a teammate" ask. */
+  nextLessonSummary?: string | null;
+  /** The department that lesson lives in + their true position inside it. */
+  departmentName?: string | null;
+  departmentDone?: number;
+  departmentTotal?: number;
+  /** Measured lifetime facts. Never estimates, never projections. */
+  completed?: number;
+  activeDays?: number;
+  daysSinceLastLesson?: number | null;
+  lastLessonTitle?: string | null;
+  /** never_started only: the honest shape of the starter lesson. */
+  readMinutes?: number | null;
+  quizQuestions?: number | null;
+  /** Referral link. Only passed once the product's own 5-lesson gate is met. */
   inviteUrl?: string | null;
-}) {
+};
+
+const plural = (n: number, one: string, many = `${one}s`) =>
+  `${n} ${n === 1 ? one : many}`;
+
+/** "3 days ago" / "yesterday" — reads as a fact, never as a reprimand. */
+const agoPhrase = (days: number | null | undefined) =>
+  days === null || days === undefined
+    ? null
+    : days <= 0
+      ? "today"
+      : days === 1
+        ? "yesterday"
+        : `${days} days ago`;
+
+/**
+ * Subject line for a lifecycle email. Always names the actual next lesson, so
+ * the subject is useful on its own and is never a generic "we miss you".
+ */
+export function lifecycleEmailSubject(p: LifecycleEmailProps): string {
+  const title = p.nextLessonTitle;
+  const dept = p.departmentName;
+  if (!title) return "Your next FRC lesson";
+  if (p.segment === "never_started") return `Start here: ${title}`;
+  if (p.segment === "deep_churn" && p.completed && dept)
+    return `${plural(p.completed, "lesson")} in — next up: ${title}`;
+  return dept ? `Next in ${dept}: ${title}` : `Your next lesson: ${title}`;
+}
+
+/**
+ * Lifecycle win-back email — RELATIONSHIP content only, strictly about this
+ * learner's own account and their own next lesson. Deliberately contains no
+ * deadline, no expiring offer, no streak-at-risk framing and no "you're falling
+ * behind": every eligible learner is by definition dormant, so manufactured
+ * urgency would be both false and the fastest route to a spam complaint. The
+ * only claims made are ones read straight out of the database.
+ */
+export function lifecycleEmailHtml(p: LifecycleEmailProps): string {
   const site = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com";
-  const greeting = name ? `Hey ${esc(name)},` : "Hey,";
-  const streakLine =
-    streak > 1
-      ? `You're on a <strong>${streak}-day streak</strong> — do one lesson today to keep it alive. 🔥`
-      : `Off-season is the best time to get ahead before build season.`;
+  const greeting = p.name ? `Hey ${esc(p.name)},` : "Hey,";
+  const dept = p.departmentName ? esc(p.departmentName) : null;
 
-  // Name the specific next lesson (strongest re-engagement hook) and deep-link
-  // straight to it; fall back to the dashboard when it isn't known.
+  // Deep-link straight at the lesson page. Landing on a lesson rather than the
+  // dashboard is the single strongest predictor of depth in the funnel data, so
+  // the dashboard is only ever a fallback.
   const ctaHref =
-    nextLessonHref && nextLessonHref.startsWith("/")
-      ? `${site}${nextLessonHref}`
+    p.nextLessonHref && p.nextLessonHref.startsWith("/")
+      ? `${site}${p.nextLessonHref}`
       : `${site}/dashboard`;
-  const nextBlock = nextLessonTitle
-    ? `<p style="margin:0 0 6px;color:#64748b;font-size:13px;text-transform:uppercase;letter-spacing:.04em">Your next lesson</p>
-       <p style="margin:0 0 22px;font-size:18px;font-weight:700;color:#0f1c33">${esc(nextLessonTitle)}</p>`
-    : `<p style="margin:0 0 22px">Your next lesson is waiting on your dashboard — pick up right where you left off:</p>`;
-  const ctaLabel = nextLessonTitle ? "Continue this lesson →" : "Continue learning →";
 
-  const inviteBlock = inviteUrl
-    ? `<p style="margin:26px 0 0;padding-top:16px;border-top:1px solid #eef2f9;color:#64748b;font-size:13px">
-         Learning with a team? Bring a teammate and you <strong>both get +25 XP</strong> —
-         <a href="${inviteUrl}" style="color:#2560e6;font-weight:600">share your invite link</a>.
-       </p>`
+  const eyebrow =
+    p.segment === "never_started"
+      ? "Your first lesson"
+      : dept
+        ? `Next in ${dept}`
+        : "Your next lesson";
+
+  const nextBlock = p.nextLessonTitle
+    ? `<div style="margin:0 0 22px;padding:16px 18px;background:#f6f9fe;border:1px solid #e2e8f5;border-radius:14px">
+         <p style="margin:0 0 6px;color:#64748b;font-size:12px;text-transform:uppercase;letter-spacing:.06em">${eyebrow}</p>
+         <p style="margin:0;font-size:18px;font-weight:700;color:#0f1c33;line-height:1.35">${esc(p.nextLessonTitle)}</p>
+         ${
+           p.nextLessonSummary
+             ? `<p style="margin:8px 0 0;color:#475569;font-size:14px;line-height:1.55">${esc(p.nextLessonSummary)}</p>`
+             : ""
+         }
+       </div>`
     : "";
+
+  const ctaLabel =
+    p.segment === "never_started"
+      ? "Read this lesson →"
+      : dept
+        ? `Continue in ${dept} →`
+        : "Continue this lesson →";
+
+  // Position-in-department, stated as a fact. Only rendered when both numbers
+  // are known, so it can never read "lesson 1 of 0".
+  const positionLine =
+    dept && p.departmentTotal
+      ? `<p style="margin:18px 0 0;color:#64748b;font-size:13px">You've done ${p.departmentDone ?? 0} of ${p.departmentTotal} lessons in ${dept}.</p>`
+      : "";
+
+  let intro: string;
+  let closing: string;
+  let reason: string;
+
+  if (p.segment === "never_started") {
+    const shape =
+      p.readMinutes && p.quizQuestions
+        ? `It's about ${plural(p.readMinutes, "minute")} of reading, then ${plural(p.quizQuestions, "multiple-choice question")} at the end. You need all ${p.quizQuestions} right for it to count, and you can retry as many times as you like.`
+        : p.readMinutes
+          ? `It's about ${plural(p.readMinutes, "minute")} of reading, then a short quiz at the end. You can retry the quiz as many times as you like.`
+          : `It's a short read with a quick quiz at the end. You can retry the quiz as many times as you like.`;
+    // Says "finished", never "opened". This segment is defined purely by having
+    // zero rows in lesson_progress, and that table only records COMPLETIONS — so
+    // a reader who opened ten lessons and finished none lands in this segment.
+    // Telling them they never opened one is simply false to their face, and
+    // being caught in a small lie is exactly the failure mode this project can
+    // least afford right now.
+    intro = `<p style="margin:0 0 16px">You created a LearnFRC account but haven't finished a lesson yet. Nothing's wrong — picking where to start out of 394 lessons is the hard part, so here's the one we'd start you on.</p>`;
+    closing = `<p style="margin:18px 0 0;color:#64748b;font-size:13px">${shape}</p>
+      <p style="margin:10px 0 0;color:#64748b;font-size:13px">Everything on LearnFRC is free and there's nothing else to set up. If it turns out not to be what you wanted, you can turn these off below — no hard feelings.</p>`;
+    reason = `You're getting this once because you created a LearnFRC account and haven't finished a lesson yet. It's the only reminder we'll send about it.`;
+  } else if (p.segment === "stalled_early") {
+    const last = p.lastLessonTitle
+      ? ` Your last one was <strong>${esc(p.lastLessonTitle)}</strong>${
+          agoPhrase(p.daysSinceLastLesson)
+            ? `, ${agoPhrase(p.daysSinceLastLesson)}`
+            : ""
+        }.`
+      : "";
+    intro = `<p style="margin:0 0 16px">You've finished <strong>${plural(p.completed ?? 0, "lesson")}</strong> on LearnFRC.${last} Here's what comes next.</p>`;
+    // "There's no streak to keep" used to sit here, and it was simply false.
+    // `handle_lesson_completed` awards `10 + least(10, streak - 1)` XP per
+    // lesson, where the streak is the run of consecutive days with a
+    // completion — so a streak exists, it lapses, and it is worth up to double
+    // XP. Telling a learner otherwise is a claim they can disprove from their
+    // own dashboard, which shows the multiplier. The replacement says only
+    // what is true: nothing already earned goes away, consecutive days pay
+    // more, and a new run costs exactly one lesson. No deadline, no
+    // streak-at-risk framing — this segment's streak has already lapsed by
+    // definition, so urgency here would be manufactured as well as unkind.
+    closing = `${positionLine}
+      <p style="margin:10px 0 0;color:#64748b;font-size:13px">Nothing you've finished expires — your lessons and XP stay exactly as you left them. Lessons on back-to-back days earn bonus XP, and a new run starts with your next one, so pick it up whenever the shop's quiet.</p>`;
+    reason = `You're getting this because you have a LearnFRC account with lessons in progress.`;
+  } else {
+    const daysLine =
+      p.activeDays && p.activeDays > 1
+        ? ` across ${plural(p.activeDays, "day")}`
+        : "";
+    const last = p.lastLessonTitle
+      ? ` Your last one was <strong>${esc(p.lastLessonTitle)}</strong>${
+          agoPhrase(p.daysSinceLastLesson)
+            ? `, ${agoPhrase(p.daysSinceLastLesson)}`
+            : ""
+        }.`
+      : "";
+    intro = `<p style="margin:0 0 16px">You're <strong>${plural(p.completed ?? 0, "lesson")}</strong> into LearnFRC${daysLine} — that's real work.${last} Whenever you want to pick it back up, this is where you left off.</p>`;
+    closing = `${positionLine}
+      <p style="margin:10px 0 0;color:#64748b;font-size:13px">Nothing expires and your progress is saved exactly as you left it.</p>`;
+    reason = `You're getting this because you have a LearnFRC account with lessons in progress.`;
+  }
+
+  // The referral ask is gated on the same 5-lesson milestone the dashboard
+  // uses, so it only ever reaches people who have actually earned the invite.
+  const inviteBlock =
+    p.inviteUrl && p.segment === "deep_churn"
+      ? `<p style="margin:26px 0 0;padding-top:16px;border-top:1px solid #eef2f9;color:#64748b;font-size:13px">
+           Learning with a team? Bring a teammate and you <strong>both get +25 XP</strong> —
+           <a href="${p.inviteUrl}" style="color:#2560e6;font-weight:600">share your invite link</a>.
+         </p>`
+      : "";
 
   return marketingShell(
     `
     <p style="margin:0 0 14px">${greeting}</p>
-    <p style="margin:0 0 16px">You've completed <strong>${completed} ${completed === 1 ? "lesson" : "lessons"}</strong> on LearnFRC. ${streakLine}</p>
+    ${intro}
     ${nextBlock}
     <a href="${ctaHref}"
        style="display:inline-block;background:linear-gradient(110deg,#2560e6,#1aa9d6);color:#fff;text-decoration:none;padding:12px 22px;border-radius:12px;font-weight:600">${ctaLabel}</a>
+    ${closing}
     ${inviteBlock}
     <p style="margin:22px 0 0;color:#64748b">Gracious professionalism, always. 🤖</p>
   `,
-    unsubscribeUrl
+    p.unsubscribeUrl,
+    reason
   );
 }
 

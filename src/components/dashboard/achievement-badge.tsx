@@ -5,6 +5,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Lock } from "lucide-react";
 import { Icon } from "@/lib/icon-map";
 import { cn } from "@/lib/utils";
+import type { BadgeProgress } from "@/lib/streaks";
 
 export type AchievementView = {
   slug: string;
@@ -13,6 +14,17 @@ export type AchievementView = {
   icon: string;
   earned: boolean;
   earnedAt: string | null;
+  /**
+   * How close this badge is, derived from the SAME `achievements.criteria`
+   * shapes the award logic already uses (see `achievementProgress` in
+   * src/lib/streaks.ts) — nothing new is stored, and a caller that doesn't
+   * supply it gets exactly the previous behaviour.
+   *
+   * Why it matters: a zero-progress learner currently scrolls past eleven
+   * identical padlocks, which reads as a wall rather than a ladder. "3 / 5"
+   * on the nearest badge turns the same grid into something aimable.
+   */
+  progress?: BadgeProgress | null;
 };
 
 export function AchievementBadge({
@@ -22,7 +34,18 @@ export function AchievementBadge({
 }) {
   const reduce = useReducedMotion();
   const [open, setOpen] = React.useState(false);
-  const { earned, name, description, icon, earnedAt } = achievement;
+  const { earned, name, description, icon, earnedAt, progress } = achievement;
+
+  // Only meaningful while locked and actually started — an untouched badge
+  // shows nothing rather than a 0-width bar and a "0 / 25".
+  const meter =
+    !earned && progress && progress.target > 0 && progress.current > 0
+      ? progress
+      : null;
+  const meterPct = meter
+    ? Math.max(4, Math.min(100, Math.round((meter.current / meter.target) * 100)))
+    : 0;
+  const remaining = meter ? Math.max(0, meter.target - meter.current) : 0;
 
   const earnedLabel = earnedAt
     ? new Date(earnedAt).toLocaleDateString(undefined, {
@@ -43,7 +66,13 @@ export function AchievementBadge({
       <motion.button
         type="button"
         tabIndex={0}
-        aria-label={`${name}${earned ? " — earned" : " — locked"}. ${description}`}
+        aria-label={`${name}${
+          earned
+            ? " — earned"
+            : meter
+              ? ` — ${meter.current} of ${meter.target} ${meter.unit}`
+              : " — locked"
+        }. ${description}`}
         whileHover={reduce ? undefined : { y: -4, scale: 1.03 }}
         whileTap={{ scale: 0.97 }}
         transition={reduce ? { duration: 0 } : { type: "spring", stiffness: 320, damping: 20 }}
@@ -99,6 +128,21 @@ export function AchievementBadge({
         >
           {name}
         </span>
+
+        {/* Locked-but-started: show the distance, not just the padlock. */}
+        {meter && (
+          <span className="w-full" aria-hidden>
+            <span className="block h-1 w-full overflow-hidden rounded-full bg-muted">
+              <span
+                className="block h-full rounded-full bg-[linear-gradient(90deg,var(--primary),var(--accent))]"
+                style={{ width: `${meterPct}%` }}
+              />
+            </span>
+            <span className="mt-1 block font-mono text-[10px] tabular-nums text-muted-foreground">
+              {meter.current}/{meter.target}
+            </span>
+          </span>
+        )}
       </motion.button>
 
       <AnimatePresence>
@@ -125,7 +169,13 @@ export function AchievementBadge({
                 ? earnedLabel
                   ? `// earned ${earnedLabel}`
                   : "// earned"
-                : "// locked — keep learning"}
+                : meter
+                  ? `// ${remaining} more ${
+                      remaining === 1 && meter.unit.endsWith("s")
+                        ? meter.unit.slice(0, -1)
+                        : meter.unit
+                    } to go`
+                  : "// locked — keep learning"}
             </p>
             <span
               aria-hidden

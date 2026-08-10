@@ -2,7 +2,6 @@ import type { CSSProperties } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Calendar, Zap, Trophy, BookOpen, Medal, Sparkles } from "lucide-react";
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Badge } from "@/components/ui/badge";
 import { Icon } from "@/lib/icon-map";
@@ -71,10 +70,18 @@ export default async function PublicProfilePage({
   params: Promise<{ username: string }>;
 }) {
   const { username } = await params;
-  const supabase = await createClient();
+  // Service-role, NOT the request-scoped client. `profiles` and
+  // `user_achievements` are no longer SELECTable by the anon API role — that is
+  // what stops a stranger from paging every account off /rest/v1 — and a
+  // logged-out visitor's client IS the anon role, so this page has to read
+  // server-side to stay public and indexable.
+  //
+  // The service-role key bypasses RLS *and* column grants, so every select
+  // below is an EXPLICIT allow-list. Never `select("*")`, never `full_name`,
+  // `signup_ip`, `unsubscribe_token`, or anything else that isn't rendered:
+  // there is no second line of defence behind this key.
+  const supabase = createAdminClient();
 
-  // Public profile — explicit safe columns only. Never select `full_name`: it's
-  // PII and the anon/authenticated API role is no longer granted it.
   const { data: profile } = await supabase
     .from("profiles")
     .select("id, username, avatar_url, team_number, bio, role, xp, created_at")
@@ -92,7 +99,7 @@ export default async function PublicProfilePage({
   const tier = tierFor(level);
 
   // Real completed-lesson count (lesson_progress is RLS-private → admin client).
-  const { count: lessonsCount } = await createAdminClient()
+  const { count: lessonsCount } = await supabase
     .from("lesson_progress")
     .select("*", { count: "exact", head: true })
     .eq("user_id", p.id);

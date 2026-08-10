@@ -28,6 +28,9 @@ const REFERRAL_SURFACES = new Set([
   "dashboard",
   "leaderboard",
   "email",
+  // A signup that started by opening a team-space invite link or scanning the
+  // QR at a team meeting. Stamped by /join/space/continue.
+  "team-invite",
 ]);
 
 /** Reduce an untrusted `?via=` to an allow-listed surface, or "" if unknown. */

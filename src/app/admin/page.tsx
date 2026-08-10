@@ -6,6 +6,7 @@ import { ShieldAlert, ShieldCheck } from "lucide-react";
 import { getSession } from "@/lib/auth";
 import { getAdminStats, getPendingEdits, getPendingSubmissions } from "@/lib/admin";
 import { getRetentionStats } from "@/lib/retention";
+import { getFunnelStats } from "@/lib/funnel";
 import { getFeedback } from "@/lib/feedback";
 import { StatTile, StatGrid } from "@/components/admin/stat-tile";
 import { CollapsiblePanel } from "@/components/admin/collapsible-panel";
@@ -27,6 +28,29 @@ const GRADIENT: CSSProperties = {
   backgroundClip: "text",
   color: "transparent",
 };
+
+const MONTHS = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
+
+/**
+ * `2026-07-22T23:13:50Z` → `Jul 22` (or `Jul 22, 2026`).
+ *
+ * UTC and table-driven on purpose. The pageview coverage windows are computed
+ * in UTC SQL-side, so rendering them in the runtime's local zone would print a
+ * boundary a day off from the one the numbers actually use; and
+ * `toLocaleDateString` returns different strings on different ICU builds. This
+ * runs in a Server Component and the result is handed down as a plain string,
+ * so nothing is recomputed on the client and hydration cannot disagree.
+ */
+function utcDay(iso: string | null, withYear = false): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  const md = `${MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}`;
+  return withYear ? `${md}, ${d.getUTCFullYear()}` : md;
+}
 
 function timeAgo(iso: string): string {
   const d = Date.now() - new Date(iso).getTime();
@@ -96,10 +120,11 @@ export default async function AdminPage() {
     );
   }
 
-  const [stats, retention, pendingEdits, pendingSubmissions, feedback] =
+  const [stats, retention, funnel, pendingEdits, pendingSubmissions, feedback] =
     await Promise.all([
       getAdminStats(),
       getRetentionStats(),
+      getFunnelStats(),
       getPendingEdits(),
       getPendingSubmissions(),
       getFeedback(),
@@ -109,6 +134,34 @@ export default async function AdminPage() {
   // calling an export of a "use client" module from a Server Component throws.
   const openFeedback = feedback.filter((f) => f.status !== "replied").length;
   const completionsAll = stats.totals.completions + stats.guestCompletions;
+
+  // ── What the traffic numbers actually cover ──────────────────────
+  // `page_views` spans three eras and the tiles read only the measured one
+  // (see AnalyticsCoverage in src/lib/admin.ts). Printing the window is the
+  // whole point of this block: a growth analysis read straight across the eras
+  // and got a ~100% activation rate out of rows that, by construction, exist
+  // only for people who had already completed a lesson. A reader who can see
+  // "since Jul 22" cannot make that mistake twice.
+  const viewsSince = utcDay(stats.analytics.viewsSince);
+  const visitorsSince = utcDay(stats.analytics.visitorsSince);
+  const coverageParts: string[] = [];
+  if (viewsSince) coverageParts.push(`Page views measured since ${viewsSince}`);
+  if (visitorsSince)
+    coverageParts.push(
+      `every per-person number — unique visitors, guide viewers, acquisition sources — since ${visitorsSince}, when the beacon began sending visitor ids`
+    );
+  const backfillFrom = utcDay(stats.analytics.backfillFrom, true);
+  const backfillTo = utcDay(stats.analytics.backfillTo, true);
+  const coverageNote = [
+    coverageParts.length > 0 ? `${coverageParts.join("; ")}.` : null,
+    stats.analytics.backfillViews > 0
+      ? `A further ${stats.analytics.backfillViews.toLocaleString()} rows${
+          backfillFrom && backfillTo ? ` (${backfillFrom} – ${backfillTo})` : ""
+        } reconstructed from lesson completions and labelled source=backfill are held out of every figure above and are not added in anywhere: they exist only for people who already finished a lesson, so any funnel built on them reads ~100% by construction.`
+      : null,
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   const lessonRows = withPct(
     stats.topLessons.slice(0, 8).map((l) => ({ label: l.title, value: l.completions }))
@@ -171,6 +224,47 @@ export default async function AdminPage() {
       : []),
   ];
 
+  // ── Activation funnel ────────────────────────────────────────────
+  // NOT run through withPct(): the bar must be each step's share of the FIRST
+  // step, which is what makes the list read as a funnel narrowing to a point.
+  // withPct() rescales to the largest row, which here is always step 1 — the
+  // same answer today, but it would silently stop being a funnel the moment a
+  // step ever exceeded signups. pctOfStart says what it means.
+  const funnelRows: MiniRow[] = funnel.rows.map((r) => ({
+    label: r.label,
+    // The conversion INTO this step. Bases are mostly the previous row; see
+    // STEP_META in src/lib/funnel.ts for the one deliberate exception.
+    sub: r.baseLabel ? `${r.conversionPct}% of ${r.baseLabel}` : undefined,
+    value: r.count,
+    pct: r.pctOfStart,
+  }));
+  // Logged-out readers who reached a step before they had an account. Rendered
+  // only when there is something to show — an all-zero list on day one would be
+  // noise, and its absence is not a finding (the beacon simply hasn't fired).
+  const funnelAnonRows = withPct(
+    funnel.rows
+      .filter((r) => r.anonymous > 0)
+      .map((r) => ({ label: r.label, value: r.anonymous }))
+  );
+  // Kept SHORT on purpose: the chip is whitespace-nowrap, so a long badge
+  // cannot wrap and would push the panel header sideways at 375px.
+  const funnelBadge = funnel.worstDrop
+    ? `−${funnel.worstDrop.lostPct}% ${funnel.worstDrop.label}`
+    : undefined;
+  // Which rows can be believed. This is the honesty valve for the whole panel:
+  // 'Opened a lesson' and 'Attempted a quiz' have no source in the schema, so
+  // until the beacon fires they show the floor (= everyone who completed a
+  // lesson) and the funnel LOOKS like 100% of openers finish. Saying so is the
+  // difference between an instrument and a decoration.
+  const funnelNote =
+    funnel.rows.length === 0
+      ? null
+      : funnel.inferredSteps.length > 0
+        ? `${funnel.inferredSteps.join(" and ")} ${
+            funnel.inferredSteps.length === 1 ? "is" : "are"
+          } a floor, not a measurement — nothing has ever recorded them, so the count shown is everyone who completed a lesson (you cannot finish one without opening it and passing its quiz). They separate from “Completed a lesson” the moment the beacon fires on a reader who opens a lesson and stops. Every other row is exact, back to the first signup.`
+        : `Every step measured directly · ${funnel.recorded.toLocaleString()} events recorded.`;
+
   const articleRows = withPct(
     stats.articleViews.slice(0, 10).map((a) => ({ label: a.title, value: a.views }))
   );
@@ -202,10 +296,37 @@ export default async function AdminPage() {
         {/* ============ EVERY NUMBER, ONE GRID ============
             Deliberately no time-window stats here — a tile is a standing
             total, and anything trend/period-shaped lives in the Growth
-            panel below, which is built for it. */}
+            panel below, which is built for it.
+
+            The traffic tiles' "since <date>" hints are not an exception to
+            that: they say how far back the standing total can see, which is a
+            property of the data, not a window chosen for the tile. A total
+            whose coverage is unstated is the failure this whole block exists
+            to prevent — see the footnote under the grid. */}
         <StatGrid className="mt-5">
-          <StatTile label="Unique visitors" value={stats.uniqueVisitors} icon="UsersRound" accent="#2560e6" hero />
-          <StatTile label="Page views" value={stats.pageViewsTotal} hint={`${stats.articleViewsTotal.toLocaleString()} on articles`} icon="Eye" accent="#1aa9d6" />
+          {/* The two traffic tiles carry their own coverage window in the hint.
+              They read MEASURED pageviews only — the reconstructed backfill is
+              excluded SQL-side and accounted for in the note under this grid —
+              and the two windows differ on purpose: raw views go back to the
+              first beacon row, per-visitor counts only to the first row that
+              carried a visitor id. */}
+          <StatTile
+            label="Unique visitors"
+            value={stats.uniqueVisitors}
+            hint={visitorsSince ? `measured since ${visitorsSince}` : undefined}
+            icon="UsersRound"
+            accent="#2560e6"
+            hero
+          />
+          <StatTile
+            label="Page views"
+            value={stats.pageViewsTotal}
+            hint={`${stats.articleViewsTotal.toLocaleString()} on articles${
+              viewsSince ? ` · since ${viewsSince}` : ""
+            }`}
+            icon="Eye"
+            accent="#1aa9d6"
+          />
           <StatTile label="Online now" value={stats.onlineNow} icon="Activity" accent="#0ea5a3" live />
           <StatTile label="Teams" value={stats.totalUniqueTeams} hint="FRC teams represented" icon="Flag" accent="#12a150" />
 
@@ -227,7 +348,15 @@ export default async function AdminPage() {
             accent="#2560e6"
             hero
           />
-          <StatTile label="Guide viewers" value={stats.guideViewersTotal} hint={`${stats.guideViewsTotal.toLocaleString()} guide views`} icon="BookOpen" accent="#d64b8a" />
+          <StatTile
+            label="Guide viewers"
+            value={stats.guideViewersTotal}
+            hint={`${stats.guideViewsTotal.toLocaleString()} guide views${
+              visitorsSince ? ` · viewers since ${visitorsSince}` : ""
+            }`}
+            icon="BookOpen"
+            accent="#d64b8a"
+          />
           <StatTile label="Bookmarks" value={stats.totals.bookmarks} icon="Bookmark" accent="#7c5cff" />
 
           <StatTile label="Activation" value={retention.activationPct} suffix="%" hint={`${retention.activated}/${retention.totalUsers} did a lesson`} icon="Percent" accent="#f5a623" />
@@ -247,6 +376,17 @@ export default async function AdminPage() {
           <StatTile label="Pending edits" value={pendingEdits.length} hint={`${pendingSubmissions.length} pending submissions`} icon="FileClock" accent="#f5a623" />
         </StatGrid>
 
+        {/* Coverage footnote for the traffic tiles. Same 11px muted note the
+            panels below use for the same job (see the funnel note), placed
+            directly under the grid because that is where the numbers it
+            qualifies are read. Deliberately not a tile and not a panel: it is
+            not a metric, it is the provenance of four of them. */}
+        {coverageNote ? (
+          <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
+            {coverageNote}
+          </p>
+        ) : null}
+
         {/* ===================== DETAIL — COLLAPSED BY DEFAULT ===================== */}
         <Reveal className="mt-6">
           <CollapsiblePanel title="Growth" icon="TrendingUp" badge="Last 30 days">
@@ -261,6 +401,64 @@ export default async function AdminPage() {
               }}
               bare
             />
+            {/* The 30-day window straddles the day visitor ids started, so the
+                visitor line legitimately sits at zero for its left-hand days.
+                Saying so stops it reading as a traffic collapse. */}
+            {visitorsSince ? (
+              <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
+                Days before {visitorsSince} plot views but no visitors — the
+                beacon had not started sending visitor ids, so that stretch of
+                the visitor line is missing data, not a quiet week. The
+                reconstructed backfill is excluded from this chart, so nothing
+                plotted here is synthetic.
+              </p>
+            ) : null}
+          </CollapsiblePanel>
+        </Reveal>
+
+        {/* ===================== ACTIVATION FUNNEL =====================
+            Full width and directly under Growth because it answers the one
+            question the dashboard could not: WHERE the 45% of accounts that
+            never complete a lesson actually stop. No time-window control —
+            every row is a standing total over the whole history of the site,
+            same contract as the tiles above. */}
+        <Reveal className="mt-3">
+          <CollapsiblePanel
+            title="Activation funnel"
+            icon="Gauge"
+            accent="#0ea5a3"
+            badge={funnelBadge}
+          >
+            <MiniList
+              rows={funnelRows}
+              accent="#0ea5a3"
+              empty="Funnel unavailable — check the server logs for [funnel]."
+            />
+
+            {funnelNote ? (
+              <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
+                {funnelNote}
+              </p>
+            ) : null}
+
+            {funnelAnonRows.length > 0 ? (
+              <section
+                aria-labelledby="admin-funnel-anonymous"
+                className="mt-4 min-w-0 border-t border-border/50 pt-3"
+              >
+                <h4
+                  id="admin-funnel-anonymous"
+                  className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground"
+                >
+                  Before signup — anonymous readers
+                </h4>
+                <MiniList rows={funnelAnonRows} accent="#8a97ad" />
+                <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
+                  Counted by device, not by person, and never joined to an
+                  account — a reader who signs up starts a fresh row above.
+                </p>
+              </section>
+            ) : null}
           </CollapsiblePanel>
         </Reveal>
 
@@ -273,6 +471,23 @@ export default async function AdminPage() {
                 visitorWeek={stats.visitorSources7d}
                 visitorAllTime={stats.visitorSources}
               />
+              {/* The two halves of this control do NOT cover the same span, and
+                  the toggle says "All-time" for both. Users come from
+                  profiles.source (every signup ever); visitors come from
+                  first-touch pageviews, which only carry a visitor id from the
+                  date below. Differencing the two would invent a gap. */}
+              {visitorsSince ? (
+                <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">
+                  &ldquo;All-time&rdquo; means every signup ever on the Users
+                  view, but only {visitorsSince} onward on the Visitors view —
+                  that is when pageviews began carrying a visitor id, so no
+                  earlier visitor can be attributed to a source. The two are not
+                  comparable totals. <em>backfill</em> no longer appears as a
+                  channel here: it was our own reconstruction script, not a
+                  referrer, and it was counting {stats.analytics.backfillVisitors}{" "}
+                  synthetic visitors.
+                </p>
+              ) : null}
             </CollapsiblePanel>
           </Reveal>
 

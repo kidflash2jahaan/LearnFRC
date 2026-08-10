@@ -38,6 +38,7 @@ import { cn } from "@/lib/utils";
 import type { Resource, QuizQuestion } from "@/lib/types";
 import { MyProgressProvider } from "@/components/progress/my-progress";
 import {
+  LessonOpenBeacon,
   LessonStatusChip,
   LessonActionsIsland,
   ReadingRailIsland,
@@ -250,6 +251,10 @@ export default async function LessonPage({
 
   return (
     <MyProgressProvider>
+    {/* Records `lesson_opened`. Renders nothing; mounted at the top of the tree
+        so the milestone does not depend on how far down the page a reader
+        scrolls or on which optional block happens to render. */}
+    <LessonOpenBeacon />
     <div className="relative overflow-x-clip">
       <Glow
         blobs={[

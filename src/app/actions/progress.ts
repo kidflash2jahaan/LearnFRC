@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { rateLimit } from "@/lib/rate-limit";
+import { recordFunnelEvent } from "@/lib/funnel";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 function currentStreak(timestamps: string[]): number {
@@ -27,7 +28,13 @@ function currentStreak(timestamps: string[]): number {
   return streak;
 }
 
-async function awardAchievements(supabase: SupabaseClient, userId: string) {
+/** Returns the user's lifetime completed-lesson count, which the caller reuses
+ *  for the activation-funnel milestones rather than paying for a second count
+ *  query. */
+async function awardAchievements(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<number> {
   // total completed
   const { data: progress } = await supabase
     .from("lesson_progress")
@@ -82,6 +89,8 @@ async function awardAchievements(supabase: SupabaseClient, userId: string) {
   }
   if (toInsert.length)
     await supabase.from("user_achievements").insert(toInsert);
+
+  return completedCount;
 }
 
 export async function setLessonComplete(
@@ -134,7 +143,31 @@ export async function setLessonComplete(
         { onConflict: "user_id,lesson_id", ignoreDuplicates: true }
       );
     if (error) return { error: error.message };
-    await awardAchievements(supabase, user.id);
+    const completedCount = await awardAchievements(supabase, user.id);
+
+    // ---- Activation funnel ------------------------------------------------
+    // Recorded HERE rather than from the browser: this is the point at which a
+    // completion is a server-verified fact (the quiz gate above has already
+    // passed and the row is in lesson_progress), so the event cannot be minted
+    // by anyone POSTing at /api/funnel-event. recordFunnelEvent never throws and
+    // treats a repeat as success, so neither call can fail a completion — the
+    // worst case is a missing data point. Awaited rather than fired-and-forgotten
+    // because a serverless invocation can be frozen the moment this action
+    // returns.
+    //
+    // These two steps are already derivable exactly from lesson_progress, so the
+    // funnel's COUNTS do not depend on them; what they add is the `measured`
+    // column, which is what tells a reader of /admin that a row is a real
+    // observation rather than an inference. `completedCount` is reused from
+    // awardAchievements above, and the >= 2 test is immune to the PostgREST
+    // 1000-row truncation in that query: a truncated read still reports at least
+    // 1000, which is still at least two.
+    await recordFunnelEvent({ step: "lesson_completed", userId: user.id });
+    if (completedCount >= 2)
+      await recordFunnelEvent({
+        step: "second_lesson_completed",
+        userId: user.id,
+      });
   } else {
     const { error } = await supabase
       .from("lesson_progress")

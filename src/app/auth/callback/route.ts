@@ -5,9 +5,7 @@ import {
   payReferralReward,
   readSourceCookie,
 } from "@/lib/signup-attribution";
-
-/** A user created within this window is treated as a brand-new signup. */
-const NEW_USER_WINDOW_MS = 5 * 60 * 1000;
+import { isFreshSignup, postAuthDestination } from "@/lib/first-run";
 
 /**
  * OAuth / email-confirmation callback.
@@ -22,6 +20,20 @@ const NEW_USER_WINDOW_MS = 5 * 60 * 1000;
  * email path does, via the shared module, and pays the referral reward here
  * because Google has already verified the address (the email path waits for
  * /auth/confirm to get that same guarantee).
+ *
+ * FIRST RUN: a brand-new account whose destination is the GENERIC dashboard is
+ * sent to /start instead — one question, then a five-lesson plan, because 45%
+ * of accounts never finish a lesson and the loss is entirely upstream of the
+ * content. `isNew` is the same created_at test that already gates attribution
+ * below, so there is one definition of "new account" in this route, not two.
+ *
+ * WHAT IS DELIBERATELY NOT TOUCHED: an explicit `next` — a team invite
+ * (`/join/space?t=…`), a lesson a signed-out reader was on, a tool page — is
+ * returned verbatim, because only the literal string "/dashboard" is ever
+ * swapped. `ref` and `via` are read straight off this URL for attribution and
+ * are unaffected by the destination choice. Referrals through this file were
+ * silently dead for 24 days once already; the invite path is a hard constraint
+ * here, not a nice-to-have.
  */
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
@@ -34,6 +46,10 @@ export async function GET(request: Request) {
     !nextParam.startsWith("/\\")
       ? nextParam
       : "/dashboard";
+
+  // Set only on a confirmed brand-new account, and read once at the very
+  // bottom to choose between /start and the resolved destination.
+  let isNew = false;
 
   if (code) {
     const supabase = await createClient();
@@ -48,9 +64,7 @@ export async function GET(request: Request) {
     // must keep the source they arrived with. attributeSignup additionally
     // refuses to overwrite a non-empty source, so this is belt-and-braces.
     const user = data?.user;
-    const createdAt = user?.created_at ? Date.parse(user.created_at) : NaN;
-    const isNew =
-      Number.isFinite(createdAt) && Date.now() - createdAt < NEW_USER_WINDOW_MS;
+    isNew = isFreshSignup(user?.created_at);
 
     if (user && isNew) {
       const hdrs = request.headers;
@@ -78,5 +92,7 @@ export async function GET(request: Request) {
     }
   }
 
-  return NextResponse.redirect(new URL(next, origin));
+  return NextResponse.redirect(
+    new URL(postAuthDestination(next, isNew), origin)
+  );
 }

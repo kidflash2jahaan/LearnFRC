@@ -66,14 +66,21 @@ export function LessonActions({
   const onComplete = () => {
     // Auth state not yet known — ignore the click rather than misroute it.
     if (!ready) return;
-    if (!authed) return requireAuth("track your progress");
-    // A required quiz can't be bypassed — send them to it.
+    // A required quiz can't be bypassed — send them to it. This runs BEFORE the
+    // auth gate on purpose: guest completion is fully supported (localStorage +
+    // a verified server row, migrated at signup), but this button used to hit
+    // `requireAuth` first, so a logged-out reader who pressed the only action in
+    // the lesson hero got a "create an account" toast instead of the quiz. That
+    // is the first viewport of every SEO landing, and it contradicted the page's
+    // own "free, no login to read a guide" promise. Everyone gets the quiz; only
+    // the no-quiz "mark complete" fallback below still needs an account.
     if (quizRequired && !completed) {
       document
         .getElementById("lesson-quiz")
         ?.scrollIntoView({ behavior: "smooth" });
       return;
     }
+    if (!authed) return requireAuth("track your progress");
     const next = !completed;
     setCompleted(next);
     onCompletedChange?.(next);

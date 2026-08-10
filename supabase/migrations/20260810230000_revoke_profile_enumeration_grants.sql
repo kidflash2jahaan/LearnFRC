@@ -1,0 +1,83 @@
+-- Kill bulk enumeration of the social graph.
+--
+-- THE PROBLEM
+-- Before this migration, `public.profiles` and `public.user_achievements` both
+-- carried column-level SELECT grants for the `anon` role, and the RLS policies
+-- guarding them are `USING (true)` — i.e. RLS was never the gate, the grants
+-- were. With nothing but the publishable anon key (which ships in every page of
+-- the site) and no account at all, anyone could run:
+--
+--   GET /rest/v1/profiles?select=id,username,team_number,xp   -> 200, all 348 rows
+--   GET /rest/v1/profiles?team_number=eq.447                  -> 200, a team roster
+--   GET /rest/v1/user_achievements?select=user_id,earned_at   -> 200, all 520 rows
+--
+-- That is every account on the site, the team each learner belongs to, and a
+-- timestamped activity trail per user — on a platform whose users are mostly
+-- 14-to-18-year-olds. An earlier pass had already revoked the obvious PII
+-- (`full_name`, `signup_ip`, `unsubscribe_token`), which is why those columns
+-- 401'd while the rest of the row did not; the leak left behind was the SOCIAL
+-- GRAPH, not the names.
+--
+-- WHY GRANTS AND NOT RLS
+-- Postgres checks table/column privileges BEFORE it evaluates RLS. The
+-- `profiles_read` / `ua_select` policies are `USING (true)`, so tightening RLS
+-- alone would have changed nothing while the grants stood. Revoking the grant
+-- is the fix; RLS stays as a second layer for anything that is re-granted later.
+--
+-- WHY THIS DOESN'T BREAK THE PUBLIC PAGES
+-- /u/<username> is a deliberate SEO surface and must keep rendering for
+-- logged-out visitors and for Googlebot — and a logged-out visitor's Supabase
+-- client IS the `anon` role. So before this ran, every public cross-user read
+-- was moved onto the service-role client with an EXPLICIT column allow-list:
+--   src/app/u/[username]/page.tsx        (profile + achievements)
+--   src/app/u/[username]/opengraph-image.tsx
+--   src/lib/queries.ts                   (leaderboard, team board, XP totals,
+--                                         overview counts, referral count)
+--   src/app/actions/auth.ts              (login-by-username, signup collision)
+--   src/app/actions/profile.ts           (settings reads + write)
+-- The service-role key bypasses RLS *and* column grants, so in those functions
+-- the select list IS the access control. Never `select("*")` there, and never
+-- spread a profile row into a response object.
+REVOKE SELECT ON public.profiles FROM anon;
+REVOKE SELECT ON public.user_achievements FROM anon;
+
+-- `authenticated` too, for `profiles`. Signing up is free and self-serve, so a
+-- grant to `authenticated` is a grant to anyone willing to confirm an email —
+-- which is not a meaningful barrier, and is precisely the barrier that Team
+-- Mode ("only teammates who accept your invite can see your progress") claims
+-- to enforce. Verified with a throwaway account before and after: it could read
+-- all 350 profile rows and any team's roster beforehand, and gets 403 now.
+--
+-- Nothing reads `profiles` through a session-scoped client any more; the own-row
+-- reads in src/app/actions/profile.ts moved to the service-role client, where
+-- the `.eq("id", user.id)` filter (id validated by auth.getUser()) replaces the
+-- `profiles_update_own` RLS check that used to scope them.
+REVOKE SELECT ON public.profiles FROM authenticated;
+
+-- STILL OUTSTANDING — NOT DONE HERE
+-- `user_achievements` keeps its `authenticated` SELECT grant, so a signed-in
+-- account can still read all ~521 rows (user_id + achievement_id + earned_at).
+-- With the `profiles` grant gone those user_ids no longer resolve to usernames
+-- without a service-role key, so this is a pseudonymous activity list rather
+-- than a named one — but it is still a per-user timeline and should go.
+--
+-- It was left in place because revoking it breaks src/app/dashboard/page.tsx,
+-- which reads the table with the request-scoped (authenticated) client and was
+-- owned by another in-flight workstream at the time of this change. The full
+-- fix is three one-line client swaps plus this statement:
+--
+--   src/app/dashboard/page.tsx:127        -> createAdminClient()
+--   src/app/profile/page.tsx:67           -> createAdminClient()
+--   src/app/api/me/progress/route.ts:90   -> createAdminClient()
+--   src/app/actions/progress.ts:70        -> createAdminClient()
+--   REVOKE SELECT ON public.user_achievements FROM authenticated;
+--
+-- Each of those reads is already scoped to the caller's own user_id, so the
+-- swap is behaviour-preserving.
+--
+-- Also deliberately left alone: `anon` still holds INSERT on both tables and
+-- UPDATE on user_achievements. Both are dead in practice — the INSERT policies
+-- require `auth.uid() = id` / `auth.uid() = user_id`, which no anonymous caller
+-- can satisfy, and user_achievements has no UPDATE policy at all, so RLS denies
+-- every anonymous write. They are pointless grants worth removing separately;
+-- they are not a live hole, and revoking writes was out of scope for this pass.

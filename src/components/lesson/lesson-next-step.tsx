@@ -1,6 +1,12 @@
 import type { CSSProperties } from "react";
 import Link from "next/link";
-import { ArrowRight, ListTree, Rocket, CornerDownRight } from "lucide-react";
+import {
+  ArrowRight,
+  ListTree,
+  Rocket,
+  CornerDownRight,
+  ListChecks,
+} from "lucide-react";
 import { Icon } from "@/lib/icon-map";
 
 /**
@@ -28,6 +34,17 @@ import { Icon } from "@/lib/icon-map";
  *   see them, and there is no layout shift.
  * - The primary continuation is visually singular (one accent-filled card).
  *   Everything else on the block is deliberately quieter so it cannot compete.
+ * - ONE exception to that, added deliberately: a link to this lesson's quiz,
+ *   above the continuation card. Fixing the exit-before-continuation problem
+ *   above created a second one — the completion control (the only thing that
+ *   writes a lesson_progress row) is rendered further down the page than this
+ *   block, so a reader could chain lessons forever and record zero completions,
+ *   which is the shape of the 45% of accounts that have never completed
+ *   anything. The quiz link is quieter than the continuation card but it now
+ *   comes first, so the activation event is offered before the exit. It is a
+ *   plain anchor with no state, so it survives the pure-server contract above:
+ *   `#lesson-quiz` resolves to the quiz card, or to the completion card once the
+ *   lesson is finished, so the link is correct in both states.
  * - Cold-landing context: a visitor arriving mid-curriculum from search is told
  *   which module this is, their position in it, and where to start if new.
  */
@@ -107,12 +124,34 @@ export function LessonNextStep({
         </span>
       </div>
 
-      <h2
-        id="next-step-heading"
-        className="mt-3 font-display text-xl font-semibold tracking-tight"
-      >
-        {next ? "Keep going" : "You've reached the end of this track"}
-      </h2>
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <h2
+          id="next-step-heading"
+          className="font-display text-xl font-semibold tracking-tight"
+        >
+          {next ? "Keep going" : "You've reached the end of this track"}
+        </h2>
+        {/* The activation event, offered before the exit below it.
+            The XP qualifier is not padding. This page is ISR-cached
+            (`revalidate = 86400`), so this string is in the SAME static HTML
+            for every reader and cannot branch on auth. It previously read
+            "Take the quiz · +10 XP", which is false for a logged-out reader:
+            a guest completion writes a `guest_progress` row, and the only
+            thing that pays XP is the `on_lesson_completed` trigger on
+            `lesson_progress` (verified against the live schema — there is no
+            trigger on `guest_progress`). Guests earn zero XP at quiz time.
+            "with an account" is true in both directions: signed in, the
+            completion pays out now; as a guest, it pays out when the row
+            migrates at signup. 10 is the floor the trigger guarantees
+            (`10 + least(10, streak - 1)`), never an overstatement. */}
+        <a
+          href="#lesson-quiz"
+          className="ac-chip inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-[color:var(--ai)] transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        >
+          <ListChecks className="h-4 w-4 shrink-0" aria-hidden />
+          Take the quiz &middot; +10 XP with an account
+        </a>
+      </div>
 
       {/* ---- THE primary continuation: one card, visually singular ---- */}
       {next && (

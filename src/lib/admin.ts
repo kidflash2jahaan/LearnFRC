@@ -46,6 +46,38 @@ export type ReferralSurfaceStat = {
   signups7d: number;
 };
 
+/**
+ * What the pageview-derived numbers actually cover.
+ *
+ * `page_views` holds three eras, and reading across them without saying so is
+ * how a 100%-activation illusion got into a growth analysis:
+ *
+ *  1. 2026-06-19..07-03 — 992 SYNTHETIC rows (`source = 'backfill'`,
+ *     `visitor = 'seed:<user_id>'`) reconstructed from `lesson_progress`. They
+ *     exist ONLY for people who completed a lesson, so any funnel over them
+ *     reads ~100% by construction. Kept in the table (they are honestly
+ *     labelled and may stand in for real pre-beacon activity) but excluded
+ *     from every figure here; the size and span come back as `backfill*` so
+ *     the panel can show them as their own line instead of summing them in.
+ *  2. 07-03..07-22 — real traffic, but `visitor` is NULL on every row. Fine as
+ *     raw view counts, useless per-person. Needs no filter (`count(distinct)`
+ *     ignores NULLs) — it is a COVERAGE fact, which is what `visitorsSince`
+ *     starting later than `viewsSince` records.
+ *  3. 07-22 onward — real traffic with real visitor ids.
+ */
+export type AnalyticsCoverage = {
+  /** First measured pageview of any kind — raw view counts start here. */
+  viewsSince: string | null;
+  /** First measured pageview carrying a visitor id — per-person counts start here. */
+  visitorsSince: string | null;
+  /** Synthetic rows held out of every number above. */
+  backfillViews: number;
+  /** `seed:` pseudo-visitors held out of every per-visitor number above. */
+  backfillVisitors: number;
+  backfillFrom: string | null;
+  backfillTo: string | null;
+};
+
 /** One calendar day of activity for the chart. */
 export type DailyPoint = {
   day: string; // YYYY-MM-DD
@@ -97,11 +129,13 @@ export type AdminStats = {
   articleViewsTotal: number;
   /** Per-article view counts, most read first, incl. zero-view articles. */
   articleViews: { slug: string; title: string; views: number }[];
-  /** Site-wide pageviews (all pages), all-time. */
+  /** Site-wide MEASURED pageviews (all pages), all-time. Excludes the backfill. */
   pageViewsTotal: number;
-  /** Distinct first-party visitor ids (unique visitors). */
+  /** Distinct first-party visitor ids (unique visitors). Excludes the backfill. */
   uniqueVisitors: number;
   uniqueVisitors30d: number;
+  /** Provenance + coverage window for every pageview-derived number above. */
+  analytics: AnalyticsCoverage;
   /** Most-completed lessons. */
   topLessons: { slug: string; title: string; completions: number }[];
   /** Where UNIQUE VISITORS came from — first-touch source (all-time / last 7d). */
@@ -110,9 +144,13 @@ export type AdminStats = {
   /** Guest (no-account) learning — completions + distinct learners. */
   guestCompletions: number;
   guestLearners: number;
-  /** All-time raw views across every /guides page. */
+  /** All-time MEASURED views across every /guides page (backfill excluded). */
   guideViewsTotal: number;
-  /** Distinct people who viewed any guide (can't be summed per-dept). */
+  /**
+   * Distinct people who viewed any guide (can't be summed per-dept). Covers
+   * `analytics.visitorsSince` onward — the backfill's 73 `seed:` guide
+   * "viewers" are excluded, and rows before visitor ids existed carry none.
+   */
   guideViewersTotal: number;
 };
 
@@ -188,9 +226,15 @@ export async function getAdminStats(): Promise<AdminStats> {
     supabase.from("admin_daily_completions").select("day, count"),
     // Aggregated in SQL (one row per slug) so we never fetch raw view rows.
     supabase.rpc("article_view_counts"),
-    // Site-wide pageview aggregates — all computed SQL-side.
+    // Site-wide pageview aggregates — all computed SQL-side, and all reading
+    // `page_views_measured` rather than `page_views` so the reconstructed
+    // backfill (see AnalyticsCoverage) is excluded. This RPC also returns the
+    // held-back backfill totals and the coverage window, so the panel can state
+    // what each number covers instead of leaving it to be re-derived.
     supabase.rpc("page_view_summary"),
     supabase.rpc("page_views_daily", { days: DAILY_WINDOW }),
+    // Reads lesson_progress, NOT page_views — the backfill cannot reach it, so
+    // it is deliberately left unfiltered.
     supabase.rpc("top_lessons", { lim: 8 }),
     supabase.rpc("visitor_sources"),
     supabase.rpc("guest_progress_stats"),
@@ -390,6 +434,11 @@ export async function getAdminStats(): Promise<AdminStats> {
   // one consistent window means the two counts can't disagree on their window;
   // max() then just guarantees a floor (a member whose heartbeat landed without
   // a beacon in the window still counts).
+  //
+  // online_visitors also excludes the backfill now. That changes nothing today
+  // — the synthetic rows are five weeks old and this window is five minutes —
+  // but it is a distinct-visitor count, and the next reconstruction script to
+  // stamp rows with now() would otherwise inflate a LIVE tile.
   const onlineVisitorsRes = await supabase.rpc("online_visitors", { minutes: 5 });
   const onlineVisitors = Number((onlineVisitorsRes.data as number | null) ?? 0);
   const onlineNow = Math.max(onlineMembers, onlineVisitors);
@@ -466,12 +515,37 @@ export async function getAdminStats(): Promise<AdminStats> {
   const articleViewsTotal = avRows.reduce((s, r) => s + Number(r.views ?? 0), 0);
 
   // ── Site-wide pageviews + top pages / lessons (SQL-aggregated) ─────
+  // Every figure here is MEASURED traffic: page_view_summary reads
+  // page_views_measured, so the 992 reconstructed rows are already out. The
+  // `backfill_*` columns are what was held back — carried through to the panel
+  // as its own labelled line, never added into the totals.
   const pvs = ((pageSummaryRes.data as
-    | { total: number | string; views_7d: number | string; views_30d: number | string; visitors: number | string; visitors_30d: number | string; visitors_7d: number | string }[]
+    | {
+        total: number | string;
+        views_7d: number | string;
+        views_30d: number | string;
+        visitors: number | string;
+        visitors_30d: number | string;
+        visitors_7d: number | string;
+        views_since: string | null;
+        visitors_since: string | null;
+        backfill_views: number | string;
+        backfill_visitors: number | string;
+        backfill_from: string | null;
+        backfill_to: string | null;
+      }[]
     | null) ?? [])[0];
   const pageViewsTotal = Number(pvs?.total ?? 0);
   const uniqueVisitors = Number(pvs?.visitors ?? 0);
   const uniqueVisitors30d = Number(pvs?.visitors_30d ?? 0);
+  const analytics: AnalyticsCoverage = {
+    viewsSince: pvs?.views_since ?? null,
+    visitorsSince: pvs?.visitors_since ?? null,
+    backfillViews: Number(pvs?.backfill_views ?? 0),
+    backfillVisitors: Number(pvs?.backfill_visitors ?? 0),
+    backfillFrom: pvs?.backfill_from ?? null,
+    backfillTo: pvs?.backfill_to ?? null,
+  };
   const topLessons = ((topLessonsRes.data as
     | { slug: string; title: string; completions: number | string }[]
     | null) ?? []).map((r) => ({
@@ -481,6 +555,11 @@ export async function getAdminStats(): Promise<AdminStats> {
   }));
 
   // Where UNIQUE VISITORS came from (one first-touch source per visitor).
+  // This was the worst-corrupted number on the panel: all 150 `seed:`
+  // pseudo-visitors carried `source = 'backfill'`, so the pie chart rendered
+  // "backfill" as the fourth-largest acquisition channel on the site (150
+  // visitors, ahead of Chief Delphi's 143). The RPC now excludes them, so the
+  // channel is gone and no real channel's count moved.
   const vsRows = (visitorSourcesRes.data as
     | { source: string; all_time: number | string; last_7d: number | string }[]
     | null) ?? [];
@@ -500,7 +579,10 @@ export async function getAdminStats(): Promise<AdminStats> {
   const guestCompletions = Number(gs?.guest_completions ?? 0);
   const guestLearners = Number(gs?.guest_learners ?? 0);
 
-  // Guide audience rollup (admin_guide_views_summary); bigints arrive as strings.
+  // Guide audience rollup (admin_guide_views_summary); bigints arrive as
+  // strings. The view now reads page_views_measured: 842 of the backfill's 992
+  // rows were /guides/ paths, which had inflated `views` by the same 842 and
+  // `viewers` by the 73 distinct `seed:` ids among them.
   const gvSummary = (((guideViewsSummaryRes.data as { views: number | string; viewers: number | string }[] | null) ?? []))[0];
   const guideViewsTotal = Number(gvSummary?.views ?? 0);
   const guideViewersTotal = Number(gvSummary?.viewers ?? 0);
@@ -537,6 +619,7 @@ export async function getAdminStats(): Promise<AdminStats> {
     pageViewsTotal,
     uniqueVisitors,
     uniqueVisitors30d,
+    analytics,
     topLessons,
     visitorSources,
     visitorSources7d,

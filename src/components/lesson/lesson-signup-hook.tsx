@@ -6,6 +6,7 @@ import Link from "next/link";
 import { ArrowRight, Cloud, Medal, Trophy, Zap } from "lucide-react";
 import { Reveal } from "@/components/motion/primitives";
 import { useMyProgress } from "@/components/progress/my-progress";
+import { readGuestLessons, subscribeGuestProgress } from "@/lib/guest-progress";
 
 const GRADIENT_TEXT: CSSProperties = {
   background: "linear-gradient(120deg,#2560e6,#1aa9d6)",
@@ -24,34 +25,20 @@ const PERKS = [
   { icon: Medal, label: "Leaderboard rank" },
 ] as const;
 
-/** Where <LessonComplete/> stores a guest's completions on this device. */
-const GUEST_KEY = "lf_guest_lessons";
-/** /api/migrate-guest awards exactly this per migrated lesson — so the XP
-    number this component quotes is the number the reader actually receives. */
+/** The base award the on_lesson_completed trigger pays per migrated lesson.
+    It can be higher (there is a streak bonus of up to +10), never lower — so
+    the figure this component quotes is a floor the reader is guaranteed, which
+    is why the copy says "at least". */
 const XP_PER_LESSON = 10;
 
 type GuestCount = { total: number; inDept: number };
 const NO_GUEST: GuestCount = { total: 0, inDept: 0 };
 
-function readGuestCount(deptIds: Set<string>): GuestCount {
-  try {
-    const map = JSON.parse(localStorage.getItem(GUEST_KEY) || "{}") as Record<
-      string,
-      boolean
-    >;
-    let total = 0;
-    let inDept = 0;
-    for (const [id, done] of Object.entries(map)) {
-      if (!done) continue;
-      total++;
-      if (deptIds.has(id)) inDept++;
-    }
-    return { total, inDept };
-  } catch {
-    // Storage blocked (private mode / third-party restrictions) — fall back to
-    // the first-time ask rather than guessing.
-    return NO_GUEST;
-  }
+function countGuest(deptIds: Set<string>): GuestCount {
+  const set = readGuestLessons();
+  let inDept = 0;
+  for (const id of set) if (deptIds.has(id)) inDept++;
+  return { total: set.size, inDept };
 }
 
 /**
@@ -111,28 +98,20 @@ export function LessonSignupHook({
 
     const read = () =>
       setGuest((prev) => {
-        const next = readGuestCount(deptIds);
+        const next = countGuest(deptIds);
         return prev.total === next.total && prev.inDept === next.inDept
           ? prev
           : next;
       });
     read();
 
-    // <LessonComplete/> writes straight to localStorage with no event, so
-    // re-read on the next tick after any click. Finishing the lesson directly
-    // above this card therefore upgrades the ask immediately — and because the
-    // re-read lands within 500ms of a real user interaction, any resulting
-    // reflow is excluded from CLS.
-    const onClick = () => window.setTimeout(read, 0);
-    document.addEventListener("click", onClick, true);
-    // Cross-tab / returning readers.
-    window.addEventListener("storage", read);
-    window.addEventListener("focus", read);
-    return () => {
-      document.removeEventListener("click", onClick, true);
-      window.removeEventListener("storage", read);
-      window.removeEventListener("focus", read);
-    };
+    // The guest store broadcasts on every write (this tab, another tab, or on
+    // refocus), so finishing the lesson directly above this card upgrades the
+    // ask immediately. It replaces a document-wide capture-phase click listener
+    // that re-read localStorage after every click anywhere on the page; the
+    // re-read still lands within 500ms of a real interaction, so any resulting
+    // reflow stays excluded from CLS.
+    return subscribeGuestProgress(read);
   }, [loaded, authed, deptIds]);
 
   if (authed) return null;
@@ -142,54 +121,78 @@ export function LessonSignupHook({
   const xp = total * XP_PER_LESSON;
   const them = total === 1 ? "it" : "them";
   const plural = total === 1 ? "" : "s";
+  // "all 1 lesson" reads like a bug, so the singular gets its own phrasing.
+  const theLessons = total === 1 ? "your lesson" : `all ${total} lessons`;
 
   let eyebrow: string;
   let headline: [string, string];
   let body: string;
   let cta: string;
 
+  // Both "has progress" branches are written around what an account ADDS, not
+  // around what a browser might take away. The previous version led in
+  // emphasised type with "don't lose them" and opened the body with "Clear your
+  // history, or open LearnFRC on your build-season laptop, and it's gone" —
+  // loss aversion aimed at teenagers, and a threat the product itself creates.
+  // Every fact below is still here (browser-only storage, the XP floor, the
+  // preserved dates, certificates, leaderboard); what changed is that the
+  // sentence now ends in the benefit rather than the loss.
+  //
+  // The eyebrow stays "Saved in this browser only" on purpose. That is not a
+  // scare line, it is the one piece of information a reader needs in order to
+  // judge the offer at all, and removing it would make the ask less honest
+  // rather than kinder.
   if (inDept > 0) {
-    eyebrow = "Saved on this device only";
+    eyebrow = "Saved in this browser only";
     headline = [
-      `You've already finished ${inDept} of ${count} lessons in ${department} —`,
-      `claim ${them}.`,
+      `${inDept} of ${count} lessons done in ${department} —`,
+      `take your progress with you.`,
     ];
     body =
-      `Guest progress lives in this browser only. Creating a free ` +
-      `account moves all ${total} lesson${plural} you've finished on LearnFRC ` +
-      `into a real profile — that's +${xp} XP the moment you sign up — so they ` +
-      `follow you to any device, count toward your streak and the ${department} ` +
-      `certificate, and put you on the leaderboard. About 10 seconds; you can ` +
-      `keep learning either way.`;
+      `A free account gives that work a permanent home: it moves ` +
+      `${theLessons} into a real profile with the dates you actually earned ` +
+      `them — at least +${xp} XP — and from then on your progress follows you ` +
+      `onto any device, counts toward the ${department} certificate, and puts ` +
+      `you on the leaderboard. Reading stays free either way; nothing here ` +
+      `gets locked.`;
     cta = `Claim my ${total} lesson${plural}`;
   } else if (total > 0) {
-    eyebrow = "Saved on this device only";
+    eyebrow = "Saved in this browser only";
     headline = [
-      `You've finished ${total} lesson${plural} without an account —`,
-      `claim ${them}.`,
+      `${total} lesson${plural} finished without an account —`,
+      `give your progress a permanent home.`,
     ];
     body =
-      `Guest progress lives in this browser only. Creating a free ` +
-      `account moves ${them} into a real profile — that's +${xp} XP the moment ` +
-      `you sign up — so your work follows you to any device, counts toward your ` +
-      `streak and certificates, and puts you on the leaderboard. About 10 ` +
-      `seconds; you can keep learning either way.`;
+      `A free account moves ${them} into a real profile with the dates you ` +
+      `actually earned them — at least +${xp} XP — so your progress follows ` +
+      `you onto any device, counts toward streaks and certificates, and puts ` +
+      `you on the leaderboard. Reading stays free either way; nothing here ` +
+      `gets locked.`;
     cta = `Claim my ${total} lesson${plural}`;
   } else {
-    eyebrow = "Save your progress";
-    headline = [`You're on lesson ${position} of ${count} in`, `${department}.`];
+    // Nothing finished yet, so there is nothing to lose and no reason to ask.
+    // This is also the server-rendered variant — the HTML a crawler and a cold
+    // visitor get — so it says the true thing: the quiz below works right now,
+    // signed in or not. The account ask arrives once they've earned something,
+    // which is what the two branches above are for.
+    eyebrow = "No account needed";
+    headline = [
+      `Lesson ${position} of ${count} in ${department} —`,
+      `finish it right here.`,
+    ];
     body =
-      `You can finish lessons without an account — progress saves in this ` +
-      `browser. A free account keeps it on every device instead, adds XP and ` +
-      `daily streaks, and unlocks the ${department} certificate when you finish ` +
-      `the track. It takes about 10 seconds.`;
-    cta = "Create a free account";
+      `The quiz above is open to everyone: pass it and this lesson is marked ` +
+      `complete, saved in this browser, no sign-up. Do a few and we'll offer ` +
+      `you somewhere permanent to put them.`;
+    cta = "Take the quiz";
   }
+
+  const asked = total > 0;
 
   return (
     <Reveal>
       <aside
-        aria-label="Create a free account"
+        aria-label={asked ? "Save your progress" : "Finish this lesson"}
         className="ac-glass relative mt-10 overflow-hidden rounded-3xl p-6 sm:p-8"
         style={{ "--a": "#2560e6" } as CSSProperties}
       >
@@ -206,34 +209,61 @@ export function LessonSignupHook({
             {body}
           </p>
 
-          <ul className="mt-5 flex flex-wrap gap-2.5">
-            {PERKS.map(({ icon: Icon, label }) => (
-              <li
-                key={label}
-                className="ac-chip inline-flex items-center gap-1.5 text-xs font-medium text-foreground/80"
-              >
-                <Icon className="h-3.5 w-3.5 text-primary" aria-hidden />
-                {label}
-              </li>
-            ))}
-          </ul>
+          {/* The perk chips are an account pitch, so they only appear once
+              there is progress an account would protect. */}
+          {asked && (
+            <ul className="mt-5 flex flex-wrap gap-2.5">
+              {PERKS.map(({ icon: Icon, label }) => (
+                <li
+                  key={label}
+                  className="ac-chip inline-flex items-center gap-1.5 text-xs font-medium text-foreground/80"
+                >
+                  <Icon className="h-3.5 w-3.5 text-primary" aria-hidden />
+                  {label}
+                </li>
+              ))}
+            </ul>
+          )}
 
           <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-3">
-            <Link
-              href={`/signup?next=${encoded}&ref=lesson-hook`}
-              className="ac-btn max-w-full text-sm"
-            >
-              <span className="truncate">{cta}</span>
-              <ArrowRight className="h-4 w-4 shrink-0" aria-hidden />
-            </Link>
+            {asked ? (
+              <Link
+                href={`/signup?next=${encoded}&ref=lesson-hook`}
+                className="ac-btn max-w-full text-sm"
+              >
+                <span className="truncate">{cta}</span>
+                <ArrowRight className="h-4 w-4 shrink-0" aria-hidden />
+              </Link>
+            ) : (
+              // Every lesson carries a quiz, and <LessonComplete/> renders it
+              // with id="lesson-quiz" whenever the lesson isn't already done —
+              // which is exactly the state this branch describes. A plain
+              // in-page anchor, so it works before hydration and without JS.
+              <a href="#lesson-quiz" className="ac-btn max-w-full text-sm">
+                <span className="truncate">{cta}</span>
+                <ArrowRight className="h-4 w-4 shrink-0" aria-hidden />
+              </a>
+            )}
             <span className="text-sm text-muted-foreground">
-              Already have one?{" "}
+              {asked ? "Already have an account? " : "Got an account? "}
               <Link
                 href={`/login?next=${encoded}`}
                 className="font-semibold text-primary hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
               >
                 Log in
               </Link>
+              {!asked && (
+                <>
+                  {" "}
+                  or{" "}
+                  <Link
+                    href={`/signup?next=${encoded}&ref=lesson-hook`}
+                    className="font-semibold text-primary hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                  >
+                    create one free
+                  </Link>
+                </>
+              )}
             </span>
           </div>
         </div>

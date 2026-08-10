@@ -16,8 +16,16 @@ export default async function Image({
   let team: number | null = null;
   let xp = 0;
   try {
+    // Service-role, not the anon key: `profiles` is no longer SELECTable by the
+    // anon API role, and this card has to render for logged-out visitors and
+    // link-unfurling crawlers. Only the three fields the card actually paints
+    // are requested — the key bypasses RLS and column grants, so this list IS
+    // the access control. Never `select("*")`, never `full_name`.
+    //
+    // The 3s abort stays: a slow database must degrade to the generic card, not
+    // stall OG generation.
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 3000);
     const res = await fetch(
@@ -25,7 +33,7 @@ export default async function Image({
         username
       )}&select=username,team_number,xp`,
       {
-        headers: { apikey: anon, Authorization: `Bearer ${anon}` },
+        headers: { apikey: key, Authorization: `Bearer ${key}` },
         cache: "no-store",
         signal: ctrl.signal,
       }

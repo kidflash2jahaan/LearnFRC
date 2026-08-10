@@ -45,13 +45,17 @@ export async function signIn(
   let email = identifier;
   if (!identifier.includes("@")) {
     const uname = identifier.toLowerCase().replace(/[^a-z0-9_]/g, "");
-    const { data: prof } = await supabase
+    const admin = createAdminClient();
+    // Service-role: the caller is signed OUT here, so `supabase` is the anon
+    // role, and anon can no longer SELECT `profiles` at all. Single-row lookup
+    // by exact username, `id` only — it resolves one handle the user already
+    // typed, it can't be walked into a roster.
+    const { data: prof } = await admin
       .from("profiles")
       .select("id")
       .eq("username", uname)
       .maybeSingle();
     if (!prof) return { error: "No account found with that username." };
-    const admin = createAdminClient();
     const { data: u } = await admin.auth.admin.getUserById(prof.id as string);
     email = u?.user?.email ?? "";
     if (!email) return { error: "Couldn't sign you in — try your email." };
@@ -141,9 +145,12 @@ export async function signUp(
       };
   }
 
-  // Friendly pre-check for username collision (avoids cryptic DB error)
+  // Friendly pre-check for username collision (avoids cryptic DB error).
+  // Service-role: signup runs signed OUT, and the anon role can no longer
+  // SELECT `profiles`. Exact-match, `id` only — a taken/not-taken answer for
+  // one handle, which the unique index would give away on submit anyway.
   if (username) {
-    const { data: taken } = await supabase
+    const { data: taken } = await createAdminClient()
       .from("profiles")
       .select("id")
       .eq("username", username)

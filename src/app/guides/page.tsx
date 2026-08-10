@@ -5,6 +5,7 @@ import {
   ArrowRight,
   Compass,
   Layers,
+  Sparkles,
 } from "lucide-react";
 import { getDepartments, getCompletedLessonIds } from "@/lib/queries";
 import { getSession } from "@/lib/auth";
@@ -55,12 +56,18 @@ export default async function GuidesPage() {
   ]);
 
   const progress: Record<string, number> = {};
+  // Hoisted out of the block below so the first-run entry point can read it.
+  // Only ever compared against zero: PostgREST truncates a large select at 1000
+  // rows, but truncation can never turn a non-empty history into an empty one,
+  // so `=== 0` is safe on this unpaged read in a way that a count would not be.
+  let completedCount = 0;
   if (user) {
     const supabase = await createClient();
     const [{ data: lessons }, completed] = await Promise.all([
       supabase.from("lessons").select("id, modules(department_id)"),
       getCompletedLessonIds(user.id),
     ]);
+    completedCount = completed.size;
     const totals: Record<string, number> = {};
     const done: Record<string, number> = {};
     for (const l of lessons ?? []) {
@@ -77,6 +84,26 @@ export default async function GuidesPage() {
 
   const totalModules = departments.reduce((s, d) => s + d.moduleCount, 0);
   const totalLessons = departments.reduce((s, d) => s + d.lessonCount, 0);
+
+  /**
+   * THE ENTRY POINT FOR ACCOUNTS THAT NEVER STARTED.
+   *
+   * 156 of 347 accounts (45%) have never completed a lesson, and every one of
+   * them predates /start — the post-signup redirect only catches people who
+   * sign up from now on. This is how the existing 156 find it.
+   *
+   * WHY HERE. This page is the choosing surface, and the choosing is exactly
+   * where those accounts are lost: 11 departments and 394 lessons is the
+   * problem /start exists to collapse, so the alternative belongs beside it.
+   * It is also already a per-user render (it reads the session for the
+   * progress rings), so showing it costs no extra dynamism.
+   *
+   * WHY IT IS NOT A NAG. Signed-out visitors never see it (they get the normal
+   * public hero), it disappears permanently the moment one lesson is done, it
+   * is one inline card among the page's own content — not a banner, modal,
+   * toast or interstitial — and it is dismissible by simply doing nothing.
+   */
+  const showFirstRunEntry = !!user && completedCount === 0;
 
   // Catalog structured data — tells search engines this is a browsable set of
   // FRC department guides, each linking to its own curriculum.
@@ -146,6 +173,26 @@ export default async function GuidesPage() {
               </Link>
             </div>
           </RiseItem>
+          {showFirstRunEntry && (
+            <RiseItem>
+              <div className="ac-card mt-6 flex flex-wrap items-center gap-x-4 gap-y-3 p-4">
+                <span className="ac-badge flex h-9 w-9 flex-none items-center justify-center">
+                  <Sparkles className="h-4 w-4" aria-hidden />
+                </span>
+                <p className="min-w-0 flex-1 text-[13px] leading-snug text-foreground/75">
+                  <span className="font-semibold text-foreground">
+                    Haven&apos;t started yet?
+                  </span>{" "}
+                  Answer one question and we&apos;ll turn all {totalLessons}{" "}
+                  lessons into the five that get you moving.
+                </p>
+                <Link href="/start" className="ac-btn-ghost text-sm">
+                  Build my plan{" "}
+                  <ArrowRight className="h-4 w-4" aria-hidden />
+                </Link>
+              </div>
+            </RiseItem>
+          )}
           <RiseItem>
             <dl className="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground">
               <div className="flex items-baseline gap-1.5">

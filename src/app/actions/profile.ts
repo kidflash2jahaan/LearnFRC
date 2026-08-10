@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { rateLimit } from "@/lib/rate-limit";
 import { firstProfaneField } from "@/lib/profanity";
 import {
   isPlaceholderUsername,
@@ -26,6 +27,12 @@ export async function updateProfile(
   } = await supabase.auth.getUser();
   if (!user) return { error: "You must be signed in." };
 
+  // Every other server action in this codebase is rate limited; this one was
+  // the exception. Keyed on the user id (not just the IP) so one account can't
+  // spray edits from a rotating address.
+  if (!(await rateLimit("update-profile", 20, 3600, user.id)))
+    return { error: "Too many profile updates — try again in a bit." };
+
   const full_name = String(formData.get("full_name") || "").trim() || null;
   const bio = String(formData.get("bio") || "").trim() || null;
   const avatar_url = String(formData.get("avatar_url") || "").trim() || null;
@@ -42,12 +49,45 @@ export async function updateProfile(
       return { error: "Enter a valid FRC team number." };
   }
 
+  // `team_number` is self-declared and it is the key to the team roster at
+  // /teams, so an unthrottled edit here is a team-hopping primitive: set it,
+  // load the roster, set it again. Three CHANGES per day is generous for a
+  // real correction and useless for walking the team list.
+  //
+  // Deliberately gated on an actual change: comparing against the stored value
+  // means someone fixing a typo in their bio never burns the budget, and it
+  // costs one indexed primary-key read. Service-role because this must keep
+  // working if the `authenticated` SELECT grant on `profiles` is revoked too.
+  //
+  // rateLimit() FAILS OPEN on infrastructure error (see src/lib/rate-limit.ts),
+  // which is the right trade here: this is anti-abuse friction on a legitimate
+  // settings field, not an authorization boundary. The real fix for roster
+  // exposure is consent-gated membership, not this counter.
+  const { data: currentTeam } = await createAdminClient()
+    .from("profiles")
+    .select("team_number")
+    .eq("id", user.id)
+    .maybeSingle();
+  const priorTeam = (currentTeam as { team_number: number | null } | null)
+    ?.team_number ?? null;
+  if (
+    team_number !== priorTeam &&
+    !(await rateLimit("profile-team-number", 3, 86400, user.id))
+  )
+    return {
+      error:
+        "You've changed your team number a few times today — try again tomorrow.",
+    };
+
   let username: string | null = null;
   if (usernameRaw) {
     username = usernameRaw.toLowerCase().replace(/[^a-z0-9_]/g, "");
     if (username.length < 3)
       return { error: "Username must be at least 3 characters (a–z, 0–9, _)." };
-    const { data: taken } = await supabase
+    // Service-role: `profiles` is no longer SELECTable by the anon OR the
+    // authenticated API role, so no session-scoped client can read this. Exact
+    // match on one handle, `id` only — a taken/not-taken answer, not a listing.
+    const { data: taken } = await createAdminClient()
       .from("profiles")
       .select("id")
       .eq("username", username)
@@ -109,7 +149,12 @@ export async function saveProfileSetup(
   } = await supabase.auth.getUser();
   if (!user) return { error: "You must be signed in." };
 
-  const { data: current } = await supabase
+  // Service-role for every `profiles` read in this action: no API role can
+  // SELECT the table any more. Own row, one column, keyed on the id that
+  // auth.getUser() just verified against the auth server.
+  const admin = createAdminClient();
+
+  const { data: current } = await admin
     .from("profiles")
     .select("username")
     .eq("id", user.id)
@@ -138,7 +183,7 @@ export async function saveProfileSetup(
       return { error: "That username isn't allowed — please choose another." };
 
     if (username !== currentUsername) {
-      const { data: taken } = await supabase
+      const { data: taken } = await admin
         .from("profiles")
         .select("id")
         .eq("username", username)
@@ -163,7 +208,15 @@ export async function saveProfileSetup(
 
   // Guard the username write against a race: only overwrite the exact value we
   // decided was fair game (null, or the placeholder we just read).
-  let q = supabase.from("profiles").update(payload).eq("id", user.id);
+  //
+  // Service-role because this chains `.select("id")` to detect a lost race, and
+  // SELECT on `profiles` is revoked for every API role. The RLS policy that
+  // used to scope this write (profiles_update_own: auth.uid() = id) is replaced
+  // by the `.eq("id", user.id)` below — `user.id` came from auth.getUser(),
+  // which validates the JWT against the auth server, so it is the same check.
+  // If you ever widen this filter, you remove the only thing stopping this
+  // action from writing to somebody else's row.
+  let q = admin.from("profiles").update(payload).eq("id", user.id);
   if (payload.username !== undefined)
     q = currentUsername === null
       ? q.is("username", null)

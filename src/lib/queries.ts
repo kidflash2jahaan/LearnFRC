@@ -288,12 +288,16 @@ export async function getProfile(userId: string): Promise<Profile | null> {
 export const getOverviewStats = unstable_cache(
   async () => {
     const supabase = createPublicClient();
+    // `profiles` is no longer readable by the anon API role AT ALL (the whole
+    // table's SELECT grant is revoked, not just the PII columns), so the
+    // learner count has to come from the service-role client. Head/count-only:
+    // no rows leave the database.
+    const admin = createAdminClient();
     const [depts, modules, lessons, learners] = await Promise.all([
       supabase.from("departments").select("*", { count: "exact", head: true }),
       supabase.from("modules").select("*", { count: "exact", head: true }),
       supabase.from("lessons").select("*", { count: "exact", head: true }),
-      // count only (no full_name egress; "*" would touch the now-restricted column)
-      supabase.from("profiles").select("id", { count: "exact", head: true }),
+      admin.from("profiles").select("id", { count: "exact", head: true }),
     ]);
     return {
       deptCount: depts.count ?? 0,
@@ -313,7 +317,11 @@ export const getOverviewStats = unstable_cache(
  */
 export const getLeaderboard = unstable_cache(
   async (limit = 25): Promise<(Profile & { lessons: number })[]> => {
-    const supabase = createPublicClient();
+    // Service-role, not the anon client: `profiles` is no longer SELECTable by
+    // the anon API role, which is what stops a stranger from paging the whole
+    // user table straight off /rest/v1. The board is a deliberate public
+    // surface, so it is rebuilt here from an EXPLICIT column list.
+    const supabase = createAdminClient();
     const { data } = await supabase
       .from("profiles")
       .select(PROFILE_BOARD_COLS)
@@ -413,7 +421,10 @@ export type TeamEntry = {
 /** Leaderboard of teams ranked by their members' combined XP. Cached briefly. */
 export const getTeamLeaderboard = unstable_cache(
   async (limit = 50): Promise<TeamEntry[]> => {
-    const supabase = createPublicClient();
+    // Service-role (anon can no longer SELECT `profiles`). Two columns only,
+    // and they are aggregated into per-team totals below — no per-member row
+    // ever leaves this function, so the team board cannot become a roster dump.
+    const supabase = createAdminClient();
     const { data } = await supabase
       .from("profiles")
       .select("team_number, xp")
@@ -655,9 +666,17 @@ export const getPublicContributions = unstable_cache(
   { revalidate: 60, tags: ["contributions"] }
 );
 
-/** How many people a given user has referred. Per-user, uncached. */
+/**
+ * How many people a given user has referred. Per-user, uncached.
+ *
+ * Service-role: no API role can SELECT `profiles` any more. Head/count-only —
+ * this returns a single integer and never the referred accounts themselves,
+ * which is the whole point (you learn that you referred five people, not who).
+ * Callers must pass the SIGNED-IN user's own id; every call site today reads it
+ * from getSession()/auth.getUser() on an auth-gated page.
+ */
 export async function getReferralCount(userId: string): Promise<number> {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const { count } = await supabase
     .from("profiles")
     .select("id", { count: "exact", head: true })
@@ -686,7 +705,9 @@ export async function isEmailSubscribed(email: string): Promise<boolean> {
  */
 export const getXpTotals = unstable_cache(
   async (): Promise<{ learners: number; totalXp: number }> => {
-    const supabase = createPublicClient();
+    // Service-role (anon can no longer SELECT `profiles`). One column, and it
+    // is reduced to two scalars before it leaves — no identifiers at all.
+    const supabase = createAdminClient();
     const { data } = await supabase.from("profiles").select("xp").gt("xp", 0);
     const rows = (data as { xp: number }[]) ?? [];
     return {

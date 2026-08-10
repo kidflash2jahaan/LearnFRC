@@ -20,6 +20,8 @@ import { Progress } from "@/components/ui/progress";
 import { DepartmentCard } from "@/components/department-card";
 import { InviteCard } from "@/components/leaderboard/invite-card";
 import { FirstRunGuide } from "@/components/dashboard/first-run-guide";
+import { FirstRunLaunch } from "@/components/onboarding/first-run-launch";
+import { readStartGoalId } from "@/lib/recommend";
 import { GuestMigration } from "@/components/guest-migration";
 import { ProfileSetupForm } from "@/components/onboarding/profile-setup-form";
 import {
@@ -36,6 +38,8 @@ import {
   AchievementBadge,
   type AchievementView,
 } from "@/components/dashboard/achievement-badge";
+import { PlanNudgeCard } from "@/components/team/plan-nudge-card";
+import { getActivePlan } from "@/app/teams/space/plan/plan-data";
 import { getSession } from "@/lib/auth";
 import { getDepartments, getDepartmentBySlug, getReferralCount } from "@/lib/queries";
 import { suggestUsername } from "@/lib/onboarding";
@@ -133,6 +137,10 @@ export default async function DashboardPage() {
   }[];
   const completedIds = new Set(progressRows.map((r) => r.lesson_id));
   const completedCount = completedIds.size;
+  // Which starter goal this learner picked on /start, if any. Only read for a
+  // zero-progress learner — it decides between showing their five-lesson plan
+  // and offering the question that produces one.
+  const startGoalId = completedCount === 0 ? await readStartGoalId() : null;
   const streak = streakFromDates(progressRows.map((r) => r.completed_at));
   // Lesson XP = 10 + 1 per streak-day, capped at 20 (max 2x). Show the multiplier.
   const xpMultiplier = (1 + Math.min(10, Math.max(0, streak - 1)) / 10).toFixed(1);
@@ -208,6 +216,21 @@ export default async function DashboardPage() {
   const firstName = displayName.split(" ")[0];
 
   const referralCount = profile?.username ? await getReferralCount(user.id) : 0;
+
+  // ── Team Mode: the route this learner's team space suggested, if any ──
+  // Self-scoped and read-only — getActivePlan() derives the space from
+  // auth.getUser() and returns null for anyone in no space, which is nearly
+  // everyone. It reads no other member's data, so nothing about another
+  // learner can reach this page. The card below is a suggestion and says so.
+  const teamPlan = await getActivePlan().catch(() => null);
+  const planDepts = (teamPlan?.departments ?? []).map((d) => ({
+    slug: d.slug,
+    name: d.name,
+    // Reuses the per-department tallies already computed above — no extra
+    // query, and the numbers are the learner's own by construction.
+    done: deptDone.get(d.id) ?? 0,
+    total: deptTotals.get(d.id) ?? d.lessonCount,
+  }));
 
   // ── Invite: ask in proportion to what the learner has actually done ──
   // Referral converts far better than any other channel precisely because the
@@ -362,14 +385,56 @@ export default async function DashboardPage() {
             />
           </Reveal>
         )}
-        {/* First-run guide — only for brand-new (zero-progress) learners. */}
-        {completedCount === 0 && continueLesson && cm && (
+        {/* FIRST RUN — the only surface a zero-progress learner sees here.
+            45% of accounts never finish a single lesson, and the loss is
+            entirely upstream of the content: they land on a dashboard built for
+            someone with a history and are handed 394 lessons across 11
+            departments with no default.
+
+            FirstRunLaunch renders the goal-aware five-lesson plan when the
+            learner has answered the one question on /start, so returning here
+            shows their plan rather than resetting them. With no answer stored
+            it falls back to the generic next-lesson card, and the banner below
+            offers the question — the email confirmation link cannot reliably
+            route people to /start (Supabase's template hardcodes its own
+            destination), so the dashboard has to be a real entry point rather
+            than a backstop. */}
+        {completedCount === 0 && (
           <Reveal className="mb-8">
-            <FirstRunGuide
-              href={`/guides/${continueLesson.deptSlug}/${continueLesson.moduleSlug}/${continueLesson.lessonSlug}`}
-              lessonTitle={continueLesson.lessonTitle}
-              deptName={continueLesson.deptName}
-            />
+            <div className="space-y-4">
+              {startGoalId ? (
+                <FirstRunLaunch userId={user.id} />
+              ) : (
+                <>
+                  {continueLesson && cm && (
+                    <FirstRunGuide
+                      href={`/guides/${continueLesson.deptSlug}/${continueLesson.moduleSlug}/${continueLesson.lessonSlug}`}
+                      lessonTitle={continueLesson.lessonTitle}
+                      deptName={continueLesson.deptName}
+                    />
+                  )}
+                  <Link
+                    href="/start"
+                    className="ac-tile flex items-center justify-between gap-3 p-3.5 text-left transition-colors hover:bg-white/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                    style={{ "--a": "#2560e6" } as CSSProperties}
+                  >
+                    <span className="min-w-0">
+                      <span className="block text-[15px] font-semibold text-foreground">
+                        Not sure where to start?
+                      </span>
+                      <span className="mt-0.5 block text-sm leading-snug text-foreground/70">
+                        Answer one question and we&apos;ll lay out your first
+                        five lessons.
+                      </span>
+                    </span>
+                    <ArrowRight
+                      className="h-4 w-4 shrink-0 text-primary"
+                      aria-hidden
+                    />
+                  </Link>
+                </>
+              )}
+            </div>
           </Reveal>
         )}
 
@@ -589,6 +654,24 @@ export default async function DashboardPage() {
               </Link>
             </Hover>
           </Reveal>
+        )}
+
+        {/* ============================ TEAM'S SUGGESTED ROUTE ============================ */}
+        {/* Deliberately BELOW "continue learning": the learner's own next step
+            outranks anyone else's suggestion about it. Dismissible, and the
+            dismissal sticks until the plan itself changes. */}
+        {teamPlan && planDepts.length > 0 && (
+          <PlanNudgeCard
+            className="mt-8"
+            teamName={teamPlan.teamName}
+            title={teamPlan.path?.title ?? "A route your team picked out"}
+            icon={teamPlan.path?.icon ?? null}
+            color={teamPlan.path?.color ?? null}
+            departments={planDepts}
+            dueLabel={teamPlan.dueLabel}
+            dueIsPast={teamPlan.dueIsPast}
+            stamp={teamPlan.stamp}
+          />
         )}
 
         {/* ============================ INVITE — EARNED SLOT ============================ */}

@@ -37,6 +37,7 @@ import {
   DeptFooterHeading,
   DeptModules,
   DeptSuggest,
+  DeptWeekGoal,
 } from "./_progress-islands";
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com";
@@ -162,7 +163,16 @@ export default async function DepartmentPage({
   const totalModules = dept.modules.length;
   // Ordered lesson refs the client islands use to derive progress (completed
   // set → counts, mastery %, and the continue/next destination) after hydration.
-  const lessons = flat.map((l) => ({ id: l.id, moduleSlug: l.moduleSlug, slug: l.slug }));
+  // Titles ride along so the resume affordance can NAME the next lesson instead
+  // of saying "continue" — one array, passed by reference to every island, so
+  // the RSC payload carries it exactly once.
+  const lessons = flat.map((l) => ({
+    id: l.id,
+    moduleSlug: l.moduleSlug,
+    slug: l.slug,
+    title: l.title,
+    moduleTitle: l.moduleTitle,
+  }));
 
   const learn = (dept.what_youll_learn ?? []) as string[];
   const tools = (dept.tools ?? []) as string[];
@@ -339,6 +349,17 @@ export default async function DepartmentPage({
       <div className="mx-auto grid max-w-6xl grid-cols-1 gap-10 px-4 py-8 sm:px-6 lg:grid-cols-3 lg:gap-12 lg:px-8 lg:py-12">
         {/* main: the module path */}
         <div className="min-w-0 lg:col-span-2">
+          {/* Week rhythm + resume + next badge. Renders nothing for a
+              logged-out reader or a crawler, so the static HTML below is
+              untouched — see the note on DeptWeekGoal. */}
+          <DeptWeekGoal
+            deptSlug={dept.slug}
+            deptName={dept.name}
+            lessons={lessons}
+            accent={accent}
+            ink={ink}
+          />
+
           <Reveal className="mb-6 flex items-end justify-between gap-4">
             <div className="flex items-center gap-3">
               <span
