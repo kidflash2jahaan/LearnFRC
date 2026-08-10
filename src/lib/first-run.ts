@@ -17,7 +17,7 @@
  *
  *  2. Only the DEFAULT destination is overridden. Both auth routes resolve
  *     `?next=` to `/dashboard` when it is absent or unsafe, and every caller
- *     that means something specific — a team invite (`/join/space?t=…`), a
+ *     that means something specific — a course-code join (`/join/<code>`), a
  *     password reset (`/account/password`), a tool or lesson a signed-out
  *     visitor was reading — passes that path explicitly. Swapping only the
  *     literal `/dashboard` therefore cannot eat an invite: the invite carries

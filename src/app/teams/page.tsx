@@ -19,7 +19,6 @@ import {
 } from "@/lib/queries";
 import { ShareButton } from "@/components/share-button";
 import { AnimatedCounter } from "@/components/animated-counter";
-import { InviteCard } from "@/components/leaderboard/invite-card";
 import { clampPct, pluralize } from "@/lib/utils";
 import {
   RiseGroup,
@@ -38,6 +37,7 @@ import {
 // Component cannot call a function exported by a client module.
 import { subteamLabel } from "@/components/team/subteam-label";
 import { SubteamGapCard } from "@/components/team/subteam-gap-card";
+import { TeamInvite } from "@/components/team/team-invite";
 import { Roster, type RosterMember } from "./_roster";
 import { CrewPanel, type CrewMember } from "./_crew-panel";
 
@@ -291,6 +291,25 @@ async function renderTeam(
         />
       </section>
 
+      {/* ==================== INVITE (solo lead) ===================== */}
+      {/* 109 of 144 teams here are exactly one person, and for that person a  */}
+      {/* roster is a list of themselves. The empty roster IS the invite       */}
+      {/* moment, so on a team of one the invite runs directly under the hero  */}
+      {/* instead of at the bottom of the page — an offer, not a report that   */}
+      {/* nobody else showed up. On a team with a crew it stays where it was.  */}
+      {solo && username ? (
+        <Reveal>
+          <section id="invite" className="scroll-mt-28">
+            <TeamInvite
+              username={username}
+              teamNumber={teamNumber}
+              referralCount={referralCount}
+              tone="solo"
+            />
+          </section>
+        </Reveal>
+      ) : null}
+
       {/* =========================== STATS =========================== */}
       <RevealGroup className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((s) => (
@@ -432,15 +451,27 @@ async function renderTeam(
       {/* controls on this page used to point at https://learnfrc.com with   */}
       {/* no `?ref=`, so every teammate recruited from the team page landed  */}
       {/* unattributed and neither side ever got the +25 XP the copy         */}
-      {/* promises. InviteCard is the same control the dashboard and         */}
-      {/* leaderboard use — one invite surface, one link shape.              */}
-      <Reveal>
-        {username ? (
-          <InviteCard username={username} count={referralCount} />
-        ) : (
-          <UnattributedInvite teamNumber={teamNumber} />
-        )}
-      </Reveal>
+      {/* promises. TeamInvite hands out ONE url across its copy control,    */}
+      {/* its share sheet, its QR and the printable handout, so a signup     */}
+      {/* from any of them is credited to the same person and stamped        */}
+      {/* `via=team-invite`. (The subteam gap card above still emits a bare  */}
+      {/* `?ref=` with no `&via=` — attributed, just not surface-tagged.)    */}
+      {/*                                                                    */}
+      {/* Rendered here only when it is NOT already up under the hero, so a  */}
+      {/* solo member never gets the same panel twice.                       */}
+      {!solo || !username ? (
+        <Reveal>
+          {username ? (
+            <TeamInvite
+              username={username}
+              teamNumber={teamNumber}
+              referralCount={referralCount}
+            />
+          ) : (
+            <UnattributedInvite teamNumber={teamNumber} />
+          )}
+        </Reveal>
+      ) : null}
     </div>
   );
 }
@@ -448,7 +479,8 @@ async function renderTeam(
 /**
  * Fallback for the handful of accounts with no username yet — there is no
  * `?ref=` to build a referral link from, so this can only send a plain signup
- * link. Everyone else gets the real InviteCard above.
+ * link — and no QR or handout, both of which would print a code that credits
+ * nobody. Everyone else gets the real TeamInvite above.
  */
 function UnattributedInvite({ teamNumber }: { teamNumber: number }) {
   return (

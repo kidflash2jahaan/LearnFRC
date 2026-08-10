@@ -27,8 +27,8 @@ import { isFreshSignup, postAuthDestination } from "@/lib/first-run";
  * content. `isNew` is the same created_at test that already gates attribution
  * below, so there is one definition of "new account" in this route, not two.
  *
- * WHAT IS DELIBERATELY NOT TOUCHED: an explicit `next` — a team invite
- * (`/join/space?t=…`), a lesson a signed-out reader was on, a tool page — is
+ * WHAT IS DELIBERATELY NOT TOUCHED: an explicit `next` — a course-code join
+ * (`/join/<code>`), a lesson a signed-out reader was on, a tool page — is
  * returned verbatim, because only the literal string "/dashboard" is ever
  * swapped. `ref` and `via` are read straight off this URL for attribution and
  * are unaffected by the destination choice. Referrals through this file were

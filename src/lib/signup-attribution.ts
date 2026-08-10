@@ -28,8 +28,10 @@ const REFERRAL_SURFACES = new Set([
   "dashboard",
   "leaderboard",
   "email",
-  // A signup that started by opening a team-space invite link or scanning the
-  // QR at a team meeting. Stamped by /join/space/continue.
+  // A signup that started from the team invite on /teams — a pasted link, the
+  // share sheet, the projected QR, or the printed handout (/teams/print). All
+  // four encode the same URL; see src/components/team/invite-link.ts, which
+  // carries this exact string as TEAM_INVITE_VIA. KEEP: still in active use.
   "team-invite",
 ]);
 

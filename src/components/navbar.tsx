@@ -44,6 +44,27 @@ const NAV = [
   { href: "/for-teams", label: "For teams" },
 ];
 
+/**
+ * The last slot is audience-dependent. Signed OUT, "For teams" is the pitch
+ * page — the right thing for a mentor deciding whether this is worth their
+ * team's time. Signed IN, that page has already done its job and the useful
+ * destination is the member's own team, which otherwise lives only inside the
+ * avatar dropdown where nobody thinks to look. 109 of 144 teams have exactly
+ * one member, and the invite link that would fix that is on /teams — so the
+ * route to it has to be visible, not discoverable-if-you-hunt.
+ *
+ * Swapping after load is safe and matches what this component already does:
+ * `me` starts { authed: false } on both server and first client render, so the
+ * server HTML and the hydration pass agree, and the swap happens in the same
+ * post-fetch update that draws the avatar.
+ */
+function navFor(authed: boolean) {
+  if (!authed) return NAV;
+  return NAV.map((item) =>
+    item.href === "/for-teams" ? { href: "/teams", label: "My team" } : item
+  );
+}
+
 type Me = {
   authed: boolean;
   profile: Profile | null;
@@ -111,7 +132,7 @@ export function Navbar() {
 
         {/* Desktop links */}
         <div className="hidden items-center gap-0.5 md:flex">
-          {NAV.map((item) => {
+          {navFor(authed).map((item) => {
             const active = pathname === item.href || pathname.startsWith(item.href + "/");
             return (
               <Link
@@ -276,7 +297,7 @@ export function Navbar() {
             className="overflow-hidden border-b border-white/70 bg-white/85 backdrop-blur-xl md:hidden"
           >
             <nav aria-label="Mobile" className="space-y-0.5 px-4 py-4">
-              {NAV.map((item) => {
+              {navFor(authed).map((item) => {
                 const active = pathname === item.href || pathname.startsWith(item.href + "/");
                 return (
                   <Link

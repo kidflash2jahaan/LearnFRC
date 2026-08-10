@@ -38,8 +38,6 @@ import {
   AchievementBadge,
   type AchievementView,
 } from "@/components/dashboard/achievement-badge";
-import { PlanNudgeCard } from "@/components/team/plan-nudge-card";
-import { getActivePlan } from "@/app/teams/space/plan/plan-data";
 import { getSession } from "@/lib/auth";
 import { getDepartments, getDepartmentBySlug, getReferralCount } from "@/lib/queries";
 import { suggestUsername } from "@/lib/onboarding";
@@ -216,21 +214,6 @@ export default async function DashboardPage() {
   const firstName = displayName.split(" ")[0];
 
   const referralCount = profile?.username ? await getReferralCount(user.id) : 0;
-
-  // ── Team Mode: the route this learner's team space suggested, if any ──
-  // Self-scoped and read-only — getActivePlan() derives the space from
-  // auth.getUser() and returns null for anyone in no space, which is nearly
-  // everyone. It reads no other member's data, so nothing about another
-  // learner can reach this page. The card below is a suggestion and says so.
-  const teamPlan = await getActivePlan().catch(() => null);
-  const planDepts = (teamPlan?.departments ?? []).map((d) => ({
-    slug: d.slug,
-    name: d.name,
-    // Reuses the per-department tallies already computed above — no extra
-    // query, and the numbers are the learner's own by construction.
-    done: deptDone.get(d.id) ?? 0,
-    total: deptTotals.get(d.id) ?? d.lessonCount,
-  }));
 
   // ── Invite: ask in proportion to what the learner has actually done ──
   // Referral converts far better than any other channel precisely because the
@@ -542,11 +525,19 @@ export default async function DashboardPage() {
                     <Flame className="h-5 w-5" aria-hidden />
                   </span>
                   <div className="min-w-0">
+                    {/* States the fact, not a countdown. "Keep your streak
+                        alive… it resets at midnight" is a manufactured deadline
+                        pointed at a teenager, and it makes a missed evening feel
+                        like losing something. The streak is real and it does
+                        lapse, so we say what it IS and what today's lesson adds
+                        — and a lapsed streak just starts again, which is worth
+                        knowing and is the opposite of a threat. */}
                     <p className="text-[15px] font-bold text-foreground">
-                      Keep your {streak}-day streak alive 🔥
+                      {streak} days running 🔥
                     </p>
                     <p className="text-sm leading-snug text-foreground/70">
-                      One lesson today keeps it going — it resets at midnight. Next up:{" "}
+                      A lesson today makes it {streak + 1} — and back-to-back
+                      days earn bonus XP. Next up:{" "}
                       <span className="font-semibold text-foreground">
                         {continueLesson.lessonTitle}
                       </span>
@@ -654,24 +645,6 @@ export default async function DashboardPage() {
               </Link>
             </Hover>
           </Reveal>
-        )}
-
-        {/* ============================ TEAM'S SUGGESTED ROUTE ============================ */}
-        {/* Deliberately BELOW "continue learning": the learner's own next step
-            outranks anyone else's suggestion about it. Dismissible, and the
-            dismissal sticks until the plan itself changes. */}
-        {teamPlan && planDepts.length > 0 && (
-          <PlanNudgeCard
-            className="mt-8"
-            teamName={teamPlan.teamName}
-            title={teamPlan.path?.title ?? "A route your team picked out"}
-            icon={teamPlan.path?.icon ?? null}
-            color={teamPlan.path?.color ?? null}
-            departments={planDepts}
-            dueLabel={teamPlan.dueLabel}
-            dueIsPast={teamPlan.dueIsPast}
-            stamp={teamPlan.stamp}
-          />
         )}
 
         {/* ============================ INVITE — EARNED SLOT ============================ */}

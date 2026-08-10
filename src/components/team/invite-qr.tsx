@@ -4,11 +4,11 @@ import { qrCode } from "@/lib/qr";
 /**
  * The invite link as a QR code, encoded locally and rendered as inline SVG.
  *
- * The point of this thing is a lead putting it on the projector at a team
- * meeting: fifteen phones scan it at once and nobody types a URL. That is also
- * why it is NOT an <img> pointed at a QR web service — that would post a live
- * invite credential to a third party on every render, and it would leave the
- * page blank in a pit with no wifi.
+ * The point of this thing is someone putting it on the projector at a team
+ * meeting, or on a printed handout: fifteen phones scan it at once and nobody
+ * types a URL. That is also why it is NOT an <img> pointed at a QR web service
+ * — that would post a member's referral link to a third party on every render,
+ * and it would leave the page (and the handout) blank in a pit with no wifi.
  *
  * Fixed black-on-white, deliberately, in both themes: a scanner needs dark
  * modules on a light field, and a "dark mode" QR is an unscannable QR. The

@@ -3,11 +3,13 @@
  *
  * WHY THIS EXISTS RATHER THAN A PACKAGE OR AN IMAGE SERVICE
  * ---------------------------------------------------------
- * The only thing this project encodes is a team-space INVITE LINK, and that
- * link is a bearer credential into a space full of minors. Handing it to
- * `api.qrserver.com` or any other image endpoint would post a live invite token
- * to a third party in plaintext, in a query string, on every render. So the
- * encoder is local, the page works offline, and the token never leaves us.
+ * The only thing this project encodes is a team INVITE LINK — a referral signup
+ * URL naming one member of a site whose users are mostly minors. Handing it to
+ * `api.qrserver.com` or any other image endpoint would post that username to a
+ * third party in a query string on every render, and would leave the QR blank
+ * in a pit with no wifi — including on the printed handout, which is the one
+ * surface that has to work with no network at all. So the encoder is local,
+ * nothing leaves us, and the page renders offline.
  *
  * A package would have been fine too, but this is ~250 lines of pure arithmetic
  * with no runtime dependencies, no install step and nothing to keep patched.
