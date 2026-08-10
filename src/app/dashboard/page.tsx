@@ -21,7 +21,7 @@ import { DepartmentCard } from "@/components/department-card";
 import { InviteCard } from "@/components/leaderboard/invite-card";
 import { FirstRunGuide } from "@/components/dashboard/first-run-guide";
 import { GuestMigration } from "@/components/guest-migration";
-import { UsernameClaim } from "@/components/onboarding/username-claim";
+import { ProfileSetupForm } from "@/components/onboarding/profile-setup-form";
 import {
   Reveal,
   RevealGroup,
@@ -38,6 +38,8 @@ import {
 } from "@/components/dashboard/achievement-badge";
 import { getSession } from "@/lib/auth";
 import { getDepartments, getDepartmentBySlug, getReferralCount } from "@/lib/queries";
+import { suggestUsername } from "@/lib/onboarding";
+import { getProfileSetupState } from "@/lib/onboarding-server";
 import { createClient } from "@/lib/supabase/server";
 import { deptMeta, inkFor } from "@/lib/departments";
 import { clampPct, pluralize } from "@/lib/utils";
@@ -99,6 +101,10 @@ const XP_BAR_STYLE = {
 export default async function DashboardPage() {
   const { user, profile } = await getSession();
   if (!user) redirect("/login?next=/dashboard");
+
+  // Google sign-ins never see the signup form, so they arrive with no handle
+  // and (70% of them) no team number. Ask once, here, where OAuth lands them.
+  const setup = await getProfileSetupState(profile);
 
   const supabase = await createClient();
 
@@ -346,15 +352,13 @@ export default async function DashboardPage() {
       <div className="mx-auto max-w-7xl px-4 pt-28 pb-20 sm:px-6 lg:px-8">
         {/* Migrate any guest (pre-signup) progress into this account, once. */}
         <GuestMigration />
-        {/* Google sign-ins have no handle — one-time claim, top of the page. */}
-        {!profile?.username && (
+        {/* Google sign-ins have no handle and usually no team — ask once here,
+            skippable, top of the page. */}
+        {setup.show && (
           <Reveal className="mb-8">
-            <UsernameClaim
-              suggested={user.email
-                ?.split("@")[0]
-                .toLowerCase()
-                .replace(/[^a-z0-9_]/g, "")
-                .slice(0, 20)}
+            <ProfileSetupForm
+              mode={setup.mode}
+              suggested={suggestUsername(user.email)}
             />
           </Reveal>
         )}
@@ -501,9 +505,10 @@ export default async function DashboardPage() {
         />
 
         {/* ============================ PROFILE NUDGE ============================ */}
-        {/* Username is handled by the UsernameClaim card up top — this nudge is
-            only for the remaining gap (team number). */}
-        {profile?.username && !profile?.team_number && (
+        {/* Fallback nudge for the team gap. Suppressed while the setup card is
+            up top, which already asks for it inline — and kept for learners who
+            skipped that card, so the ask survives without repeating itself. */}
+        {!setup.show && profile?.username && !profile?.team_number && (
           <Reveal className="mt-8">
             <Hover lift={-3}>
               <Link

@@ -35,7 +35,13 @@ export const metadata: Metadata = {
 };
 
 const UPDATED = "July 3, 2026";
-const CONTACT = "29pardhananij@sagehillschool.org";
+// NOT an email address. learnfrc.com publishes no MX record, so every address
+// printed here — including the one on the legally-operative "request deletion
+// of your data" line — bounced. A personal mailbox is not an option either:
+// the maintainer is a minor, and a school address publishes his surname,
+// initials, graduating year and school to every scraper that reads this page.
+// /contact is an anonymous form that reaches the same inbox and actually works.
+const CONTACT_PATH = "/contact";
 
 const BRAND_GRADIENT: CSSProperties = {
   background: "linear-gradient(120deg, #2560e6, #1aa9d6, #7c5cff)",
@@ -249,12 +255,13 @@ const SECTIONS: Section[] = [
     body: (
       <P>
         We keep your account data while your account is active. You can request access to,
-        correction of, or deletion of your data — including full account deletion — by
-        emailing{" "}
-        <a className={LINK} href={`mailto:${CONTACT}`}>
-          {CONTACT}
-        </a>
-        .
+        correction of, or deletion of your data — including full account deletion — through
+        our{" "}
+        <Link className={LINK} href={CONTACT_PATH}>
+          contact form
+        </Link>
+        . No account is needed to send it, and you don&apos;t have to give us an email
+        address unless you want a reply.
       </P>
     ),
   },
@@ -290,10 +297,10 @@ const SECTIONS: Section[] = [
     accent: "#0a7a43",
     body: (
       <P>
-        Questions? Email{" "}
-        <a className={LINK} href={`mailto:${CONTACT}`}>
-          {CONTACT}
-        </a>
+        Questions? Send them through our{" "}
+        <Link className={LINK} href={CONTACT_PATH}>
+          contact form
+        </Link>
         . See also our{" "}
         <Link className={LINK} href="/terms">
           Terms of Service
@@ -428,16 +435,13 @@ export default function PrivacyPage() {
                       <Mail className="h-5 w-5" aria-hidden />
                     </span>
                     <p className="text-[15px] text-foreground/80">
-                      Want your data corrected or deleted? We&apos;re one email away.
+                      Want your data corrected or deleted? We&apos;re one message away.
                     </p>
                   </div>
-                  <a
-                    href={`mailto:${CONTACT}`}
-                    className="ac-btn shrink-0 text-sm"
-                  >
+                  <Link href={CONTACT_PATH} className="ac-btn shrink-0 text-sm">
                     <Mail className="h-4 w-4" aria-hidden />
-                    Email us
-                  </a>
+                    Contact us
+                  </Link>
                 </div>
               </Hover>
             </Reveal>

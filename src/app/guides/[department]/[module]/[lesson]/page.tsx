@@ -6,7 +6,6 @@ import {
   ArrowLeft,
   ArrowRight,
   Lightbulb,
-  ExternalLink,
   CheckCircle2,
   ChevronRight,
   Zap,
@@ -48,6 +47,7 @@ import {
   SuggestEditIsland,
 } from "./_progress-islands";
 import { LessonSignupHook } from "@/components/lesson/lesson-signup-hook";
+import { Provenance } from "@/components/lesson/provenance";
 import {
   LessonNextStep,
   type NextStepLink,
@@ -453,14 +453,6 @@ export default async function LessonPage({
               <Markdown content={content} />
             </Reveal>
 
-            <SuggestEditIsland
-              contentType="lesson"
-              targetId={les.id}
-              title={les.title}
-              path={lessonPath}
-              content={content}
-            />
-
             {/* key takeaways */}
             {takeaways.length > 0 && (
               <Reveal>
@@ -507,43 +499,30 @@ export default async function LessonPage({
               ink={ink}
             />
 
-            {/* resources */}
-            {resources.length > 0 && (
-              <Reveal>
-                <section className="ac-card mt-8 p-6">
-                  <h2 className="flex items-center gap-2.5 font-display text-xl font-semibold">
-                    <span
-                      className="ac-badge flex h-9 w-9 items-center justify-center"
-                      style={{ "--a": "#1aa9d6" } as CSSProperties}
-                    >
-                      <ExternalLink className="h-5 w-5" aria-hidden />
-                    </span>
-                    Go deeper
-                  </h2>
-                  <ul className="mt-4 space-y-2.5">
-                    {resources.map((r, i) => (
-                      <li key={i}>
-                        <a
-                          href={r.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="group inline-flex min-h-9 items-start gap-2 text-foreground/85 transition-colors hover:text-[color:var(--ai)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                          style={{ "--ai": ink } as CSSProperties}
-                        >
-                          <ChevronRight
-                            className="mt-1 h-4 w-4 shrink-0 text-accent transition-transform group-hover:translate-x-0.5"
-                            aria-hidden
-                          />
-                          <span className="underline decoration-border underline-offset-2 group-hover:decoration-accent">
-                            {r.title}
-                          </span>
-                        </a>
-                      </li>
-                    ))}
-                  </ul>
-                </section>
-              </Reveal>
-            )}
+            {/* Provenance: the lesson's sources, its last logged correction,
+                and the report-an-error control — one block instead of a bare
+                "Go deeper" link list. The links are the same `resources` rows;
+                what changed is that the page now says where the lesson came
+                from and how to challenge it, which is the actual answer to
+                "this is AI slop". Deliberately not wrapped in <Reveal>: this is
+                the credibility block, so it must be in the first paint and in
+                the HTML a crawler sees, not faded in on scroll. */}
+            <Provenance
+              kind="lesson"
+              path={lessonPath}
+              sources={resources}
+              accent={meta.color}
+              ink={ink}
+            >
+              <SuggestEditIsland
+                contentType="lesson"
+                targetId={les.id}
+                title={les.title}
+                path={lessonPath}
+                content={content}
+                dense
+              />
+            </Provenance>
 
             {/* completion / quiz */}
             <LessonCompleteIsland

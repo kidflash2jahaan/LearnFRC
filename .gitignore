@@ -33,6 +33,11 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
+# Scratch data / one-off scripts. `content/outreach.json` — a 162-address FRC
+# team mailing list, 77 of them personal — was committed here and is still
+# retrievable from this PUBLIC repo's history. Never track this directory.
+/content/
+
 # vercel
 .vercel
 

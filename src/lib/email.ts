@@ -210,12 +210,16 @@ export function feedbackEmailHtml({
   fromEmail?: string;
   page?: string;
 }) {
+  // Every interpolation goes through `esc`. `message` used to be `<`-only and
+  // `fromEmail`/`page` were interpolated raw — fine while the only caller was a
+  // server action, but /api/report-error accepts these fields from anonymous
+  // visitors, and an unescaped field is markup injected into the admin's inbox.
   return emailShell(`
     <p style="margin:0 0 10px;font-weight:600">New feedback / topic request</p>
-    <p style="margin:0 0 10px;white-space:pre-wrap">${message.replace(/</g, "&lt;")}</p>
-    <p style="margin:14px 0 0;color:#64748b;font-size:13px">From: ${
+    <p style="margin:0 0 10px;white-space:pre-wrap">${esc(message)}</p>
+    <p style="margin:14px 0 0;color:#64748b;font-size:13px">From: ${esc(
       fromEmail || "anonymous"
-    }${page ? ` · Page: ${page}` : ""}</p>
+    )}${page ? ` · Page: ${esc(page)}` : ""}</p>
   `);
 }
 

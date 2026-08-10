@@ -452,7 +452,11 @@ export async function getTeamByNumber(
     admin.from("lessons").select("*", { count: "exact", head: true }),
     admin
       .from("profiles")
-      .select("id, username, full_name, avatar_url, xp, hide_name, created_at")
+      // Admin client bypasses RLS *and* the column grants that keep `full_name`
+      // off public surfaces, so this select must never ask for it. `full_name`
+      // and `hide_name` were fetched here but never read — one careless
+      // `{...p}` spread below would have leaked real names for a whole team.
+      .select("id, username, avatar_url, xp, created_at")
       .eq("team_number", teamNumber),
   ]);
   const rows = (profs as Profile[]) ?? [];
@@ -460,14 +464,27 @@ export async function getTeamByNumber(
   const counts: Record<string, number> = {};
   const last: Record<string, string> = {};
   if (ids.length) {
-    const { data: lp } = await admin
-      .from("lesson_progress")
-      .select("user_id, completed_at")
-      .in("user_id", ids);
-    for (const r of (lp ?? []) as { user_id: string; completed_at: string }[]) {
-      counts[r.user_id] = (counts[r.user_id] ?? 0) + 1;
-      if (!last[r.user_id] || r.completed_at > last[r.user_id])
-        last[r.user_id] = r.completed_at;
+    // PAGED, not a plain .select(): PostgREST caps a response at 1000 rows and
+    // truncates SILENTLY. Team 447 is already at 826 lesson_progress rows across
+    // 15 members, so a single read starts dropping completions the moment that
+    // team crosses the cap — and it would drop MORE as the team did more work,
+    // which is the exact inversion this page exists to show. Same trap the
+    // all-time leaderboard above already documents.
+    const PAGE = 1000;
+    for (let from = 0; ; from += PAGE) {
+      const { data: lp } = await admin
+        .from("lesson_progress")
+        .select("user_id, completed_at")
+        .in("user_id", ids)
+        .order("id")
+        .range(from, from + PAGE - 1);
+      const chunk = (lp ?? []) as { user_id: string; completed_at: string }[];
+      for (const r of chunk) {
+        counts[r.user_id] = (counts[r.user_id] ?? 0) + 1;
+        if (!last[r.user_id] || r.completed_at > last[r.user_id])
+          last[r.user_id] = r.completed_at;
+      }
+      if (chunk.length < PAGE) break;
     }
   }
   const members: TeamMemberProgress[] = rows
@@ -680,3 +697,164 @@ export const getXpTotals = unstable_cache(
   ["xp-totals"],
   { revalidate: LEADERBOARD_TTL, tags: ["leaderboard"] }
 );
+
+// ── Subteam (department) coverage ────────────────────────────────────────────
+// FRC teams are split into subteams — mechanical, programming, electrical,
+// business, drive team — and so is this site's catalog: one department per
+// subteam. That makes department coverage the one team statistic a member can
+// act on: "nobody on our team has touched Electrical" is a specific person to
+// go ask, not a vague "invite your friends".
+//
+// PRIVACY: this path reads `lesson_progress` only (user_id + lesson_id) and the
+// public catalog. It never touches `profiles`, so there is no way for it to leak
+// `full_name` or an email — the caller joins these counts against the roster it
+// already has from getTeamByNumber(), which is username/avatar only.
+
+/**
+ * Catalog index: which department every lesson belongs to, plus each
+ * department's lesson count. ~394 entries, identical for every viewer, and only
+ * changes when the catalog changes — so it rides the same `catalog` tag the
+ * department list already invalidates on.
+ */
+const getLessonDeptIndex = unstable_cache(
+  async (): Promise<{
+    departments: {
+      id: string;
+      slug: string;
+      name: string;
+      accent: string;
+      icon: string;
+    }[];
+    /** lesson id → department id */
+    lessonDept: Record<string, string>;
+    /** department id → lesson count */
+    lessonCounts: Record<string, number>;
+  }> => {
+    const supabase = createPublicClient();
+    const { data, error } = await supabase
+      .from("departments")
+      .select("id, slug, name, accent, icon, modules(id, lessons(id))")
+      .order("sort_order");
+    if (error) throw error;
+
+    const departments: {
+      id: string;
+      slug: string;
+      name: string;
+      accent: string;
+      icon: string;
+    }[] = [];
+    const lessonDept: Record<string, string> = {};
+    const lessonCounts: Record<string, number> = {};
+
+    for (const row of (data ?? []) as unknown as {
+      id: string;
+      slug: string;
+      name: string;
+      accent: string;
+      icon: string;
+      modules?: { id: string; lessons?: { id: string }[] }[];
+    }[]) {
+      departments.push({
+        id: row.id,
+        slug: row.slug,
+        name: row.name,
+        accent: row.accent,
+        icon: row.icon,
+      });
+      let count = 0;
+      for (const m of row.modules ?? []) {
+        for (const l of m.lessons ?? []) {
+          lessonDept[l.id] = row.id;
+          count++;
+        }
+      }
+      lessonCounts[row.id] = count;
+    }
+    return { departments, lessonDept, lessonCounts };
+  },
+  ["lesson-dept-index"],
+  { revalidate: CATALOG_TTL, tags: ["catalog", "departments"] }
+);
+
+/** One subteam's coverage across a whole FRC team. */
+export type SubteamCoverage = {
+  slug: string;
+  name: string;
+  accent: string;
+  icon: string;
+  lessonCount: number;
+  /** Distinct lessons finished by ANYONE on the team (not a sum — no double count). */
+  teamCompleted: number;
+  /** Members with ≥1 lesson finished here, most first. IDs only; join to the roster. */
+  members: { userId: string; completed: number }[];
+};
+
+/**
+ * How much of each subteam the given members cover between them.
+ *
+ * Takes user IDs rather than a team number so it composes with the roster
+ * getTeamByNumber() already returned — one profiles read per page, not two —
+ * and so this function never has any reason to open the profiles table.
+ *
+ * Uncached: per-team and it must move the moment a teammate finishes a lesson,
+ * which is exactly the moment that makes the page worth reloading. The
+ * expensive half (the catalog index) IS cached.
+ */
+export async function getTeamSubteamCoverage(
+  userIds: string[]
+): Promise<SubteamCoverage[]> {
+  const { departments, lessonDept, lessonCounts } = await getLessonDeptIndex();
+
+  // dept id → distinct lesson ids finished by the team
+  const teamDone: Record<string, Set<string>> = {};
+  // dept id → user id → lessons finished
+  const perMember: Record<string, Record<string, number>> = {};
+
+  // Bounded defensively: the largest real team is 15, but `.in()` builds a URL.
+  const ids = userIds.slice(0, 200);
+  if (ids.length) {
+    // Cross-user read: lesson_progress is RLS-locked to its owner, so this has
+    // to be the service-role client. Two columns, no PII.
+    //
+    // MUST page: PostgREST caps a response at 1000 rows and truncates silently.
+    // A whole team's rows blow past that — the busiest team already sits at 826
+    // of 394 lessons x 15 members — and a truncated read would quietly report
+    // subteams as uncovered that the team has actually finished, which is the
+    // exact opposite of what this board is for. Same trap documented on the
+    // all-time leaderboard above.
+    const admin = createAdminClient();
+    const PAGE = 1000;
+    for (let from = 0; ; from += PAGE) {
+      const { data } = await admin
+        .from("lesson_progress")
+        .select("user_id, lesson_id")
+        .in("user_id", ids)
+        .order("id", { ascending: true })
+        .range(from, from + PAGE - 1);
+      const chunk = (data ?? []) as { user_id: string; lesson_id: string }[];
+      for (const r of chunk) {
+        const deptId = lessonDept[r.lesson_id];
+        // Lesson deleted, or the cached index is behind a brand-new lesson.
+        if (!deptId) continue;
+        const set = teamDone[deptId] || (teamDone[deptId] = new Set());
+        set.add(r.lesson_id);
+        const byUser = perMember[deptId] || (perMember[deptId] = {});
+        byUser[r.user_id] = (byUser[r.user_id] ?? 0) + 1;
+      }
+      if (chunk.length < PAGE) break;
+    }
+  }
+
+  return departments.map((d) => ({
+    slug: d.slug,
+    name: d.name,
+    accent: d.accent,
+    icon: d.icon,
+    lessonCount: lessonCounts[d.id] ?? 0,
+    teamCompleted: teamDone[d.id]?.size ?? 0,
+    members: Object.entries(perMember[d.id] ?? {})
+      .map(([userId, completed]) => ({ userId, completed }))
+      .sort((a, b) => b.completed - a.completed),
+  }));
+}

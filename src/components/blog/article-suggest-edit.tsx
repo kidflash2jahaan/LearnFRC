@@ -14,11 +14,14 @@ export function ArticleSuggestEdit({
   title,
   path,
   content,
+  dense = false,
 }: {
   articleId: string;
   title: string;
   path: string;
   content: string;
+  /** Tighter spacing when rendered inside the provenance card. */
+  dense?: boolean;
 }) {
   const [isLoggedIn, setIsLoggedIn] = React.useState(false);
 
@@ -43,6 +46,7 @@ export function ArticleSuggestEdit({
       path={path}
       content={content}
       isLoggedIn={isLoggedIn}
+      dense={dense}
     />
   );
 }

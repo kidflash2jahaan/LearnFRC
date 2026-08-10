@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import type { CSSProperties } from "react";
+import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
 import { Mail, ScrollText } from "lucide-react";
 import { AnimatedCounter } from "@/components/animated-counter";
@@ -20,10 +21,11 @@ const RING_C = 2 * Math.PI * RING_R;
  */
 export function ContentsRail({
   items,
-  contact,
+  contactHref,
 }: {
   items: RailItem[];
-  contact: string;
+  /** Route to the contact form. Was a `mailto:` on a domain with no MX record. */
+  contactHref: string;
 }) {
   const [active, setActive] = React.useState(items[0]?.id ?? "");
   const reduce = useReducedMotion();
@@ -158,13 +160,13 @@ export function ContentsRail({
         })}
       </ol>
 
-      <a
-        href={`mailto:${contact}`}
+      <Link
+        href={contactHref}
         className="ac-btn-ghost mt-5 flex w-full items-center justify-center gap-2 text-[13px]"
       >
         <Mail className="h-3.5 w-3.5" aria-hidden />
-        Email us a question
-      </a>
+        Send us a question
+      </Link>
     </nav>
   );
 }

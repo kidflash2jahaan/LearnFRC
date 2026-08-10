@@ -37,7 +37,11 @@ export const metadata: Metadata = {
 };
 
 const UPDATED = "June 20, 2026";
-const CONTACT = "29pardhananij@sagehillschool.org";
+// NOT an email address. learnfrc.com publishes no MX record, so every address
+// printed here bounced, and a personal mailbox can't be published (the
+// maintainer is a minor). /contact is an anonymous form that reaches the same
+// inbox and actually works.
+const CONTACT_PATH = "/contact";
 
 const LINK =
   "font-medium text-primary underline decoration-primary/40 underline-offset-2 transition-colors hover:text-accent hover:decoration-accent break-words";
@@ -213,11 +217,11 @@ const RULES: Rule[] = [
     title: "Contact",
     body: (
       <P>
-        Questions about these terms? Email{" "}
-        <a className={LINK} href={`mailto:${CONTACT}`}>
-          {CONTACT}
-        </a>
-        . See also our{" "}
+        Questions about these terms? Send them through our{" "}
+        <Link className={LINK} href={CONTACT_PATH}>
+          contact form
+        </Link>
+        — no account needed. See also our{" "}
         <Link className={LINK} href="/privacy">
           Privacy Policy
         </Link>
@@ -329,7 +333,7 @@ export default function TermsPage() {
           <div className="hidden lg:block">
             <div className="sticky top-28">
               <div className="ac-card p-5">
-                <ContentsRail items={RAIL_ITEMS} contact={CONTACT} />
+                <ContentsRail items={RAIL_ITEMS} contactHref={CONTACT_PATH} />
               </div>
             </div>
           </div>
@@ -404,13 +408,13 @@ export default function TermsPage() {
                     <Mail className="h-5 w-5" aria-hidden />
                   </span>
                   <p className="text-[15px] text-foreground/80">
-                    Still have a question about the rules? We&apos;re one email away.
+                    Still have a question about the rules? We&apos;re one message away.
                   </p>
                 </div>
-                <a href={`mailto:${CONTACT}`} className="ac-btn text-sm">
+                <Link href={CONTACT_PATH} className="ac-btn text-sm">
                   <Mail className="h-4 w-4" aria-hidden />
-                  Email us
-                </a>
+                  Contact us
+                </Link>
               </div>
             </RevealItem>
           </RevealGroup>

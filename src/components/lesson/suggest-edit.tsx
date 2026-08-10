@@ -19,6 +19,7 @@ export function SuggestEdit({
   path,
   content,
   isLoggedIn,
+  dense = false,
 }: {
   contentType?: "lesson" | "article";
   targetId: string;
@@ -26,6 +27,12 @@ export function SuggestEdit({
   path: string;
   content: string;
   isLoggedIn: boolean;
+  /**
+   * Tightens the trigger row's spacing for use inside the provenance card,
+   * where the surrounding section already supplies the padding. Default keeps
+   * the original standalone spacing.
+   */
+  dense?: boolean;
 }) {
   const [open, setOpen] = React.useState(false);
   const [value, setValue] = React.useState(content);
@@ -62,7 +69,11 @@ export function SuggestEdit({
   }
 
   const trigger = (
-    <div className="mt-10 flex flex-wrap items-center gap-2 border-t border-border pt-6 text-sm text-muted-foreground">
+    <div
+      className={`flex flex-wrap items-center gap-2 border-t border-border text-sm text-muted-foreground ${
+        dense ? "mt-6 pt-5" : "mt-10 pt-6"
+      }`}
+    >
       <PencilLine className="h-4 w-4 text-primary" aria-hidden />
       <span>Spot an error or something out of date?</span>
       {isLoggedIn ? (

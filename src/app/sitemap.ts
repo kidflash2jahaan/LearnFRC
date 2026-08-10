@@ -3,6 +3,7 @@ import type { DeptWithModules, ModuleRow } from "@/lib/queries";
 import { getAllDepartmentSlugs, getDepartmentBySlug } from "@/lib/queries";
 import { getArticles } from "@/lib/queries";
 import { PATHS } from "@/lib/paths-data";
+import { correctionsLastUpdated } from "@/lib/corrections";
 import { GLOSSARY, glossarySlug, hasGlossaryDepth } from "@/lib/glossary-data";
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com";
@@ -88,8 +89,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { path: "/about", lastModified: STATIC_UPDATED },
     { path: "/for-teams", lastModified: STATIC_UPDATED },
     { path: "/contributions", lastModified: STATIC_UPDATED },
+    // /corrections carries a real per-entry date, so its lastmod comes from the
+    // newest entry in the log rather than the hand-bumped constant above.
+    { path: "/corrections", lastModified: correctionsLastUpdated() },
     { path: "/terms", lastModified: LAUNCH },
     { path: "/privacy", lastModified: LAUNCH },
+    // The site's only reachable contact surface — /privacy, /terms and /about
+    // all depend on it now that the dead mailto: links are gone.
+    { path: "/contact", lastModified: STATIC_UPDATED },
   ].map((r) => ({
     url: `${SITE}${r.path}`,
     lastModified: r.lastModified,

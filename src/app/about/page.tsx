@@ -33,7 +33,12 @@ import {
 } from "@/components/motion/primitives";
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com";
-const CONTACT = "29pardhananij@sagehillschool.org";
+// NOT an email address. learnfrc.com publishes no MX record, so anything
+// printed here bounced — and this page also emitted it as machine-readable
+// JSON-LD, so a bad address was being handed to crawlers as fact. A personal
+// mailbox is not an option: the maintainer is a minor. The JSON-LD below now
+// carries a `contactPoint` with this URL instead of an `email`.
+const CONTACT_PATH = "/contact";
 const REPO = "https://github.com/kidflash2jahaan/LearnFRC";
 const AUTHOR = "Jahaan Pardhanani";
 
@@ -195,10 +200,10 @@ export default async function AboutPage() {
             every claim, a disclosed drafting process, a public correction queue,
             and one person whose name is on all of it. If something here is wrong,
             it&apos;s mine to fix — and{" "}
-            <a className={LINK} href={`mailto:${CONTACT}`}>
-              you can email me directly
-            </a>
-            .
+            <Link className={LINK} href={CONTACT_PATH}>
+              you can tell me directly
+            </Link>
+            , without an account.
           </P>
           <P>
             LearnFRC is in beta and the code is public on{" "}
@@ -292,12 +297,13 @@ export default async function AboutPage() {
                 sent it.
               </>,
               <>
-                <span className={strong}>Email it.</span> If it&apos;s faster to
-                just describe the problem, send it to{" "}
-                <a className={LINK} href={`mailto:${CONTACT}`}>
-                  {CONTACT}
-                </a>{" "}
-                with the page URL.
+                <span className={strong}>Just describe it.</span> If it&apos;s
+                faster to say what&apos;s wrong than to write the fix, use the{" "}
+                <Link className={LINK} href={CONTACT_PATH}>
+                  contact form
+                </Link>{" "}
+                with the page URL. No account, and no email address unless you
+                want a reply.
               </>,
             ]}
           />
@@ -352,7 +358,9 @@ export default async function AboutPage() {
         url: `${SITE}/about`,
         description:
           "High-school student in the FIRST Robotics Competition community; builds, writes, and edits LearnFRC.",
-        email: CONTACT,
+        // No `email`. The domain runs no mail server, so any address here is a
+        // machine-readable claim that resolves to a bounce — and this node
+        // describes a minor. Reach him through the Organization contactPoint.
         knowsAbout: [
           "FIRST Robotics Competition",
           "FRC robot design",
@@ -374,7 +382,16 @@ export default async function AboutPage() {
         description:
           "A free, complete learning platform for the FIRST Robotics Competition.",
         founder: { "@id": `${SITE}/#person` },
-        email: CONTACT,
+        // `contactPoint` with a `url` instead of `email`: ContactPoint inherits
+        // `url` from Thing and `contactType` is one of its own properties, so
+        // this is valid schema.org — and unlike the address it replaces, it
+        // points somewhere that answers.
+        contactPoint: {
+          "@type": "ContactPoint",
+          contactType: "customer support",
+          url: `${SITE}${CONTACT_PATH}`,
+          availableLanguage: "English",
+        },
         sameAs: [REPO],
       },
       {
@@ -602,10 +619,10 @@ export default async function AboutPage() {
                     Questions, corrections, or something you wish LearnFRC covered?
                   </p>
                 </div>
-                <a href={`mailto:${CONTACT}`} className="ac-btn shrink-0 text-sm">
+                <Link href={CONTACT_PATH} className="ac-btn shrink-0 text-sm">
                   <Mail className="h-4 w-4" aria-hidden />
-                  Email me
-                </a>
+                  Message me
+                </Link>
               </div>
             </Hover>
           </Reveal>

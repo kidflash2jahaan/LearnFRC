@@ -12,6 +12,10 @@ const LEARN = [
   { label: "Resources", href: "/resources" },
   { label: "For Teams", href: "/for-teams" },
   { label: "Contributions", href: "/contributions" },
+  // The public record of what we got wrong. Linked from the nav column rather
+  // than buried in the fine print — a corrections page nobody can find is
+  // worth about as much as no corrections page.
+  { label: "Corrections", href: "/corrections" },
   // /about carries the Person/Organization schema that backs authorship on
   // every article. It shipped with nothing linking to it, so it was a hard
   // orphan — reachable only via the sitemap.
@@ -116,6 +120,13 @@ export function Footer() {
             <Link href="/terms" className="text-xs transition-colors hover:text-primary">
               Terms
             </Link>
+            {/* The site publishes no email address (the domain has no MX
+                record and the maintainer is a minor), so this form is the only
+                way to reach anyone — it can't be findable only from the legal
+                pages that link to it. */}
+            <Link href="/contact" className="text-xs transition-colors hover:text-primary">
+              Contact
+            </Link>
             <p className="text-xs">
               © {new Date().getFullYear()} LearnFRC · Not affiliated with or endorsed by FIRST®
             </p>
@@ -138,6 +149,13 @@ export function Footer() {
             className="underline underline-offset-2 transition-colors hover:text-primary"
           >
             contributions page
+          </Link>
+          , and every fix we make to a fact is written down in the{" "}
+          <Link
+            href="/corrections"
+            className="underline underline-offset-2 transition-colors hover:text-primary"
+          >
+            corrections log
           </Link>
           .
         </p>

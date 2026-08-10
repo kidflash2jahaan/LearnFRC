@@ -2,11 +2,24 @@ import type { CSSProperties, ComponentType } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Users, CheckCircle2, Gauge, ArrowRight, Sparkles, UserPlus } from "lucide-react";
+import {
+  Users,
+  CheckCircle2,
+  Gauge,
+  LayoutGrid,
+  ArrowRight,
+  Sparkles,
+  UserPlus,
+} from "lucide-react";
 import { getSession } from "@/lib/auth";
-import { getTeamByNumber } from "@/lib/queries";
+import {
+  getTeamByNumber,
+  getTeamSubteamCoverage,
+  getReferralCount,
+} from "@/lib/queries";
 import { ShareButton } from "@/components/share-button";
 import { AnimatedCounter } from "@/components/animated-counter";
+import { InviteCard } from "@/components/leaderboard/invite-card";
 import { clampPct, pluralize } from "@/lib/utils";
 import {
   RiseGroup,
@@ -16,6 +29,15 @@ import {
   RevealItem,
   Glow,
 } from "@/components/motion/primitives";
+import {
+  SubteamBoard,
+  SubteamMeter,
+  type SubteamRow,
+} from "@/components/team/subteam-board";
+// From its own plain module, NOT from the "use client" board: a Server
+// Component cannot call a function exported by a client module.
+import { subteamLabel } from "@/components/team/subteam-label";
+import { SubteamGapCard } from "@/components/team/subteam-gap-card";
 import { Roster, type RosterMember } from "./_roster";
 import { CrewPanel, type CrewMember } from "./_crew-panel";
 
@@ -48,7 +70,11 @@ export default async function TeamsPage() {
       />
 
       <div className="mx-auto max-w-6xl px-4 pb-12 pt-28 sm:px-6 lg:px-8">
-        {!profile?.team_number ? <EmptyState /> : await renderTeam(profile.team_number, user.id)}
+        {!profile?.team_number ? (
+          <EmptyState />
+        ) : (
+          await renderTeam(profile.team_number, user.id, profile.username)
+        )}
       </div>
     </div>
   );
@@ -115,8 +141,15 @@ function EmptyState() {
   );
 }
 
-async function renderTeam(teamNumber: number, uid: string) {
-  const { totalLessons, members } = await getTeamByNumber(teamNumber);
+async function renderTeam(
+  teamNumber: number,
+  uid: string,
+  username: string | null
+) {
+  const [{ totalLessons, members }, referralCount] = await Promise.all([
+    getTeamByNumber(teamNumber),
+    getReferralCount(uid),
+  ]);
   const totalCompleted = members.reduce((s, m) => s + m.completed, 0);
   const totalNeeded = members.length * totalLessons;
   const avgPct =
@@ -141,6 +174,42 @@ async function renderTeam(teamNumber: number, uid: string) {
     isYou: m.isYou,
   }));
 
+  // ── Subteam coverage ────────────────────────────────────────────────────
+  // Departments ARE subteams, so this is the one team view a member can act
+  // on. Only usernames/avatars cross the boundary — the coverage query never
+  // opens the profiles table at all.
+  const byId = new Map(rosterMembers.map((m) => [m.userId, m]));
+  const coverage = await getTeamSubteamCoverage(members.map((m) => m.userId));
+  const subteamRows: SubteamRow[] = coverage.map((c) => ({
+    slug: c.slug,
+    name: c.name,
+    accent: c.accent,
+    icon: c.icon,
+    lessonCount: c.lessonCount,
+    teamCompleted: c.teamCompleted,
+    crew: c.members.flatMap((cm) => {
+      const r = byId.get(cm.userId);
+      return r
+        ? [
+            {
+              userId: r.userId,
+              name: r.name,
+              avatarUrl: r.avatarUrl,
+              completed: cm.completed,
+              isYou: r.isYou,
+            },
+          ]
+        : [];
+    }),
+  }));
+
+  const gapRows = subteamRows.filter((r) => r.crew.length === 0);
+  const claimedCount = subteamRows.length - gapRows.length;
+  // Distinct lessons the team has finished between them — NOT the sum of the
+  // per-member counts, which double-counts a lesson two people both did.
+  const distinctDone = subteamRows.reduce((s, r) => s + r.teamCompleted, 0);
+  const solo = members.length <= 1;
+
   const stats: {
     icon: ComponentType<{ className?: string }>;
     label: string;
@@ -150,12 +219,19 @@ async function renderTeam(teamNumber: number, uid: string) {
   }[] = [
     { icon: Users, label: "Members", value: members.length, accent: "var(--primary)" },
     {
+      icon: LayoutGrid,
+      label: "Subteams covered",
+      value: claimedCount,
+      suffix: `/${subteamRows.length}`,
+      accent: "var(--magenta)",
+    },
+    {
       icon: CheckCircle2,
       label: "Lessons completed",
       value: totalCompleted,
       accent: "var(--accent)",
     },
-    { icon: Gauge, label: "Avg. completion", value: avgPct, suffix: "%", accent: "var(--magenta)" },
+    { icon: Gauge, label: "Avg. completion", value: avgPct, suffix: "%", accent: "var(--primary)" },
   ];
 
   return (
@@ -178,9 +254,19 @@ async function renderTeam(teamNumber: number, uid: string) {
           </RiseItem>
           <RiseItem>
             <p className="mt-5 max-w-xl text-pretty text-lg leading-relaxed text-foreground/70">
-              Everyone who signed up with team #{teamNumber} is in the pit —
-              ranked by lessons finished so you can all see who&apos;s
-              build-season ready and push each other to the top.
+              {solo ? (
+                <>
+                  You&apos;re the only one from #{teamNumber} here so far.
+                  Below is every subteam on the team — what you&apos;re
+                  covering, and what&apos;s still wide open.
+                </>
+              ) : (
+                <>
+                  Everyone who signed up with team #{teamNumber} is in the pit —
+                  with every subteam laid out so you can see who&apos;s covering
+                  what, and what nobody has picked up yet.
+                </>
+              )}
             </p>
           </RiseItem>
           <RiseItem>
@@ -188,12 +274,9 @@ async function renderTeam(teamNumber: number, uid: string) {
               <Link href="/guides" className="ac-btn text-sm">
                 Keep climbing <ArrowRight className="h-4 w-4" aria-hidden />
               </Link>
-              <ShareButton
-                variant="ghost"
-                label="Invite teammates"
-                text={`Join our FRC team on LearnFRC — sign up with team #${teamNumber} and we can track each other's progress and learn together:`}
-                url="https://learnfrc.com"
-              />
+              <Link href="#subteams" className="ac-btn-ghost text-sm">
+                {gapRows.length > 0 ? "See what's missing" : "See who's on what"}
+              </Link>
             </div>
           </RiseItem>
         </RiseGroup>
@@ -209,7 +292,7 @@ async function renderTeam(teamNumber: number, uid: string) {
       </section>
 
       {/* =========================== STATS =========================== */}
-      <RevealGroup className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <RevealGroup className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((s) => (
           <RevealItem key={s.label}>
             <div
@@ -235,6 +318,66 @@ async function renderTeam(teamNumber: number, uid: string) {
         ))}
       </RevealGroup>
 
+      {/* ========================== SUBTEAMS ========================= */}
+      {/* An FRC team is split into subteams and so is this catalog — one      */}
+      {/* department each. This is the section that makes the page a TEAM      */}
+      {/* tool: a named, checkable gap ("nobody is on Electrical") is a        */}
+      {/* specific person to go ask, and it reads the same for a team of one.  */}
+      <section id="subteams" className="scroll-mt-28">
+        <Reveal>
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <span className="ac-eyebrow inline-flex items-center gap-1.5">
+                <span className="inline-block h-2 w-2 rounded-full bg-primary" aria-hidden />
+                Who&apos;s on what
+              </span>
+              <h2 className="mt-2 font-display text-3xl font-bold tracking-tight text-foreground">
+                Subteam coverage
+              </h2>
+              <p className="mt-1 max-w-lg text-base text-foreground/70">
+                {claimedCount} of {subteamRows.length} subteams have someone
+                from #{teamNumber} on them
+                {gapRows.length > 0
+                  ? ". The dashed ones are wide open."
+                  : " — the whole robot, covered."}
+              </p>
+            </div>
+            {/* Distinct lessons, deliberately worded differently from the
+                "Lessons completed" stat above — that one sums every member,
+                this one counts each lesson once however many people did it. */}
+            <span className="ac-chip text-xs font-semibold tabular-nums">
+              Covers {distinctDone} of {totalLessons} lessons
+            </span>
+          </div>
+        </Reveal>
+
+        <Reveal delay={0.05}>
+          <div className="mt-5">
+            <SubteamMeter rows={subteamRows} />
+          </div>
+        </Reveal>
+
+        <Reveal delay={0.08}>
+          <div className="mt-5">
+            <SubteamGapCard
+              teamNumber={teamNumber}
+              username={username}
+              gaps={gapRows.map((r) => subteamLabel(r.name))}
+              gapAccent={gapRows[0]?.accent}
+              coveredCount={claimedCount}
+              totalSubteams={subteamRows.length}
+              soloMember={solo}
+              teamCompleted={distinctDone}
+              totalLessons={totalLessons}
+            />
+          </div>
+        </Reveal>
+
+        <div className="mt-5">
+          <SubteamBoard rows={subteamRows} />
+        </div>
+      </section>
+
       {/* =========================== ROSTER ========================== */}
       <section>
         <Reveal>
@@ -242,14 +385,15 @@ async function renderTeam(teamNumber: number, uid: string) {
             <div>
               <span className="ac-eyebrow inline-flex items-center gap-1.5">
                 <span className="inline-block h-2 w-2 rounded-full bg-primary" aria-hidden />
-                The leaderboard
+                {solo ? "Where you're at" : "The leaderboard"}
               </span>
               <h2 className="mt-2 font-display text-3xl font-bold tracking-tight text-foreground">
-                The roster
+                {solo ? "Your progress" : "The roster"}
               </h2>
               <p className="mt-1 max-w-lg text-base text-foreground/70">
-                Ranked by lessons finished. The one on top wears the crown —
-                for now.
+                {solo
+                  ? `One row, for now. Anyone who signs up with #${teamNumber} lands here automatically, ranked by lessons finished.`
+                  : "Ranked by lessons finished. The one on top wears the crown — for now."}
               </p>
             </div>
             <span className="ac-chip text-xs font-semibold">
@@ -284,35 +428,56 @@ async function renderTeam(teamNumber: number, uid: string) {
       </section>
 
       {/* ========================== INVITE =========================== */}
+      {/* The real referral card, not a bare homepage link. Both share       */}
+      {/* controls on this page used to point at https://learnfrc.com with   */}
+      {/* no `?ref=`, so every teammate recruited from the team page landed  */}
+      {/* unattributed and neither side ever got the +25 XP the copy         */}
+      {/* promises. InviteCard is the same control the dashboard and         */}
+      {/* leaderboard use — one invite surface, one link shape.              */}
       <Reveal>
-        <div className="ac-glass flex flex-col gap-4 p-7 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-start gap-3">
-            <span
-              className="ac-badge flex h-11 w-11 shrink-0 items-center justify-center"
-              style={{ "--a": "var(--accent)" } as CSSProperties}
-            >
-              <UserPlus className="h-5 w-5" aria-hidden />
-            </span>
-            <div>
-              <h2 className="text-lg font-bold tracking-tight text-foreground">
-                Grow the crew
-              </h2>
-              <p className="mt-1 text-base leading-relaxed text-foreground/70">
-                Anyone who signs up with team #{teamNumber} joins the roster
-                automatically — no codes, no setup.
-              </p>
-            </div>
-          </div>
-          <div className="shrink-0">
-            <ShareButton
-              variant="brand"
-              label="Share invite"
-              text={`Join our FRC team on LearnFRC — sign up with team #${teamNumber} and we can track each other's progress and learn together:`}
-              url="https://learnfrc.com"
-            />
-          </div>
-        </div>
+        {username ? (
+          <InviteCard username={username} count={referralCount} />
+        ) : (
+          <UnattributedInvite teamNumber={teamNumber} />
+        )}
       </Reveal>
+    </div>
+  );
+}
+
+/**
+ * Fallback for the handful of accounts with no username yet — there is no
+ * `?ref=` to build a referral link from, so this can only send a plain signup
+ * link. Everyone else gets the real InviteCard above.
+ */
+function UnattributedInvite({ teamNumber }: { teamNumber: number }) {
+  return (
+    <div className="ac-glass flex flex-col gap-4 p-7 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex items-start gap-3">
+        <span
+          className="ac-badge flex h-11 w-11 shrink-0 items-center justify-center"
+          style={{ "--a": "var(--accent)" } as CSSProperties}
+        >
+          <UserPlus className="h-5 w-5" aria-hidden />
+        </span>
+        <div>
+          <h2 className="text-lg font-bold tracking-tight text-foreground">
+            Grow the crew
+          </h2>
+          <p className="mt-1 text-base leading-relaxed text-foreground/70">
+            Anyone who signs up with team #{teamNumber} joins the roster
+            automatically — no codes, no setup.
+          </p>
+        </div>
+      </div>
+      <div className="shrink-0">
+        <ShareButton
+          variant="brand"
+          label="Share invite"
+          text={`Join our FRC team on LearnFRC — sign up with team #${teamNumber} and we can track each other's progress and learn together:`}
+          url="https://learnfrc.com/signup"
+        />
+      </div>
     </div>
   );
 }

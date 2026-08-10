@@ -188,8 +188,13 @@ export default function RootLayout({
         <Analytics />
         <SpeedInsights />
         <PresenceBeacon />
-        <PageViewBeacon />
+        {/* SourceCapture must stay ahead of PageViewBeacon: React flushes
+            sibling passive effects in mount order, and the beacon's request is
+            what carries the lf_src cookie to /api/page-view. The beacon also
+            calls ensureSourceCookie() itself, so correctness no longer *depends*
+            on this order — but keeping it makes the dependency legible. */}
         <SourceCapture />
+        <PageViewBeacon />
       </body>
     </html>
   );

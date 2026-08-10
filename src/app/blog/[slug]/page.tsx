@@ -16,6 +16,7 @@ import { getRelated } from "@/lib/blog-data";
 import { getArticles } from "@/lib/queries";
 import { Markdown } from "@/components/markdown";
 import { ArticleSuggestEdit } from "@/components/blog/article-suggest-edit";
+import { Provenance, extractLinkedReferences } from "@/components/lesson/provenance";
 import { JsonLd } from "@/components/json-ld";
 import { parseFaqs } from "@/lib/faq";
 import { ShareButton } from "@/components/share-button";
@@ -293,14 +294,28 @@ export default async function ArticlePage({
           <Reveal delay={0.1}>
             <Markdown content={a.content} />
           </Reveal>
-          {a.id && (
-            <ArticleSuggestEdit
-              articleId={a.id}
-              title={a.title}
-              path={`/blog/${a.slug}`}
-              content={a.content}
-            />
-          )}
+          {/* Provenance. Articles have no `resources` column the way lessons
+              do, so the reference list is the set of external links the prose
+              itself cites — real links, labelled as exactly that, and simply
+              absent on the articles that link out to nothing. Nothing here is
+              generated to fill the space. Not wrapped in <Reveal>: this block
+              is the credibility answer to "AI slop", so it ships in the first
+              paint and in the static HTML. */}
+          <Provenance
+            kind="article"
+            path={`/blog/${a.slug}`}
+            sources={extractLinkedReferences(a.content)}
+          >
+            {a.id && (
+              <ArticleSuggestEdit
+                articleId={a.id}
+                title={a.title}
+                path={`/blog/${a.slug}`}
+                content={a.content}
+                dense
+              />
+            )}
+          </Provenance>
         </div>
 
         {/* Signature: fixed reading-progress bar (all sizes) + sticky TOC
