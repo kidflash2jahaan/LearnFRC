@@ -32,6 +32,7 @@ import { getDepartments, getOverviewStats } from "@/lib/queries";
 import { DEPT_CATALOG } from "@/lib/dept-catalog";
 import { PATHS } from "@/lib/paths-data";
 import { AnimatedCounter } from "@/components/animated-counter";
+import { SocialProof } from "@/components/social-proof";
 import {
   RiseGroup,
   RiseItem,
@@ -393,6 +394,11 @@ export default async function HomePage() {
           ))}
         </RevealGroup>
       </section>
+
+      {/* ========================== WHO USES IT ========================== */}
+      {/* Named teams (written permission only) + measured aggregates. The
+          quote slot inside stays empty until a real reply arrives. */}
+      <SocialProof />
 
       {/* =========================== FREE TOOLS =========================== */}
       <section className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">

@@ -13,10 +13,7 @@ import {
 import { Rise, RiseGroup, RiseItem, Reveal, Glow } from "@/components/motion/primitives";
 import { AnimatedCounter } from "@/components/animated-counter";
 import { type PodiumEntry } from "@/components/leaderboard/podium";
-import {
-  LeaderboardTabs,
-  type TeamRow,
-} from "@/components/leaderboard/leaderboard-tabs";
+import { LeaderboardTabs } from "@/components/leaderboard/leaderboard-tabs";
 import { InviteCard } from "@/components/leaderboard/invite-card";
 import {
   getLeaderboard,
@@ -24,6 +21,7 @@ import {
   getTeamLeaderboard,
   getReferralCount,
   getXpTotals,
+  TEAM_MIN_MEMBERS,
   type WeeklyEntry,
 } from "@/lib/queries";
 import { getSession } from "@/lib/auth";
@@ -114,7 +112,6 @@ export default async function LeaderboardPage() {
   const referralCount = uid ? await getReferralCount(uid) : 0;
   const allTimeEntries = profiles.map((p, i) => toEntry(p, i + 1, uid));
   const weeklyEntries = weekly.map((p, i) => toWeeklyEntry(p, i + 1, uid));
-  const teamRows: TeamRow[] = teams.map((t, i) => ({ rank: i + 1, ...t }));
   // Site-wide totals (all learners), so the header matches the admin panel.
   const totalXp = xpTotals.totalXp;
 
@@ -255,7 +252,9 @@ export default async function LeaderboardPage() {
           <LeaderboardTabs
             weekly={weeklyEntries}
             allTime={allTimeEntries}
-            teams={teamRows}
+            teams={teams.byTotal}
+            teamsPerMember={teams.byMember}
+            minTeamMembers={TEAM_MIN_MEMBERS}
             userTeam={profile?.team_number ?? null}
           />
 

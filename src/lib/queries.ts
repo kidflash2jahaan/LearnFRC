@@ -413,33 +413,100 @@ export const getWeeklyLeaderboard = unstable_cache(
 );
 
 export type TeamEntry = {
+  /** Position on the board this entry was returned for, 1-based. */
+  rank: number;
   team_number: number;
   totalXp: number;
   members: number;
+  /**
+   * totalXp / members, rounded. Still an aggregate of the whole team — it is
+   * a total divided by a count, so it can't be reversed into anyone's score
+   * unless the team has exactly one member, and the per-member board excludes
+   * those by construction (see TEAM_MIN_MEMBERS).
+   */
+  avgXp: number;
 };
 
-/** Leaderboard of teams ranked by their members' combined XP. Cached briefly. */
+/**
+ * How many members a team needs before it appears on the per-member board.
+ *
+ * A plain average is worse than the problem it fixes: 110 of our 145 teams are
+ * a single account, so sorted by raw average 4 of the top 8 are solo signups
+ * and one dedicated person takes first place on a TEAM board. Two doesn't fix
+ * it either — with two members one person is still half the number, and any
+ * solo account clears that bar by getting one teammate to sign up. Three is the
+ * smallest count where no individual is more than a third of their team's
+ * score, and it's the last cut that's cheap: 35 teams have 2+ members, 17 have
+ * 3+, only 9 have 4+. So 3 keeps a board worth reading and 4 would halve it.
+ *
+ * This is exported so the UI can state the number instead of quietly dropping
+ * teams — the copy and the filter have to come from the same constant.
+ */
+export const TEAM_MIN_MEMBERS = 3;
+
+export type TeamBoards = {
+  /** Top `limit` teams by combined XP. The default board, unchanged. */
+  byTotal: TeamEntry[];
+  /**
+   * Teams with TEAM_MIN_MEMBERS+ members, by XP per member. Ranked over EVERY
+   * eligible team, not over `byTotal` — team 1 has 3 members but sits 74th by
+   * total, so re-sorting the top-50-by-total list would have silently dropped
+   * a team that meets the rule we print on the page.
+   */
+  byMember: TeamEntry[];
+};
+
+/** Team leaderboards, both orderings, ranked server-side. Cached briefly. */
 export const getTeamLeaderboard = unstable_cache(
-  async (limit = 50): Promise<TeamEntry[]> => {
+  async (limit = 50): Promise<TeamBoards> => {
     // Service-role (anon can no longer SELECT `profiles`). Two columns only,
     // and they are aggregated into per-team totals below — no per-member row
     // ever leaves this function, so the team board cannot become a roster dump.
     const supabase = createAdminClient();
-    const { data } = await supabase
-      .from("profiles")
-      .select("team_number, xp")
-      .not("team_number", "is", null);
-    const teams: Record<number, TeamEntry> = {};
-    for (const p of (data ?? []) as { team_number: number; xp: number }[]) {
-      const t = p.team_number;
-      if (t == null) continue;
-      teams[t] = teams[t] || { team_number: t, totalXp: 0, members: 0 };
-      teams[t].totalXp += p.xp || 0;
-      teams[t].members += 1;
+    const totals: Record<number, { totalXp: number; members: number }> = {};
+    // PAGED, not a plain .select(): PostgREST caps a response at 1000 rows and
+    // truncates SILENTLY. A truncated read here doesn't just shrink a total,
+    // it drops MEMBERS — which can push a real team under the per-member
+    // board's minimum and delete it from the ranking with no error anywhere.
+    const PAGE = 1000;
+    for (let from = 0; ; from += PAGE) {
+      const { data } = await supabase
+        .from("profiles")
+        .select("team_number, xp")
+        .not("team_number", "is", null)
+        .order("id", { ascending: true })
+        .range(from, from + PAGE - 1);
+      const chunk = (data ?? []) as { team_number: number; xp: number }[];
+      for (const p of chunk) {
+        const t = p.team_number;
+        if (t == null) continue;
+        totals[t] = totals[t] || { totalXp: 0, members: 0 };
+        totals[t].totalXp += p.xp || 0;
+        totals[t].members += 1;
+      }
+      if (chunk.length < PAGE) break;
     }
-    return Object.values(teams)
-      .sort((a, b) => b.totalXp - a.totalXp || b.members - a.members)
-      .slice(0, limit);
+    const all: Omit<TeamEntry, "rank">[] = Object.entries(totals).map(
+      ([team, t]) => ({
+        team_number: Number(team),
+        totalXp: t.totalXp,
+        members: t.members,
+        // members is >= 1 for every key that exists, so this can't divide by 0.
+        avgXp: Math.round(t.totalXp / t.members),
+      })
+    );
+    const rank = (rows: Omit<TeamEntry, "rank">[]): TeamEntry[] =>
+      rows.slice(0, limit).map((t, i) => ({ rank: i + 1, ...t }));
+    return {
+      byTotal: rank(
+        [...all].sort((a, b) => b.totalXp - a.totalXp || b.members - a.members)
+      ),
+      byMember: rank(
+        all
+          .filter((t) => t.members >= TEAM_MIN_MEMBERS)
+          .sort((a, b) => b.avgXp - a.avgXp || b.totalXp - a.totalXp)
+      ),
+    };
   },
   ["leaderboard-teams"],
   { revalidate: LEADERBOARD_TTL, tags: ["leaderboard"] }
