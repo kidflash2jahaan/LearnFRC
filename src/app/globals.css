@@ -96,6 +96,27 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 6px);
+
+  /* Drives `animate-shimmer` on <Skeleton>. Tailwind v4 is CSS-first: an
+     `animate-*` utility only exists if a matching `--animate-*` theme variable
+     is declared here. This one was missing, so `animate-shimmer` generated no
+     CSS at all and every skeleton on the site rendered as a motionless grey
+     stripe. A frozen grey page reads as broken rather than as loading, which
+     is the opposite of what a skeleton is for. */
+  --animate-shimmer: shimmer 1.6s linear infinite;
+}
+
+/* Slides the highlight in <Skeleton>'s 200%-wide gradient across the element.
+   Animating background-position only, so it never triggers layout or paint of
+   anything around it. Honoured by the global prefers-reduced-motion rule near
+   the bottom of this file, which zeroes every animation duration. */
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
 }
 
 /* ------------------------------------------------------------------ */
