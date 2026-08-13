@@ -28,7 +28,7 @@ const NEXT_STEPS = [
   {
     icon: LogIn,
     title: "You're signed in",
-    body: "The link logs you in automatically — no need to sign in again.",
+    body: "The link logs you in automatically, so you won't need to sign in again.",
   },
   {
     icon: Wrench,
@@ -88,7 +88,7 @@ export default async function VerifyEmailPage({
               ) : (
                 "your inbox"
               )}
-              . Open it to activate your account — this takes about 30 seconds.
+              . Open it to activate your account, which takes about 30 seconds.
             </p>
 
             {/* progress rail: where you are in sign-up */}

@@ -116,7 +116,7 @@ const SECTIONS: Section[] = [
         items={[
           "Create and operate your account and save your progress.",
           "Send essential emails (email verification, welcome, password reset).",
-          "Send occasional learning reminders to account holders — e.g. your next lesson or a streak about to end. These are on by default and every one includes a one-click unsubscribe; opting out stops them permanently.",
+          "Send occasional learning reminders to account holders, such as your next lesson or a streak about to end. These are on by default and every one includes a one-click unsubscribe; opting out stops them permanently.",
           "Send product updates only if you subscribed to the newsletter.",
           "Prevent abuse, spam, and security incidents.",
         ]}
@@ -141,7 +141,7 @@ const SECTIONS: Section[] = [
           number, you are automatically grouped with other registered users who entered the
           same team number. Members of the same team can see each other&apos;s{" "}
           <strong className={strong}>learning progress</strong> (lessons completed, XP, level,
-          badges, and last activity) along with your display name — unless you turn on
+          badges, and last activity) along with your display name, unless you turn on
           &quot;hide my name,&quot; in which case your username is shown instead. Your email
           is never shared. If you don&apos;t want to appear in a team view, leave your team
           number blank (or remove it) in your settings.
@@ -165,8 +165,8 @@ const SECTIONS: Section[] = [
             </>,
             <>
               <strong className={strong}>Where you came from.</strong> A first-party
-              cookie remembers how you first found LearnFRC — say, a forum link or a
-              teammate&apos;s invite — so we can see which channels actually help people
+              cookie remembers how you first found LearnFRC, say a forum link or a
+              teammate&apos;s invite, so we can see which channels actually help people
               discover us. It records the source, not who you are, and never follows you
               across other sites.
             </>,
@@ -204,7 +204,7 @@ const SECTIONS: Section[] = [
               >
                 Supabase
               </a>{" "}
-              — database and authentication.
+              provides database and authentication.
             </>,
             <>
               <a
@@ -215,7 +215,7 @@ const SECTIONS: Section[] = [
               >
                 Vercel
               </a>{" "}
-              — hosting and analytics.
+              provides hosting and analytics.
             </>,
             <>
               <a
@@ -226,7 +226,7 @@ const SECTIONS: Section[] = [
               >
                 Resend
               </a>{" "}
-              — sending transactional and newsletter email.
+              sends transactional and newsletter email.
             </>,
           ]}
         />
@@ -255,7 +255,7 @@ const SECTIONS: Section[] = [
     body: (
       <P>
         We keep your account data while your account is active. You can request access to,
-        correction of, or deletion of your data — including full account deletion — through
+        correction of, or deletion of your data (including full account deletion) through
         our{" "}
         <Link className={LINK} href={CONTACT_PATH}>
           contact form
@@ -273,7 +273,7 @@ const SECTIONS: Section[] = [
     body: (
       <P>
         Data is encrypted in transit, access is restricted with row-level security, and
-        passwords are hashed by our authentication provider — we never see them. No system is
+        passwords are hashed by our authentication provider. We never see them. No system is
         perfectly secure, but we work to protect your information.
       </P>
     ),
@@ -343,7 +343,7 @@ export default function PrivacyPage() {
           <RiseItem>
             <p className="mt-4 max-w-xl text-pretty text-lg leading-relaxed text-foreground/70">
               LearnFRC is a free platform for learning the FIRST Robotics Competition. We
-              collect as little as we can — this page lays out exactly what, why, and the
+              collect as little as we can. This page lays out exactly what, why, and the
               choices you have. Plain language, no fine print.
             </p>
           </RiseItem>

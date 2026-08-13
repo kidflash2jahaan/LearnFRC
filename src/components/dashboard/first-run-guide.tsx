@@ -13,7 +13,7 @@ const STEPS = [
   {
     icon: BookOpen,
     title: "Finish one lesson",
-    body: "Short and focused — about 5 minutes. That's your first win.",
+    body: "Short and focused: about 5 minutes. That's your first win.",
   },
   {
     icon: CheckCircle2,
@@ -59,8 +59,8 @@ export function FirstRunGuide({
         Welcome to <span style={GRADIENT}>LearnFRC</span> 🤖
       </h2>
       <p className="mt-2 max-w-xl text-[15px] leading-relaxed text-foreground/70">
-        The fastest way in is to finish one lesson. Here&apos;s the whole loop —
-        it takes about five minutes.
+        The fastest way in is to finish one lesson. Here&apos;s the whole loop,
+        and it takes about five minutes.
       </p>
 
       <ol className="mt-6 grid gap-3 sm:grid-cols-3">

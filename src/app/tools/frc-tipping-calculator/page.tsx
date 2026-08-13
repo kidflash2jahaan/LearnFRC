@@ -7,13 +7,13 @@ import Calculator from "./_calculator";
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com";
 
 export const metadata: Metadata = {
-  title: "FRC Robot Tip-Over Calculator — Center of Gravity & Stability",
+  title: "FRC Robot Tip-Over Calculator: Center of Gravity & Stability",
   description:
-    "Free FRC tip-over and traction-stability calculator. Enter your track width, wheelbase, and center-of-gravity height to find the maximum turning acceleration and ramp/incline angle before your robot tips — plus a traction-limited pushing-force estimate. Exact rigid-body statics.",
+    "Free FRC tip-over and traction-stability calculator. Enter your track width, wheelbase, and center-of-gravity height to find the maximum turning acceleration and ramp/incline angle before your robot tips, plus a traction-limited pushing-force estimate, using exact rigid-body statics.",
   alternates: { canonical: `${SITE}/tools/frc-tipping-calculator` },
   openGraph: {
     images: [{ url: `${SITE}/opengraph-image`, width: 1200, height: 630 }],
-    title: "FRC Tip-Over & Stability Calculator (Free) — LearnFRC",
+    title: "FRC Tip-Over & Stability Calculator (Free) | LearnFRC",
     description:
       "Will your robot tip? Enter track width, wheelbase, and CoG height for tip acceleration and ramp angle.",
     url: `${SITE}/tools/frc-tipping-calculator`,
@@ -65,7 +65,7 @@ export default async function Page() {
               name: "What makes an FRC robot tip over?",
               acceptedAnswer: {
                 "@type": "Answer",
-                text: "A robot tips when the horizontal force on it — from hard turning, a sudden stop, or an incline — pushes its effective center of gravity past the edge of its wheelbase. A higher center of gravity, a narrower track width, and higher acceleration all lower the threshold. This calculator turns your geometry into the maximum turning acceleration and ramp angle before that happens.",
+                text: "A robot tips when the horizontal force on it (from hard turning, a sudden stop, or an incline) pushes its effective center of gravity past the edge of its wheelbase. A higher center of gravity, a narrower track width, and higher acceleration all lower the threshold. This calculator turns your geometry into the maximum turning acceleration and ramp angle before that happens.",
               },
             },
             {
@@ -73,7 +73,7 @@ export default async function Page() {
               name: "How do I lower my robot's center of gravity?",
               acceptedAnswer: {
                 "@type": "Answer",
-                text: "Mount the heaviest components — the battery, motors, and gearboxes — as low and as centered as possible, keep tall mechanisms retracted while driving, and avoid unnecessary height. Even a few inches of CoG height meaningfully changes how hard you can turn or how steep a ramp you can climb before tipping.",
+                text: "Mount the heaviest components (the battery, motors, and gearboxes) as low and as centered as possible, keep tall mechanisms retracted while driving, and avoid unnecessary height. Even a few inches of CoG height meaningfully changes how hard you can turn or how steep a ramp you can climb before tipping.",
               },
             },
             {
@@ -81,7 +81,7 @@ export default async function Page() {
               name: "Does a wider robot resist tipping better?",
               acceptedAnswer: {
                 "@type": "Answer",
-                text: "Yes. Tipping resistance scales with the ratio of half the track width (or wheelbase) to the center-of-gravity height. A wider or longer wheelbase, or a lower CoG, raises the acceleration and incline angle the robot can handle before it tips — try different values above to see the effect.",
+                text: "Yes. Tipping resistance scales with the ratio of half the track width (or wheelbase) to the center-of-gravity height. A wider or longer wheelbase, or a lower CoG, raises the acceleration and incline angle the robot can handle before it tips. Try different values above to see the effect.",
               },
             },
           ],

@@ -32,12 +32,12 @@ const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com";
 export const metadata: Metadata = {
   title: "FRC Guides & Articles",
   description:
-    "In-depth FRC guides: how to start a team, swerve drive explained, how to win the Impact Award, and more — free, from an FRC student.",
+    "In-depth FRC guides: how to start a team, swerve drive explained, how to win the Impact Award, and more. Free, from an FRC student.",
   alternates: { canonical: `${SITE}/blog` },
   openGraph: {
     title: "FRC Guides & Articles · LearnFRC",
     description:
-      "In-depth FRC guides for every department — free, from an FRC student.",
+      "In-depth FRC guides for every department. Free, from an FRC student.",
     url: `${SITE}/blog`,
     type: "website",
   },
@@ -256,7 +256,7 @@ export default async function BlogPage() {
           <RiseItem>
             <p className="mt-5 max-w-xl text-pretty text-lg leading-relaxed text-foreground/70">
               Practical, no-fluff walkthroughs of the parts of FRC people search
-              for most — starting a team, understanding swerve, winning the
+              for most: starting a team, understanding swerve, winning the
               Impact Award. Free, written by an FRC student, filed by desk.
             </p>
           </RiseItem>
@@ -283,7 +283,7 @@ export default async function BlogPage() {
                 minutes of reading
               </span>
               <span>
-                <b className="font-semibold text-foreground">$0</b> — always
+                <b className="font-semibold text-foreground">$0</b>, always
               </span>
             </div>
           </RiseItem>
@@ -308,7 +308,7 @@ export default async function BlogPage() {
               Start with these {featured.length}
             </h2>
             <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-muted-foreground">
-              If you read nothing else, read these — what FRC actually is, how to
+              If you read nothing else, read these: what FRC actually is, how to
               get a team off the ground, how a competition runs, and the two
               topics every team ends up arguing about.
             </p>
@@ -472,7 +472,7 @@ export default async function BlogPage() {
               <span style={BRAND_GRADIENT}>article.</span>
             </h2>
             <p className="mx-auto mt-3 max-w-md text-[15px] leading-relaxed text-muted-foreground">
-              Join the list for new FRC articles as they&apos;re published — no spam,
+              Join the list for new FRC articles as they&apos;re published. No spam,
               unsubscribe anytime.
             </p>
             <div className="mt-7 flex flex-col items-center gap-3">

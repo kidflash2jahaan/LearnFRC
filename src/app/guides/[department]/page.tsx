@@ -61,57 +61,57 @@ const SEO_META: Record<string, { title: string; description: string }> = {
   "getting-started": {
     title: "Getting Started with FRC: A Rookie's Complete Guide",
     description:
-      "New to FIRST Robotics? Free structured lessons on how FRC works — the season, the robot, the team roles — from zero to your first competition.",
+      "New to FIRST Robotics? Free structured lessons on how FRC works: the season, the robot, the team roles, from zero to your first competition.",
   },
   "mechanical-build": {
     title: "FRC Mechanical & Build Guide: Drivetrain to Pneumatics",
     description:
-      "Free FRC mechanical lessons — drivetrains, power transmission, pneumatics, intakes, and fabrication — from first bolt to competition-ready robot.",
+      "Free FRC mechanical lessons on drivetrains, power transmission, pneumatics, intakes, and fabrication, from first bolt to competition-ready robot.",
   },
   "programming-software": {
     title: "FRC Programming Guide: WPILib, Java & Command-Based",
     description:
-      "Learn FRC programming free — WPILib setup, Java, command-based structure, closed-loop control, and vision — with hands-on lessons and quizzes.",
+      "Learn FRC programming free: WPILib setup, Java, command-based structure, closed-loop control, and vision, with hands-on lessons and quizzes.",
   },
   "electrical-wiring": {
     title: "FRC Electrical & Wiring Guide: PDH, CAN & Breakers",
     description:
-      "Wire an FRC robot the right way — PDH, CAN bus, breakers, brownouts, and troubleshooting — in free step-by-step electrical lessons.",
+      "Wire an FRC robot the right way: PDH, CAN bus, breakers, brownouts, and troubleshooting, in free step-by-step electrical lessons.",
   },
   "cad-design": {
     title: "FRC CAD & Design: Free Onshape Robot Design Course",
     description:
-      "Design FRC robots in Onshape — sketches, assemblies, swerve drivebase layout, and worked mini-projects — in a free structured CAD course.",
+      "Design FRC robots in Onshape: sketches, assemblies, swerve drivebase layout, and worked mini-projects, in a free structured CAD course.",
   },
   "scouting-strategy": {
     title: "FRC Scouting & Strategy: OPR, EPA & Picklists",
     description:
-      "Free FRC scouting and strategy lessons — data collection, OPR/EPA, match strategy, alliance selection, and picklist building that wins matches.",
+      "Free FRC scouting and strategy lessons on data collection, OPR/EPA, match strategy, alliance selection, and picklist building that wins matches.",
   },
   "drive-team": {
     title: "FRC Drive Team Guide: Driver, Operator & Coach",
     description:
-      "Everything the FRC drive team needs — driver practice, operator flow, coach calls, and match-day routines — in free structured lessons.",
+      "Everything the FRC drive team needs: driver practice, operator flow, coach calls, and match-day routines, in free structured lessons.",
   },
   "business-operations": {
     title: "FRC Team Business & Fundraising Guide: Budgets, Grants",
     description:
-      "Run the business side of an FRC team — budgets, sponsors, grants, and sustainability — with free lessons and real templates.",
+      "Run the business side of an FRC team: budgets, sponsors, grants, and sustainability, with free lessons and real templates.",
   },
   "media-outreach": {
     title: "FRC Media, Branding & Outreach Guide",
     description:
-      "Build your FRC team's brand — social media, outreach events, storytelling, and award documentation — in free structured lessons.",
+      "Build your FRC team's brand: social media, outreach events, storytelling, and award documentation, in free structured lessons.",
   },
   "impact-award": {
     title: "FIRST Impact Award Guide: Essay, Submission & Judging",
     description:
-      "Win the FIRST Impact Award — essay writing, executive summaries, judging prep, and documentation — with free lessons from real submissions.",
+      "Win the FIRST Impact Award: essay writing, executive summaries, judging prep, and documentation, with free lessons from real submissions.",
   },
   safety: {
     title: "FRC Robot Safety Guide: Shop, Battery & Pit Rules",
     description:
-      "FRC safety done right — shop practices, battery handling, pit conduct, and inspection rules — in free lessons your whole team can take.",
+      "FRC safety done right: shop practices, battery handling, pit conduct, and inspection rules, in free lessons your whole team can take.",
   },
 };
 
@@ -130,8 +130,8 @@ export async function generateMetadata({
   const mods = dept.modules ?? [];
   const totalModules = mods.length;
   const totalLessons = mods.reduce((s, m) => s + (m.lessons?.length ?? 0), 0);
-  const richFallback = `Learn ${dept.name} for FRC — ${totalLessons} free lessons across ${totalModules} modules. ${dept.tagline ?? ""}`.trim();
-  const title = seo?.title ?? `${dept.name} — FRC Guide`;
+  const richFallback = `Learn ${dept.name} for FRC: ${totalLessons} free lessons across ${totalModules} modules. ${dept.tagline ?? ""}`.trim();
+  const title = seo?.title ?? `${dept.name}: FRC Guide`;
   const description = seo?.description ?? richFallback;
   return {
     // The root template appends " · LearnFRC"; these titles are already full
@@ -551,7 +551,7 @@ export default async function DepartmentPage({
             </span>
             <DeptFooterHeading deptName={dept.name} lessons={lessons} />
             <p className="relative mx-auto mt-3 max-w-xl text-pretty text-base text-muted-foreground">
-              {totalModules} modules, {totalLessons} lessons, all free — grounded in
+              {totalModules} modules, {totalLessons} lessons, all free, grounded in
               the real Game Manual and WPILib docs. Read now, track your mastery
               when you sign up.
             </p>

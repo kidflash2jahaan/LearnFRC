@@ -25,12 +25,12 @@ export const metadata: Metadata = {
   // title tag, so emit it as-is.
   title: { absolute: "FRC Learning Paths: Guided Tracks by Goal" },
   description:
-    "Free, guided FRC learning paths — new-member onboarding, robot programming, build & design, the FIRST Impact Award, and competition day. No login needed.",
+    "Free, guided FRC learning paths: new-member onboarding, robot programming, build & design, the FIRST Impact Award, and competition day. No login needed.",
   alternates: { canonical: "/paths" },
   openGraph: {
     title: "FRC Learning Paths: Guided Tracks by Goal",
     description:
-      "Free, guided FRC learning paths — onboarding, robot programming, build & design, the Impact Award, and competition day.",
+      "Free, guided FRC learning paths: onboarding, robot programming, build & design, the Impact Award, and competition day.",
     url: "/paths",
     type: "website",
   },
@@ -129,8 +129,8 @@ export default function PathsPage() {
           </RiseItem>
           <RiseItem>
             <p className="mt-5 max-w-xl text-pretty text-lg leading-relaxed text-foreground/70">
-              Not sure where to start? Each learning path is a mapped route —
-              department by department — that threads the right guides
+              Not sure where to start? Each learning path is a mapped route:
+              department by department, it threads the right guides
               together, from your first day in the pit to a robot-ready
               season.
             </p>
@@ -188,7 +188,7 @@ export default function PathsPage() {
               </h2>
             </div>
             <p className="hidden max-w-xs text-sm text-muted-foreground sm:block">
-              Each stop links straight into a live department guide — travel
+              Each stop links straight into a live department guide. Travel
               at your own pace.
             </p>
           </div>
@@ -345,7 +345,7 @@ export default function PathsPage() {
                   No route fits your goal?
                 </p>
                 <p className="mt-1 text-sm text-foreground/70">
-                  Every department stands on its own — dive straight into a
+                  Every department stands on its own. Dive straight into a
                   guide and chart your own route through the season.
                 </p>
               </div>

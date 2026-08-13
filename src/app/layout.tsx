@@ -46,7 +46,7 @@ export const metadata: Metadata = {
     template: "%s · LearnFRC",
   },
   description:
-    "The complete, structured guide to mastering every department of the FIRST Robotics Competition — mechanical, CAD, programming, electrical, controls, strategy, business, outreach and more. Free, web-grounded, and built for new teams.",
+    "A complete, structured guide to every department of the FIRST Robotics Competition: mechanical, CAD, programming, electrical, controls, strategy, business, outreach, and more. Free, web-grounded, and built for new teams.",
   keywords: [
     "FRC",
     "FIRST Robotics Competition",

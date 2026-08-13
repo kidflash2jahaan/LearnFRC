@@ -27,9 +27,9 @@ import { OnboardingRail, type OnboardingStep } from "./_onboarding-rail";
 import { TeamPanel, type RosterMember } from "./_team-panel";
 
 export const metadata: Metadata = {
-  title: "LearnFRC for Teams — free onboarding curriculum for FRC teams",
+  title: "LearnFRC for Teams: free onboarding curriculum for FRC teams",
   description:
-    "Onboard your whole FRC team with a ready-made curriculum across every department. Everyone who signs up with your team number is grouped automatically — and you can all see each other's progress. Free.",
+    "Onboard your whole FRC team with a ready-made curriculum across every department. Everyone who signs up with your team number is grouped automatically, and you can all see each other's progress. Free.",
   alternates: { canonical: "/for-teams" },
 };
 
@@ -40,7 +40,7 @@ const STEPS: OnboardingStep[] = [
     n: "01",
     icon: "hash",
     title: "Everyone adds your team number",
-    body: "When your members sign up, they enter the same FRC team number. That's the only step — no codes, no invites, nothing to set up.",
+    body: "When your members sign up, they enter the same FRC team number. That's the only step: no codes, no invites, nothing to set up.",
   },
   {
     n: "02",
@@ -52,7 +52,7 @@ const STEPS: OnboardingStep[] = [
     n: "03",
     icon: "eye",
     title: "See each other's progress",
-    body: "You and your teammates can all see who's completed which lessons, their XP, and recent activity — so you can push each other and spot who needs help.",
+    body: "You and your teammates can all see who's completed which lessons, their XP, and recent activity, so you can push each other and spot who needs help.",
   },
 ];
 
@@ -60,12 +60,12 @@ const FEATURES = [
   {
     icon: GraduationCap,
     title: "A ready-made curriculum",
-    body: "394 lessons across all 11 departments — stop rebuilding rookie training from scratch every season.",
+    body: "394 lessons across all 11 departments. Stop rebuilding rookie training from scratch every season.",
   },
   {
     icon: Award,
     title: "Quizzes & certificates",
-    body: "Every lesson ends in a quiz, and members earn certificates — real proof they learned the material.",
+    body: "Every lesson ends in a quiz, and members earn certificates: real proof they learned the material.",
   },
   {
     icon: CheckCircle2,
@@ -129,7 +129,7 @@ export default async function ForTeamsPage() {
             <p className="mt-5 max-w-xl text-pretty text-lg leading-relaxed text-foreground/70">
               LearnFRC gives your team a structured curriculum for every
               department, and automatically groups everyone who signs up with
-              your team number — so you can all see each other&apos;s progress
+              your team number, so you can all see each other&apos;s progress
               from kickoff to competition. Completely free.
             </p>
           </RiseItem>
@@ -158,7 +158,7 @@ export default async function ForTeamsPage() {
                 lessons
               </span>
               <span>
-                <b className="font-semibold text-foreground">$0</b> — always
+                <b className="font-semibold text-foreground">$0</b>, always
                 free
               </span>
             </div>
@@ -243,8 +243,8 @@ export default async function ForTeamsPage() {
               A starting path for new members
             </h2>
             <p className="mx-auto mt-3 max-w-xl text-lg leading-relaxed text-foreground/70">
-              Not sure where to point rookies? Start them here and work down
-              — or let them pick the department they&apos;re joining in the
+              Not sure where to point rookies? Start them here and work down,
+              or let them pick the department they&apos;re joining in the
               pit.
             </p>
           </Reveal>
@@ -315,8 +315,8 @@ export default async function ForTeamsPage() {
               Ready to onboard your team?
             </h2>
             <p className="mx-auto mt-4 max-w-lg text-[15px] leading-relaxed text-muted-foreground">
-              Add your team number and tell your members to do the same —
-              everyone groups together automatically. It&apos;s free, and
+              Add your team number and tell your members to do the same.
+              Everyone groups together automatically. It&apos;s free, and
               there&apos;s nothing to set up.
             </p>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3">

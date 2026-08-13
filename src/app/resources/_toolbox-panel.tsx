@@ -110,8 +110,8 @@ export function ToolboxPanel({
       </div>
 
       <p className="mt-5 text-[13px] leading-relaxed text-muted-foreground">
-        Every link is free to use — sign in and suggest a resource to help keep
-        these shelves current all season long.
+        Every link is free to use. Sign in and suggest a resource to help
+        keep these shelves current all season long.
       </p>
     </motion.div>
   );

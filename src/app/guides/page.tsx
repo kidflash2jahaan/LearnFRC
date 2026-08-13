@@ -29,14 +29,14 @@ const SITE =
   process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com";
 
 export const metadata: Metadata = {
-  title: "FRC Guides — Learn Every Department, Free",
+  title: "FRC Guides: Learn Every Department, Free",
   description:
-    "Explore every FRC department — mechanical, CAD, programming, electrical, business, outreach, scouting, drive team and more. Structured guides from fundamentals to advanced.",
+    "Explore every FRC department: mechanical, CAD, programming, electrical, business, outreach, scouting, drive team and more. Structured guides from fundamentals to advanced.",
   alternates: { canonical: `${SITE}/guides` },
   openGraph: {
-    title: "FRC Guides — Learn Every Department, Free · LearnFRC",
+    title: "FRC Guides: Learn Every Department, Free · LearnFRC",
     description:
-      "Explore every FRC department — mechanical, CAD, programming, electrical, business, outreach, scouting, drive team and more. Structured guides from fundamentals to advanced.",
+      "Explore every FRC department: mechanical, CAD, programming, electrical, business, outreach, scouting, drive team and more. Structured guides from fundamentals to advanced.",
     url: `${SITE}/guides`,
     type: "website",
   },
@@ -158,7 +158,7 @@ export default async function GuidesPage() {
           <RiseItem>
             <p className="mt-5 max-w-xl text-pretty text-lg leading-relaxed text-foreground/70">
               A full FRC team is eleven teams in one. This is the whole map of
-              build season — every stop a complete curriculum of structured
+              build season, every stop a complete curriculum of structured
               modules and example-rich lessons that carry you from your first
               day in the pit to robot-ready.
             </p>
@@ -267,7 +267,7 @@ export default async function GuidesPage() {
               Start at the <span style={BRAND_GRADIENT}>beginning.</span>
             </h2>
             <p className="mx-auto mt-3 max-w-md text-[15px] leading-relaxed text-muted-foreground">
-              Getting Started walks you through the whole map — what each
+              Getting Started walks you through the whole map: what each
               department does and where a rookie fits. Every path begins at
               zero and ends robot-ready.
             </p>

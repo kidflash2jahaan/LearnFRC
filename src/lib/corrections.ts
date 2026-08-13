@@ -83,20 +83,20 @@ export const CORRECTIONS: Correction[] = [
     date: "2026-08-10",
     status: "checked",
     summary:
-      "The SI base units passage quoted on Chief Delphi — checked, and it was not a factual error",
+      "The SI base units passage quoted on Chief Delphi: checked, and it was not a factual error",
     affects: [],
     raised:
-      "A reader on Chief Delphi quoted an intro-lesson passage that listed all seven SI base units — including the kelvin, the mole and the candela — and asked what any of that had to do with FRC. It has been repeated since as an example of an inaccuracy on the site.",
+      "A reader on Chief Delphi quoted an intro-lesson passage that listed all seven SI base units (including the kelvin, the mole and the candela) and asked what any of that had to do with FRC. It has been repeated since as an example of an inaccuracy on the site.",
     outcome:
-      "The claim itself is correct: there are seven SI base units, and the 2019 redefinition did put all seven on fixed values of defining constants. The real objection was relevance, not accuracy — kelvin, moles and candelas do not belong in an FRC lesson. The passage is no longer anywhere on the site: searching all 394 lessons and 91 articles for “candela”, “luminous”, “SI base”, “kelvin” and “amount of substance” returns zero matches. Logging it as a correction we made would be untrue, so it is logged as what it was.",
+      "The claim itself is correct: there are seven SI base units, and the 2019 redefinition did put all seven on fixed values of defining constants. The real objection was relevance, not accuracy. Kelvin, moles and candelas do not belong in an FRC lesson. The passage is no longer anywhere on the site: searching all 394 lessons and 91 articles for “candela”, “luminous”, “SI base”, “kelvin” and “amount of substance” returns zero matches. Logging it as a correction we made would be untrue, so it is logged as what it was.",
     sources: [
       {
-        title: "NIST — SI Units (the seven base units)",
+        title: "NIST: SI Units (the seven base units)",
         url: "https://www.nist.gov/pml/owm/metric-si/si-units",
       },
     ],
     reportedAt: {
-      title: "Chief Delphi — thread 521987, post #4",
+      title: "Chief Delphi: thread 521987, post #4",
       url: "https://www.chiefdelphi.com/t/521987/4",
     },
   },
@@ -119,12 +119,12 @@ export const CORRECTIONS: Correction[] = [
       "Full-size FRC motors — the NEO, Falcon 500, and Kraken X60 — actually mount with imperial #10-32 screws, not metric. This distinction matters: an M5 will start threading into a #10-32 hole and destroy it, so never assume a motor is metric — check its datasheet.",
     sources: [
       {
-        title: "REV Robotics — NEO Brushless Motor documentation",
+        title: "REV Robotics: NEO Brushless Motor documentation",
         url: "https://docs.revrobotics.com/brushless/neo/v1.1",
       },
     ],
     reportedAt: {
-      title: "Chief Delphi — thread 521987, post #43",
+      title: "Chief Delphi: thread 521987, post #43",
       url: "https://www.chiefdelphi.com/t/521987/43",
     },
   },
@@ -146,12 +146,12 @@ export const CORRECTIONS: Correction[] = [
       "That means lower DPR is better (the team is associated with holding opponents to fewer points) and a high DPR is bad — the opposite of the intuition the name suggests.",
     sources: [
       {
-        title: "The Blue Alliance Blog — OPR and You: Basic FRC Strategy",
+        title: "The Blue Alliance Blog, OPR and You: Basic FRC Strategy",
         url: "https://blog.thebluealliance.com/2017/11/06/opr-you-basic-frc-strategy/",
       },
     ],
     reportedAt: {
-      title: "Chief Delphi — thread 521987, post #55",
+      title: "Chief Delphi: thread 521987, post #55",
       url: "https://www.chiefdelphi.com/t/521987/55",
     },
   },
@@ -173,7 +173,7 @@ export const CORRECTIONS: Correction[] = [
       { title: "REC Foundation (recf.org)", url: "https://recf.org/" },
     ],
     reportedAt: {
-      title: "Chief Delphi — thread 521987, post #81",
+      title: "Chief Delphi: thread 521987, post #81",
       url: "https://www.chiefdelphi.com/t/521987/81",
     },
   },
@@ -195,7 +195,7 @@ export const CORRECTIONS: Correction[] = [
       "Those radios are no longer used in most of the world, but the 2026 manual (R702) still requires an OpenMesh radio at events held in China.",
     sources: [
       {
-        title: "FIRST — Competition Manual and Q&A System",
+        title: "FIRST: Competition Manual and Q&A System",
         url: "https://www.firstinspires.org/resource-library/frc/competition-manual-qa-system",
       },
     ],
@@ -222,11 +222,11 @@ export const CORRECTIONS: Correction[] = [
     quote: "Each additional Regional event is $3,200.",
     sources: [
       {
-        title: "FIRST — Cost & Registration",
+        title: "FIRST: Cost & Registration",
         url: "https://www.firstinspires.org/robotics/frc/cost-and-registration",
       },
       {
-        title: "FIRST Community — 2025-2026 Program Registration Pricing",
+        title: "FIRST Community: 2025-2026 Program Registration Pricing",
         url: "https://community.firstinspires.org/2025-2026-first-program-registration-pricing",
       },
     ],
@@ -243,12 +243,12 @@ export const CORRECTIONS: Correction[] = [
       },
     ],
     raised:
-      "The lesson describes a “typical” ranking-point scheme that includes a Coopertition Bonus, using 2025 REEFSCAPE as its worked example. 2026 REBUILT has no Coopertition Bonus — its bonus RPs are different. The lesson is not strictly false, because it is framed as a past example, but it reads as current.",
+      "The lesson describes a “typical” ranking-point scheme that includes a Coopertition Bonus, using 2025 REEFSCAPE as its worked example. 2026 REBUILT has no Coopertition Bonus, and its bonus RPs are different. The lesson is not strictly false, because it is framed as a past example, but it reads as current.",
     outcome:
       "Not fixed yet. It needs rewording so the year each scheme belongs to is unmissable. Logged here rather than left quiet.",
     sources: [
       {
-        title: "FIRST — Competition Manual and Q&A System",
+        title: "FIRST: Competition Manual and Q&A System",
         url: "https://www.firstinspires.org/resource-library/frc/competition-manual-qa-system",
       },
     ],

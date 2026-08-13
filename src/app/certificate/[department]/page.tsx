@@ -47,7 +47,7 @@ export async function generateMetadata({
   const { department } = await params;
   const dept = await getDepartmentBySlug(department).catch(() => null);
   return {
-    title: dept ? `${dept.name} — Certificate` : "Certificate",
+    title: dept ? `${dept.name}: Certificate` : "Certificate",
     robots: { index: false, follow: false },
   };
 }
@@ -220,7 +220,7 @@ export default async function CertificatePage({
           </Link>
           <div className="flex items-center gap-2">
             <ShareButton
-              text={`I just earned the ${dept.name} certificate on LearnFRC — free FRC training for every seat on the team. Earn yours 👇`}
+              text={`I just earned the ${dept.name} certificate on LearnFRC, free FRC training for every seat on the team. Earn yours 👇`}
               // With a username this is a real referral, so tag the surface
               // that earned it. Without one there is nothing to attribute —
               // the plain homepage URL must stay bare (no ref, no via).
@@ -333,7 +333,7 @@ export default async function CertificatePage({
               </div>
 
               <p className="mx-auto mt-4 max-w-lg text-pretty text-base leading-relaxed text-foreground/70">
-                has completed the full {dept.name} department on LearnFRC —{" "}
+                has completed the full {dept.name} department on LearnFRC:{" "}
                 <strong className="text-foreground">
                   <AnimatedCounter value={total} /> lessons
                 </strong>{" "}

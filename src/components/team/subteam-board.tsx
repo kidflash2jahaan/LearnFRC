@@ -91,8 +91,8 @@ export function SubteamBoard({ rows }: { rows: SubteamRow[] }) {
               href={`/guides/${row.slug}`}
               aria-label={
                 gap
-                  ? `${label} — nobody on your team has started it, 0 of ${row.lessonCount} lessons`
-                  : `${label} — your team has finished ${row.teamCompleted} of ${row.lessonCount} lessons`
+                  ? `${label}: nobody on your team has started it, 0 of ${row.lessonCount} lessons`
+                  : `${label}: your team has finished ${row.teamCompleted} of ${row.lessonCount} lessons`
               }
               className={`ac-card block px-4 py-3.5 transition-transform duration-300 motion-safe:hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${
                 // ac-card's own border is near-white, so a plain `border-dashed`
@@ -133,7 +133,7 @@ export function SubteamBoard({ rows }: { rows: SubteamRow[] }) {
                               m.isYou ? "ring-primary" : "ring-white"
                             }`}
                             style={{ zIndex: shown.length - mi }}
-                            title={`${m.name} — ${m.completed} ${
+                            title={`${m.name}: ${m.completed} ${
                               m.completed === 1 ? "lesson" : "lessons"
                             }`}
                           >

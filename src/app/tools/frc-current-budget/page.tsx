@@ -81,7 +81,7 @@ export default async function Page() {
               name: "How can I prevent brownouts?",
               acceptedAnswer: {
                 "@type": "Answer",
-                text: "Limit peak current: set current limits on your motor controllers, avoid commanding several high-draw mechanisms to full power simultaneously, use a healthy, freshly-charged battery with clean connections, and keep wire gauge adequate. Budgeting your current draw ahead of time — as this calculator does — is the first step.",
+                text: "Limit peak current: set current limits on your motor controllers, avoid commanding several high-draw mechanisms to full power at the same time, use a healthy, freshly charged battery with clean connections, and keep wire gauge adequate. Budgeting your current draw ahead of time, which is what this calculator is for, is the first step.",
               },
             },
           ],

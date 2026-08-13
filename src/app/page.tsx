@@ -49,7 +49,7 @@ import { HeroPanel, type HeroDept } from "./_hero-panel";
 export const metadata: Metadata = {
   // Tighter than the sitewide fallback so the home SERP snippet isn't truncated.
   description:
-    "Free, structured guides to every department of the FIRST Robotics Competition — mechanical, CAD, programming, electrical, strategy, business and more.",
+    "Free, structured guides to every department of the FIRST Robotics Competition: mechanical, CAD, programming, electrical, strategy, business and more.",
   alternates: { canonical: "/" },
 };
 
@@ -64,17 +64,17 @@ const STEPS = [
   {
     icon: BookOpen,
     title: "Read the guides",
-    body: "Clear, complete lessons for every department — grounded in the real Game Manual and WPILib docs. No login needed to read.",
+    body: "Clear, complete lessons for every department, grounded in the real Game Manual and WPILib docs. No login needed to read.",
   },
   {
     icon: ClipboardCheck,
     title: "Pass the quizzes",
-    body: "Every lesson ends in a quick quiz that checks what actually matters at competition — and earns you XP on the leaderboard.",
+    body: "Every lesson ends in a quick quiz that checks what actually matters at competition, and earns you XP on the leaderboard.",
   },
   {
     icon: Award,
     title: "Earn certificates",
-    body: "Finish a department and print a certificate — real proof you learned the whole role, from your first day in the pit.",
+    body: "Finish a department and print a certificate: real proof you learned the whole role, from your first day in the pit.",
   },
 ];
 
@@ -114,7 +114,7 @@ const PIT_FIXES = [
     href: "/blog/frc-can-bus",
     icon: Network,
     symptom: "CAN devices keep dropping off the bus",
-    title: "FRC CAN bus explained — and how to fix common problems",
+    title: "FRC CAN bus explained: how to fix common problems",
   },
   {
     href: "/blog/frc-battery-guide",
@@ -199,7 +199,7 @@ export default async function HomePage() {
           </RiseItem>
           <RiseItem>
             <p className="mt-5 max-w-xl text-pretty text-lg leading-relaxed text-foreground/70">
-              An FRC team is eleven teams in one — build, code, CAD, wiring,
+              An FRC team is eleven teams in one: build, code, CAD, wiring,
               scouting, business, drive team and more. LearnFRC teaches all of
               them with written guides, quizzes, and printable certificates.
               Built by students, free for everyone.
@@ -230,7 +230,7 @@ export default async function HomePage() {
                 departments
               </span>
               <span>
-                <b className="font-semibold text-foreground">$0</b> — always
+                <b className="font-semibold text-foreground">$0</b>, always
               </span>
             </div>
           </RiseItem>
@@ -321,7 +321,7 @@ export default async function HomePage() {
                 </h3>
                 <p className="mt-1.5 max-w-lg text-sm leading-relaxed text-muted-foreground">
                   Each path strings several departments together in the order a
-                  real team actually learns them — so you always know what comes
+                  real team actually learns them, so you always know what comes
                   next.
                 </p>
               </div>
@@ -417,7 +417,7 @@ export default async function HomePage() {
         </Reveal>
         <RevealGroup className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           {[
-            { href: "/tools/frc-budget-calculator", icon: Calculator, title: "Team Budget", desc: "What your season will actually cost — itemized, sponsor-ready." },
+            { href: "/tools/frc-budget-calculator", icon: Calculator, title: "Team Budget", desc: "What your season will actually cost: itemized, sponsor-ready." },
             { href: "/tools/frc-wire-gauge-calculator", icon: Cable, title: "Wire Gauge", desc: "Voltage drop + a check against FRC's minimum-AWG rules." },
             { href: "/tools/frc-tipping-calculator", icon: Move3d, title: "Tip-Over", desc: "Will your robot tip? Enter track, wheelbase, CoG height." },
             { href: "/tools/frc-current-budget", icon: BatteryCharging, title: "Brownout", desc: "Total draw vs the 120 A main breaker + roboRIO threshold." },
@@ -506,7 +506,7 @@ export default async function HomePage() {
             />
             <p className="ac-eyebrow">Kickoff is closer than you think</p>
             <h2 className="mx-auto mt-3 max-w-xl text-balance font-display text-3xl font-bold sm:text-4xl">
-              Start your first lesson — <span style={BRAND_GRADIENT}>free.</span>
+              Start your first lesson, <span style={BRAND_GRADIENT}>free.</span>
             </h2>
             <p className="mx-auto mt-3 max-w-md text-[15px] leading-relaxed text-muted-foreground">
               No experience needed. No credit card. Pick a department, track

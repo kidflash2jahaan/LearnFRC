@@ -253,12 +253,12 @@ export default async function ArticlePage({
           <RiseItem>
             <div className="mt-7 flex flex-wrap items-center gap-3">
               <Link href="/signup" className="ac-btn text-sm">
-                Start learning — free <ArrowRight aria-hidden className="h-4 w-4" />
+                Start learning for free <ArrowRight aria-hidden className="h-4 w-4" />
               </Link>
               <ShareButton
                 variant="outline"
                 label="Share"
-                text={`${a.title} — a free FRC article on LearnFRC`}
+                text={`${a.title}: a free FRC article on LearnFRC`}
                 url={url}
               />
             </div>
@@ -384,7 +384,7 @@ export default async function ArticlePage({
               <BookOpen aria-hidden className="h-6 w-6" />
             </span>
             <h2 className="text-balance font-display text-2xl font-bold tracking-tight sm:text-3xl">
-              Start learning FRC — <span style={GRADIENT_TEXT}>free</span>
+              Start learning FRC for <span style={GRADIENT_TEXT}>free</span>
             </h2>
             <p className="mx-auto mt-3 max-w-md text-base leading-relaxed text-foreground/70">
               Structured lessons and quizzes across every department. Create a

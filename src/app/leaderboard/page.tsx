@@ -32,7 +32,7 @@ export const metadata: Metadata = {
   // The root template appends " · LearnFRC" — don't repeat it here.
   title: "Leaderboard",
   description:
-    "See the top FRC learners climbing the ranks — earn XP, level up, and represent your team on the global LearnFRC leaderboard.",
+    "See the top FRC learners climbing the ranks: earn XP, level up, and represent your team on the global LearnFRC leaderboard.",
   alternates: { canonical: "/leaderboard" },
   // This page lists usernames and team numbers of learners, many of whom are
   // minors. It's user-generated personal data with no search value, so keep it
@@ -146,8 +146,8 @@ export default async function LeaderboardPage() {
           <RiseItem>
             <p className="mt-5 max-w-xl text-pretty text-lg leading-relaxed text-foreground/70">
               Every guide you finish earns XP. Win the weekly sprint, chase
-              the all-time greats, and put your team on the map — the same
-              gracious grind that wins build season.
+              the all-time greats, and put your team on the map. It's the
+              same gracious grind that wins build season.
             </p>
           </RiseItem>
           <RiseItem>
@@ -209,7 +209,7 @@ export default async function LeaderboardPage() {
                 The podium is empty
               </h2>
               <p className="mt-2 text-base leading-relaxed text-foreground/70">
-                No learners on the board yet. Be the first — start learning,
+                No learners on the board yet. Be the first to start learning,
                 earn XP, and claim the crown.
               </p>
               <div className="mt-6 flex justify-center">
@@ -245,7 +245,7 @@ export default async function LeaderboardPage() {
             </h2>
             <p className="mx-auto mt-1 max-w-lg text-base text-foreground/70">
               Weekly sprints, the all-time greats, and how your team stacks
-              up — switch the view below.
+              up. Switch the view below.
             </p>
           </Reveal>
 

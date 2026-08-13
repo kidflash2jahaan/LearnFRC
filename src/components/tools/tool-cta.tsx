@@ -32,7 +32,7 @@ export function ToolCTA({ related }: { related: RelatedLink[] }) {
           <Wrench aria-hidden className="h-5 w-5" />
         </span>
         <h2 className="text-balance font-display text-2xl font-bold tracking-tight sm:text-3xl">
-          This tool is free — so is the rest of{" "}
+          This tool is free, and so is the rest of{" "}
           <span style={GRADIENT_TEXT}>LearnFRC</span>
         </h2>
         <p className="mx-auto mt-3 max-w-md text-base leading-relaxed text-foreground/70">

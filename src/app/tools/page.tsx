@@ -33,12 +33,12 @@ const GRADIENT_TEXT: CSSProperties = {
 export const metadata: Metadata = {
   title: "Free FRC Tools & Calculators",
   description:
-    "Free interactive FRC calculators: team budget, wire gauge & voltage drop, robot tip-over stability, and current draw / brownout. Every number sourced from official FIRST and vendor specs.",
+    "Free interactive FRC calculators: team budget, wire gauge & voltage drop, robot tip-over stability, and current draw / brownout. Every number is sourced from official FIRST and vendor specs.",
   alternates: { canonical: `${SITE}/tools` },
   openGraph: {
-    title: "Free FRC Tools & Calculators — LearnFRC",
+    title: "Free FRC Tools & Calculators from LearnFRC",
     description:
-      "Team budget, wire gauge, tip-over stability, and brownout calculators for FRC teams. Free, sourced, and accurate.",
+      "Team budget, wire gauge, tip-over stability, and brownout calculators for FRC teams. Free to use, with accurate numbers sourced from official specs.",
     url: `${SITE}/tools`,
     type: "website",
   },
@@ -50,7 +50,7 @@ const TOOLS = [
     icon: Calculator,
     color: "#2560e6",
     title: "Team Budget Calculator",
-    desc: "What will your season actually cost? Itemize registration, drivetrain, electronics, tools, and travel — with a sponsor-ready summary.",
+    desc: "What will your season actually cost? Itemize registration, drivetrain, electronics, tools, and travel, with a sponsor-ready summary.",
     tag: "Fundraising",
   },
   {
@@ -58,7 +58,7 @@ const TOOLS = [
     icon: Cog,
     color: "#0f766e",
     title: "Gear Ratio Calculator",
-    desc: "Overall reduction, free vs adjusted speed, wheel torque, pushing force against the traction limit, and a brownout check — with every formula shown.",
+    desc: "Overall reduction, free vs adjusted speed, wheel torque, pushing force against the traction limit, and a brownout check, with every formula shown.",
     tag: "Drivetrain",
   },
   {
@@ -82,7 +82,7 @@ const TOOLS = [
     icon: BatteryCharging,
     color: "#12a150",
     title: "Current Budget & Brownout",
-    desc: "Add up your mechanisms' current draw against the 120 A main breaker and the roboRIO brownout thresholds — before you brown out at an event.",
+    desc: "Add up your mechanisms' current draw against the 120 A main breaker and the roboRIO brownout thresholds, before you brown out at an event.",
     tag: "Power",
   },
   {
@@ -134,7 +134,7 @@ export default function ToolsPage() {
           </RiseItem>
           <RiseItem>
             <p className="mt-5 max-w-2xl text-lg leading-relaxed text-foreground/70">
-              Interactive tools for the questions every FRC team hits — budget,
+              Interactive tools for the questions every FRC team hits: budget,
               wiring, stability, and power. Every default is pulled from an
               official FIRST or vendor source and cited right in the tool. Free,
               no account needed to use.
@@ -180,8 +180,9 @@ export default function ToolsPage() {
         </RevealGroup>
 
         <p className="mt-8 text-sm text-muted-foreground">
-          Figures reflect the 2025–26 season and current vendor pricing — always
-          verify against the official FIRST Game Manual before an event.
+          Figures reflect the 2025-26 season and current vendor pricing.
+          Always verify against the official FIRST Game Manual before an
+          event.
         </p>
       </section>
     </div>
