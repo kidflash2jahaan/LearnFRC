@@ -36,7 +36,7 @@ const BRAND_GRADIENT: CSSProperties = {
 
 /** What a free account unlocks — spoken in one glance. */
 const PERKS = [
-  "Free forever, no card, no paywalls",
+  "Free forever — no card, no paywalls",
   "394 lessons across all 11 departments",
   "Save progress, earn XP, climb the leaderboard",
 ];
@@ -109,7 +109,7 @@ export default async function SignupPage({
                   {referrer.team_number
                     ? `the Team ${referrer.team_number} crew and `
                     : ""}
-                  learn every part of FRC, free, forever. You{" "}
+                  learn every part of FRC — free, forever. You{" "}
                   <span className="font-semibold text-foreground">
                     both get +25 XP
                   </span>{" "}
@@ -127,7 +127,7 @@ export default async function SignupPage({
                   Create your free <span style={BRAND_GRADIENT}>account</span>
                 </h1>
                 <p className="mt-2 text-[15px] leading-relaxed text-foreground/70">
-                  A few details and you&apos;re into build season. Every seat
+                  A few details and you&apos;re into build season — every seat
                   on the team, unlocked.
                 </p>
               </>
@@ -154,7 +154,7 @@ export default async function SignupPage({
             </RiseItem>
             <RiseItem>
               <p className="mt-4 max-w-lg text-lg leading-relaxed text-foreground/70">
-                One account unlocks every department: drivetrain and code to
+                One account unlocks every department — drivetrain and code to
                 scouting and the Impact Award. It&apos;s free, forever.
               </p>
             </RiseItem>

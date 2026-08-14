@@ -72,7 +72,7 @@ export function HandoutSheet({
         {teamLine} is on LearnFRC
       </h1>
       <p className="mt-3 max-w-2xl text-pretty text-[15px] leading-relaxed text-[#141c2e]/75">
-        Free lessons for every seat on the team: mechanical, electrical, CAD,
+        Free lessons for every seat on the team — mechanical, electrical, CAD,
         programming, controls, scouting, strategy, safety, business and
         outreach. No cost, no trial, no card. Take the subteam you actually work
         on and start.
@@ -108,12 +108,12 @@ export function HandoutSheet({
           <Step
             n={2}
             title="Make a free account"
-            body={`About thirty seconds: an email address and a username${withNumber}. That number is what puts you on the team page with everyone else.`}
+            body={`About thirty seconds — an email address and a username${withNumber}. That number is what puts you on the team page with everyone else.`}
           />
           <Step
             n={3}
             title="Pick your subteam and start lesson one"
-            body="Choose what you actually do on the team. Every lesson you finish shows up for the whole crew, and you both get +25 XP the moment you confirm your email."
+            body="Choose what you actually do on the team. Every lesson you finish shows up for the whole crew — and you both get +25 XP the moment you confirm your email."
           />
         </ol>
       </div>
@@ -132,7 +132,7 @@ export function HandoutSheet({
           </strong>
           . They cannot see your real name or your email, and they cannot change
           anything on your account. Clear the team number in Settings whenever
-          you like. Your lessons and XP stay yours either way.
+          you like — your lessons and XP stay yours either way.
         </p>
       </div>
 

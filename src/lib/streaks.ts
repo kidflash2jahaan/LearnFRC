@@ -370,14 +370,14 @@ export function describeRhythm(r: Rhythm): RhythmCopy {
       return {
         eyebrow,
         headline: `${r.goal} lessons is where it sticks`,
-        body: `Learners who finish ${r.goal} in their first week are about five times more likely to still be learning here three weeks later. One sitting or spread across the week, whichever suits you.`,
+        body: `Learners who finish ${r.goal} in their first week are about five times more likely to still be learning here three weeks later. One sitting or spread across the week — whichever suits you.`,
         cta: "Start your first lesson",
       };
 
     case "first-lesson":
       return {
         eyebrow,
-        headline: "One down: that was the hard one",
+        headline: "One down — that was the hard one",
         body: `Starting is the single biggest step there is. ${r.remaining} more ${
           first ? "this first week" : "this week"
         } is the point where it usually turns into a habit.`,
@@ -393,7 +393,7 @@ export function describeRhythm(r: Rhythm): RhythmCopy {
         body: `${lessons(r.windowCount)} down. ${
           r.daysActiveInWindow === 1
             ? "Coming back on another day counts for more than doing them all at once."
-            : `${r.daysActiveInWindow} days in: that's the part most people skip.`
+            : `${r.daysActiveInWindow} days in — that's the part most people skip.`
         }`,
         cta: "Next lesson",
       };
@@ -402,7 +402,7 @@ export function describeRhythm(r: Rhythm): RhythmCopy {
       return {
         eyebrow,
         headline: `${r.windowCount} cleared${first ? " in your first week" : " this week"} 🎉`,
-        body: `That's the mark. Everything past here is bonus: carry on if you're enjoying it, stop if you've had enough. ${
+        body: `That's the mark. Everything past here is bonus — carry on if you're enjoying it, stop if you've had enough. ${
           r.bestWindow > r.windowCount
             ? `Your best week so far is ${r.bestWindow}.`
             : "This is your best week yet."
@@ -445,7 +445,7 @@ export function describeRhythm(r: Rhythm): RhythmCopy {
         headline: "Pick it back up whenever",
         body: `${lessons(r.lifetime)} completed so far${
           r.bestWindow > 0 ? `, best week ${r.bestWindow}` : ""
-        }. Come back at whatever pace suits you. The week starts counting again when you do.`,
+        }. Come back at whatever pace suits you — the week starts counting again when you do.`,
         cta: "Resume learning",
       };
   }
@@ -466,7 +466,7 @@ export function rhythmMicrocopy(r: Rhythm): string {
     case "new":
       return `${r.goal} lessons in a week is where it starts to stick.`;
     case "first-lesson":
-      return "One down. That was the hard one.";
+      return "One down — that was the hard one.";
     case "building":
       return r.remaining === 1
         ? "One more makes the week."
@@ -477,7 +477,7 @@ export function rhythmMicrocopy(r: Rhythm): string {
       return "Good to have you back.";
     case "resting":
     default:
-      return "Whenever you're ready, it picks up where you left it.";
+      return "Whenever you're ready — it picks up where you left it.";
   }
 }
 

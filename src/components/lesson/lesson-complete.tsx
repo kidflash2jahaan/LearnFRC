@@ -204,8 +204,8 @@ export function LessonComplete({
         }
         toast.success(
           saved
-            ? "Lesson complete, saved in this browser."
-            : "Lesson complete, saved in this browser. We'll finish syncing it next time you're online."
+            ? "Lesson complete — saved in this browser."
+            : "Lesson complete — saved in this browser. We'll finish syncing it next time you're online."
         );
       });
       return;
@@ -346,10 +346,10 @@ export function LessonComplete({
         <h2 className="mt-3 font-display text-xl font-bold">Lesson complete</h2>
         <p className="mt-1 text-sm text-muted-foreground">
           {authed
-            ? "Nice work. Your progress is saved."
+            ? "Nice work — your progress is saved."
             : guestDone > 1
-              ? `Nice work. That's ${guestDone} lessons finished in this browser.`
-              : "Nice work. Saved in this browser. No account needed."}
+              ? `Nice work — that's ${guestDone} lessons finished in this browser.`
+              : "Nice work — saved in this browser. No account needed."}
         </p>
 
         {/* Momentum toward the number that actually predicts retention. The
@@ -377,12 +377,12 @@ export function LessonComplete({
               {toGo > 0 ? (
                 <span>
                   <strong className="tabular-nums">
-                    {completedCount} of {MOMENTUM_TARGET}:
+                    {completedCount} of {MOMENTUM_TARGET}
                   </strong>{" "}
-                  {toGo} more unlocks the Warmed Up badge.
+                  — {toGo} more unlocks the Warmed Up badge.
                 </span>
               ) : (
-                <span>Warmed Up unlocked. That&apos;s five lessons down.</span>
+                <span>Warmed Up unlocked — that&apos;s five lessons down.</span>
               )}
             </p>
           </div>
@@ -409,8 +409,8 @@ export function LessonComplete({
                 <strong>
                   {guestDone} lessons done, saved in this browser.
                 </strong>{" "}
-                A free account gives them a permanent home: at least +
-                {guestDone * 10} XP, with the dates you actually earned them,
+                A free account gives them a permanent home — at least +
+                {guestDone * 10} XP, with the dates you actually earned them —
                 and your progress follows you onto any device from then on.
               </p>
               <Button asChild variant="brand" size="sm" className="mt-3">
@@ -422,7 +422,7 @@ export function LessonComplete({
             </div>
           ) : (
             <p className="mt-3 text-sm text-muted-foreground">
-              Keep going, nothing to sign up for.{" "}
+              Keep going — nothing to sign up for.{" "}
               <Link
                 href={`/signup?next=${encodeURIComponent(lessonPath)}&ref=lesson-complete`}
                 className="font-semibold text-primary hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
@@ -528,7 +528,7 @@ export function LessonComplete({
         </div>
         <p className="mt-1 text-sm text-muted-foreground">
           All {quiz.length} right completes the lesson. Miss one and only that
-          question comes back: anything you already answered correctly stays
+          question comes back — anything you already answered correctly stays
           banked.
         </p>
 
@@ -611,7 +611,7 @@ export function LessonComplete({
                         aria-checked={isSelected}
                         aria-label={
                           isSelected && (isLocked || graded)
-                            ? `${opt}, your answer, ${state === "correct" ? "correct" : "incorrect"}`
+                            ? `${opt} — your answer, ${state === "correct" ? "correct" : "incorrect"}`
                             : opt
                         }
                         disabled={graded || isLocked}
@@ -675,11 +675,11 @@ export function LessonComplete({
                     <strong className="text-foreground">
                       {lockedCount} of {quiz.length} locked in.
                     </strong>{" "}
-                    Just {remaining} to go. The rest stay saved.
+                    Just {remaining} to go — the rest stay saved.
                   </>
                 ) : (
                   <>
-                    Not this time. Nothing is lost. Take another run at{" "}
+                    Not this time. Nothing is lost — take another run at{" "}
                     {quiz.length === 1 ? "it" : "them"}.
                   </>
                 )}

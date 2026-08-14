@@ -221,7 +221,7 @@ const RULES: Rule[] = [
         <Link className={LINK} href={CONTACT_PATH}>
           contact form
         </Link>
-        , no account needed. See also our{" "}
+        — no account needed. See also our{" "}
         <Link className={LINK} href="/privacy">
           Privacy Policy
         </Link>
@@ -262,7 +262,7 @@ export default function TermsPage() {
             <RiseItem>
               <p className="mt-4 max-w-xl text-pretty text-lg leading-relaxed text-foreground/70">
                 LearnFRC is a free, independent place to learn the FIRST Robotics Competition.
-                These are the plain-language terms for using it. Read them like you&apos;d read
+                These are the plain-language terms for using it — read them like you&apos;d read
                 the game manual before a match.
               </p>
             </RiseItem>
@@ -299,7 +299,7 @@ export default function TermsPage() {
                   -minute read
                 </span>
                 <span>
-                  <b className="font-semibold text-foreground">$0</b>, always
+                  <b className="font-semibold text-foreground">$0</b> — always
                 </span>
               </div>
             </RiseItem>
@@ -321,7 +321,7 @@ export default function TermsPage() {
             </span>
             <p className="relative text-[16px] leading-relaxed text-foreground/85">
               Welcome to LearnFRC. By creating an account or using the service you agree to these
-              terms. If you don&apos;t agree, that&apos;s okay. Just don&apos;t use the service.
+              terms. If you don&apos;t agree, that&apos;s okay — just don&apos;t use the service.
               We&apos;ll keep this short and gracious.
             </p>
           </div>

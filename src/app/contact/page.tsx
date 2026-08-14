@@ -33,7 +33,7 @@ const USES: { icon: typeof ShieldCheck; accent: string; text: string }[] = [
   {
     icon: ScrollText,
     accent: "#2560e6",
-    text: "A factual error in a lesson, article, or glossary entry: a stale rule reference, a wrong part number, a price that changed.",
+    text: "A factual error in a lesson, article, or glossary entry — a stale rule reference, a wrong part number, a price that changed.",
   },
   {
     icon: Trash2,
@@ -132,7 +132,7 @@ export default function ContactPage() {
             <p className="mt-2.5 text-sm leading-relaxed text-foreground/80">
               LearnFRC is run by one high-school student. Publishing a personal
               mailbox on every page of a site this size is a privacy problem, and
-              the domain doesn&rsquo;t run a mail server, so an address printed
+              the domain doesn&rsquo;t run a mail server — so an address printed
               here would simply bounce. This form is the honest version of
               &ldquo;email us&rdquo;: it reaches the same person, and it works.
             </p>

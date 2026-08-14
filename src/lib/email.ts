@@ -156,7 +156,7 @@ export function lifecycleEmailSubject(p: LifecycleEmailProps): string {
   if (!title) return "Your next FRC lesson";
   if (p.segment === "never_started") return `Start here: ${title}`;
   if (p.segment === "deep_churn" && p.completed && dept)
-    return `${plural(p.completed, "lesson")} in, next up: ${title}`;
+    return `${plural(p.completed, "lesson")} in — next up: ${title}`;
   return dept ? `Next in ${dept}: ${title}` : `Your next lesson: ${title}`;
 }
 
@@ -231,9 +231,9 @@ export function lifecycleEmailHtml(p: LifecycleEmailProps): string {
     // Telling them they never opened one is simply false to their face, and
     // being caught in a small lie is exactly the failure mode this project can
     // least afford right now.
-    intro = `<p style="margin:0 0 16px">You created a LearnFRC account but haven't finished a lesson yet. Nothing's wrong: picking where to start out of 394 lessons is the hard part, so here's the one we'd start you on.</p>`;
+    intro = `<p style="margin:0 0 16px">You created a LearnFRC account but haven't finished a lesson yet. Nothing's wrong — picking where to start out of 394 lessons is the hard part, so here's the one we'd start you on.</p>`;
     closing = `<p style="margin:18px 0 0;color:#64748b;font-size:13px">${shape}</p>
-      <p style="margin:10px 0 0;color:#64748b;font-size:13px">Everything on LearnFRC is free and there's nothing else to set up. If it turns out not to be what you wanted, you can turn these off below. No hard feelings.</p>`;
+      <p style="margin:10px 0 0;color:#64748b;font-size:13px">Everything on LearnFRC is free and there's nothing else to set up. If it turns out not to be what you wanted, you can turn these off below — no hard feelings.</p>`;
     reason = `You're getting this once because you created a LearnFRC account and haven't finished a lesson yet. It's the only reminder we'll send about it.`;
   } else if (p.segment === "stalled_early") {
     const last = p.lastLessonTitle
@@ -255,7 +255,7 @@ export function lifecycleEmailHtml(p: LifecycleEmailProps): string {
     // streak-at-risk framing — this segment's streak has already lapsed by
     // definition, so urgency here would be manufactured as well as unkind.
     closing = `${positionLine}
-      <p style="margin:10px 0 0;color:#64748b;font-size:13px">Nothing you've finished expires: your lessons and XP stay exactly as you left them. Lessons on back-to-back days earn bonus XP, and a new run starts with your next one, so pick it up whenever the shop's quiet.</p>`;
+      <p style="margin:10px 0 0;color:#64748b;font-size:13px">Nothing you've finished expires — your lessons and XP stay exactly as you left them. Lessons on back-to-back days earn bonus XP, and a new run starts with your next one, so pick it up whenever the shop's quiet.</p>`;
     reason = `You're getting this because you have a LearnFRC account with lessons in progress.`;
   } else {
     const daysLine =
@@ -269,7 +269,7 @@ export function lifecycleEmailHtml(p: LifecycleEmailProps): string {
             : ""
         }.`
       : "";
-    intro = `<p style="margin:0 0 16px">You're <strong>${plural(p.completed ?? 0, "lesson")}</strong> into LearnFRC${daysLine}: that's real work.${last} Whenever you want to pick it back up, this is where you left off.</p>`;
+    intro = `<p style="margin:0 0 16px">You're <strong>${plural(p.completed ?? 0, "lesson")}</strong> into LearnFRC${daysLine} — that's real work.${last} Whenever you want to pick it back up, this is where you left off.</p>`;
     closing = `${positionLine}
       <p style="margin:10px 0 0;color:#64748b;font-size:13px">Nothing expires and your progress is saved exactly as you left it.</p>`;
     reason = `You're getting this because you have a LearnFRC account with lessons in progress.`;
@@ -280,7 +280,7 @@ export function lifecycleEmailHtml(p: LifecycleEmailProps): string {
   const inviteBlock =
     p.inviteUrl && p.segment === "deep_churn"
       ? `<p style="margin:26px 0 0;padding-top:16px;border-top:1px solid #eef2f9;color:#64748b;font-size:13px">
-           Learning with a team? Bring a teammate and you <strong>both get +25 XP</strong>:
+           Learning with a team? Bring a teammate and you <strong>both get +25 XP</strong> —
            <a href="${p.inviteUrl}" style="color:#2560e6;font-weight:600">share your invite link</a>.
          </p>`
       : "";
@@ -343,7 +343,7 @@ export function welcomeEmailHtml(name?: string | null) {
   const greeting = name ? `Hey ${name},` : "Welcome aboard,";
   return emailShell(`
     <p style="margin:0 0 14px">${greeting}</p>
-    <p style="margin:0 0 14px">Welcome to <strong>LearnFRC</strong>: your structured path to mastering every department of FIRST Robotics Competition, from swerve drivetrains and WPILib to the Impact Award and scouting.</p>
+    <p style="margin:0 0 14px">Welcome to <strong>LearnFRC</strong> — your structured path to mastering every department of FIRST Robotics Competition, from swerve drivetrains and WPILib to the Impact Award and scouting.</p>
     <p style="margin:0 0 22px">Pick a department, work through the guides, and track your progress as you go.</p>
     <a href="${process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com"}/guides"
        style="display:inline-block;background:linear-gradient(110deg,#2560e6,#1aa9d6);color:#fff;text-decoration:none;padding:12px 22px;border-radius:12px;font-weight:600">Explore the guides →</a>
@@ -386,7 +386,7 @@ export function feedbackReplyHtml({
   original?: string | null;
 }) {
   return emailShell(`
-    <p style="margin:0 0 14px">Thanks for reaching out to LearnFRC. Here&rsquo;s a reply to your message:</p>
+    <p style="margin:0 0 14px">Thanks for reaching out to LearnFRC — here&rsquo;s a reply to your message:</p>
     <div style="margin:0 0 16px;padding:14px 16px;background:#f4f7fd;border:1px solid #e2e8f5;border-radius:12px;white-space:pre-wrap;color:#1e2a44">${esc(
       reply
     )}</div>
@@ -398,7 +398,7 @@ export function feedbackReplyHtml({
     ).slice(0, 800)}</div>`
         : ""
     }
-    <p style="margin:18px 0 0">Jahaan · LearnFRC</p>
+    <p style="margin:18px 0 0">— Jahaan · LearnFRC</p>
   `);
 }
 

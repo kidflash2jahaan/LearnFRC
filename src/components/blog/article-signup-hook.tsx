@@ -40,9 +40,9 @@ const INTENT_COPY: {
   },
   {
     match: /swerve|cad|onshape|design|drivetrain|elevator|intake|mechanism|gear/,
-    headline: ["Keep building,", "the full course is free"],
+    headline: ["Keep building —", "the full course is free"],
     body: () =>
-      "This article pairs with a full structured design course: swerve layout, assemblies, worked mini-projects. A free account saves your progress lesson by lesson.",
+      "This article pairs with a full structured design course — swerve layout, assemblies, worked mini-projects. A free account saves your progress lesson by lesson.",
     cta: "Save my progress",
   },
   {
@@ -56,7 +56,7 @@ const INTENT_COPY: {
     match: /mentor|preseason|training|onboarding|rookie|joining|first-team/,
     headline: ["Turn this into", "a training plan"],
     body: (count) =>
-      `LearnFRC's ${count}+ free lessons are a ready-made curriculum: assign a path, track who finished what, and hand out certificates.`,
+      `LearnFRC's ${count}+ free lessons are a ready-made curriculum — assign a path, track who finished what, and hand out certificates.`,
     cta: "Set up your team free",
   },
 ];

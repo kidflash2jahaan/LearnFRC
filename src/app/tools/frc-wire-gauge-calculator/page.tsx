@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   alternates: { canonical: `${SITE}/tools/frc-wire-gauge-calculator` },
   openGraph: {
     images: [{ url: `${SITE}/opengraph-image`, width: 1200, height: 630 }],
-    title: "FRC Wire Gauge & Voltage-Drop Calculator (Free) - LearnFRC",
+    title: "FRC Wire Gauge & Voltage-Drop Calculator (Free) — LearnFRC",
     description:
       "Voltage drop over a run, plus a check against FRC's minimum-AWG rules for each breaker size.",
     url: `${SITE}/tools/frc-wire-gauge-calculator`,
@@ -65,7 +65,7 @@ export default async function Page() {
               name: "What wire gauge do FRC rules require?",
               acceptedAnswer: {
                 "@type": "Answer",
-                text: "FRC's rules set a minimum wire gauge for each branch-circuit breaker size. As a common guideline, a 40 A circuit needs at least 12 AWG, a 30 A circuit at least 14 AWG, and a 20 A circuit at least 18 AWG, while the main battery and PDH/PDP leads use 6 AWG. Exact minimum-AWG values can change year to year, so always check the current game manual's wiring rules. This tool does that check for you.",
+                text: "FRC's rules set a minimum wire gauge for each branch-circuit breaker size. As a common guideline, a 40 A circuit needs at least 12 AWG, a 30 A circuit at least 14 AWG, and a 20 A circuit at least 18 AWG, while the main battery and PDH/PDP leads use 6 AWG. Exact minimum-AWG values can change year to year, so always check the current game manual's wiring rules — which this tool does for you.",
               },
             },
             {
@@ -73,7 +73,7 @@ export default async function Page() {
               name: "How much voltage drop is acceptable on an FRC robot?",
               acceptedAnswer: {
                 "@type": "Answer",
-                text: "There is no single legal limit, but keeping voltage drop under roughly 3 to 5% of battery voltage on a run is a good target. Excessive drop on long, thin runs wastes power as heat and can contribute to brownouts under high current. Enter your current, run length, and gauge to see the drop and decide whether to size up.",
+                text: "There is no single legal limit, but keeping voltage drop under roughly 3–5% of battery voltage on a run is a good target. Excessive drop on long, thin runs wastes power as heat and can contribute to brownouts under high current. Enter your current, run length, and gauge to see the drop and decide whether to size up.",
               },
             },
             {

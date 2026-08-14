@@ -20,9 +20,9 @@ import { ToolboxPanel } from "./_toolbox-panel";
 import { ShelfRail } from "./_shelf-rail";
 
 export const metadata: Metadata = {
-  title: "FRC Resources: Tools, Docs & Links",
+  title: "FRC Resources — Tools, Docs & Links",
   description:
-    "The essential FRC links: official docs, software, vendors, community, and learning resources, plus the sources behind every LearnFRC guide.",
+    "The essential FRC links — official docs, software, vendors, community, and learning resources, plus the sources behind every LearnFRC guide.",
   alternates: { canonical: "/resources" },
 };
 
@@ -50,7 +50,7 @@ const CATEGORY_META: Record<
   "CAD & Design": {
     icon: "PenTool",
     a: "#7c5cff",
-    blurb: "Model the robot before you cut metal: free CAD built for FRC.",
+    blurb: "Model the robot before you cut metal — free CAD built for FRC.",
   },
   "Hardware & Vendors": {
     icon: "Cog",
@@ -60,7 +60,7 @@ const CATEGORY_META: Record<
   "Community & Data": {
     icon: "LineChart",
     a: "#2560e6",
-    blurb: "Forums and match data, the collective brain of the FRC world.",
+    blurb: "Forums and match data — the collective brain of the FRC world.",
   },
 };
 
@@ -174,7 +174,7 @@ export default async function ResourcesPage() {
             </RiseItem>
             <RiseItem>
               <p className="mt-4 max-w-xl text-pretty text-lg leading-relaxed text-foreground/70">
-                A curated toolbox for build season: the docs, software,
+                A curated toolbox for build season — the docs, software,
                 vendors, and community hubs every team reaches for, organized
                 on shelves so you always know where to look. Plus the
                 authoritative sources behind every LearnFRC guide.
@@ -231,7 +231,7 @@ export default async function ResourcesPage() {
               The curated toolbox
             </h2>
             <p className="mt-3 max-w-2xl text-foreground/70">
-              Grouped the way a well-run pit is: each shelf holds the tools
+              Grouped the way a well-run pit is — each shelf holds the tools
               for one job, so the link you need is always where you expect
               it.
             </p>
@@ -348,7 +348,7 @@ export default async function ResourcesPage() {
               Sources behind the guides
             </h2>
             <p className="mb-6 mt-3 max-w-2xl text-foreground/70">
-              Every LearnFRC guide is built on authoritative references, the
+              Every LearnFRC guide is built on authoritative references — the
               same docs and manuals mentors point rookies to. Here they are,
               department by department.
             </p>
@@ -375,7 +375,7 @@ export default async function ResourcesPage() {
           {withSources.length === 0 ? (
             <Reveal>
               <div className="ac-card p-6 text-foreground/70">
-                Sources are being compiled. Check back soon as each
+                Sources are being compiled — check back soon as each
                 department&apos;s guides are published.
               </div>
             </Reveal>
@@ -453,8 +453,8 @@ export default async function ResourcesPage() {
               </h2>
             </div>
             <p className="mb-6 max-w-xl text-foreground/70">
-              Missing something you&apos;d find useful? Tell us what to add.
-              In the spirit of gracious professionalism, your suggestion goes
+              Missing something you&apos;d find useful? Tell us what to add —
+              in the spirit of gracious professionalism, your suggestion goes
               straight to the team.
             </p>
             <div className="max-w-xl">

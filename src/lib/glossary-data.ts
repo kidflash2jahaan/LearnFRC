@@ -101,10 +101,10 @@ export const GLOSSARY: GlossaryTerm[] = [
     abbr: "FIRST",
     category: "General",
     definition:
-      "For Inspiration and Recognition of Science and Technology: the non-profit founded by Dean Kamen in 1989 that runs FRC and its sister programs.",
+      "For Inspiration and Recognition of Science and Technology — the non-profit founded by Dean Kamen in 1989 that runs FRC and its sister programs.",
     link: "https://www.firstinspires.org/about",
     inMatch:
-      "You meet FIRST long before you meet a robot: it is the organisation your team registers under, whose Core Values judges ask about in the pit, and whose logo is on the field wall. Every rule dispute, every award criterion, and every deadline in your season traces back to a FIRST document, not to your school and not to your sponsor.",
+      "You meet FIRST long before you meet a robot: it is the organisation your team registers under, whose Core Values judges ask about in the pit, and whose logo is on the field wall. Every rule dispute, every award criterion, and every deadline in your season traces back to a FIRST document — not to your school and not to your sponsor.",
     lessonCues: ["FIRST core values", "FIRST progression", "what FIRST and FRC are"],
     related: ["Gracious Professionalism", "Coopertition", "FIRST Championship"],
   },
@@ -125,10 +125,10 @@ export const GLOSSARY: GlossaryTerm[] = [
     abbr: "FTC",
     category: "General",
     definition:
-      "The middle/high-school FIRST program using smaller robots, a common stepping stone to FRC.",
+      "The middle/high-school FIRST program using smaller robots — a common stepping stone to FRC.",
     link: "https://www.firstinspires.org/robotics/ftc",
     inMatch:
-      "Most FRC rookies arrive from FTC, and the habits transfer unevenly. Java structure, driver practice, and scouting discipline carry straight over; sizing, wiring, and safety instincts do not: FRC's 125-pound machines and 120-amp electrical system punish FTC-scale assumptions. Knowing which of your reflexes are FTC-specific saves a rookie season of relearning things the hard way.",
+      "Most FRC rookies arrive from FTC, and the habits transfer unevenly. Java structure, driver practice, and scouting discipline carry straight over; sizing, wiring, and safety instincts do not — FRC's 125-pound machines and 120-amp electrical system punish FTC-scale assumptions. Knowing which of your reflexes are FTC-specific saves a rookie season of relearning things the hard way.",
     lessonCues: ["FTC", "FIRST Tech Challenge"],
     related: ["FIRST LEGO League", "FIRST Robotics Competition", "Rookie Team"],
   },
@@ -140,7 +140,7 @@ export const GLOSSARY: GlossaryTerm[] = [
       "The entry-level FIRST program for younger students, using LEGO-based robots and research projects.",
     link: "https://www.firstinspires.org/robotics/fll",
     inMatch:
-      "You are most likely to meet FLL from the other side of the table: FRC teams mentor FLL teams and host their events, and that work is exactly the sustained, documentable outreach Impact Award judges ask for. If you came up through FLL yourself, the research-project habit (define a problem, interview experts, present it) is the same muscle a judge panel tests.",
+      "You are most likely to meet FLL from the other side of the table: FRC teams mentor FLL teams and host their events, and that work is exactly the sustained, documentable outreach Impact Award judges ask for. If you came up through FLL yourself, the research-project habit — define a problem, interview experts, present it — is the same muscle a judge panel tests.",
     lessonCues: ["FLL", "FIRST LEGO League"],
     related: ["FIRST Tech Challenge", "Impact Award"],
   },
@@ -151,7 +151,7 @@ export const GLOSSARY: GlossaryTerm[] = [
       "The event in early January that opens the season: the new game is revealed and the build period begins.",
     link: "https://www.firstinspires.org/robotics/frc/kickoff",
     inMatch:
-      "Kickoff is the most consequential Saturday of your season. The game animation drops and within hours your team has to read the manual, argue about scoring priorities, and decide what the robot must do. Teams that lose their season usually lose it here: by opening CAD before anyone has read the rules, or by chasing every scoring element instead of picking two.",
+      "Kickoff is the most consequential Saturday of your season. The game animation drops and within hours your team has to read the manual, argue about scoring priorities, and decide what the robot must do. Teams that lose their season usually lose it here — by opening CAD before anyone has read the rules, or by chasing every scoring element instead of picking two.",
     alsoCalled: ["Kickoff Saturday", "Game reveal"],
     lessonCues: ["kickoff", "game reveal", "annual season"],
     related: ["Build Season", "Kit of Parts", "FIRST Choice"],
@@ -163,7 +163,7 @@ export const GLOSSARY: GlossaryTerm[] = [
       "The intense period after Kickoff (historically ~6 weeks) when teams design and build their robot before competitions.",
     link: "https://docs.wpilib.org",
     inMatch:
-      "Build season is where a schedule either exists or it doesn't. Six weeks sounds long until you subtract exams, snow days, and the fortnight a first article actually takes to fabricate. Teams that arrive with a working robot are the ones that froze the design in week two and spent weeks five and six driving it, not the ones still machining on the last night.",
+      "Build season is where a schedule either exists or it doesn't. Six weeks sounds long until you subtract exams, snow days, and the fortnight a first article actually takes to fabricate. Teams that arrive with a working robot are the ones that froze the design in week two and spent weeks five and six driving it — not the ones still machining on the last night.",
     alsoCalled: ["Build period"],
     lessonCues: ["build season", "season timeline", "build schedule"],
     related: ["Kickoff", "KitBot", "Inspection"],
@@ -175,7 +175,7 @@ export const GLOSSARY: GlossaryTerm[] = [
       "A team in its first year of FRC competition; rookies have access to special grants and awards.",
     link: "https://www.firstinspires.org/robotics/frc/team-resources",
     inMatch:
-      "Rookie status is a real, time-limited asset. Your first year carries the Rookie All-Star and Highest Rookie Seed awards, rookie grants, and veteran teams who will genuinely stop what they are doing to help you in the pit. It also means nobody expects you to win, so spend the year on a drivetrain that survives every match and a team that comes back next season.",
+      "Rookie status is a real, time-limited asset. Your first year carries the Rookie All-Star and Highest Rookie Seed awards, rookie grants, and veteran teams who will genuinely stop what they are doing to help you in the pit. It also means nobody expects you to win — so spend the year on a drivetrain that survives every match and a team that comes back next season.",
     lessonCues: ["rookie", "new team", "registration"],
     related: ["Rookie All-Star Award", "Kit of Parts", "KitBot"],
   },
@@ -195,10 +195,10 @@ export const GLOSSARY: GlossaryTerm[] = [
     term: "Coopertition",
     category: "General",
     definition:
-      "A FIRST value blending cooperation and competition: helping others even while competing against them; some games reward it directly.",
+      "A FIRST value blending cooperation and competition — helping others even while competing against them; some games reward it directly.",
     link: "https://www.firstinspires.org/about/vision-and-mission",
     inMatch:
-      "Coopertition shows up concretely: helping a rookie wire their PDH the morning of quals, sharing scouting data with an alliance partner, lending a battery to the team you play next. Several games have also made it literal, awarding a ranking point only when both alliances cooperate on a shared objective, so the value is sometimes worth real points in the standings.",
+      "Coopertition shows up concretely: helping a rookie wire their PDH the morning of quals, sharing scouting data with an alliance partner, lending a battery to the team you play next. Several games have also made it literal, awarding a ranking point only when both alliances cooperate on a shared objective — so the value is sometimes worth real points in the standings.",
     lessonCues: ["coopertition", "core values"],
     related: ["Gracious Professionalism", "Ranking Points", "Alliance"],
   },
@@ -211,7 +211,7 @@ export const GLOSSARY: GlossaryTerm[] = [
       "A group of three teams that play together on the red or blue side of a match.",
     link: "https://docs.wpilib.org",
     inMatch:
-      "Three robots, one score, which means two-thirds of your match outcome is decided by people you met ten minutes ago. In practice that becomes a pre-match huddle in the queue line: who takes which scoring location, who plays defence, who has the fastest climb. Teams that skip that conversation lose matches their robot was easily fast enough to win.",
+      "Three robots, one score — which means two-thirds of your match outcome is decided by people you met ten minutes ago. In practice that becomes a pre-match huddle in the queue line: who takes which scoring location, who plays defence, who has the fastest climb. Teams that skip that conversation lose matches their robot was easily fast enough to win.",
     alsoCalled: ["Red alliance", "Blue alliance"],
     lessonCues: ["alliances", "alliance station", "alliance partner"],
     related: ["Alliance Selection", "Ranking Points", "Scouting"],
@@ -249,7 +249,7 @@ export const GLOSSARY: GlossaryTerm[] = [
       "The final phase of teleop, usually with a special scoring objective such as climbing or parking.",
     link: "https://www.firstinspires.org/robotics/frc/game-and-season",
     inMatch:
-      "Endgame is a scheduling problem as much as an engineering one. Climbs take longer than teams estimate, and a partner who starts theirs late can physically block yours. Good drive teams call endgame off the match clock rather than off a feeling, and they practise the abort case: a failed climb that leaves you dangling costs more than simply parking would have.",
+      "Endgame is a scheduling problem as much as an engineering one. Climbs take longer than teams estimate, and a partner who starts theirs late can physically block yours. Good drive teams call endgame off the match clock rather than off a feeling, and they practise the abort case — a failed climb that leaves you dangling costs more than simply parking would have.",
     lessonCues: ["endgame", "climb", "climber"],
     related: ["Teleoperated", "Ranking Points", "Gear Ratio"],
   },
@@ -261,7 +261,7 @@ export const GLOSSARY: GlossaryTerm[] = [
       "Randomly-scheduled matches that determine each team's seeding/ranking at an event.",
     link: "https://www.firstinspires.org/resource-library/frc/competition-manual-qa-system",
     inMatch:
-      "Quals are randomly scheduled, so you play with and against teams of every skill level and your ranking measures how well you play with strangers. That is the practical case for ranking-point strategy: since your partners are assigned, the things you control (your own consistency and the bonus objectives) matter far more to your seed than raw scoring does.",
+      "Quals are randomly scheduled, so you play with and against teams of every skill level and your ranking measures how well you play with strangers. That is the practical case for ranking-point strategy: since your partners are assigned, the things you control — your own consistency and the bonus objectives — matter far more to your seed than raw scoring does.",
     alsoCalled: ["Qual match", "Quals"],
     lessonCues: ["qualification", "seeding", "rankings"],
     related: ["Ranking Points", "Playoffs", "Scouting"],
@@ -273,7 +273,7 @@ export const GLOSSARY: GlossaryTerm[] = [
       "The elimination bracket after qualifications; FRC uses a double-elimination format among the alliance captains' picks.",
     link: "https://www.firstinspires.org/resource-library/frc/competition-manual-qa-system",
     inMatch:
-      "Playoffs change the calculus completely: you now know your partners, you can plan around each other between matches, and defence becomes far more common than it was in quals. The double-elimination bracket also means one bad match is survivable, so alliances tend to hold their riskiest strategy back until they are in the lower bracket with nothing left to lose.",
+      "Playoffs change the calculus completely: you now know your partners, you can plan around each other between matches, and defence becomes far more common than it was in quals. The double-elimination bracket also means one bad match is survivable — so alliances tend to hold their riskiest strategy back until they are in the lower bracket with nothing left to lose.",
     alsoCalled: ["Eliminations", "Elims"],
     lessonCues: ["playoff", "playoffs", "double elimination"],
     related: ["Alliance Selection", "Qualification Match", "Picklist"],
@@ -287,7 +287,7 @@ export const GLOSSARY: GlossaryTerm[] = [
     link: "https://www.firstinspires.org/resource-library/frc/competition-manual-qa-system",
     internalLink: "/blog/frc-ranking-points-explained",
     inMatch:
-      "RP is why a team can lose a match and still climb the standings. Each game defines bonus RPs (a cooperative objective, a scoring threshold, a successful endgame) and drive teams call those targets out loud mid-match. If you only track win-loss, your scouting will consistently misjudge which teams are actually seeded to become alliance captains.",
+      "RP is why a team can lose a match and still climb the standings. Each game defines bonus RPs — a cooperative objective, a scoring threshold, a successful endgame — and drive teams call those targets out loud mid-match. If you only track win-loss, your scouting will consistently misjudge which teams are actually seeded to become alliance captains.",
     lessonCues: ["ranking point", "ranking points"],
     related: ["Qualification Match", "Alliance Selection", "Scouting"],
   },
@@ -299,7 +299,7 @@ export const GLOSSARY: GlossaryTerm[] = [
     link: "https://www.firstinspires.org/resource-library/frc/competition-manual-qa-system",
     internalLink: "/blog/frc-alliance-selection-strategy",
     inMatch:
-      "Alliance selection happens on the field, on camera, in a few minutes, but the decision was made the night before over scouting data. If you are picking, you need a picklist you trust and a first pick who complements you rather than duplicates you. If you are hoping to be picked, a reputation for showing up working every single match beats a high peak score.",
+      "Alliance selection happens on the field, on camera, in a few minutes — but the decision was made the night before over scouting data. If you are picking, you need a picklist you trust and a first pick who complements you rather than duplicates you. If you are hoping to be picked, a reputation for showing up working every single match beats a high peak score.",
     alsoCalled: ["Alliance draft", "Selection ceremony"],
     lessonCues: ["alliance selection", "picklist", "pick list"],
     related: ["Picklist", "Scouting", "OPR"],
@@ -322,7 +322,7 @@ export const GLOSSARY: GlossaryTerm[] = [
       "A regional model where teams earn points across multiple events to qualify for their District Championship.",
     link: "https://www.firstinspires.org/resource-library/frc/the-first-district-model",
     inMatch:
-      "The district model spreads the risk: you play two events, earn points for qualification finish, playoff result, and awards, and the sum decides whether you advance to your District Championship. Practically, that makes event one a legitimate place to learn: a rough first weekend is recoverable, and plenty of teams deliberately treat it as a debugging event.",
+      "The district model spreads the risk: you play two events, earn points for qualification finish, playoff result, and awards, and the sum decides whether you advance to your District Championship. Practically, that makes event one a legitimate place to learn — a rough first weekend is recoverable, and plenty of teams deliberately treat it as a debugging event.",
     alsoCalled: ["District event", "District points"],
     lessonCues: ["district", "district points"],
     related: ["Regional", "FIRST Championship", "Ranking Points"],
@@ -335,7 +335,7 @@ export const GLOSSARY: GlossaryTerm[] = [
       "The season-ending world championship (held in Houston) for teams that qualify through events and awards.",
     link: "https://www.firstinspires.org/robotics/frc/championship",
     inMatch:
-      "Championship is the same game at a different level: every robot in your division already won something. The real differences are logistical: getting the robot there, a much larger pit to navigate, fields running on a tighter schedule, plus the fact that a season of regional scouting data is largely useless against teams you have never seen play.",
+      "Championship is the same game at a different level: every robot in your division already won something. The real differences are logistical — getting the robot there, a much larger pit to navigate, fields running on a tighter schedule — plus the fact that a season of regional scouting data is largely useless against teams you have never seen play.",
     alsoCalled: ["Champs", "World Championship", "Einstein"],
     lessonCues: ["championship", "hall of fame"],
     related: ["District", "Regional", "Impact Award"],
@@ -347,7 +347,7 @@ export const GLOSSARY: GlossaryTerm[] = [
       "The required check that a robot meets size, weight, safety, and rules before it can compete.",
     link: "https://www.firstinspires.org/resource-library/frc/competition-manual-qa-system",
     inMatch:
-      "Inspection is the gate between your robot and the field, and teams fail it for boring reasons: over weight with the bumpers off, outside the frame perimeter, a missing or dead Robot Signal Light, unprotected wiring. Inspectors are helpful rather than adversarial, but every hour you spend fixing something in the pit is an hour you are not practising with drivers.",
+      "Inspection is the gate between your robot and the field, and teams fail it for boring reasons: over weight with the bumpers off, outside the frame perimeter, a missing or dead Robot Signal Light, unprotected wiring. Inspectors are helpful rather than adversarial — but every hour you spend fixing something in the pit is an hour you are not practising with drivers.",
     alsoCalled: ["Robot inspection", "Weigh-in"],
     lessonCues: ["inspection", "inspections", "inspector"],
     related: ["Bumpers", "Robot Signal Light", "Main Breaker"],
@@ -373,7 +373,7 @@ export const GLOSSARY: GlossaryTerm[] = [
       "The official, free software library for programming FRC robots in Java, C++, or Python (RobotPy).",
     link: "https://docs.wpilib.org",
     inMatch:
-      "WPILib is the layer between your code and everything else: motor controllers, the driver station, the field management system, and the timing of your robot's periodic loop. In practice you meet it through its opinions: the command-based structure, the units library, the simulator, and the yearly version bump you do in the first week of build season.",
+      "WPILib is the layer between your code and everything else — motor controllers, the driver station, the field management system, and the timing of your robot's periodic loop. In practice you meet it through its opinions: the command-based structure, the units library, the simulator, and the yearly version bump you do in the first week of build season.",
     lessonCues: ["WPILib", "wpilib"],
     related: ["Command-Based Programming", "RobotPy", "Driver Station"],
   },
@@ -397,7 +397,7 @@ export const GLOSSARY: GlossaryTerm[] = [
       "The NI software (and the physical station) that connects driver inputs to the robot and reports status during matches.",
     link: "https://docs.wpilib.org/en/stable/docs/software/driverstation/driver-station.html",
     inMatch:
-      "The Driver Station is the laptop that decides whether you play. It shows battery voltage, CAN utilisation, and the reason the robot just disabled, and its logs are the single best debugging artifact after a bad match. Drive teams learn to read it live: a voltage sag mid-cycle or a climbing loop-overrun count is something you can act on before the next match.",
+      "The Driver Station is the laptop that decides whether you play. It shows battery voltage, CAN utilisation, and the reason the robot just disabled — and its logs are the single best debugging artifact after a bad match. Drive teams learn to read it live: a voltage sag mid-cycle or a climbing loop-overrun count is something you can act on before the next match.",
     alsoCalled: ["FRC Driver Station", "DS software"],
     lessonCues: ["driver station", "FMS"],
     related: ["roboRIO", "CAN bus", "Teleoperated"],
@@ -411,7 +411,7 @@ export const GLOSSARY: GlossaryTerm[] = [
     link: "https://docs.wpilib.org/en/stable/docs/software/advanced-controls/introduction/introduction-to-pid.html",
     internalLink: "/blog/pid-control-frc",
     inMatch:
-      "PID is how an arm holds a position instead of slamming into a hard stop. You meet it the first time a mechanism overshoots, oscillates, or sags under gravity, and then you meet the tuning process, which is a methodical loop of raising kP until it oscillates, adding kD to damp that out, and using kI sparingly, if at all.",
+      "PID is how an arm holds a position instead of slamming into a hard stop. You meet it the first time a mechanism overshoots, oscillates, or sags under gravity — and then you meet the tuning process, which is a methodical loop of raising kP until it oscillates, adding kD to damp that out, and using kI sparingly, if at all.",
     alsoCalled: ["Closed-loop control", "PID loop"],
     lessonCues: ["PID", "closed-loop", "closed loop"],
     related: ["Feedforward", "Encoder", "Command-Based Programming"],
@@ -423,7 +423,7 @@ export const GLOSSARY: GlossaryTerm[] = [
       "Control that predicts the output needed (e.g., to overcome gravity or reach a velocity) and is combined with PID for accuracy.",
     link: "https://docs.wpilib.org/en/stable/docs/software/advanced-controls/introduction/introduction-to-feedforward.html",
     inMatch:
-      "Feedforward is why a good shooter recovers to speed between shots instead of dipping. PID reacts to error; feedforward predicts the voltage the mechanism needs: kS to break friction, kV for velocity, kG to hold an arm against gravity. Once you characterise those constants, PID only has to clean up the remainder, and tuning becomes far less painful.",
+      "Feedforward is why a good shooter recovers to speed between shots instead of dipping. PID reacts to error; feedforward predicts the voltage the mechanism needs — kS to break friction, kV for velocity, kG to hold an arm against gravity. Once you characterise those constants, PID only has to clean up the remainder, and tuning becomes far less painful.",
     alsoCalled: ["Feed-forward", "kS / kV / kA / kG"],
     lessonCues: ["feedforward", "motion profiling", "characterization"],
     related: ["PID Controller", "Encoder", "Gear Ratio"],
@@ -435,7 +435,7 @@ export const GLOSSARY: GlossaryTerm[] = [
       "Tracking the robot's position on the field over time using encoder and gyro data (often fused with vision).",
     link: "https://docs.wpilib.org/en/stable/docs/software/kinematics-and-odometry/intro-and-chassis-speeds.html",
     inMatch:
-      "Odometry lets an autonomous routine say “drive to the scoring position” instead of “drive forward for 2.1 seconds”. Wheel encoders and a gyro integrate into a field position, and that position drifts, especially after a collision or a wheel slip. The drift is exactly why teams fuse AprilTag measurements into a pose estimator rather than trusting encoders alone.",
+      "Odometry lets an autonomous routine say “drive to the scoring position” instead of “drive forward for 2.1 seconds”. Wheel encoders and a gyro integrate into a field position — and that position drifts, especially after a collision or a wheel slip. The drift is exactly why teams fuse AprilTag measurements into a pose estimator rather than trusting encoders alone.",
     alsoCalled: ["Pose estimation", "Dead reckoning"],
     lessonCues: ["odometry", "pose estimation", "kinematics"],
     related: ["Encoder", "Gyroscope / IMU", "AprilTag"],
@@ -447,7 +447,7 @@ export const GLOSSARY: GlossaryTerm[] = [
       "A popular tool for designing and following autonomous paths/trajectories for FRC drivetrains.",
     link: "https://pathplanner.dev",
     inMatch:
-      "PathPlanner is where most teams draw their autonomous. You place waypoints on a field image, attach commands to markers along the path, and the tool hands your drivetrain a trajectory to follow. The hard part is never the drawing: a path only works if your odometry, your feedforward constants, and your starting pose are all honest.",
+      "PathPlanner is where most teams draw their autonomous. You place waypoints on a field image, attach commands to markers along the path, and the tool hands your drivetrain a trajectory to follow. The hard part is never the drawing — a path only works if your odometry, your feedforward constants, and your starting pose are all honest.",
     lessonCues: ["PathPlanner", "trajectories", "trajectory"],
     related: ["Choreo", "Odometry", "Autonomous"],
   },
@@ -458,7 +458,7 @@ export const GLOSSARY: GlossaryTerm[] = [
       "A trajectory-optimization tool that generates time-optimal autonomous paths, often paired with WPILib.",
     link: "https://choreo.autos",
     inMatch:
-      "Choreo solves for the fastest path your drivetrain can physically drive given its real mass and motor limits, rather than the smoothest one you could draw by hand. Teams reach for it when auto is the difference between winning and losing and a hand-tuned path is leaving tenths on the table, and it demands the same honest odometry work PathPlanner does.",
+      "Choreo solves for the fastest path your drivetrain can physically drive given its real mass and motor limits, rather than the smoothest one you could draw by hand. Teams reach for it when auto is the difference between winning and losing and a hand-tuned path is leaving tenths on the table — and it demands the same honest odometry work PathPlanner does.",
     lessonCues: ["Choreo", "trajectories"],
     related: ["PathPlanner", "Odometry", "Autonomous"],
   },
@@ -469,7 +469,7 @@ export const GLOSSARY: GlossaryTerm[] = [
       "The Python implementation of WPILib, letting teams program their robot in Python.",
     link: "https://robotpy.readthedocs.io",
     inMatch:
-      "RobotPy is a genuine option, not a toy: the same WPILib APIs, in Python. The trade-off is practical: faster to write and read for a team whose students already know Python, but a smaller pool of FRC example code and fewer people at your event who can help you debug it at 9am on Saturday. Choose deliberately in week one, then commit.",
+      "RobotPy is a genuine option, not a toy — the same WPILib APIs, in Python. The trade-off is practical: faster to write and read for a team whose students already know Python, but a smaller pool of FRC example code and fewer people at your event who can help you debug it at 9am on Saturday. Choose deliberately in week one, then commit.",
     lessonCues: ["RobotPy", "choosing a language"],
     related: ["WPILib", "Command-Based Programming"],
   },
@@ -483,7 +483,7 @@ export const GLOSSARY: GlossaryTerm[] = [
     link: "https://docs.wpilib.org/en/stable/docs/controls-overviews/control-system-hardware.html",
     internalLink: "/blog/frc-roborio-guide",
     inMatch:
-      "Everything on the robot ends at the roboRIO. It runs your code on a real-time loop, talks to motor controllers over CAN, reads sensors on its DIO and analog ports, and reports back to the driver station. When it browns out under a 12-volt sag, or your code overruns its 20-millisecond loop, the whole robot stops, so voltage and loop timing are the first two things to check.",
+      "Everything on the robot ends at the roboRIO. It runs your code on a real-time loop, talks to motor controllers over CAN, reads sensors on its DIO and analog ports, and reports back to the driver station. When it browns out under a 12-volt sag, or your code overruns its 20-millisecond loop, the whole robot stops — so voltage and loop timing are the first two things to check.",
     alsoCalled: ["roboRIO 2.0", "The robot's brain"],
     lessonCues: ["roboRIO", "robo rio"],
     related: ["CAN bus", "Driver Station", "Power Distribution Hub"],
@@ -497,7 +497,7 @@ export const GLOSSARY: GlossaryTerm[] = [
     link: "https://docs.revrobotics.com/rev-11-1850",
     internalLink: "/blog/frc-pdh-power-distribution-hub",
     inMatch:
-      "The PDH is where every wire on the robot comes from. You meet it while wiring: matching breaker sizes to wire gauge, keeping high-current mechanisms on the 40-amp channels, and again at competition, where its per-channel current logging tells you which mechanism actually caused the brownout. Its switchable channel is also the usual home for the radio power module.",
+      "The PDH is where every wire on the robot comes from. You meet it while wiring — matching breaker sizes to wire gauge, keeping high-current mechanisms on the 40-amp channels — and again at competition, where its per-channel current logging tells you which mechanism actually caused the brownout. Its switchable channel is also the usual home for the radio power module.",
     alsoCalled: ["REV PDH"],
     lessonCues: ["PDH", "power distribution"],
     related: ["Power Distribution Panel", "Main Breaker", "roboRIO"],
@@ -523,7 +523,7 @@ export const GLOSSARY: GlossaryTerm[] = [
       "Provides clean, regulated low-current power (e.g., 5V/12V) for sensors, the radio, and other accessories.",
     link: "https://docs.wpilib.org/en/stable/docs/controls-overviews/control-system-hardware.html",
     inMatch:
-      "The VRM is the small board nobody thinks about until the radio reboots mid-match. It converts the robot's sagging 12 volts into clean 5V and 12V rails for the radio, sensors, and cameras, and it has per-port current limits that teams quietly exceed by hanging LED strips off it. Give the radio its own dedicated pair and leave it alone.",
+      "The VRM is the small board nobody thinks about until the radio reboots mid-match. It converts the robot's sagging 12 volts into clean 5V and 12V rails for the radio, sensors, and cameras — and it has per-port current limits that teams quietly exceed by hanging LED strips off it. Give the radio its own dedicated pair and leave it alone.",
     lessonCues: ["VRM", "voltage regulator"],
     related: ["Power Distribution Hub", "roboRIO", "Robot Signal Light"],
   },
@@ -544,7 +544,7 @@ export const GLOSSARY: GlossaryTerm[] = [
     abbr: "CAN",
     category: "Electrical",
     definition:
-      "Controller Area Network: the wiring/protocol that lets motor controllers, sensors, and the roboRIO communicate on one daisy-chained bus.",
+      "Controller Area Network — the wiring/protocol that lets motor controllers, sensors, and the roboRIO communicate on one daisy-chained bus.",
     link: "https://docs.wpilib.org/en/stable/docs/software/can-devices/can-addressing.html",
     internalLink: "/blog/frc-can-bus",
     inMatch:
@@ -560,7 +560,7 @@ export const GLOSSARY: GlossaryTerm[] = [
       "The 120A circuit breaker that protects the entire robot's main power circuit between the battery and PDH/PDP.",
     link: "https://docs.wpilib.org/en/stable/docs/controls-overviews/control-system-hardware.html",
     inMatch:
-      "The main breaker is the robot's on switch and its last line of defence. It trips when the whole robot draws too much: usually a stalled drivetrain shoving against a wall, and once it has tripped repeatedly it starts tripping earlier and earlier. Keep a spare in the pit, because a tired main breaker looks exactly like a bad battery.",
+      "The main breaker is the robot's on switch and its last line of defence. It trips when the whole robot draws too much — usually a stalled drivetrain shoving against a wall — and once it has tripped repeatedly it starts tripping earlier and earlier. Keep a spare in the pit, because a tired main breaker looks exactly like a bad battery.",
     alsoCalled: ["120A breaker", "Main circuit breaker"],
     lessonCues: ["main breaker", "120A breaker", "breakers"],
     related: ["Anderson SB Connector", "Power Distribution Hub", "Inspection"],
@@ -572,7 +572,7 @@ export const GLOSSARY: GlossaryTerm[] = [
       "The standard genderless quick-connect (often SB50) used between the battery and the robot.",
     link: "https://www.andymark.com",
     inMatch:
-      "You handle Anderson connectors more than any other part on the robot: every battery swap between matches goes through one. They wear out, and a loose or corroded SB50 produces exactly the symptom teams misdiagnose as a dead battery: voltage that collapses under load. Proper crimps and a habit of inspecting the contacts kill a whole category of mystery brownouts.",
+      "You handle Anderson connectors more than any other part on the robot — every battery swap between matches goes through one. They wear out, and a loose or corroded SB50 produces exactly the symptom teams misdiagnose as a dead battery: voltage that collapses under load. Proper crimps and a habit of inspecting the contacts kill a whole category of mystery brownouts.",
     alsoCalled: ["SB50", "Battery connector"],
     lessonCues: ["Anderson", "Anderson connectors", "crimping"],
     related: ["Main Breaker", "Power Distribution Hub"],
@@ -587,7 +587,7 @@ export const GLOSSARY: GlossaryTerm[] = [
     link: "https://docs.wpilib.org/en/stable/docs/software/kinematics-and-odometry/swerve-drive-kinematics.html",
     internalLink: "/blog/swerve-drive-explained",
     inMatch:
-      "Swerve is the default now, and it changes what your drivers practise: translation and rotation are independent, so approaching a scoring location no longer means lining up first. The cost is real: four steering motors, four absolute encoders, module offsets that must be re-zeroed, and a maintenance schedule. A well-driven tank robot still beats a poorly maintained swerve.",
+      "Swerve is the default now, and it changes what your drivers practise: translation and rotation are independent, so approaching a scoring location no longer means lining up first. The cost is real — four steering motors, four absolute encoders, module offsets that must be re-zeroed, and a maintenance schedule. A well-driven tank robot still beats a poorly maintained swerve.",
     alsoCalled: ["Swerve", "Independent module drive"],
     lessonCues: ["swerve", "swerve drive", "swerve module"],
     related: ["Odometry", "Gear Ratio", "Kraken X60"],
@@ -624,7 +624,7 @@ export const GLOSSARY: GlossaryTerm[] = [
       "The ratio between input and output rotation in a gearbox, trading speed for torque (or vice-versa).",
     link: "https://docs.wpilib.org",
     inMatch:
-      "Gear ratio is the number you get wrong once and remember forever. Too fast and your drivetrain browns out and trips breakers pushing against a defender; too slow and your cycles crawl while everyone else scores. The same arithmetic decides whether an arm can hold its own weight and whether a shooter recovers between shots, which is why you run it before cutting metal.",
+      "Gear ratio is the number you get wrong once and remember forever. Too fast and your drivetrain browns out and trips breakers pushing against a defender; too slow and your cycles crawl while everyone else scores. The same arithmetic decides whether an arm can hold its own weight and whether a shooter recovers between shots — which is why you run it before cutting metal.",
     alsoCalled: ["Gearing", "Reduction"],
     lessonCues: ["gear ratio", "gear ratios", "gearbox"],
     related: ["Swerve Drive", "Feedforward", "COTS"],
@@ -634,10 +634,10 @@ export const GLOSSARY: GlossaryTerm[] = [
     abbr: "COTS",
     category: "Mechanical",
     definition:
-      "Commercial Off-The-Shelf: pre-made parts teams can buy rather than fabricate, within the rules.",
+      "Commercial Off-The-Shelf — pre-made parts teams can buy rather than fabricate, within the rules.",
     link: "https://www.firstinspires.org/resource-library/frc/competition-manual-qa-system",
     inMatch:
-      "COTS is a rules category before it is a shopping decision: the manual defines what counts as commercially available and what you may modify. In practice it is how a small team fields a competitive robot: a bought swerve module or gearbox is one fewer thing to machine, and one fewer thing to debug at midnight the week before an event.",
+      "COTS is a rules category before it is a shopping decision — the manual defines what counts as commercially available and what you may modify. In practice it is how a small team fields a competitive robot: a bought swerve module or gearbox is one fewer thing to machine, and one fewer thing to debug at midnight the week before an event.",
     alsoCalled: ["Commercial off-the-shelf"],
     lessonCues: ["COTS", "off-the-shelf"],
     related: ["Kit of Parts", "Swerve Drive", "Inspection"],
@@ -650,7 +650,7 @@ export const GLOSSARY: GlossaryTerm[] = [
       "The components FIRST provides to every team each season as a starting point for the robot.",
     link: "https://www.firstinspires.org/robotics/frc/kit-of-parts",
     inMatch:
-      "The KOP is the box that arrives around Kickoff, and for a rookie team it is most of a robot: a drivetrain, control system components, motors, and vouchers. The practical skill is knowing what is in it before you buy anything: teams routinely order parts they were already sent, then discover the KOP chassis in a corner a week before their event.",
+      "The KOP is the box that arrives around Kickoff, and for a rookie team it is most of a robot: a drivetrain, control system components, motors, and vouchers. The practical skill is knowing what is in it before you buy anything — teams routinely order parts they were already sent, then discover the KOP chassis in a corner a week before their event.",
     lessonCues: ["Kit of Parts", "KOP"],
     related: ["FIRST Choice", "KitBot", "Rookie Team"],
   },
@@ -661,7 +661,7 @@ export const GLOSSARY: GlossaryTerm[] = [
       "A program giving teams credits to select specific Kit of Parts components from partner vendors.",
     link: "https://www.firstinspires.org/robotics/frc/kit-of-parts",
     inMatch:
-      "FIRST Choice is a credit balance your team will forget to spend. It opens before Kickoff, runs in rounds, and the popular items disappear within hours, so the team that assigns one person to browse and order in round one gets sensors, motors, and pneumatics for free that everyone else ends up buying at full price in February.",
+      "FIRST Choice is a credit balance your team will forget to spend. It opens before Kickoff, runs in rounds, and the popular items disappear within hours — so the team that assigns one person to browse and order in round one gets sensors, motors, and pneumatics for free that everyone else ends up buying at full price in February.",
     lessonCues: ["FIRST Choice", "Kit of Parts"],
     related: ["Kit of Parts", "KitBot", "Kickoff"],
   },
@@ -686,7 +686,7 @@ export const GLOSSARY: GlossaryTerm[] = [
       "A sensor that measures rotation/position of a shaft, essential for closed-loop control and odometry.",
     link: "https://docs.wpilib.org/en/stable/docs/hardware/sensors/encoders-hardware.html",
     inMatch:
-      "An encoder is how your code knows where a mechanism actually is, rather than where it was told to go. You meet them everywhere: drivetrain distance for odometry, arm angle for a position loop, flywheel speed for a shooter. The recurring lesson is absolute versus relative: a relative encoder forgets its zero every power cycle, which is why arms need an absolute reference.",
+      "An encoder is how your code knows where a mechanism actually is, rather than where it was told to go. You meet them everywhere: drivetrain distance for odometry, arm angle for a position loop, flywheel speed for a shooter. The recurring lesson is absolute versus relative — a relative encoder forgets its zero every power cycle, which is why arms need an absolute reference.",
     lessonCues: ["encoder", "encoders"],
     related: ["Odometry", "PID Controller", "SPARK MAX"],
   },
@@ -698,7 +698,7 @@ export const GLOSSARY: GlossaryTerm[] = [
       "A sensor that measures the robot's heading and rotation; common units are the NavX and CTRE Pigeon 2.0.",
     link: "https://docs.wpilib.org/en/stable/docs/hardware/sensors/gyros-hardware.html",
     inMatch:
-      "The gyro is what makes field-oriented driving and any straight autonomous work at all. It also drifts, and it drifts much worse if you calibrate it while the robot is moving, which is exactly what happens when someone bumps the cart during the pre-match calibration. Mount it rigidly near the centre of rotation, calibrate at rest, and re-zero deliberately.",
+      "The gyro is what makes field-oriented driving and any straight autonomous work at all. It also drifts, and it drifts much worse if you calibrate it while the robot is moving — which is exactly what happens when someone bumps the cart during the pre-match calibration. Mount it rigidly near the centre of rotation, calibrate at rest, and re-zero deliberately.",
     alsoCalled: ["Gyro", "Inertial Measurement Unit", "Pigeon 2.0", "NavX"],
     lessonCues: ["gyro", "gyros", "IMU", "IMUs", "gyroscope"],
     related: ["Odometry", "Autonomous", "AprilTag"],
@@ -734,7 +734,7 @@ export const GLOSSARY: GlossaryTerm[] = [
       "Free, open-source vision software that runs on a coprocessor or Limelight for targeting and pose estimation.",
     link: "https://docs.photonvision.org",
     inMatch:
-      "PhotonVision is free and runs on hardware you may already own (an Orange Pi, a Limelight, a spare laptop), which makes it the choice for teams with more time than budget. You spend that time on setup: camera calibration, exposure tuning, and getting the coprocessor to boot reliably on a robot that gets power-cycled twenty times a day.",
+      "PhotonVision is free and runs on hardware you may already own — an Orange Pi, a Limelight, a spare laptop — which makes it the choice for teams with more time than budget. You spend that time on setup: camera calibration, exposure tuning, and getting the coprocessor to boot reliably on a robot that gets power-cycled twenty times a day.",
     lessonCues: ["PhotonVision"],
     related: ["Limelight", "AprilTag", "Odometry"],
   },
@@ -745,7 +745,7 @@ export const GLOSSARY: GlossaryTerm[] = [
       "REV Robotics brushless motors with built-in encoders, paired with SPARK MAX/Flex controllers.",
     link: "https://www.revrobotics.com",
     inMatch:
-      "NEOs are the motor most teams meet first: brushless, cheap enough to keep spares, with an encoder built in and a SPARK MAX or SPARK Flex on the other end. The 550 is the small one: great for intakes and turrets, easy to cook if you stall it. Both are configured through the REV Hardware Client, which you will end up running in the pit.",
+      "NEOs are the motor most teams meet first: brushless, cheap enough to keep spares, with an encoder built in and a SPARK MAX or SPARK Flex on the other end. The 550 is the small one — great for intakes and turrets, easy to cook if you stall it. Both are configured through the REV Hardware Client, which you will end up running in the pit.",
     alsoCalled: ["NEO Brushless", "NEO 550"],
     lessonCues: ["NEO", "NEO Vortex", "REVLib"],
     related: ["SPARK MAX", "Kraken X60", "Gear Ratio"],
@@ -757,7 +757,7 @@ export const GLOSSARY: GlossaryTerm[] = [
       "A high-performance brushless motor (with integrated Talon FX electronics) controlled over CAN via Phoenix.",
     link: "https://wcproducts.com",
     inMatch:
-      "The Kraken puts a strong brushless motor and Talon FX electronics in the same housing, so there is no separate controller to mount or wire: just power and CAN. Teams choose it for drivetrains and heavy mechanisms where the extra torque matters, and configure it in Phoenix Tuner, including the current limits that stop four of them browning out the robot.",
+      "The Kraken puts a strong brushless motor and Talon FX electronics in the same housing, so there is no separate controller to mount or wire — just power and CAN. Teams choose it for drivetrains and heavy mechanisms where the extra torque matters, and configure it in Phoenix Tuner, including the current limits that stop four of them browning out the robot.",
     lessonCues: ["Kraken", "Kraken X60"],
     related: ["Talon FX / SRX", "Falcon 500", "CAN bus"],
   },
@@ -768,7 +768,7 @@ export const GLOSSARY: GlossaryTerm[] = [
       "A brushless motor with an integrated Talon FX controller and encoder, controlled over the CAN bus.",
     link: "https://store.ctr-electronics.com",
     inMatch:
-      "Falcons are still on plenty of robots, and knowing them matters because sooner or later you inherit one. Same integrated-controller idea as the Kraken and the same Phoenix software family, but a different generation, and mixed Phoenix 5 and Phoenix 6 code is a common source of confusion when a team upgrades some motors and not others.",
+      "Falcons are still on plenty of robots, and knowing them matters because sooner or later you inherit one. Same integrated-controller idea as the Kraken and the same Phoenix software family, but a different generation — and mixed Phoenix 5 and Phoenix 6 code is a common source of confusion when a team upgrades some motors and not others.",
     lessonCues: ["Falcon 500", "Falcon"],
     related: ["Talon FX / SRX", "Kraken X60", "CAN bus"],
   },
@@ -779,7 +779,7 @@ export const GLOSSARY: GlossaryTerm[] = [
       "A REV Robotics motor controller for brushed and brushless (NEO) motors, configured via REV Hardware Client.",
     link: "https://docs.revrobotics.com/brushless/spark-max/overview",
     inMatch:
-      "SPARK MAX is where NEO configuration actually lives: CAN ID, brake or coast mode, current limits, and closed-loop gains are set on the controller, not only in code. Two habits save events: apply a known configuration from code at startup so a swapped controller behaves identically, and label CAN IDs physically so a pit repair does not turn into a debugging session.",
+      "SPARK MAX is where NEO configuration actually lives: CAN ID, brake or coast mode, current limits, and closed-loop gains are set on the controller, not only in code. Two habits save events — apply a known configuration from code at startup so a swapped controller behaves identically, and label CAN IDs physically so a pit repair does not turn into a debugging session.",
     alsoCalled: ["SPARK Flex", "REV SPARK"],
     lessonCues: ["SPARK MAX", "SPARK Flex", "REVLib"],
     related: ["NEO / NEO 550", "CAN bus", "Encoder"],
@@ -791,7 +791,7 @@ export const GLOSSARY: GlossaryTerm[] = [
       "CTR Electronics motor controllers (Talon FX is integrated in Falcon/Kraken; SRX is a standalone CAN controller).",
     link: "https://store.ctr-electronics.com",
     inMatch:
-      "Talon FX is the controller living inside a Falcon or Kraken; Talon SRX is the standalone one you bolt on for brushed motors like a window motor or an older CIM. You meet both through Phoenix Tuner: assigning CAN IDs, updating firmware, and checking a device's status the moment the driver station reports it has vanished from the bus.",
+      "Talon FX is the controller living inside a Falcon or Kraken; Talon SRX is the standalone one you bolt on for brushed motors like a window motor or an older CIM. You meet both through Phoenix Tuner — assigning CAN IDs, updating firmware, and checking a device's status the moment the driver station reports it has vanished from the bus.",
     alsoCalled: ["TalonFX", "Talon SRX"],
     lessonCues: ["Talon FX", "Talon SRX", "motor controller", "motor controllers"],
     related: ["Kraken X60", "Falcon 500", "CAN bus"],
@@ -819,7 +819,7 @@ export const GLOSSARY: GlossaryTerm[] = [
       "Recognizes an outstanding mentor who exemplifies excellence in communication and teaching within FRC.",
     link: "https://www.firstinspires.org/resource-library/frc/awards",
     inMatch:
-      "WFFA is nominated by students, in an essay, about one specific mentor, and the essays that win are full of concrete moments rather than adjectives. Practically, that means somebody on your team has to start noticing in October what a mentor actually does, because a good nomination cannot be reconstructed from memory in the week it is due.",
+      "WFFA is nominated by students, in an essay, about one specific mentor — and the essays that win are full of concrete moments rather than adjectives. Practically, that means somebody on your team has to start noticing in October what a mentor actually does, because a good nomination cannot be reconstructed from memory in the week it is due.",
     alsoCalled: ["Woodie Flowers Finalist Award", "WFFA"],
     lessonCues: ["Woodie Flowers", "mentor award", "mentors"],
     related: ["Dean's List Award", "Impact Award", "Gracious Professionalism"],
@@ -831,7 +831,7 @@ export const GLOSSARY: GlossaryTerm[] = [
       "Honors exceptional student leaders for their contributions and leadership within their team and community.",
     link: "https://www.firstinspires.org/resource-library/frc/awards",
     inMatch:
-      "Dean's List is a nomination your mentors submit for up to two sophomores or juniors, with a deadline weeks before your first event. Students who win it are usually the ones who took over something outright (a subsystem, the scouting system, the safety program) and can talk about it in a judged interview without a mentor in the room.",
+      "Dean's List is a nomination your mentors submit for up to two sophomores or juniors, with a deadline weeks before your first event. Students who win it are usually the ones who took over something outright — a subsystem, the scouting system, the safety program — and can talk about it in a judged interview without a mentor in the room.",
     lessonCues: ["Dean's List", "Deans List", "student leadership"],
     related: ["Woodie Flowers Award", "Impact Award", "Rookie All-Star Award"],
   },
@@ -842,7 +842,7 @@ export const GLOSSARY: GlossaryTerm[] = [
       "The top award for a first-year team, recognizing a strong start that embodies FIRST's values.",
     link: "https://www.firstinspires.org/resource-library/frc/awards",
     inMatch:
-      "Rookie All-Star is the highest award a first-year team can win, and it advances the team, so it is worth understanding in September rather than March. Judges look for a rookie that already behaves like a programme: outreach started, sponsors thanked properly, safety taken seriously, and a robot the students can clearly explain because they built it themselves.",
+      "Rookie All-Star is the highest award a first-year team can win, and it advances the team — so it is worth understanding in September rather than March. Judges look for a rookie that already behaves like a programme: outreach started, sponsors thanked properly, safety taken seriously, and a robot the students can clearly explain because they built it themselves.",
     lessonCues: ["Rookie All-Star", "Rookie All Star"],
     related: ["Rookie Team", "Impact Award", "Dean's List Award"],
   },
@@ -855,7 +855,7 @@ export const GLOSSARY: GlossaryTerm[] = [
       "Systematically collecting data on robots' performance to inform strategy and alliance-selection decisions.",
     link: "https://www.thebluealliance.com",
     inMatch:
-      "Scouting is a whole sub-team's job at an event: people in the stands recording what every robot does each match, plus pit scouting to catch what the field never shows: cycle strategy, mechanism reliability, whether they can actually climb. The data only matters if it is clean, which is why teams standardise the form long before the first event.",
+      "Scouting is a whole sub-team's job at an event: people in the stands recording what every robot does each match, plus pit scouting to catch what the field never shows — cycle strategy, mechanism reliability, whether they can actually climb. The data only matters if it is clean, which is why teams standardise the form long before the first event.",
     alsoCalled: ["Match scouting", "Pit scouting"],
     lessonCues: ["scouting", "pit scouting", "match scouting"],
     related: ["Picklist", "The Blue Alliance", "Alliance Selection"],
@@ -877,11 +877,11 @@ export const GLOSSARY: GlossaryTerm[] = [
     abbr: "OPR",
     category: "Data & Scouting",
     definition:
-      "Offensive Power Rating: a calculated estimate of a team's average scoring contribution, derived from match results.",
+      "Offensive Power Rating — a calculated estimate of a team's average scoring contribution, derived from match results.",
     link: "https://www.thebluealliance.com",
     internalLink: "/blog/frc-opr-dpr-ccwm-explained",
     inMatch:
-      "OPR is computed from match scores alone, so it needs no scouts, which is both its strength and its weakness. It is a fast first pass at ranking an event you have not watched, but it credits a team for their partners' scoring and gives a good defender almost nothing. Use it to sort your scouting priorities, never as the picklist itself.",
+      "OPR is computed from match scores alone, so it needs no scouts — which is both its strength and its weakness. It is a fast first pass at ranking an event you have not watched, but it credits a team for their partners' scoring and gives a good defender almost nothing. Use it to sort your scouting priorities, never as the picklist itself.",
     alsoCalled: ["Offensive Power Rating"],
     lessonCues: ["OPR", "DPR", "CCWM"],
     related: ["EPA", "Statbotics", "Scouting"],
@@ -891,11 +891,11 @@ export const GLOSSARY: GlossaryTerm[] = [
     abbr: "EPA",
     category: "Data & Scouting",
     definition:
-      "Expected Points Added: Statbotics' rating model estimating a team's contribution to match score.",
+      "Expected Points Added — Statbotics' rating model estimating a team's contribution to match score.",
     link: "https://www.statbotics.io",
     internalLink: "/blog/what-is-statbotics-frc-epa",
     inMatch:
-      "EPA is the number most teams glance at before a match to know roughly what their alliance is worth. It updates match by match and is comparable across events, which OPR is not. It still cannot see strategy: a robot with a modest EPA that plays flawless defence can decide a playoff series, and no rating model will warn you about that.",
+      "EPA is the number most teams glance at before a match to know roughly what their alliance is worth. It updates match by match and is comparable across events, which OPR is not. It still cannot see strategy — a robot with a modest EPA that plays flawless defence can decide a playoff series, and no rating model will warn you about that.",
     alsoCalled: ["Expected Points Added"],
     lessonCues: ["EPA", "Statbotics"],
     related: ["Statbotics", "OPR", "The Blue Alliance"],
@@ -905,11 +905,11 @@ export const GLOSSARY: GlossaryTerm[] = [
     abbr: "TBA",
     category: "Data & Scouting",
     definition:
-      "The community database of teams, events, matches, and results, with a public API used by many scouting tools.",
+      "The community database of teams, events, matches, and results — with a public API used by many scouting tools.",
     link: "https://www.thebluealliance.com",
     internalLink: "/blog/the-blue-alliance-tba-guide",
     inMatch:
-      "TBA is the tab you keep open in the stands: match schedules, live results, rankings, and every match a team has ever played. Its API is also the usual first data source for a scouting system or a sponsor report, and your own TBA page, with its photos and links, is what a judge or a prospective sponsor finds when they look your team up.",
+      "TBA is the tab you keep open in the stands: match schedules, live results, rankings, and every match a team has ever played. Its API is also the usual first data source for a scouting system or a sponsor report — and your own TBA page, with its photos and links, is what a judge or a prospective sponsor finds when they look your team up.",
     alsoCalled: ["TBA"],
     lessonCues: ["The Blue Alliance", "TBA"],
     related: ["Statbotics", "Scouting", "OPR"],
@@ -936,7 +936,7 @@ export const GLOSSARY: GlossaryTerm[] = [
       "The largest FRC community forum, where teams share technical knowledge, designs, and code.",
     link: "https://www.chiefdelphi.com",
     inMatch:
-      "Chief Delphi is where FRC's institutional knowledge actually lives. Almost every problem you hit in build season (a gearbox that keeps eating itself, a CAN bus dropping devices, a swerve module nobody can zero) already has a thread with photos and a real answer. It is also where Open Alliance build threads and post-season design releases get posted.",
+      "Chief Delphi is where FRC's institutional knowledge actually lives. Almost every problem you hit in build season — a gearbox that keeps eating itself, a CAN bus dropping devices, a swerve module nobody can zero — already has a thread with photos and a real answer. It is also where Open Alliance build threads and post-season design releases get posted.",
     alsoCalled: ["CD"],
     lessonCues: ["Chief Delphi", "open alliance", "build thread"],
     related: ["Open Alliance", "Onshape", "Build Season"],
@@ -959,7 +959,7 @@ export const GLOSSARY: GlossaryTerm[] = [
       "A group of teams that publicly document their build season in real time to share knowledge with the community.",
     link: "https://www.theopenalliance.org",
     inMatch:
-      "Open Alliance teams post their design decisions, CAD, and mistakes publicly during build season, which makes their threads the closest thing FRC has to a live engineering notebook from a top team. Reading one alongside your own build is one of the cheapest ways to learn: you see not just what they built, but what they tried and abandoned.",
+      "Open Alliance teams post their design decisions, CAD, and mistakes publicly during build season, which makes their threads the closest thing FRC has to a live engineering notebook from a top team. Reading one alongside your own build is one of the cheapest ways to learn — you see not just what they built, but what they tried and abandoned.",
     alsoCalled: ["Build thread", "OA"],
     lessonCues: ["Open Alliance", "build thread"],
     related: ["Chief Delphi", "Build Season", "Swerve Drive"],

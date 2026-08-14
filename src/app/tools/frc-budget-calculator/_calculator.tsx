@@ -382,14 +382,14 @@ export default function BudgetCalculator({ authed }: { authed: boolean }) {
         label: "District program fee",
         amount: districtFee,
         estimate: true,
-        note: `Region-specific: typically $${RANGES.districtFee.low.toLocaleString()}–$${RANGES.districtFee.high.toLocaleString()} on top of the FIRST fee. Verify with your district each season.`,
+        note: `Region-specific — typically $${RANGES.districtFee.low.toLocaleString()}–$${RANGES.districtFee.high.toLocaleString()} on top of the FIRST fee. Verify with your district each season.`,
       });
       if (attendDistrictChamps && districtChampsFee > 0) {
         regItems.push({
           label: "District Championship fee",
           amount: districtChampsFee,
           estimate: true,
-          note: "Varies by district. Enter your district's figure.",
+          note: "Varies by district — enter your district's figure.",
         });
       }
     }
@@ -398,7 +398,7 @@ export default function BudgetCalculator({ authed }: { authed: boolean }) {
         label: "FIRST Championship fee",
         amount: champsFee,
         estimate: true,
-        note: "2026 fee not yet published by FIRST. Seeded with the last publicly-cited figure (~$5,750, 2024). Re-verify when FIRST posts 2026 pricing.",
+        note: "2026 fee not yet published by FIRST. Seeded with the last publicly-cited figure (~$5,750, 2024) — re-verify when FIRST posts 2026 pricing.",
       });
     }
     if (grants > 0) {
@@ -416,7 +416,7 @@ export default function BudgetCalculator({ authed }: { authed: boolean }) {
     if (drivetrainChoice === "kop") {
       if (isRookie) {
         driveItems.push({
-          label: "AM14U6 KOP drive base (included free for rookies)",
+          label: "AM14U6 KOP drive base — included free for rookies",
           amount: 0,
           source: FEES.am14u6,
           note: "$940 retail value provided with rookie registration.",
@@ -435,7 +435,7 @@ export default function BudgetCalculator({ authed }: { authed: boolean }) {
         label: "COTS swerve modules (your quote)",
         amount: swerveCost,
         estimate: true,
-        note: "COTS swerve pricing varies widely by vendor and module count. Enter your quote.",
+        note: "COTS swerve pricing varies widely by vendor and module count — enter your quote.",
       });
     } else {
       driveItems.push({ label: "Reuse existing drivetrain", amount: 0 });
@@ -459,7 +459,7 @@ export default function BudgetCalculator({ authed }: { authed: boolean }) {
           label: "RSL + 120A main breaker + wiring consumables",
           amount: consumables,
           estimate: true,
-          note: `Bundled small legal parts, roughly $${RANGES.consumables.low}–$${RANGES.consumables.high}.`,
+          note: `Bundled small legal parts — roughly $${RANGES.consumables.low}–$${RANGES.consumables.high}.`,
         },
       );
       electronics = elecItems.reduce((s, it) => s + it.amount, 0);
@@ -504,7 +504,7 @@ export default function BudgetCalculator({ authed }: { authed: boolean }) {
         label: `Kraken X60 motors (${krakenQty} × $217.99)`,
         amount: krakenQty * FEES.kraken.value,
         source: FEES.kraken,
-        note: "Integrated Talon FX, no separate controller.",
+        note: "Integrated Talon FX — no separate controller.",
       });
     }
     if (otherMotorQty > 0 && otherMotorUnit > 0) {
@@ -542,7 +542,7 @@ export default function BudgetCalculator({ authed }: { authed: boolean }) {
               label: `Travel, lodging & food (${events} event${events === 1 ? "" : "s"} × ${fmt0.format(travelPerEvent)})`,
               amount: travelPerEvent * events,
               estimate: true,
-              note: "Team/region specific. FIRST publishes no travel model.",
+              note: "Team/region specific — FIRST publishes no travel model.",
             },
           ]
         : [];
@@ -641,7 +641,7 @@ export default function BudgetCalculator({ authed }: { authed: boolean }) {
           </span>
         </h1>
         <p className="mt-2 max-w-2xl text-sm text-foreground/70">
-          Build a transparent, itemized season budget for your FRC team: registration,
+          Build a transparent, itemized season budget for your FRC team — registration,
           drivetrain, control system, motors, travel and more. Every default is
           primary-sourced; values that vary by team or region stay editable.
         </p>
@@ -692,7 +692,7 @@ export default function BudgetCalculator({ authed }: { authed: boolean }) {
               <>
                 <Field
                   label="District program fee"
-                  helper={`Region-specific ($${RANGES.districtFee.low.toLocaleString()}–$${RANGES.districtFee.high.toLocaleString()} typical). Estimate. Verify with your district each season.`}
+                  helper={`Region-specific ($${RANGES.districtFee.low.toLocaleString()}–$${RANGES.districtFee.high.toLocaleString()} typical). Estimate — verify with your district each season.`}
                 >
                   <NumberInput value={districtFee} onChange={setDistrictFee} prefix="$" step={50} />
                 </Field>
@@ -709,7 +709,7 @@ export default function BudgetCalculator({ authed }: { authed: boolean }) {
                   Attending District Championship?
                 </label>
                 {attendDistrictChamps ? (
-                  <Field label="District Championship fee" helper="Varies by district. Enter yours as an estimate.">
+                  <Field label="District Championship fee" helper="Varies by district — enter yours. Estimate.">
                     <NumberInput value={districtChampsFee} onChange={setDistrictChampsFee} prefix="$" step={50} />
                   </Field>
                 ) : null}
@@ -728,7 +728,7 @@ export default function BudgetCalculator({ authed }: { authed: boolean }) {
             {attendFirstChamps ? (
               <Field
                 label="FIRST Championship fee"
-                helper="2026 not yet published by FIRST. Seeded with the last cited figure (~$5,750, 2024). Treat as an estimate and re-verify."
+                helper="2026 not yet published by FIRST. Seeded with the last cited figure (~$5,750, 2024) — estimate, re-verify."
               >
                 <NumberInput value={champsFee} onChange={setChampsFee} prefix="$" step={50} />
               </Field>
@@ -741,7 +741,7 @@ export default function BudgetCalculator({ authed }: { authed: boolean }) {
             <div className="ac-divider" />
 
             {/* Drivetrain */}
-            <Field label="Drivetrain" helper="Rookies: KOP drive base is free. COTS swerve pricing varies. Enter your quote.">
+            <Field label="Drivetrain" helper="Rookies: KOP drive base is free. COTS swerve pricing varies — enter your quote.">
               <SegBtn<DrivetrainChoice>
                 value={drivetrainChoice}
                 onChange={setDrivetrainChoice}
@@ -797,10 +797,10 @@ export default function BudgetCalculator({ authed }: { authed: boolean }) {
               <Field label="Kraken X60" helper="$217.99, no controller">
                 <NumberInput value={krakenQty} onChange={setKrakenQty} />
               </Field>
-              <Field label="Other motors" helper="Optional (qty)">
+              <Field label="Other motors" helper="Optional — qty">
                 <NumberInput value={otherMotorQty} onChange={setOtherMotorQty} />
               </Field>
-              <Field label="Other unit price" helper="Optional ($ each)">
+              <Field label="Other unit price" helper="Optional — $ each">
                 <NumberInput value={otherMotorUnit} onChange={setOtherMotorUnit} prefix="$" step={0.5} />
               </Field>
             </div>
@@ -811,13 +811,13 @@ export default function BudgetCalculator({ authed }: { authed: boolean }) {
             <Field label="Tools & starter equipment" helper="Your shop/tool budget (a tool set is included in the Starter Bundle).">
               <NumberInput value={toolsCost} onChange={setToolsCost} prefix="$" step={25} />
             </Field>
-            <Field label="Travel, lodging & food per event" helper={`Team/region specific ($${RANGES.travelPerEvent.low.toLocaleString()}–$${RANGES.travelPerEvent.high.toLocaleString()} typical). Never a quote. Enter your own.`}>
+            <Field label="Travel, lodging & food per event" helper={`Team/region specific ($${RANGES.travelPerEvent.low.toLocaleString()}–$${RANGES.travelPerEvent.high.toLocaleString()} typical). Never a quote — enter your own.`}>
               <NumberInput value={travelPerEvent} onChange={setTravelPerEvent} prefix="$" step={50} />
             </Field>
             <Field label="Spares, sensors, pneumatics & other" helper="Anything else your season needs.">
               <NumberInput value={sparesOther} onChange={setSparesOther} prefix="$" step={25} />
             </Field>
-            <Field label="Team size (optional)" helper="For a per-student cost, useful for grant asks.">
+            <Field label="Team size (optional)" helper="For a per-student cost — useful for grant asks.">
               <NumberInput value={teamSize} onChange={setTeamSize} />
             </Field>
           </div>
@@ -930,7 +930,7 @@ export default function BudgetCalculator({ authed }: { authed: boolean }) {
                 Create a free account to save scenarios &amp; export
               </Link>
               <p className="mt-1 text-xs text-muted-foreground">
-                The full calculator, math and citations stay free. No account required.
+                The full calculator, math and citations stay free — no account required.
               </p>
             </div>
           ) : null}
@@ -947,18 +947,18 @@ export default function BudgetCalculator({ authed }: { authed: boolean }) {
             <li>
               Registration figures are FIRST&apos;s {SEASON} published fees (worldwide $6,300 all
               teams; additional regionals $3,000). Re-verify each season at
-              community.firstinspires.org / help.firstinspires.org before Kickoff. FIRST adjusts
+              community.firstinspires.org / help.firstinspires.org before Kickoff — FIRST adjusts
               these annually.
             </li>
             <li>
               District teams: the $6,300 FIRST fee is only the base. Your district (e.g. FIRST
               Washington, FIN, PNW, NE, ONT) adds its own program/event fees that vary by region and
-              are billed separately. Select your district or enter the amount from your district
+              are billed separately — select your district or enter the amount from your district
               organization.
             </li>
             <li>
               FIRST Championship fee is shown from recent historical pricing (~$5,750, 2024) and is
-              NOT yet published for 2026. Treat as an estimate and confirm when FIRST posts it.
+              NOT yet published for 2026 — treat as an estimate and confirm when FIRST posts it.
             </li>
             <li>
               Vendor hardware prices are the currently-listed FRC/education prices (checked 2026-07)
@@ -966,7 +966,7 @@ export default function BudgetCalculator({ authed }: { authed: boolean }) {
               X60 $399.99 MSRP, VH-109 radio). Prices exclude shipping and tax.
             </li>
             <li>
-              Travel, lodging, and food are inherently team-specific and are user-entered. Never
+              Travel, lodging, and food are inherently team-specific and are user-entered — never
               treat the range as a quote.
             </li>
             <li>

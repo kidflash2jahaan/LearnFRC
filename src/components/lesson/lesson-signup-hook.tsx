@@ -145,29 +145,29 @@ export function LessonSignupHook({
   if (inDept > 0) {
     eyebrow = "Saved in this browser only";
     headline = [
-      `${inDept} of ${count} lessons done in ${department}.`,
-      `Take your progress with you.`,
+      `${inDept} of ${count} lessons done in ${department} —`,
+      `take your progress with you.`,
     ];
     body =
       `A free account gives that work a permanent home: it moves ` +
       `${theLessons} into a real profile with the dates you actually earned ` +
-      `them, worth at least +${xp} XP, and from then on your progress ` +
-      `follows you onto any device, counts toward the ${department} ` +
-      `certificate, and puts you on the leaderboard. Reading stays free ` +
-      `either way; nothing here gets locked.`;
+      `them — at least +${xp} XP — and from then on your progress follows you ` +
+      `onto any device, counts toward the ${department} certificate, and puts ` +
+      `you on the leaderboard. Reading stays free either way; nothing here ` +
+      `gets locked.`;
     cta = `Claim my ${total} lesson${plural}`;
   } else if (total > 0) {
     eyebrow = "Saved in this browser only";
     headline = [
-      `${total} lesson${plural} finished without an account.`,
-      `Give your progress a permanent home.`,
+      `${total} lesson${plural} finished without an account —`,
+      `give your progress a permanent home.`,
     ];
     body =
       `A free account moves ${them} into a real profile with the dates you ` +
-      `actually earned them, worth at least +${xp} XP, so your progress ` +
-      `follows you onto any device, counts toward streaks and certificates, ` +
-      `and puts you on the leaderboard. Reading stays free either way; ` +
-      `nothing here gets locked.`;
+      `actually earned them — at least +${xp} XP — so your progress follows ` +
+      `you onto any device, counts toward streaks and certificates, and puts ` +
+      `you on the leaderboard. Reading stays free either way; nothing here ` +
+      `gets locked.`;
     cta = `Claim my ${total} lesson${plural}`;
   } else {
     // Nothing finished yet, so there is nothing to lose and no reason to ask.
@@ -177,8 +177,8 @@ export function LessonSignupHook({
     // which is what the two branches above are for.
     eyebrow = "No account needed";
     headline = [
-      `Lesson ${position} of ${count} in ${department}.`,
-      `Finish it right here.`,
+      `Lesson ${position} of ${count} in ${department} —`,
+      `finish it right here.`,
     ];
     body =
       `The quiz above is open to everyone: pass it and this lesson is marked ` +

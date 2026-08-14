@@ -38,7 +38,7 @@ export function NewsletterForm({
           className
         )}
       >
-        <CheckCircle2 className="h-4 w-4" aria-hidden="true" /> You&apos;re on the list. Check your inbox.
+        <CheckCircle2 className="h-4 w-4" aria-hidden="true" /> You&apos;re on the list — check your inbox.
       </p>
     );
   }

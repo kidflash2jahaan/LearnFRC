@@ -92,15 +92,15 @@ export function SubteamGapCard({
       : state === "fresh"
         ? `Claim the one you actually work on, then send this link to the rest of the crew so they can take theirs. Every lesson is free, and you both get +25 XP once they join.`
         : state === "solo"
-          ? `Nothing from #${teamNumber} has touched ${list} yet. Send this to whoever runs ${gaps.length === 1 ? "it" : "them"}. Every lesson is free, and you both get +25 XP once they join.`
-          : `Nobody on team #${teamNumber} has started ${list}. Send this to whoever runs ${gaps.length === 1 ? "it" : "them"}. Every lesson is free, and you both get +25 XP once they join.`;
+          ? `Nothing from #${teamNumber} has touched ${list} yet. Send this to whoever runs ${gaps.length === 1 ? "it" : "them"} — every lesson is free, and you both get +25 XP once they join.`
+          : `Nobody on team #${teamNumber} has started ${list}. Send this to whoever runs ${gaps.length === 1 ? "it" : "them"} — every lesson is free, and you both get +25 XP once they join.`;
 
   const shareText =
     state === "covered"
-      ? `Team ${teamNumber} has all ${totalSubteams} subteams going on LearnFRC. Every lesson is free. Join us:`
+      ? `Team ${teamNumber} has all ${totalSubteams} subteams going on LearnFRC — every lesson is free. Join us:`
       : state === "fresh"
-        ? `Team ${teamNumber} is getting on LearnFRC: free lessons for every subteam, mechanical through scouting. Grab yours:`
-        : `Nobody on team ${teamNumber} has ${list} covered on LearnFRC yet. It's free and I'm already on it. Claim your subteam:`;
+        ? `Team ${teamNumber} is getting on LearnFRC — free lessons for every subteam, mechanical through scouting. Grab yours:`
+        : `Nobody on team ${teamNumber} has ${list} covered on LearnFRC yet — it's free and I'm already on it. Claim your subteam:`;
 
   return (
     <div

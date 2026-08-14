@@ -7,13 +7,13 @@ import Calculator from "./_calculator";
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com";
 
 export const metadata: Metadata = {
-  title: "FRC Structural Deflection Calculator: Tube & Arm Sag / Bending",
+  title: "FRC Structural Deflection Calculator — Tube & Arm Sag / Bending",
   description:
-    "Free FRC deflection calculator for arms, elevators, and drivetrain rails. Enter beam type, material (6061-T6 aluminum or steel), cross-section, length, and load to get tip/center sag, bending stress, and a safety factor. Beam-mechanics formulas, sourced material properties.",
+    "Free FRC deflection calculator. Enter beam type, material (6061-T6 aluminum or steel), cross-section, length, and load to get tip/center sag, bending stress, and a safety factor — for arms, elevators, and drivetrain rails. Beam-mechanics formulas, sourced material properties.",
   alternates: { canonical: `${SITE}/tools/frc-deflection-calculator` },
   openGraph: {
     images: [{ url: `${SITE}/opengraph-image`, width: 1200, height: 630 }],
-    title: "FRC Structural Deflection Calculator (Free) - LearnFRC",
+    title: "FRC Structural Deflection Calculator (Free) — LearnFRC",
     description:
       "Will your arm or rail sag? Enter geometry + load for deflection, bending stress, and a safety factor.",
     url: `${SITE}/tools/frc-deflection-calculator`,
@@ -73,7 +73,7 @@ export default async function Page() {
               name: "Is aluminum or steel better for FRC structure?",
               acceptedAnswer: {
                 "@type": "Answer",
-                text: "It depends on your priority. Steel is about three times stiffer than aluminum for the same shape, so it deflects less, but it is also roughly three times denser. Aluminum (usually 6061-T6) gives far better stiffness-per-weight, which is why most FRC structure is aluminum. You add stiffness with a larger cross-section rather than by switching to steel.",
+                text: "It depends on your priority. Steel is about three times stiffer than aluminum for the same shape, so it deflects less, but it is also roughly three times denser. Aluminum (usually 6061-T6) gives far better stiffness-per-weight, which is why most FRC structure is aluminum — you add stiffness with a larger cross-section rather than by switching to steel.",
               },
             },
             {

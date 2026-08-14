@@ -41,27 +41,27 @@ const SEO_META: Record<string, { title: string; description: string }> = {
   "new-member-onboarding": {
     title: "How to Start on an FRC Team: Free Onboarding Path",
     description:
-      "A guided route for brand-new FRC members: how the season works, shop safety, your first build, wiring basics, and picking a department. Free, no login.",
+      "A guided route for brand-new FRC members — how the season works, shop safety, your first build, wiring basics, and picking a department. Free, no login.",
   },
   "become-a-robot-programmer": {
     title: "How to Become an FRC Robot Programmer: Free Path",
     description:
-      "A guided route from zero code to competition-ready FRC software: WPILib setup, command-based subsystems, sensors, PID, and autonomous. Free, no login.",
+      "A guided route from zero code to competition-ready FRC software — WPILib setup, command-based subsystems, sensors, PID, and autonomous. Free, no login.",
   },
   "build-and-design-track": {
     title: "How to Design and Build an FRC Robot: Free Path",
     description:
-      "A guided route through the FRC build pipeline: CAD in Onshape, fabrication and fasteners, gearboxes, wiring your mechanism, and shop safety. Free.",
+      "A guided route through the FRC build pipeline — CAD in Onshape, fabrication and fasteners, gearboxes, wiring your mechanism, and shop safety. Free.",
   },
   "win-the-impact-award": {
     title: "How to Win the FIRST Impact Award: Free Path",
     description:
-      "A guided route to a winning FIRST Impact Award entry: team sustainability, funding, outreach and media, then the essay and presentation. Free, no login.",
+      "A guided route to a winning FIRST Impact Award entry — team sustainability, funding, outreach and media, then the essay and presentation. Free, no login.",
   },
   "game-day-ready": {
     title: "How to Prepare for an FRC Competition: Free Path",
     description:
-      "A guided route to competition day: scouting and picklists, match strategy, drive team roles, and running a safe, inspection-ready pit. Free, no login.",
+      "A guided route to competition day — scouting and picklists, match strategy, drive team roles, and running a safe, inspection-ready pit. Free, no login.",
   },
 };
 
@@ -390,7 +390,7 @@ export default async function PathPage({
                     Arrive
                   </div>
                   <p className="font-display text-lg font-semibold text-foreground">
-                    Path complete. You&apos;ve got the whole role
+                    Path complete — you&apos;ve got the whole role
                   </p>
                 </div>
               </div>
@@ -464,7 +464,7 @@ export default async function PathPage({
                   </span>{" "}
                   and work your way to{" "}
                   {lastStep ? nameBySlug.get(lastStep.deptSlug) ?? lastStep.label : "the finish"}
-                  . Free, no login needed to start reading.
+                  . Free — no login needed to start reading.
                 </p>
                 <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
                   <Button asChild variant="brand" size="lg">

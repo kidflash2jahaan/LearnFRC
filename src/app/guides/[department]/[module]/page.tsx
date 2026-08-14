@@ -357,7 +357,7 @@ function moduleFit({
   const plural = lessons === 1 ? "lesson" : "lessons";
 
   const where = isPre
-    ? `${title} is the prerequisite module of the ${deptName} guide: the ground the ${count - 1} numbered modules after it assume you already have`
+    ? `${title} is the prerequisite module of the ${deptName} guide — the ground the ${count - 1} numbered modules after it assume you already have`
     : !prev
       ? `${title} opens the ${deptName} guide`
       : !next
@@ -695,7 +695,7 @@ export default async function ModulePage({
   // sentence derived from where this module sits in the department.
   const overview =
     squash(mod.overview) ||
-    `${mod.title} is ${isPre ? "the recommended starting point" : `module ${label}`} of ${modules.length} in the LearnFRC ${dept.name} guide: ${lessons.length} free ${lessons.length === 1 ? "lesson" : "lessons"} you can read in any order.`;
+    `${mod.title} is ${isPre ? "the recommended starting point" : `module ${label}`} of ${modules.length} in the LearnFRC ${dept.name} guide — ${lessons.length} free ${lessons.length === 1 ? "lesson" : "lessons"} you can read in any order.`;
 
   const fit = moduleFit({
     title: mod.title,
@@ -1141,7 +1141,7 @@ export default async function ModulePage({
                 </div>
               </div>
               <p className="mt-3 text-pretty text-sm leading-relaxed text-muted-foreground">
-                This is the {dept.name} one: {lessons.length}{" "}
+                This is the {dept.name} one — {lessons.length}{" "}
                 {lessons.length === 1 ? "lesson" : "lessons"}
                 {totalMinutes > 0 ? `, about ${totalMinutes} minutes` : ""}. The{" "}
                 {twins.length === 1 ? "department" : "departments"} below run a module by the same

@@ -25,7 +25,7 @@ export const PATHS: LearningPath[] = [
     slug: "new-member-onboarding",
     title: "New Member Onboarding",
     description:
-      "Brand new to the team? This is the path that turns a curious rookie into a contributing member: culture, shop safety, and your first real hands on the robot.",
+      "Brand new to the team? This is the path that turns a curious rookie into a contributing member — culture, shop safety, and your first real hands on the robot.",
     icon: "Rocket",
     color: "#3b82f6",
     outcomes: [
@@ -43,7 +43,7 @@ export const PATHS: LearningPath[] = [
       {
         deptSlug: "safety",
         label: "Earn your shop safety basics",
-        note: "Before you touch a tool or the robot, learn PPE, safe tool use, and shop etiquette. Safety isn't optional. It's the first thing every veteran respects.",
+        note: "Before you touch a tool or the robot, learn PPE, safe tool use, and shop etiquette. Safety isn't optional — it's the first thing every veteran respects.",
       },
       {
         deptSlug: "mechanical-build",
@@ -58,7 +58,7 @@ export const PATHS: LearningPath[] = [
       {
         deptSlug: "media-outreach",
         label: "Find your voice on the team",
-        note: "Onboarding isn't only the robot: see how the team tells its story and how every member can contribute beyond the shop.",
+        note: "Onboarding isn't only the robot — see how the team tells its story and how every member can contribute beyond the shop.",
       },
     ],
   },
@@ -66,7 +66,7 @@ export const PATHS: LearningPath[] = [
     slug: "become-a-robot-programmer",
     title: "Become a Robot Programmer",
     description:
-      "Go from zero code to writing real, competition-ready robot software: command-based WPILib, sensors, and tuned autonomous routines.",
+      "Go from zero code to writing real, competition-ready robot software — command-based WPILib, sensors, and tuned autonomous routines.",
     icon: "Code2",
     color: "#10b981",
     outcomes: [
@@ -89,7 +89,7 @@ export const PATHS: LearningPath[] = [
       {
         deptSlug: "electrical-wiring",
         label: "Understand the hardware you control",
-        note: "Great code needs hardware fluency: know your motor controllers, CAN bus, and sensors so you can debug from the wire up.",
+        note: "Great code needs hardware fluency — know your motor controllers, CAN bus, and sensors so you can debug from the wire up.",
       },
       {
         deptSlug: "mechanical-build",
@@ -107,7 +107,7 @@ export const PATHS: LearningPath[] = [
     slug: "build-and-design-track",
     title: "Build & Design Track",
     description:
-      "Design it in CAD, build it in the shop, and bring it to life: the full mechanical engineering pipeline from a sketch to a working subsystem.",
+      "Design it in CAD, build it in the shop, and bring it to life — the full mechanical engineering pipeline from a sketch to a working subsystem.",
     icon: "Wrench",
     color: "#f97316",
     outcomes: [
@@ -130,7 +130,7 @@ export const PATHS: LearningPath[] = [
       {
         deptSlug: "mechanical-build",
         label: "Build it in the shop",
-        note: "Turn the CAD into reality: fabrication, fasteners, gearboxes, and assembly that survive a full competition.",
+        note: "Turn the CAD into reality — fabrication, fasteners, gearboxes, and assembly that survive a full competition.",
       },
       {
         deptSlug: "electrical-wiring",
@@ -140,7 +140,7 @@ export const PATHS: LearningPath[] = [
       {
         deptSlug: "safety",
         label: "Build it safely",
-        note: "Reinforce safe fabrication, machine use, and inspection-ready practices so what you build passes, and protects everyone.",
+        note: "Reinforce safe fabrication, machine use, and inspection-ready practices so what you build passes — and protects everyone.",
       },
     ],
   },
@@ -166,7 +166,7 @@ export const PATHS: LearningPath[] = [
       {
         deptSlug: "business-operations",
         label: "Build a sustainable team",
-        note: "Sponsorships, budgets, structure, and continuity: the operational backbone judges look for in a thriving program.",
+        note: "Sponsorships, budgets, structure, and continuity — the operational backbone judges look for in a thriving program.",
       },
       {
         deptSlug: "media-outreach",
@@ -176,7 +176,7 @@ export const PATHS: LearningPath[] = [
       {
         deptSlug: "impact-award",
         label: "Craft the submission",
-        note: "The capstone: assemble the essay, executive summary, video, and presentation that turn your work into a winning entry.",
+        note: "The capstone — assemble the essay, executive summary, video, and presentation that turn your work into a winning entry.",
       },
     ],
   },
@@ -184,7 +184,7 @@ export const PATHS: LearningPath[] = [
     slug: "game-day-ready",
     title: "Game Day Ready",
     description:
-      "Competition is its own skill. Scout smart, drive sharp, and run a calm, safe pit: everything that turns a good robot into match wins.",
+      "Competition is its own skill. Scout smart, drive sharp, and run a calm, safe pit — everything that turns a good robot into match wins.",
     icon: "Gamepad2",
     color: "#ef4444",
     outcomes: [
@@ -197,7 +197,7 @@ export const PATHS: LearningPath[] = [
       {
         deptSlug: "getting-started",
         label: "Understand event flow",
-        note: "Qualifications, alliance selection, playoffs: know how an event runs so nothing on game day catches you off guard.",
+        note: "Qualifications, alliance selection, playoffs — know how an event runs so nothing on game day catches you off guard.",
       },
       {
         deptSlug: "scouting-strategy",

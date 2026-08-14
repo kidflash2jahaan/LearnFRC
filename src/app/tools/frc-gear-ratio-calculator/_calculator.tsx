@@ -74,7 +74,7 @@ const MOTORS: Motor[] = [
     stallA: 105,
     freeA: 1.8,
     vendor: "REV Robotics",
-    note: "REV's published empirical figures (measured with a SPARK MAX on FRC hardware). WPILib's simulation uses this same set.",
+    note: "REV's published empirical figures (measured with a SPARK MAX on FRC hardware) — the same set WPILib's simulation uses.",
   },
   {
     key: "vortex",
@@ -94,7 +94,7 @@ const MOTORS: Motor[] = [
     stallA: 366,
     freeA: 2,
     vendor: "WCP / CTR Electronics",
-    note: "Default commutation: what you get without a Phoenix Pro FOC licence.",
+    note: "Default commutation — what you get without a Phoenix Pro FOC licence.",
   },
   {
     key: "krakenx60foc",
@@ -114,7 +114,7 @@ const MOTORS: Motor[] = [
     stallA: 275,
     freeA: 1.4,
     vendor: "WCP / CTR Electronics",
-    note: "The compact Kraken: smaller and faster, for intakes, hoods and shooters.",
+    note: "The compact Kraken — smaller and faster, for intakes, hoods and shooters.",
   },
   {
     key: "krakenx44foc",
@@ -180,7 +180,7 @@ const PRESETS: Preset[] = [
     key: "kop",
     label: "KOP tank",
     blurb:
-      "Kit-of-Parts chassis: 2 × CIM through a ToughBox Mini at 8.45:1 (AndyMark's real gearset: a 14T pinion into 50T, then 19T into 45T), 6 in wheels.",
+      "Kit-of-Parts chassis: 2 × CIM through a ToughBox Mini at 8.45:1 (AndyMark's real gearset — a 14T pinion into 50T, then 19T into 45T), 6 in wheels.",
     mode: "drivetrain",
     motor: "cim",
     count: "2",
@@ -243,7 +243,7 @@ const PRESETS: Preset[] = [
     key: "arm",
     label: "Arm / mechanism",
     blurb:
-      "A single NEO through a 100:1 planetary driving a 24 in arm, the starting point for most FRC arm and elevator ratio questions.",
+      "A single NEO through a 100:1 planetary driving a 24 in arm — the starting point for most FRC arm and elevator ratio questions.",
     mode: "mechanism",
     motor: "neo",
     count: "1",
@@ -643,7 +643,7 @@ export default function GearRatioCalculator({
             stall ·{" "}
             <span className="tabular-nums">{fmt(motor.stallA, 0)} A</span> stall
             / <span className="tabular-nums">{fmt(motor.freeA, 1)} A</span> free{" "}
-            <Tip text={`${motor.vendor} published spec at 12 V, verified this session.`} />
+            <Tip text={`${motor.vendor} published spec at 12 V — verified this session.`} />
             <br />
             {motor.note}
           </p>
@@ -698,7 +698,7 @@ export default function GearRatioCalculator({
             </div>
           </div>
           <p className="mb-3 text-xs leading-relaxed text-muted-foreground">
-            One row per reduction: a gear mesh, a chain run, or a belt run. In
+            One row per reduction — a gear mesh, a chain run, or a belt run. In
             teeth mode a stage reduces by{" "}
             <span className="font-medium text-foreground">driven ÷ driving</span>
             , so a 14T pinion into a 50T gear is 3.571:1.
@@ -853,7 +853,7 @@ export default function GearRatioCalculator({
                   id="gr-wheel"
                   label="Wheel diameter"
                   unit="in"
-                  help="Measure a loaded wheel if you can. Tread squash under a 125 lb robot makes the effective diameter smaller than nominal, which is why vendors' published speeds run a little under the pure calculation."
+                  help="Measure a loaded wheel if you can — tread squash under a 125 lb robot makes the effective diameter smaller than nominal, which is why vendors' published speeds run a little under the pure calculation."
                   value={wheel}
                   onChange={setWheel}
                   accent
@@ -862,15 +862,15 @@ export default function GearRatioCalculator({
                   id="gr-weight"
                   label="Robot weight"
                   unit="lb"
-                  help="Competition weight: robot plus battery and bumpers, since that is what is actually pressing the wheels into the carpet."
+                  help="Competition weight — robot plus battery and bumpers, since that is what is actually pressing the wheels into the carpet."
                   value={weight}
                   onChange={setWeight}
                 />
                 <Field
                   id="gr-mu"
-                  label="Wheel-carpet μ"
+                  label="Wheel–carpet μ"
                   unit=""
-                  help="Coefficient of friction. Community-measured, not a vendor spec: roughly 0.8-1.0 for smooth/Colson wheels and 1.1-1.4 for nitrile or roughtop tread on FRC carpet. Measure your own robot if the answer matters."
+                  help="Coefficient of friction. Community-measured, not a vendor spec: roughly 0.8–1.0 for smooth/Colson wheels and 1.1–1.4 for nitrile or roughtop tread on FRC carpet. Measure your own robot if the answer matters."
                   value={mu}
                   onChange={setMu}
                 />
@@ -878,7 +878,7 @@ export default function GearRatioCalculator({
                   id="gr-frac"
                   label="Weight on driven wheels"
                   unit="%"
-                  help="100% for swerve or a 6-wheel tank where every wheel is driven. Drop it if some of your weight rides on undriven omni or caster wheels: only weight over a traction wheel makes grip."
+                  help="100% for swerve or a 6-wheel tank where every wheel is driven. Drop it if some of your weight rides on undriven omni or caster wheels — only weight over a traction wheel makes grip."
                   value={weightFrac}
                   onChange={setWeightFrac}
                 />
@@ -886,7 +886,7 @@ export default function GearRatioCalculator({
                   id="gr-derate"
                   label="Speed derate"
                   unit="%"
-                  help="Free speed is a no-load number. On carpet the motor also fights rolling resistance, gearbox drag and wheel scrub, so it settles below it. 80-85% is the long-standing FRC design-calculator convention. It is an empirical allowance, not physics."
+                  help="Free speed is a no-load number. On carpet the motor also fights rolling resistance, gearbox drag and wheel scrub, so it settles below it. 80–85% is the long-standing FRC design-calculator convention — it is an empirical allowance, not physics."
                   value={derate}
                   onChange={setDerate}
                 />
@@ -924,7 +924,7 @@ export default function GearRatioCalculator({
               id="gr-limit"
               label="Current limit per motor"
               unit="A"
-              help="The smart-current limit you set in your motor-controller config. This is the single biggest lever on how hard your robot can push, and the thing that stops you tripping breakers."
+              help="The smart-current limit you set in your motor-controller config. This is the single biggest lever on how hard your robot can push — and the thing that stops you tripping breakers."
               value={limit}
               onChange={setLimit}
               accent
@@ -933,7 +933,7 @@ export default function GearRatioCalculator({
               id="gr-voc"
               label="Battery open-circuit V"
               unit="V"
-              help="Resting pack voltage. A healthy charged FRC pack reads about 12.7-13.5 V open; 12.5 V is a conservative default."
+              help="Resting pack voltage. A healthy charged FRC pack reads about 12.7–13.5 V open; 12.5 V is a conservative default."
               value={voc}
               onChange={setVoc}
             />
@@ -1020,7 +1020,7 @@ export default function GearRatioCalculator({
               <>
                 <div className="ac-tile min-w-0 rounded-xl border border-border bg-white/60 p-3">
                   <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                    Output free speed <Tip text="No-load motor speed divided by the reduction: the speed of the shaft your mechanism hangs off." />
+                    Output free speed <Tip text="No-load motor speed divided by the reduction — the speed of the shaft your mechanism hangs off." />
                   </div>
                   <div className="mt-1 flex items-end gap-1">
                     <div className="text-2xl font-bold tabular-nums text-foreground">
@@ -1054,7 +1054,7 @@ export default function GearRatioCalculator({
           <div className="ac-tile mt-3 min-w-0 rounded-xl border border-border bg-white/60 p-3">
             <div className="flex items-center gap-1 text-xs text-muted-foreground">
               {isDrive ? "Torque at the wheels" : "Torque at the output shaft"}{" "}
-              <Tip text="All motors combined, at your current limit, after the reduction and efficiency. This is peak (near-stall) torque. A spinning motor makes less." />
+              <Tip text="All motors combined, at your current limit, after the reduction and efficiency. This is peak (near-stall) torque — a spinning motor makes less." />
             </div>
             <div className="mt-1 flex items-end gap-2">
               <div className="text-3xl font-bold tabular-nums text-foreground">
@@ -1070,7 +1070,7 @@ export default function GearRatioCalculator({
                 <>
                   Each motor is capped at{" "}
                   <span className="tabular-nums">{fmt(r.tauMotor, 3)}</span> N·m
-                  by your {fmt(r.iLim, 0)} A limit, which is{" "}
+                  by your {fmt(r.iLim, 0)} A limit — that is{" "}
                   <span className="tabular-nums">
                     {fmt((r.tauMotor / motor.stallNm) * 100, 0)}%
                   </span>{" "}
@@ -1143,8 +1143,8 @@ export default function GearRatioCalculator({
                   <>
                     <strong>Traction-limited.</strong> Your gearing can make more
                     force than the carpet can hold, so the wheels spin before
-                    the motors stall. Extra reduction buys you nothing here.
-                    More grip, more weight over the driven wheels, or a lower
+                    the motors stall. Extra reduction buys you nothing here —
+                    more grip, more weight over the driven wheels, or a lower
                     current limit is the real fix. You are effectively pushing{" "}
                     <span className="tabular-nums">{fmt(r.usableLb, 1)}</span>{" "}
                     lbf.
@@ -1162,7 +1162,7 @@ export default function GearRatioCalculator({
                 )}
               </p>
               <p className="mt-2 text-xs tabular-nums text-muted-foreground">
-                That is about {fmt(r.accelG, 2)} g of acceleration, or{" "}
+                That is about {fmt(r.accelG, 2)} g of acceleration —{" "}
                 {fmt(r.accelFtS2, 1)} ft/s².
               </p>
             </div>
@@ -1221,7 +1221,7 @@ export default function GearRatioCalculator({
                     breaker.
                   </strong>{" "}
                   The breaker is thermal, so a momentary spike while you shove
-                  another robot is normal and fine. Sustained draw at this level
+                  another robot is normal and fine — sustained draw at this level
                   will trip it and kill the whole robot.{" "}
                 </>
               ) : r.power === "warn" ? (
@@ -1248,7 +1248,7 @@ export default function GearRatioCalculator({
               ) : r.brownout === "marginal" ? (
                 <>
                   The pack sags to about{" "}
-                  <span className="tabular-nums">{fmt(r.vBus, 2)}</span> V,
+                  <span className="tabular-nums">{fmt(r.vBus, 2)}</span> V —
                   under the {RAIL_DROOP_V} V point where the 6 V rail starts to
                   droop, but still above the brownout line.
                 </>
@@ -1418,7 +1418,7 @@ export default function GearRatioCalculator({
       {/* -------------------- NOTES & SOURCES -------------------- */}
       <details className="mt-6 rounded-2xl border border-border bg-white/50 p-4">
         <summary className="min-h-[44px] cursor-pointer py-2 text-sm font-semibold text-foreground">
-          Notes &amp; sources: where every number comes from
+          Notes &amp; sources — where every number comes from
         </summary>
         <div className="mt-3 space-y-4 text-xs leading-relaxed text-muted-foreground">
           <div>
@@ -1433,57 +1433,57 @@ export default function GearRatioCalculator({
               the Kraken X60 at 6,271 RPM / 4.21 N·m from REV&apos;s own bench,
               while WCP publishes 6,000 RPM / 7.09 N·m for the same motor. We use
               the manufacturer&apos;s own number for each, and you should assume
-              a real motor lands somewhere near, not exactly on, any of them.
+              a real motor lands somewhere near — not exactly on — any of them.
             </p>
             <ul className="space-y-1.5">
               <li>
                 <span className="font-medium text-foreground">
-                  NEO V1.1: 5,676 RPM, 2.6 N·m, 105 A stall, 1.8 A free
-                </span>
-                , from REV Robotics motor specifications (empirical, measured with a
+                  NEO V1.1 — 5,676 RPM, 2.6 N·m, 105 A stall, 1.8 A free
+                </span>{" "}
+                — REV Robotics motor specifications (empirical, measured with a
                 SPARK MAX).{" "}
                 <Src href="https://docs.revrobotics.com/brushless/neo/v1.1" />
               </li>
               <li>
                 <span className="font-medium text-foreground">
-                  NEO Vortex: 6,784 RPM, 3.6 N·m, 211 A stall, 3.6 A free
-                </span>
-                , from REV Robotics motor specifications (565 Kv).{" "}
+                  NEO Vortex — 6,784 RPM, 3.6 N·m, 211 A stall, 3.6 A free
+                </span>{" "}
+                — REV Robotics motor specifications (565 Kv).{" "}
                 <Src href="https://docs.revrobotics.com/brushless/neo/vortex" />
               </li>
               <li>
                 <span className="font-medium text-foreground">
-                  Kraken X60: 6,000 RPM, 7.09 N·m, 366 A stall, 2 A free
+                  Kraken X60 — 6,000 RPM, 7.09 N·m, 366 A stall, 2 A free
                 </span>{" "}
                 (trapezoidal); <strong>5,800 RPM, 9.37 N·m, 483 A, 2 A</strong>{" "}
-                (FOC), from WestCoast Products motor-performance documentation.{" "}
+                (FOC) — WestCoast Products motor-performance documentation.{" "}
                 <Src href="https://docs.wcproducts.com/kraken-x60" />
               </li>
               <li>
                 <span className="font-medium text-foreground">
-                  Kraken X44: 7,530 RPM, 4.05 N·m, 275 A stall, 1.4 A free
+                  Kraken X44 — 7,530 RPM, 4.05 N·m, 275 A stall, 1.4 A free
                 </span>{" "}
                 (trapezoidal); <strong>7,368 RPM, 5.01 N·m, 329 A, 3 A</strong>{" "}
-                (FOC), from WestCoast Products motor-performance documentation.{" "}
+                (FOC) — WestCoast Products motor-performance documentation.{" "}
                 <Src href="https://docs.wcproducts.com/kraken-x44" />
               </li>
               <li>
                 <span className="font-medium text-foreground">
-                  Falcon 500: 6,380 RPM, 4.69 N·m, 257 A stall, 1.5 A free
-                </span>
-                , from CTR Electronics product specifications (trapezoidal).{" "}
+                  Falcon 500 — 6,380 RPM, 4.69 N·m, 257 A stall, 1.5 A free
+                </span>{" "}
+                — CTR Electronics product specifications (trapezoidal).{" "}
                 <Src href="https://store.ctr-electronics.com/products/falcon-500-powered-by-talon-fx" />
               </li>
               <li>
                 <span className="font-medium text-foreground">
-                  CIM: 5,310 RPM, 2.425 N·m, 133 A stall, 2.7 A free, 337 W max
-                </span>
-                , from AndyMark am-0255 product page.{" "}
+                  CIM — 5,310 RPM, 2.425 N·m, 133 A stall, 2.7 A free, 337 W max
+                </span>{" "}
+                — AndyMark am-0255 product page.{" "}
                 <Src href="https://andymark.com/products/2-5-in-cim-motor" />
               </li>
               <li className="text-foreground/70">
                 <strong>Deliberately left out:</strong> the Mini CIM (no longer
-                carried by AndyMark or CTR Electronics, only third-party
+                carried by AndyMark or CTR Electronics — only third-party
                 mirrors of its old spec sheet survive) and the CTRE Minion (its
                 store page publishes stall torque and peak power but not free
                 speed or stall current). Rather than guess at values that every
@@ -1500,8 +1500,8 @@ export default function GearRatioCalculator({
               <li>
                 <span className="font-medium text-foreground">
                   ToughBox Mini 8.45:1
-                </span>
-                , AndyMark&apos;s published gearset for that option: a 14T CIM
+                </span>{" "}
+                — AndyMark&apos;s published gearset for that option: a 14T CIM
                 pinion into a 50T cluster gear, then a 19T cluster into a 45T
                 output gear. (50 ÷ 14) × (45 ÷ 19) = 8.459, which is what the
                 vendor rounds to 8.45:1.{" "}
@@ -1510,8 +1510,8 @@ export default function GearRatioCalculator({
               <li>
                 <span className="font-medium text-foreground">
                   SDS MK4i L2 = 6.75:1
-                </span>
-                , Swerve Drive Specialties MK4i drive gearing options are L1
+                </span>{" "}
+                — Swerve Drive Specialties MK4i drive gearing options are L1
                 8.14:1, L2 6.75:1, L3 6.12:1, on the module&apos;s 4 in wheel.{" "}
                 <Src href="https://andymark.com/products/sds-mk4i-swerve-modules" />
               </li>
@@ -1526,8 +1526,8 @@ export default function GearRatioCalculator({
               <li>
                 120 A main breaker (Cooper Bussmann CB285-120); roboRIO brownout
                 at 6.75 V (roboRIO 2.0 software default; roboRIO 1.0 is fixed at
-                6.3 V); the 6 V PWM rail begins to droop around 6.8 V (WPILib
-                documentation). These match the constants in this site&apos;s{" "}
+                6.3 V); the 6 V PWM rail begins to droop around 6.8 V — WPILib
+                documentation. These match the constants in this site&apos;s{" "}
                 <Link
                   href="/tools/frc-current-budget"
                   className="text-primary underline underline-offset-2"
@@ -1538,7 +1538,7 @@ export default function GearRatioCalculator({
               </li>
               <li>
                 Battery model V_bus = V_oc − I × R_int. A healthy pack reads
-                ~12.7-13.5 V open-circuit with an internal resistance near
+                ~12.7–13.5 V open-circuit with an internal resistance near
                 0.011 Ω new; over 0.020 Ω means retire it (WPILib guidance). Use
                 your own Battery Beak numbers.
               </li>
@@ -1552,14 +1552,14 @@ export default function GearRatioCalculator({
             <ul className="list-disc space-y-1.5 pl-5">
               <li>
                 <strong>Coefficient of friction is not a vendor spec.</strong>{" "}
-                The 0.8-1.4 range in the help text comes from community
+                The 0.8–1.4 range in the help text comes from community
                 measurements, and real numbers swing with tread wear, carpet
                 type, dust and how you test. If grip decides your design,
                 measure your own robot by dragging it on a scale.
               </li>
               <li>
                 <strong>The speed derate is a convention, not physics.</strong>{" "}
-                Free speed is exact kinematics; the 80-85% multiplier is the
+                Free speed is exact kinematics; the 80–85% multiplier is the
                 long-standing FRC design-calculator allowance for rolling
                 resistance, gearbox drag and scrub. Short field runs mean you
                 often never reach even that.
@@ -1569,7 +1569,7 @@ export default function GearRatioCalculator({
                 motor makes maximum torque at zero speed. Once the wheels are
                 turning, back-EMF pulls the current below your limit and the
                 torque with it, so this is the shove you get at the moment of
-                contact, not a number you hold at speed.
+                contact — not a number you hold at speed.
               </li>
               <li>
                 <strong>Efficiency is applied to torque, not speed.</strong>{" "}
@@ -1580,7 +1580,7 @@ export default function GearRatioCalculator({
               <li>
                 <strong>Wheel diameter is nominal.</strong> Tread compresses
                 under a loaded robot, so effective rolling diameter is a little
-                under the number printed on the wheel, usually a couple of
+                under the number printed on the wheel — usually a couple of
                 percent of speed.
               </li>
               <li>

@@ -66,7 +66,7 @@ export default async function UpdatePasswordPage() {
                   Set a <span style={BRAND_GRADIENT}>new password</span>
                 </h1>
                 <p className="mx-auto mt-2 max-w-sm text-pretty text-center text-sm leading-relaxed text-foreground/70">
-                  Almost done: pick a password you&rsquo;ll remember. You&rsquo;ll
+                  Almost done — pick a password you&rsquo;ll remember. You&rsquo;ll
                   be signed in right after.
                 </p>
                 <div className="mt-6">
