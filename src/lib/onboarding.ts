@@ -86,8 +86,8 @@ export const SETUP_SKIP_MAX_AGE = 60 * 60 * 24 * 14;
 export type ProfileSetupMode = "username" | "team";
 
 export type ProfileSetupState =
-  | { show: false; mode: null }
-  | { show: true; mode: ProfileSetupMode };
+  | { show: false; mode: null; required: false }
+  | { show: true; mode: ProfileSetupMode; required: boolean };
 
 /**
  * A starting point for the username field, derived from the Google account so

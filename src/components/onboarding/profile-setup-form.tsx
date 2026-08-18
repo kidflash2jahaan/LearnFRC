@@ -41,14 +41,28 @@ function SkipButton({ disabled }: { disabled: boolean }) {
  * machine-minted placeholder) and usually no team number. `team` mode is the
  * narrower ask for an account whose handle is its own but has no team.
  *
- * Always skippable — nothing here gates reading the site.
+ * `required` is set only when the account has NO handle at all. That case is a
+ * hard stop, because email signup cannot create an account without one and
+ * Google sign-in should not either: with no handle there is no profile URL and
+ * the learner shows up as a bare "Learner" everywhere.
+ *
+ * A machine-minted placeholder is NOT required. Those accounts work and their
+ * profiles open; the person is only carrying a name they did not pick, so this
+ * asks and can be dismissed. Hard-gating them would lock out active learners,
+ * including the highest-XP account on the site, to force a cosmetic rename.
+ *
+ * Nothing here gates READING the site. Guides and articles never needed an
+ * account and still do not.
  */
 export function ProfileSetupForm({
   mode,
   suggested,
+  required = false,
 }: {
   mode: ProfileSetupMode;
   suggested?: string;
+  /** True only when the account has no handle at all. Hides the skip button. */
+  required?: boolean;
 }) {
   const [state, formAction, isPending] = useActionState<ProfileState, FormData>(
     saveProfileSetup,
@@ -78,12 +92,16 @@ export function ProfileSetupForm({
             className="font-display text-[17px] font-bold text-foreground"
           >
             {needsUsername
-              ? "Finish setting up your account"
+              ? required
+                ? "Pick a username to finish your account"
+                : "You're showing up under a generated name"
               : "Add your team number"}
           </h2>
           <p className="mt-0.5 text-sm leading-relaxed text-muted-foreground">
             {needsUsername
-              ? "You signed in with Google, so you skipped the signup form — pick a username and add your team number so your teammates can find you."
+              ? required
+                ? "Signing in with Google skipped the signup form, so you still need a username. It's your profile link and how teammates find you. Team number is optional."
+                : "Your handle was assigned automatically, so it's not really yours. Pick one you'd want on the leaderboard. Team number is optional."
               : "Add your FRC team number so you show up alongside your teammates on the leaderboard and team pages."}
           </p>
         </div>
@@ -167,7 +185,8 @@ export function ProfileSetupForm({
       </form>
 
       {/* Actions sit outside the save form so the skip button can own its own
-          form (forms cannot nest). The save button reaches back by id. */}
+          form (forms cannot nest). The save button reaches back by id.
+          Skip is hidden only when a handle is genuinely missing. */}
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <Button
           type="submit"
@@ -186,9 +205,11 @@ export function ProfileSetupForm({
             </>
           )}
         </Button>
-        <form action={skipProfileSetup}>
-          <SkipButton disabled={busy} />
-        </form>
+        {!required && (
+          <form action={skipProfileSetup}>
+            <SkipButton disabled={busy} />
+          </form>
+        )}
       </div>
 
       {state?.error && (

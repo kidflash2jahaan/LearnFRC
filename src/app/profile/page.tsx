@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { needsUsernameSetup } from "@/lib/onboarding-server";
 import {
   Pencil,
   ExternalLink,
@@ -57,6 +58,8 @@ function formatJoined(iso: string | null): string {
 export default async function ProfilePage() {
   const { user, profile } = await getSession();
   if (!user) redirect("/login?next=/profile");
+  // Required handle: hold them on the setup step (see onboarding-server.ts).
+  if (needsUsernameSetup(profile)) redirect("/dashboard");
 
   const supabase = await createClient();
 

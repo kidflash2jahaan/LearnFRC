@@ -41,7 +41,7 @@ import {
 import { getSession } from "@/lib/auth";
 import { getDepartments, getDepartmentBySlug, getReferralCount } from "@/lib/queries";
 import { suggestUsername } from "@/lib/onboarding";
-import { getProfileSetupState } from "@/lib/onboarding-server";
+import { getProfileSetupState, needsUsernameSetup } from "@/lib/onboarding-server";
 import { createClient } from "@/lib/supabase/server";
 import { deptMeta, inkFor } from "@/lib/departments";
 import { clampPct, pluralize } from "@/lib/utils";
@@ -107,6 +107,33 @@ export default async function DashboardPage() {
   // Google sign-ins never see the signup form, so they arrive with no handle
   // and (70% of them) no team number. Ask once, here, where OAuth lands them.
   const setup = await getProfileSetupState(profile);
+
+  // A handle is required, so this is a hard stop rather than a banner they can
+  // scroll past. Email signup cannot mint an account without one; Google
+  // sign-in skips that form, and letting the ask be dismissed left 26 accounts
+  // with no handle, no profile URL, and a bare "Learner" on the leaderboard.
+  // Returning before the dashboard's queries also means we do not spend them.
+  if (needsUsernameSetup(profile)) {
+    return (
+      <div className="relative overflow-x-clip">
+        <Glow
+          blobs={[
+            { size: "560px", pos: { left: "-160px", top: "-180px" }, color: "#8bbcff", opacity: 0.55 },
+            { size: "520px", pos: { right: "-170px", top: "40px" }, color: "#6ff0ea", opacity: 0.4, delay: 2.5 },
+          ]}
+        />
+        <div className="mx-auto max-w-xl px-4 pt-28 pb-20 sm:px-6 lg:px-8">
+          <Reveal>
+            <ProfileSetupForm
+              mode="username"
+              suggested={suggestUsername(user.email)}
+              required
+            />
+          </Reveal>
+        </div>
+      </div>
+    );
+  }
 
   const supabase = await createClient();
 
@@ -365,6 +392,7 @@ export default async function DashboardPage() {
             <ProfileSetupForm
               mode={setup.mode}
               suggested={suggestUsername(user.email)}
+              required={setup.required}
             />
           </Reveal>
         )}

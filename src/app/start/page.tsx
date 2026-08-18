@@ -2,6 +2,7 @@ import type { CSSProperties } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { needsUsernameSetup } from "@/lib/onboarding-server";
 import { ArrowRight, LayoutGrid, Sparkles } from "lucide-react";
 import { getSession } from "@/lib/auth";
 import { Glow, Reveal, Rise } from "@/components/motion/primitives";
@@ -65,6 +66,9 @@ export default async function StartPage({
 }) {
   const { user, profile } = await getSession();
   if (!user) redirect("/login?next=/start");
+  // Required handle first: OAuth lands here, and the setup step lives on the
+  // dashboard, so send them there until they have one.
+  if (needsUsernameSetup(profile)) redirect("/dashboard");
 
   const { change } = await searchParams;
   const goalId = await readStartGoalId();

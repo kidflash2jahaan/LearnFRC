@@ -2,6 +2,7 @@ import type { CSSProperties } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { needsUsernameSetup } from "@/lib/onboarding-server";
 import { BookmarkX, Compass, Library, Sparkles } from "lucide-react";
 import {
   RiseGroup,
@@ -55,8 +56,10 @@ const HEADING_GRADIENT: CSSProperties = {
 };
 
 export default async function BookmarksPage() {
-  const { user } = await getSession();
+  const { user, profile } = await getSession();
   if (!user) redirect("/login?next=/bookmarks");
+  // Required handle: hold them on the setup step (see onboarding-server.ts).
+  if (needsUsernameSetup(profile)) redirect("/dashboard");
 
   const supabase = await createClient();
   const { data } = await supabase

@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { needsUsernameSetup } from "@/lib/onboarding-server";
 import {
   UserRound,
   ExternalLink,
@@ -46,6 +47,8 @@ const JUMP_LINKS = [
 export default async function SettingsPage() {
   const { user, profile, isAdmin } = await getSession();
   if (!user) redirect("/login?next=/settings");
+  // Required handle: hold them on the setup step (see onboarding-server.ts).
+  if (needsUsernameSetup(profile)) redirect("/dashboard");
 
   const displayName =
     profile?.full_name || profile?.username || user.email || "Your account";
