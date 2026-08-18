@@ -13,7 +13,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { getRelated } from "@/lib/blog-data";
-import { getArticles } from "@/lib/queries";
+import { getArticles, getOverviewStats } from "@/lib/queries";
 import { Markdown } from "@/components/markdown";
 import { ArticleSuggestEdit } from "@/components/blog/article-suggest-edit";
 import { Provenance, extractLinkedReferences } from "@/components/lesson/provenance";
@@ -22,6 +22,7 @@ import { parseFaqs } from "@/lib/faq";
 import { ShareButton } from "@/components/share-button";
 import { ArticleViewBeacon } from "@/components/article-view-beacon";
 import { ArticleSignupHook } from "@/components/blog/article-signup-hook";
+import { ArticleNextStep } from "@/components/blog/article-next-step";
 import { AnimatedCounter } from "@/components/animated-counter";
 import {
   RiseGroup,
@@ -122,6 +123,7 @@ export default async function ArticlePage({
 }) {
   const { slug } = await params;
   const articles = await getArticles();
+  const siteStats = await getOverviewStats();
   const a = articles.find((x) => x.slug === slug);
   if (!a) notFound();
   const url = `${SITE}/blog/${a.slug}`;
@@ -326,8 +328,14 @@ export default async function ArticlePage({
         </aside>
       </div>
 
+      {/* Bridge into the guides. Deliberately ABOVE the two account asks: a
+          reader who just got their answer owes us nothing, so the first thing
+          after the article should be more of what they came for, not a signup
+          form. 85% of article readers never reach a second page today. */}
+      <ArticleNextStep slug={a.slug} />
+
       {/* logged-out conversion hook — contextual "continue the path" */}
-      <ArticleSignupHook articleCount={articles.length} slug={a.slug} />
+      <ArticleSignupHook lessonCount={siteStats.lessonCount} slug={a.slug} />
 
       {/* ======================== KEEP READING ======================= */}
       {related.length > 0 && (

@@ -62,10 +62,14 @@ const INTENT_COPY: {
 ];
 
 export function ArticleSignupHook({
-  articleCount,
+  lessonCount,
   slug,
 }: {
-  articleCount: number;
+  /** Real count of guide LESSONS. This used to be handed the article count
+      (91), so every article page advertised "91+ free FRC lessons" for a
+      catalogue of 394, understating the site by a factor of four in the exact
+      sentence meant to make signing up worth it. */
+  lessonCount: number;
   slug: string;
 }) {
   const [authed, setAuthed] = React.useState(false);
@@ -89,8 +93,8 @@ export function ArticleSignupHook({
   const intent = INTENT_COPY.find((c) => c.match.test(slug));
   const headline = intent?.headline ?? (["Want the whole path, not just", "this article?"] as [string, string]);
   const body =
-    intent?.body(articleCount) ??
-    `LearnFRC has ${articleCount}+ free FRC lessons and guides across every department. Create a free account to save your place, track your progress, and earn a certificate.`;
+    intent?.body(lessonCount) ??
+    `LearnFRC has ${lessonCount} free FRC lessons across every department. Create a free account to save your place, track your progress, and earn a certificate.`;
   const cta = intent?.cta ?? "Create a free account";
 
   return (
