@@ -49,6 +49,7 @@ import {
 } from "./_progress-islands";
 import { LessonSignupHook } from "@/components/lesson/lesson-signup-hook";
 import { Provenance } from "@/components/lesson/provenance";
+import { LessonReadNext } from "@/components/lesson/lesson-read-next";
 import {
   LessonNextStep,
   type NextStepLink,
@@ -528,6 +529,11 @@ export default async function LessonPage({
                 dense
               />
             </Provenance>
+
+            {/* Into the articles. Lessons are the biggest surface on the
+                site and were sending zero internal links to the pages that
+                actually pull search traffic. */}
+            <LessonReadNext lessonId={les.id} />
 
             {/* completion / quiz */}
             <LessonCompleteIsland
