@@ -32,6 +32,36 @@ export const ARTICLE_BRIDGE: Record<string, ArticleBridge> = {
       { title: "Tank and West Coast Drive", summary: "The classic, robust skid-steer drivetrain that most teams start with and many championship teams still use.", href: "/guides/mechanical-build/drivetrains/tank-and-west-coast-drive" },
     ],
   },
+  "frc-brownout": {
+    dept: "electrical-wiring",
+    deptName: "Electrical & Wiring",
+    deptCount: 35,
+    lessons: [
+      { title: "Brownouts: Why the Robot Goes Limp", summary: "Understand the multi-stage brownout protection and the systematic fixes, from current limits to battery health.", href: "/guides/electrical-wiring/common-mistakes-troubleshooting/diagnosing-brownouts" },
+      { title: "Mini-Project 2: Current-Limited Drivetrain (CTRE and REV)", summary: "Apply stator and supply current limits to a four-motor drivetrain so it accelerates hard without browning out.", href: "/guides/electrical-wiring/worked-examples-mini-projects/current-limited-drivetrain" },
+      { title: "Voltage, Current, and Resistance", summary: "Meet the three quantities every wiring decision on your robot comes back to: the push, the flow, and the friction.", href: "/guides/electrical-wiring/prerequisites/voltage-current-resistance" },
+    ],
+  },
+  "frc-robot-weight-reduction": {
+    dept: "programming-software",
+    deptName: "Programming, Controls & Sensors",
+    deptCount: 51,
+    lessons: [
+      { title: "CTRE Phoenix 6: Talon FX, Kraken X60/X44, and Falcon 500", summary: "Control CTRE's Talon FX (which drives the Kraken X60, Kraken X44, and legacy Falcon 500) using the Phoenix 6 API: configuration objects and control requests.", href: "/guides/programming-software/motors-and-control/ctre-phoenix-6" },
+      { title: "Integrated and CAN Encoders: NEO, Falcon/Kraken, and CANcoder", summary: "The encoders built into modern brushless motors and the CTRE CANcoder, plus sensor fusion in firmware.", href: "/guides/programming-software/encoders/integrated-and-can-encoders" },
+      { title: "REVLib: SPARK MAX / SPARK Flex with NEO and NEO Vortex", summary: "Control REV Robotics motors — the NEO and NEO Vortex via SPARK MAX / SPARK Flex — using the modern REVLib 2025 configuration API.", href: "/guides/programming-software/motors-and-control/revlib-spark" },
+    ],
+  },
+  "frc-fasteners-threadlocker": {
+    dept: "mechanical-build",
+    deptName: "Mechanical, Build & Pneumatics",
+    deptCount: 47,
+    lessons: [
+      { title: "Gearboxes That Grenade and Fasteners That Vibrate Loose", summary: "Prevent stripped gears, bent mounting plates, sheared shafts, and loose hardware: shock-load math, plate stiffness, set-screw failures, and threadlocker.", href: "/guides/mechanical-build/common-mistakes-troubleshooting/gearbox-fastener-failures" },
+      { title: "Fasteners and Threadlocking", summary: "Bolts, nuts, and threadlocker are what actually keep a robot together through 100+ matches of vibration.", href: "/guides/mechanical-build/structure-materials-fasteners/fasteners-threadlocking" },
+      { title: "Mini-Project 5: Integrating a COTS Swerve Module", summary: "Take a COTS swerve module from box to driving: pick a module and ratio, mount it square, run SysId, and stand up a SwerveDrive with WPILib kinematics.", href: "/guides/mechanical-build/worked-examples-mini-projects/cots-swerve-integration" },
+    ],
+  },
   "frc-robot-rules-size-weight": {
     dept: "getting-started",
     deptName: "Getting Started with FRC",
@@ -40,6 +70,16 @@ export const ARTICLE_BRIDGE: Record<string, ArticleBridge> = {
       { title: "Inspection-Day Failures: Bumpers, Size, and Weight", summary: "The mechanical rule violations that get rookies bounced at robot inspection — and the 2026 numbers to build to.", href: "/guides/getting-started/common-mistakes-troubleshooting/inspection-failures" },
       { title: "Recent Games: CRESCENDO, REEFSCAPE, and REBUILT", summary: "A tour of the 2024, 2025, and 2026 games to make the abstract concepts concrete with real game pieces and scoring.", href: "/guides/getting-started/the-season-and-the-game/recent-games-crescendo-reefscape-rebuilt" },
       { title: "The Annual Season: Kickoff to Championship", summary: "The FRC calendar from the January game reveal through the six-week build to events and the World Championship.", href: "/guides/getting-started/the-season-and-the-game/annual-season-kickoff-to-championship" },
+    ],
+  },
+  "frc-shop-safety-ppe": {
+    dept: "safety",
+    deptName: "Safety",
+    deptCount: 28,
+    lessons: [
+      { title: "Event and Pit Safety Rules", summary: "Master the enforced safety rules you must follow in the pit and at the field, from eye protection to the 10-foot limit.", href: "/guides/safety/events-and-program/event-and-pit-rules" },
+      { title: "Mini-Project: Assemble a Competition Pit Safety Kit", summary: "Build and inventory a real pit safety kit - fire extinguisher, first aid, battery spill kit, SDS binder, PPE - with a posted checklist.", href: "/guides/safety/safety-worked-examples-mini-projects/competition-pit-safety-kit" },
+      { title: "Mini-Project: Run a Mock Pit Safety Inspection", summary: "Practice the UL Safety Advisor visit by running your own scored 30-minute inspection with a Corrective and Preventative Action plan.", href: "/guides/safety/safety-worked-examples-mini-projects/mock-pit-safety-inspection" },
     ],
   },
   "frc-scouting-sheet-template": {
@@ -141,6 +181,16 @@ export const ARTICLE_BRIDGE: Record<string, ArticleBridge> = {
       { title: "Command-Based Pitfalls and How to Avoid Them", summary: "The recurring command-based mistakes -- missing requirements, reused command instances, fragile default commands, and float comparisons -- with the correct patterns.", href: "/guides/programming-software/common-mistakes-troubleshooting/command-based-pitfalls" },
     ],
   },
+  "frc-games-by-year": {
+    dept: "getting-started",
+    deptName: "Getting Started with FRC",
+    deptCount: 28,
+    lessons: [
+      { title: "Recent Games: CRESCENDO, REEFSCAPE, and REBUILT", summary: "A tour of the 2024, 2025, and 2026 games to make the abstract concepts concrete with real game pieces and scoring.", href: "/guides/getting-started/the-season-and-the-game/recent-games-crescendo-reefscape-rebuilt" },
+      { title: "Project 4 — Build a Fuel Launcher for REBUILT", summary: "Add a single-motor flywheel launcher subsystem that shoots the 2026 'Fuel' foam balls into the Hub on a button press.", href: "/guides/getting-started/worked-examples-mini-projects/build-fuel-launcher" },
+      { title: "How a Match Works: Auto, Teleop, and Endgame", summary: "The 2 minutes 30 seconds of an FRC match broken into its three phases, with real examples from recent games.", href: "/guides/getting-started/the-season-and-the-game/how-a-match-works" },
+    ],
+  },
   "frc-awards-explained": {
     dept: "impact-award",
     deptName: "The Impact Award",
@@ -208,6 +258,16 @@ export const ARTICLE_BRIDGE: Record<string, ArticleBridge> = {
       { title: "Setting Up Onshape and Navigating Documents", summary: "Create your free FRC education account, understand Onshape's document structure, and learn to navigate Part Studios and Assemblies.", href: "/guides/cad-design/onshape-fundamentals/onshape-setup-and-navigation" },
       { title: "Choosing CAD Software: Onshape, SolidWorks, Fusion, Inventor", summary: "Compare the four CAD packages FRC teams actually use and understand why Onshape has become the community default for new and returning teams.", href: "/guides/cad-design/getting-started-cad-and-the-design-process/choosing-cad-software" },
       { title: "FRCDesignLib: The Onshape FRC Parts Library", summary: "Learn what FRCDesignLib is, what it contains, and how to install the free FRCDesignApp so you can drop real, native FRC COTS parts into your Onshape designs.", href: "/guides/cad-design/vendor-libraries-mkcad-featurescripts/mkcad-frc-parts-library" },
+    ],
+  },
+  "frc-hex-shaft-bearings": {
+    dept: "mechanical-build",
+    deptName: "Mechanical, Build & Pneumatics",
+    deptCount: 47,
+    lessons: [
+      { title: "Shafts, Bearings, and Bushings", summary: "Shafts carry rotation, bearings let them spin freely, and the hex standard ties the whole COTS ecosystem together.", href: "/guides/mechanical-build/power-transmission/shafts-bearings-bushings" },
+      { title: "Mini-Project 4: A Pivoting Roller Intake", summary: "Design a deploy-and-retract intake: size a small pivot motor, pick a roller motor and compliant wheels, and sequence deploy + spin with command-based code.", href: "/guides/mechanical-build/worked-examples-mini-projects/pivoting-roller-intake" },
+      { title: "Gearboxes That Grenade and Fasteners That Vibrate Loose", summary: "Prevent stripped gears, bent mounting plates, sheared shafts, and loose hardware: shock-load math, plate stiffness, set-screw failures, and threadlocker.", href: "/guides/mechanical-build/common-mistakes-troubleshooting/gearbox-fastener-failures" },
     ],
   },
   "frc-districts-vs-regionals": {
@@ -564,6 +624,16 @@ export const ARTICLE_BRIDGE: Record<string, ArticleBridge> = {
       { title: "VS Code, the WPILib Extension, and Deploying Code", summary: "Create a project from a template, then build and deploy it to the roboRIO using the WPILib extension.", href: "/guides/programming-software/foundations-tools-and-first-program/vscode-and-deploying" },
     ],
   },
+  "frc-led-lights": {
+    dept: "electrical-wiring",
+    deptName: "Electrical & Wiring",
+    deptCount: 35,
+    lessons: [
+      { title: "Mini-Project 4: A Switchable Channel for Lights and Vision", summary: "Wire and code the REV PDH switchable channel to power LEDs, a fan, or a vision camera on demand.", href: "/guides/electrical-wiring/worked-examples-mini-projects/switchable-channel-project" },
+      { title: "Power Distribution: PDH vs PDP", summary: "Compare the REV PDH and the CTRE PDP, and learn how each splits and protects power.", href: "/guides/electrical-wiring/control-system-components/power-distribution-pdh-vs-pdp" },
+      { title: "Reading the Lights: A Diagnostic Decision Tree", summary: "Turn the roboRIO, PD, and motor controller LEDs into a fast diagnosis of what is actually wrong.", href: "/guides/electrical-wiring/common-mistakes-troubleshooting/reading-the-status-lights" },
+    ],
+  },
   "frc-drivetrain-types": {
     dept: "mechanical-build",
     deptName: "Mechanical, Build & Pneumatics",
@@ -681,6 +751,16 @@ export const ARTICLE_BRIDGE: Record<string, ArticleBridge> = {
       { title: "The Field Coordinate System and Odometry", summary: "How WPILib defines field position, Pose2d/Rotation2d, and how wheel encoders plus the gyro track the robot.", href: "/guides/programming-software/gyros-imus-orientation/coordinate-system-odometry" },
     ],
   },
+  "frc-loop-overrun": {
+    dept: "programming-software",
+    deptName: "Programming, Controls & Sensors",
+    deptCount: 51,
+    lessons: [
+      { title: "Loop Overruns and Watchdog Warnings", summary: "Why 'Loop time of 0.02s overrun' appears, how the scheduler watchdog points at the culprit, and how to keep the 20 ms budget.", href: "/guides/programming-software/common-mistakes-troubleshooting/loop-overruns-watchdog" },
+      { title: "Why Java for FRC and How to Read WPILib Code", summary: "See why Java is the most popular FRC language and learn to read a real WPILib robot file so the examples you'll meet all season stop looking like magic.", href: "/guides/programming-software/prerequisites/why-java-and-reading-wpilib" },
+      { title: "Object-Oriented Java: Classes, Objects, and Inheritance", summary: "Discover how Java models the real world with classes and objects, and how inheritance lets you build on existing code instead of starting over.", href: "/guides/programming-software/prerequisites/oop-classes-objects-inheritance" },
+    ],
+  },
   "frc-command-based-programming": {
     dept: "programming-software",
     deptName: "Programming, Controls & Sensors",
@@ -739,6 +819,16 @@ export const ARTICLE_BRIDGE: Record<string, ArticleBridge> = {
       { title: "Alliances, Scoring, and Ranking Points", summary: "Discover how three teams band into an alliance, how points pile up, and how ranking points decide who climbs the standings.", href: "/guides/drive-team/prerequisites/alliances-scoring-and-ranking-points" },
       { title: "Ranking Points Drive Your Match Goals", summary: "Translate REBUILT's ranking-point structure into concrete in-match priorities and seeding strategy.", href: "/guides/drive-team/advanced-strategy-case-studies/ranking-points-strategy" },
       { title: "Endgame Execution", summary: "The final seconds decide many matches. Learn to plan, time, and reliably execute the endgame as an alliance.", href: "/guides/drive-team/driver-practice-and-match-performance/endgame-execution" },
+    ],
+  },
+  "frc-motion-profiling": {
+    dept: "programming-software",
+    deptName: "Programming, Controls & Sensors",
+    deptCount: 51,
+    lessons: [
+      { title: "Feedforward and Motion Profiling", summary: "Add feedforward to predict required output, and use trapezoid motion profiles for smooth, fast moves.", href: "/guides/programming-software/motors-and-control/feedforward-and-motion-profiling" },
+      { title: "Mini-Project: A Closed-Loop Elevator with Motion Magic", summary: "Build a complete elevator subsystem on a Kraken X60 (Talon FX) using Phoenix 6 Motion Magic to move smoothly between scoring heights.", href: "/guides/programming-software/worked-examples-mini-projects/mini-project-elevator-motion-magic" },
+      { title: "Why Java for FRC and How to Read WPILib Code", summary: "See why Java is the most popular FRC language and learn to read a real WPILib robot file so the examples you'll meet all season stop looking like magic.", href: "/guides/programming-software/prerequisites/why-java-and-reading-wpilib" },
     ],
   },
   "frc-simulation-wpilib": {
@@ -861,6 +951,16 @@ export const ARTICLE_BRIDGE: Record<string, ArticleBridge> = {
       { title: "Installing the Toolchain: WPILib, Game Tools, and Driver Station", summary: "Install WPILib (VS Code + extension) and the NI FRC Game Tools (Driver Station + roboRIO Imaging Tool), then image a roboRIO.", href: "/guides/programming-software/foundations-tools-and-first-program/installing-the-toolchain" },
     ],
   },
+  "frc-preseason-training-plan": {
+    dept: "business-operations",
+    deptName: "Business, Operations & Fundraising",
+    deptCount: 49,
+    lessons: [
+      { title: "The Season Timeline at a Glance", summary: "Understand the shape of an FRC season from Kickoff through build, competition, and off-season, including what changed when bag day was retired.", href: "/guides/business-operations/project-management-build-season/season-timeline" },
+      { title: "Mini-Project 1: A Working Season Budget Model", summary: "Build a real, formula-driven season budget in a spreadsheet using FIRST's official median budget figures, with a base/stretch scenario toggle and a fundraising-gap calculation.", href: "/guides/business-operations/worked-examples-business-toolkit/mini-project-season-budget-model" },
+      { title: "Writing the Team Business Plan", summary: "Build a business plan that defines your team's mission, goals, budget, and sustainability strategy, the document that anchors fundraising and the Impact Award.", href: "/guides/business-operations/sustainability-documentation-business-plan/writing-the-business-plan" },
+    ],
+  },
   "frc-2027-biocore": {
     dept: "getting-started",
     deptName: "Getting Started with FRC",
@@ -909,6 +1009,16 @@ export const ARTICLE_BRIDGE: Record<string, ArticleBridge> = {
       { title: "Gene Haas, Intuitive & Foundation Grants", summary: "Two of the most popular open-eligibility foundation grants, plus how to find more.", href: "/guides/business-operations/first-grants-and-programs/gene-haas-intuitive-foundation-grants" },
       { title: "The NASA FRC Sponsorship Grant", summary: "NASA's grant can cover your first event registration; here is exactly who qualifies and how.", href: "/guides/business-operations/first-grants-and-programs/nasa-frc-sponsorship-grant" },
       { title: "Sponsorships and Grants", summary: "Learn how to fund your team through corporate sponsorships and the major FRC grant programs from FIRST and partners like NASA and Gene Haas.", href: "/guides/business-operations/budgeting-finance-fundraising/sponsorships-and-grants" },
+    ],
+  },
+  "frc-recruiting-new-members": {
+    dept: "business-operations",
+    deptName: "Business, Operations & Fundraising",
+    deptCount: 49,
+    lessons: [
+      { title: "What FRC Actually Costs: The Big Picture", summary: "An honest accounting of a first-year and ongoing FRC budget, from registration to championship travel.", href: "/guides/business-operations/understanding-the-cost/what-frc-actually-costs" },
+      { title: "What an FRC Team Actually Is", summary: "Understand that an FRC team is a small nonprofit-style organization, not just a group that builds a robot, and why structure matters.", href: "/guides/business-operations/team-structure-and-leadership/what-an-frc-team-is" },
+      { title: "Recruitment and Retention", summary: "Learn how to attract new members and, just as importantly, keep them, building a stable membership base year over year.", href: "/guides/business-operations/sustainability-documentation-business-plan/recruitment-and-retention" },
     ],
   },
 };
