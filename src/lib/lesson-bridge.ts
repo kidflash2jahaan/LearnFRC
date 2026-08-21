@@ -65,7 +65,7 @@ export const LESSON_BRIDGE: Record<string, BridgeArticle[]> = {
   "527589ea-527f-4a92-b9d7-5eeac0b57cc1": [
     { title: "FRC Battery Guide: Charging, Care, Testing, and Safety", description: "FRC battery guide: how to charge, care for, test with a Battery Beak, wire the SB50 connector, and safely handle your 12V FRC battery fleet.", href: "/blog/frc-battery-guide", readMins: 8 },
     { title: "FRC Brownout: Why Your Robot Goes Limp and How to Actually Fix It", description: "The exact roboRIO brownout voltage stages, how to spot one in the Driver Station log, and the fixes ranked by payoff: current limits, battery health, gearing, and compressor scheduling.", href: "/blog/frc-brownout", readMins: 7 },
-    { title: "FRC Pit Checklist and Competition Packing List (Printable, 2026)", description: "A complete, printable FRC pit and competition packing list — tools, spares, batteries, safety, laptop/software, paperwork — plus a robot self-inspection pre-check mapped to the 2026 rules.", href: "/blog/frc-pit-checklist-competition-packing-list", readMins: 7 },
+    { title: "3D Printing for FRC: What's Legal, What to Print, and What Actually Survives a Match", description: "What FRC's rules allow for 3D printed parts, which ones are worth printing versus machining, and the filament and settings that survive a match.", href: "/blog/frc-3d-printing", readMins: 8 },
   ],
   "579de127-9bf6-417d-9332-e83810ffedea": [
     { title: "FRC Motors Compared: NEO vs Kraken X60 vs Falcon 500 vs NEO Vortex", description: "Compare FRC brushless motors: REV NEO, NEO Vortex, Kraken X60, and Falcon 500. Exact specs, FOC explained, and which motor to pick for drivetrain vs mechanisms.", href: "/blog/frc-motors-neo-kraken-falcon", readMins: 8 },
@@ -153,8 +153,8 @@ export const LESSON_BRIDGE: Record<string, BridgeArticle[]> = {
     { title: "How FRC Competitions Work: Matches, Ranking Points, Alliances, and Playoffs", description: "How FRC competitions work: qualification matches, ranking points, alliance selection, and the double-elimination playoff format, explained for new teams.", href: "/blog/how-frc-competitions-work", readMins: 7 },
   ],
   "72c542d1-62a2-4aae-958f-87796eaa39d6": [
-    { title: "FRC Manufacturing and Fabrication: COTS vs Custom, Tools, Materials, and Tolerances", description: "How FRC parts get made: COTS vs custom tradeoffs, shop tools, 3D printing, materials like 6061 and 7075 aluminum and polycarbonate, hole/tap standards, and tolerances.", href: "/blog/frc-manufacturing-fabrication", readMins: 17 },
     { title: "FRC Build Season Timeline: A Week-by-Week Plan from Kickoff to Competition", description: "A practical week-by-week FRC build season timeline, from Kickoff and game analysis through prototyping, CAD, fabrication, wiring, programming, and driver practice.", href: "/blog/frc-build-season-timeline", readMins: 8 },
+    { title: "FRC Manufacturing and Fabrication: COTS vs Custom, Tools, Materials, and Tolerances", description: "How FRC parts get made: COTS vs custom tradeoffs, shop tools, 3D printing, materials like 6061 and 7075 aluminum and polycarbonate, hole/tap standards, and tolerances.", href: "/blog/frc-manufacturing-fabrication", readMins: 17 },
     { title: "FRC vs FTC vs VEX: Which Robotics Program Is Right for You?", description: "FRC vs FTC vs VEX compared: robot size, cost, age range, season length, and programming, plus how to choose the right robotics competition for you.", href: "/blog/frc-vs-ftc-vs-vex", readMins: 7 },
   ],
   "075d3c3b-2f6f-4fe3-ab63-9cd02809eb2c": [
@@ -178,9 +178,9 @@ export const LESSON_BRIDGE: Record<string, BridgeArticle[]> = {
     { title: "FRC \"Loop Time of 0.02s Overrun\" & Watchdog Not Fed: Causes and Fixes", description: "What \"Loop time of 0.02s overrun\" and watchdog-not-fed warnings actually mean in FRC, how to read WPILib's epoch dump, and the usual causes.", href: "/blog/frc-loop-overrun", readMins: 7 },
   ],
   "d276771a-8c39-4440-b3e4-d9b8ed90b530": [
+    { title: "3D Printing for FRC: What's Legal, What to Print, and What Actually Survives a Match", description: "What FRC's rules allow for 3D printed parts, which ones are worth printing versus machining, and the filament and settings that survive a match.", href: "/blog/frc-3d-printing", readMins: 8 },
     { title: "FRC Scouting Sheet Template: Printable Paper Sheet + Google Form to Sheets Setup", description: "A ready-to-print FRC scouting sheet plus a Google Form to Sheets setup that auto-averages one row per scout into per-team stats, with a 2026 REBUILT note.", href: "/blog/frc-scouting-sheet-template", readMins: 6 },
     { title: "How to Recruit FRC Team Members (and Actually Keep Them)", description: "Club fair tactics, a first meeting that doesn't scare people off, real week-one work for rookies, and why teams lose members before build season even starts.", href: "/blog/frc-recruiting-new-members", readMins: 7 },
-    { title: "FRC Bumpers: Rules, How to Build Them, and Common Mistakes", description: "FRC bumpers explained: 2026 rules and dimensions, approved materials, color and weight, a step-by-step build, mounting, and common inspection mistakes.", href: "/blog/frc-bumpers-guide", readMins: 13 },
   ],
   "a779bf52-05c4-4d42-89d8-c310f520e699": [
     { title: "FRC Shop Safety and PPE: Eye Protection Rules, Machine Rules, and Real Inspections", description: "FRC shop safety: when eye protection is required, machine-specific rules, the pit safety kit, and how to run a real safety inspection.", href: "/blog/frc-shop-safety-ppe", readMins: 7 },
@@ -963,7 +963,7 @@ export const LESSON_BRIDGE: Record<string, BridgeArticle[]> = {
   "2411f38c-8437-4ce2-b47b-e59f4c4543a7": [
     { title: "How to Wire an FRC Robot: A Beginner Electrical Guide", description: "A beginner-friendly, accurate guide to wiring an FRC robot: battery, 120A breaker, PDH, roboRIO, radio, CAN bus, and the wire-gauge rules that pass inspection.", href: "/blog/how-to-wire-an-frc-robot", readMins: 5 },
     { title: "FRC PDH: The Power Distribution Hub Explained (Channels, Fuses & Wiring)", description: "A complete guide to the REV PDH (Power Distribution Hub): all 24 channels, breaker and fuse sizing, clean wiring, the switchable channel, CAN telemetry, and PDH vs PDP.", href: "/blog/frc-pdh-power-distribution-hub", readMins: 19 },
-    { title: "Playing Defense in FRC: Legal Defense, Positioning, and Picklist Value", description: "Playing defense in FRC done right: when it pays off, legal vs. illegal defense and pinning rules, driving technique, counter-defense, and picklist value.", href: "/blog/frc-defense-strategy", readMins: 20 },
+    { title: "FRC Robot Radio & Networking: Setup, IP Addresses & the 2026 Wiring Change", description: "Set up your FRC robot radio and networking right: the VH-109, the 10.TE.AM.x IP scheme, the 2026 direct-wire power change, and fixing connection drops.", href: "/blog/frc-radio-networking-guide", readMins: 13 },
   ],
   "c1a16fd1-4278-4710-8a57-5e76d1e8e91b": [
     { title: "The FRC Software Toolbox: Driver Station, Dashboards, AdvantageScope & SysId", description: "A beginner-friendly tour of the FRC software ecosystem beyond robot code: Driver Station, dashboards (Glass, Elastic, AdvantageScope), SysId, and vendor tools.", href: "/blog/frc-software-tools", readMins: 8 },
@@ -1396,7 +1396,7 @@ export const LESSON_BRIDGE: Record<string, BridgeArticle[]> = {
   "a0831721-4e74-48c2-aae1-fcf7b1f17113": [
     { title: "The Blue Alliance (TBA): How to Use FRC's Match & Team Database", description: "The Blue Alliance (TBA) is FRC's free match and team database. Navigate team, event, and match pages, set up myTBA notifications, and use its read API.", href: "/blog/the-blue-alliance-tba-guide", readMins: 18 },
     { title: "Installing WPILib and VS Code for FRC (Step by Step)", description: "Learn how to install WPILib and VS Code for FRC step by step: download the installer, create a robot project, add vendordeps, and deploy to the roboRIO.", href: "/blog/frc-wpilib-installation-guide", readMins: 20 },
-    { title: "Building an FRC Scouting App: Data Model, TBA/Statbotics APIs, and Picklists", description: "Build an FRC scouting app: match and pit scouting, a simple data model, pulling schedules and EPA from the TBA and Statbotics APIs, and building a picklist.", href: "/blog/frc-scouting-app-guide", readMins: 20 },
+    { title: "3D Printing for FRC: What's Legal, What to Print, and What Actually Survives a Match", description: "What FRC's rules allow for 3D printed parts, which ones are worth printing versus machining, and the filament and settings that survive a match.", href: "/blog/frc-3d-printing", readMins: 8 },
   ],
   "cb8b5047-aa0b-4e22-9511-043e61b52003": [
     { title: "How to Win the FIRST Impact Award (FRC's Most Prestigious Award)", description: "What the FIRST Impact Award is, how it's judged, and how to write the essay, executive summaries, and pitch that win it — the most prestigious award in FRC.", href: "/blog/how-to-win-the-impact-award", readMins: 7 },
@@ -1544,8 +1544,8 @@ export const LESSON_BRIDGE: Record<string, BridgeArticle[]> = {
   ],
   "910adfbc-849d-43f8-99d7-28753ae53afc": [
     { title: "The FRC Robot Design Process, Step by Step", description: "A clear, beginner-friendly walkthrough of the FRC robot design process, from game analysis and strategic prioritization to prototyping, CAD, and iteration.", href: "/blog/frc-robot-design-process", readMins: 4 },
-    { title: "FRC Manufacturing and Fabrication: COTS vs Custom, Tools, Materials, and Tolerances", description: "How FRC parts get made: COTS vs custom tradeoffs, shop tools, 3D printing, materials like 6061 and 7075 aluminum and polycarbonate, hole/tap standards, and tolerances.", href: "/blog/frc-manufacturing-fabrication", readMins: 17 },
     { title: "FRC Flywheel Shooter Design: Compression, Speed, Backspin, and Hooding", description: "How to design an FRC flywheel shooter: exit velocity, compression, flywheel inertia and RPM recovery, single vs dual wheels, backspin, hooding, motors, and tuning.", href: "/blog/frc-shooter-design-guide", readMins: 17 },
+    { title: "FRC Manufacturing and Fabrication: COTS vs Custom, Tools, Materials, and Tolerances", description: "How FRC parts get made: COTS vs custom tradeoffs, shop tools, 3D printing, materials like 6061 and 7075 aluminum and polycarbonate, hole/tap standards, and tolerances.", href: "/blog/frc-manufacturing-fabrication", readMins: 17 },
   ],
   "ff33e2a3-a9aa-48c7-a5ce-1a762864a95e": [
     { title: "FRC Manufacturing and Fabrication: COTS vs Custom, Tools, Materials, and Tolerances", description: "How FRC parts get made: COTS vs custom tradeoffs, shop tools, 3D printing, materials like 6061 and 7075 aluminum and polycarbonate, hole/tap standards, and tolerances.", href: "/blog/frc-manufacturing-fabrication", readMins: 17 },
@@ -1638,7 +1638,7 @@ export const LESSON_BRIDGE: Record<string, BridgeArticle[]> = {
   "e63d577c-b07b-4d35-b9fb-91f98ca56f73": [
     { title: "How to Recruit FRC Team Members (and Actually Keep Them)", description: "Club fair tactics, a first meeting that doesn't scare people off, real week-one work for rookies, and why teams lose members before build season even starts.", href: "/blog/frc-recruiting-new-members", readMins: 7 },
     { title: "How to Read the FRC Game Manual (Without Getting Lost)", description: "The FRC game manual is the season's official rulebook. Here's how to read the FRC manual without getting lost: structure, rule prefixes, scoring, and Team Updates.", href: "/blog/how-to-read-the-frc-game-manual", readMins: 7 },
-    { title: "The Blue Alliance (TBA): How to Use FRC's Match & Team Database", description: "The Blue Alliance (TBA) is FRC's free match and team database. Navigate team, event, and match pages, set up myTBA notifications, and use its read API.", href: "/blog/the-blue-alliance-tba-guide", readMins: 18 },
+    { title: "FRC Offseason Events Fall 2026: The Full Calendar", description: "Every confirmed FRC offseason event from August to December 2026 — dates, cities, fees, registration — including the ones official lists leave out.", href: "/blog/frc-offseason-events", readMins: 13 },
   ],
   "2fd8a593-eb0a-4398-9fe6-d539ac5e6f56": [
     { title: "The 2027 FRC Season Calendar: Every Deadline & Fee", description: "Every verified 2027 FRC deadline and fee: event registration rounds from Sept 24, payment due Nov 17, Kickoff on Jan 9, and what the $6,500 fee covers.", href: "/blog/frc-2027-season-calendar", readMins: 14 },
@@ -1776,8 +1776,8 @@ export const LESSON_BRIDGE: Record<string, BridgeArticle[]> = {
   ],
   "a323e8bf-adc6-472e-9b4d-b429f98e715a": [
     { title: "The Blue Alliance (TBA): How to Use FRC's Match & Team Database", description: "The Blue Alliance (TBA) is FRC's free match and team database. Navigate team, event, and match pages, set up myTBA notifications, and use its read API.", href: "/blog/the-blue-alliance-tba-guide", readMins: 18 },
-    { title: "FRC Scouting Sheet Template: Printable Paper Sheet + Google Form to Sheets Setup", description: "A ready-to-print FRC scouting sheet plus a Google Form to Sheets setup that auto-averages one row per scout into per-team stats, with a 2026 REBUILT note.", href: "/blog/frc-scouting-sheet-template", readMins: 6 },
     { title: "OPR, DPR & CCWM in FRC: What Every Scouting Stat Actually Means", description: "OPR, DPR, and CCWM explained for FRC scouts: how each stat is computed with least squares, what it really measures, where it misleads, and how EPA compares.", href: "/blog/frc-opr-dpr-ccwm-explained", readMins: 18 },
+    { title: "FRC Scouting Sheet Template: Printable Paper Sheet + Google Form to Sheets Setup", description: "A ready-to-print FRC scouting sheet plus a Google Form to Sheets setup that auto-averages one row per scout into per-team stats, with a 2026 REBUILT note.", href: "/blog/frc-scouting-sheet-template", readMins: 6 },
   ],
   "61ede983-ed12-4c16-8d12-07e5935f4804": [
     { title: "Building an FRC Scouting App: Data Model, TBA/Statbotics APIs, and Picklists", description: "Build an FRC scouting app: match and pit scouting, a simple data model, pulling schedules and EPA from the TBA and Statbotics APIs, and building a picklist.", href: "/blog/frc-scouting-app-guide", readMins: 20 },

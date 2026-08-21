@@ -32,6 +32,15 @@ export const ARTICLE_BRIDGE: Record<string, ArticleBridge> = {
       { title: "Tank and West Coast Drive", summary: "The classic, robust skid-steer drivetrain that most teams start with and many championship teams still use.", href: "/guides/mechanical-build/drivetrains/tank-and-west-coast-drive" },
     ],
   },
+  "frc-3d-printing": {
+    dept: "electrical-wiring",
+    deptName: "Electrical & Wiring",
+    deptCount: 35,
+    lessons: [
+      { title: "The Legal Wiring Rules (Game Manual)", summary: "A guided tour of the FRC Game Manual electrical rules (R601-R626, R709) that inspectors check.", href: "/guides/electrical-wiring/connections-rules-troubleshooting/legal-wiring-rules" },
+      { title: "The Pre-Match and Post-Crash Checklists", summary: "Repeatable checklists that catch failures in the pit before they cost you a match, and a fast triage after a hard hit.", href: "/guides/electrical-wiring/common-mistakes-troubleshooting/pre-match-post-crash-checklists" },
+    ],
+  },
   "frc-brownout": {
     dept: "electrical-wiring",
     deptName: "Electrical & Wiring",
