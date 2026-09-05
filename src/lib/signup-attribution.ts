@@ -33,6 +33,12 @@ const REFERRAL_SURFACES = new Set([
   // four encode the same URL; see src/components/team/invite-link.ts, which
   // carries this exact string as TEAM_INVITE_VIA. KEEP: still in active use.
   "team-invite",
+  // The same TeamInvite component (copy link, share sheet, QR, printable
+  // handout) rendered in the dashboard's invite slot instead of the weaker
+  // share-only card that sat there. Tagged separately from "team-invite" on
+  // purpose: both placements are live, and without distinct tags there is no
+  // way to tell afterwards which one earned a signup.
+  "team-invite-dashboard",
 ]);
 
 /** Reduce an untrusted `?via=` to an allow-listed surface, or "" if unknown. */

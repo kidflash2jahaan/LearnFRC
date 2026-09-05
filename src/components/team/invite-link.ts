@@ -30,11 +30,18 @@ export const TEAM_INVITE_VIA = "team-invite";
 
 const SITE = "https://learnfrc.com";
 
-/** The invite link for a member, credited to their username. */
-export function teamInviteUrl(username: string): string {
-  return `${SITE}/signup?ref=${encodeURIComponent(
-    username
-  )}&via=${TEAM_INVITE_VIA}`;
+/**
+ * The invite link for a member, credited to their username.
+ *
+ * `via` defaults to the /teams surface. The dashboard placement passes its own
+ * tag so the two can be told apart in `referral_surface` later; anything passed
+ * here must also be allow-listed in REFERRAL_SURFACES or attribution drops it.
+ */
+export function teamInviteUrl(
+  username: string,
+  via: string = TEAM_INVITE_VIA
+): string {
+  return `${SITE}/signup?ref=${encodeURIComponent(username)}&via=${via}`;
 }
 
 /**
@@ -42,6 +49,9 @@ export function teamInviteUrl(username: string): string {
  * the printed sheet. Derived from `teamInviteUrl` rather than re-assembled, so
  * the printed text and the encoded QR are the same URL by construction.
  */
-export function teamInviteDisplayUrl(username: string): string {
-  return teamInviteUrl(username).replace(/^https?:\/\//, "");
+export function teamInviteDisplayUrl(
+  username: string,
+  via: string = TEAM_INVITE_VIA
+): string {
+  return teamInviteUrl(username, via).replace(/^https?:\/\//, "");
 }

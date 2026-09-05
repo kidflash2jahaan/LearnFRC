@@ -18,7 +18,7 @@ import {
 import { Avatar } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { DepartmentCard } from "@/components/department-card";
-import { InviteCard } from "@/components/leaderboard/invite-card";
+import { TeamInvite } from "@/components/team/team-invite";
 import { FirstRunGuide } from "@/components/dashboard/first-run-guide";
 import { FirstRunLaunch } from "@/components/onboarding/first-run-launch";
 import { readStartGoalId } from "@/lib/recommend";
@@ -39,7 +39,12 @@ import {
   type AchievementView,
 } from "@/components/dashboard/achievement-badge";
 import { getSession } from "@/lib/auth";
-import { getDepartments, getDepartmentBySlug, getReferralCount } from "@/lib/queries";
+import {
+  getDepartments,
+  getDepartmentBySlug,
+  getReferralCount,
+  getTeamMemberCount,
+} from "@/lib/queries";
 import { suggestUsername } from "@/lib/onboarding";
 import { getProfileSetupState, needsUsernameSetup } from "@/lib/onboarding-server";
 import { createClient } from "@/lib/supabase/server";
@@ -241,6 +246,13 @@ export default async function DashboardPage() {
   const firstName = displayName.split(" ")[0];
 
   const referralCount = profile?.username ? await getReferralCount(user.id) : 0;
+  // Tone for the invite below. 109 of 144 teams here are a single person, and
+  // the solo copy is a materially different (and better) ask for them, so it is
+  // worth one head-only count to get it right.
+  const teamMemberCount =
+    profile?.team_number != null
+      ? await getTeamMemberCount(profile.team_number)
+      : 1;
 
   // ── Invite: ask in proportion to what the learner has actually done ──
   // Referral converts far better than any other channel precisely because the
@@ -285,10 +297,12 @@ export default async function DashboardPage() {
           {inviteLead}
         </p>
       )}
-      <InviteCard
+      <TeamInvite
         username={profile.username}
-        count={referralCount}
-        via="dashboard"
+        teamNumber={profile.team_number ?? null}
+        referralCount={referralCount}
+        tone={teamMemberCount <= 1 ? "solo" : "crew"}
+        via="team-invite-dashboard"
       />
     </div>
   ) : null;

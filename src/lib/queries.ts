@@ -522,6 +522,27 @@ export const getTeamLeaderboard = unstable_cache(
  * Left uncached: it shows live per-member progress and isn't on the hot public
  * catalog path.
  */
+/**
+ * How many accounts carry this team number. Head-only count, so no rows leave
+ * the database and none of the column-grant concerns around `profiles` apply.
+ *
+ * Exists so the dashboard can pick the invite's tone without paying for
+ * `getTeamByNumber`, which fetches every member plus their whole lesson_progress
+ * history. The dashboard only needs to know "is this person on their own".
+ */
+export const getTeamMemberCount = unstable_cache(
+  async (teamNumber: number): Promise<number> => {
+    const admin = createAdminClient();
+    const { count } = await admin
+      .from("profiles")
+      .select("id", { count: "exact", head: true })
+      .eq("team_number", teamNumber);
+    return count ?? 0;
+  },
+  ["team-member-count"],
+  { revalidate: 300, tags: ["catalog"] }
+);
+
 export async function getTeamByNumber(
   teamNumber: number
 ): Promise<{ teamNumber: number; totalLessons: number; members: TeamMemberProgress[] }> {

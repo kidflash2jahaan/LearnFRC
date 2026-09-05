@@ -36,6 +36,7 @@ export function TeamInvite({
   teamNumber,
   referralCount,
   tone = "crew",
+  via,
 }: {
   /** Referral username. Never null — see the note above. */
   username: string;
@@ -48,9 +49,15 @@ export function TeamInvite({
    * roster. The invite is not a footer there, it is the page's whole answer.
    */
   tone?: "solo" | "crew";
+  /**
+   * Surface tag for `?via=`. Defaults to the /teams tag. The dashboard slot
+   * passes its own so the two placements stay distinguishable in
+   * `referral_surface`; see src/lib/signup-attribution.ts.
+   */
+  via?: string;
 }) {
-  const link = teamInviteUrl(username);
-  const shown = teamInviteDisplayUrl(username);
+  const link = teamInviteUrl(username, via);
+  const shown = teamInviteDisplayUrl(username, via);
   const solo = tone === "solo";
   const teamLabel = teamNumber ? `#${teamNumber}` : "your team";
 
