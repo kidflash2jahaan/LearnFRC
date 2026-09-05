@@ -52,6 +52,16 @@ const PRINT_CSS = `
     box-shadow: none !important;
     background: #ffffff !important;
   }
+  /* Browsers strip background colours when printing, to save ink. On this
+     sheet that is not a cosmetic loss: the numbered step markers are white
+     text on a #1d4fd0 circle, so dropping the fill prints white on white and
+     the numbers disappear entirely. Opt back in so the handout prints as
+     designed. The sheet's own background stays white above, so this costs
+     ink only where the design actually uses colour. */
+  #sheet, #sheet * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
   @page { size: portrait; margin: 0.55in; }
 }
 `;
