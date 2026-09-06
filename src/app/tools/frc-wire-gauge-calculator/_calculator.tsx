@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 
 /* ------------------------------------------------------------------ *
- * VERIFIED DATA — every number below is sourced in tools_verified.json
+ * VERIFIED DATA: every number below is sourced in tools_verified.json
  * (FRC Wire Gauge & Voltage-Drop / Breaker Calculator).
  * ------------------------------------------------------------------ */
 
@@ -31,13 +31,13 @@ const RESISTANCE_OHM_PER_1000FT: Readonly<Record<number, number>> = {
 /** AWG gauges offered, thick -> thin. */
 const AWG_OPTIONS: readonly number[] = [6, 8, 10, 12, 14, 16, 18, 20, 22, 24];
 
-/** Copper resistivity (annealed, 100% IACS) at 20 C — for the diameter/area readout. */
+/** Copper resistivity (annealed, 100% IACS) at 20 C, for the diameter/area readout. */
 const COPPER_RESISTIVITY_OHM_M = 1.7241e-8; // ohm*m, confidence "certain"
 
 /** Copper temperature coefficient of resistance at 20 C. Confidence "high". */
 const DEFAULT_ALPHA_PER_C = 0.00393; // per degree C (IEC 60028 / CRC Handbook)
 
-/** Round-trip conductor factor — supply + return. Physics identity. */
+/** Round-trip conductor factor: supply + return. Physics identity. */
 const ROUND_TRIP_FACTOR = 2;
 
 /** Nominal FRC battery / system voltage. R601-A, confidence "high" (editable). */
@@ -63,37 +63,37 @@ const CIRCUIT_TYPES: readonly CircuitType[] = [
     id: "main",
     label: "120 A main power path (battery / main breaker / PD board)",
     minAwg: 6,
-    rule: "R609 — 6 AWG (7 SWG / 16 mm²) or larger",
+    rule: "R609: 6 AWG (7 SWG / 16 mm²) or larger",
   },
   {
     id: "b40",
-    label: "31–40 A breaker-protected circuit (e.g. drive motor controller)",
+    label: "31-40 A breaker-protected circuit (e.g. drive motor controller)",
     minAwg: 12,
-    rule: "R622 Table 8-4 — 12 AWG (13 SWG / 4 mm²)",
+    rule: "R622 Table 8-4: 12 AWG (13 SWG / 4 mm²)",
   },
   {
     id: "b30",
-    label: "21–30 A breaker-protected circuit",
+    label: "21-30 A breaker-protected circuit",
     minAwg: 14,
-    rule: "R622 Table 8-4 — 14 AWG (16 SWG / 2.5 mm²)",
+    rule: "R622 Table 8-4: 14 AWG (16 SWG / 2.5 mm²)",
   },
   {
     id: "b20",
-    label: "6–20 A breaker / 11–20 A fuse; PD board to VRM-RPM / PCM-PH",
+    label: "6-20 A breaker / 11-20 A fuse; PD board to VRM-RPM / PCM-PH",
     minAwg: 18,
-    rule: "R622 Table 8-4 — 18 AWG (19 SWG / 1 mm²)",
+    rule: "R622 Table 8-4: 18 AWG (19 SWG / 1 mm²)",
   },
   {
     id: "b5",
     label: "≤5 A breaker / ≤10 A fuse / motor power adapter board",
     minAwg: 22,
-    rule: "R622 Table 8-4 — 22 AWG (22 SWG / 0.5 mm²)",
+    rule: "R622 Table 8-4: 22 AWG (22 SWG / 0.5 mm²)",
   },
   {
     id: "vrm2",
     label: "VRM 2 A circuits / ≤2 A fuse-protected circuit",
     minAwg: 24,
-    rule: "R622 Table 8-4 — 24 AWG (24 SWG / 0.25 mm²)",
+    rule: "R622 Table 8-4: 24 AWG (24 SWG / 0.25 mm²)",
   },
 ];
 
@@ -373,7 +373,7 @@ export default function WireGaugeCalculator({
           <p className="nb-stamp">
             <b>
               {rangeMode
-                ? `${fmt(derived.low.vDrop, 2)}–${fmt(derived.high.vDrop, 2)}`
+                ? `${fmt(derived.low.vDrop, 2)}-${fmt(derived.high.vDrop, 2)}`
                 : fmt(derived.low.vDrop, 2)}
             </b>
             <span>volts dropped over the run</span>
@@ -381,7 +381,7 @@ export default function WireGaugeCalculator({
           <p className="nb-stamp">
             <b>
               {rangeMode
-                ? `${fmt(derived.low.percent, 1)}–${fmt(derived.high.percent, 1)}`
+                ? `${fmt(derived.low.percent, 1)}-${fmt(derived.high.percent, 1)}`
                 : fmt(derived.low.percent, 1)}
               %
             </b>
@@ -390,7 +390,7 @@ export default function WireGaugeCalculator({
           <p className="nb-stamp">
             <b>
               {rangeMode
-                ? `${fmt(derived.high.vLoad, 2)}–${fmt(derived.low.vLoad, 2)}`
+                ? `${fmt(derived.high.vLoad, 2)}-${fmt(derived.low.vLoad, 2)}`
                 : fmt(derived.low.vLoad, 2)}
             </b>
             <span>volts left at the load</span>

@@ -177,12 +177,12 @@ function relatedTerms(self: GlossaryTerm, n = 4): GlossaryTerm[] {
  */
 function buildDescription(t: GlossaryTerm): string {
   const MAX = 160;
-  let d = `${t.term} — ${t.definition}`;
+  let d = `${t.term}: ${t.definition}`;
   if (d.length < 140) d += " Part of the LearnFRC glossary of FRC terms and acronyms.";
   if (d.length > MAX) {
     const cut = d.slice(0, MAX - 1);
     const lastSpace = cut.lastIndexOf(" ");
-    d = (lastSpace > 120 ? cut.slice(0, lastSpace) : cut).replace(/[\s—:-]+$/, "") + "…";
+    d = (lastSpace > 120 ? cut.slice(0, lastSpace) : cut).replace(/[\s\u2014:-]+$/, "") + "…";
   }
   return d;
 }
@@ -216,7 +216,7 @@ export async function generateMetadata({
   const url = `${SITE}/glossary/${term}`;
   const description = buildDescription(t);
   return {
-    title: `${t.term} — FRC Glossary`,
+    title: `${t.term}, FRC Glossary`,
     description,
     alternates: { canonical: url },
     // A term with no hand-written "in a match" section is a definition and
@@ -224,7 +224,7 @@ export async function generateMetadata({
     // doesn't go in the index: thin pages at this scale are a real liability.
     ...(hasGlossaryDepth(t) ? {} : { robots: { index: false, follow: true } }),
     openGraph: {
-      title: `${t.term} — FRC Glossary`,
+      title: `${t.term}, FRC Glossary`,
       description,
       url,
       type: "article",

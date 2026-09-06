@@ -51,7 +51,7 @@ export function ShareButton({
         await navigator.share({ text, url });
         return;
       } catch {
-        /* cancelled or unsupported — fall through to copy */
+        /* cancelled or unsupported, so fall through to copy */
       }
     }
     try {

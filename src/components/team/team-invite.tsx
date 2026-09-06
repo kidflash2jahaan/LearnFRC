@@ -5,7 +5,7 @@ import { CopyLink } from "./copy-link";
 import { teamInviteUrl, teamInviteDisplayUrl } from "./invite-link";
 
 /**
- * "Get your team on here" — the invite surface for /teams and the dashboard.
+ * "Get your team on here": the invite surface for /teams and the dashboard.
  *
  * THREE CONTROLS, ONE LINK
  *  - the link itself, written out and copyable (group chat, Discord, a text)

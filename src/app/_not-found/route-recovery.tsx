@@ -8,7 +8,7 @@ import { usePathname } from "next/navigation";
 /*  "Did you mean …" recovery for a 404                                  */
 /*                                                                       */
 /*  Stale links posted years ago on Chief Delphi get truncated, wrapped, */
-/*  or retyped — e.g. .../what-first-and-frc-are/what-is- instead of     */
+/*  or retyped, e.g. .../what-first-and-frc-are/what-is- instead of      */
 /*  .../what-is-first. Those readers currently hit a dead end. This      */
 /*  matches the requested path against the real content index and offers */
 /*  the closest pages. It never auto-redirects: the URL genuinely is a   */
@@ -35,7 +35,7 @@ function segments(path: string): string[] {
   return path.replace(/^\/+|\/+$/g, "").split("/").filter(Boolean);
 }
 
-/** Dice coefficient over character bigrams — cheap fuzzy string similarity. */
+/** Dice coefficient over character bigrams: cheap fuzzy string similarity. */
 function similarity(a: string, b: string): number {
   if (!a || !b) return 0;
   if (a === b) return 1;
@@ -82,7 +82,7 @@ export function RouteRecovery() {
 
   React.useEffect(() => {
     let alive = true;
-    // Deep paths only — a bare typo like "/gudies" has nothing to recover to
+    // Deep paths only: a bare typo like "/gudies" has nothing to recover to
     // beyond the routes already on the page.
     if (segments(pathname).length < 2) return;
 

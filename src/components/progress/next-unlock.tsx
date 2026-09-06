@@ -3,7 +3,7 @@ import type { BadgeProgress } from "@/lib/streaks";
 import { cn } from "@/lib/utils";
 
 /**
- * "Next unlock" — one reachable badge, and the distance to it.
+ * "Next unlock": one reachable badge, and the distance to it.
  *
  * The achievements grid is eleven badges and a new account has none of them, so
  * the section reads as eleven locked boxes: a scoreboard of things not done.

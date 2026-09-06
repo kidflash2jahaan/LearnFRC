@@ -7,15 +7,15 @@ import Calculator from "./_calculator";
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com";
 
 export const metadata: Metadata = {
-  title: "FRC Current Draw & Brownout Calculator — Motor Current Budget",
+  title: "FRC Current Draw & Brownout Calculator: Motor Current Budget",
   description:
-    "Free FRC current-budget and brownout calculator. Add each mechanism's motor current against the 120 A main breaker and the roboRIO brownout thresholds to see what can safely run at once — before you brown out at competition. Uses official FIRST figures and vendor motor specs.",
+    "Free FRC current-budget and brownout calculator. Add each mechanism's motor current against the 120 A main breaker and the roboRIO brownout thresholds to see what can safely run at once, before you brown out at competition. Uses official FIRST figures and vendor motor specs.",
   alternates: { canonical: `${SITE}/tools/frc-current-budget` },
   openGraph: {
     images: [{ url: `${SITE}/opengraph-image`, width: 1200, height: 630 }],
-    title: "FRC Current Budget & Brownout Checker (Free) — LearnFRC",
+    title: "FRC Current Budget & Brownout Checker (Free) · LearnFRC",
     description:
-      "Total motor current vs the 120 A main breaker and roboRIO brownout thresholds — avoid browning out.",
+      "Total motor current vs the 120 A main breaker and roboRIO brownout thresholds. Avoid browning out.",
     url: `${SITE}/tools/frc-current-budget`,
     type: "website",
   },
@@ -74,7 +74,7 @@ export default async function Page() {
               name: "What causes an FRC robot to brown out?",
               acceptedAnswer: {
                 "@type": "Answer",
-                text: "A brownout happens when battery voltage sags below the roboRIO's threshold (around 6.8 V on the roboRIO 2) because too much current is being drawn at once — often several motors stalling or accelerating at the same instant. To protect itself, the roboRIO sheds load (PWM outputs and some ports cut out), so the robot briefly stops responding.",
+                text: "A brownout happens when battery voltage sags below the roboRIO's threshold (around 6.8 V on the roboRIO 2) because too much current is being drawn at once, often several motors stalling or accelerating at the same instant. To protect itself, the roboRIO sheds load (PWM outputs and some ports cut out), so the robot briefly stops responding.",
               },
             },
             {
@@ -90,7 +90,7 @@ export default async function Page() {
               name: "How can I prevent brownouts?",
               acceptedAnswer: {
                 "@type": "Answer",
-                text: "Limit peak current: set current limits on your motor controllers, avoid commanding several high-draw mechanisms to full power simultaneously, use a healthy, freshly-charged battery with clean connections, and keep wire gauge adequate. Budgeting your current draw ahead of time — as this calculator does — is the first step.",
+                text: "Limit peak current: set current limits on your motor controllers, avoid commanding several high-draw mechanisms to full power simultaneously, use a healthy, freshly-charged battery with clean connections, and keep wire gauge adequate. Budgeting your current draw ahead of time, as this calculator does, is the first step.",
               },
             },
           ],

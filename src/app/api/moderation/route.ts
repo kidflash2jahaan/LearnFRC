@@ -275,6 +275,6 @@ export async function POST(req: Request) {
   // Revalidate cached content if anything was published, so it goes live.
   if (done.some((x) => x.decision !== "rejected")) revalidateTag("catalog", "max");
 
-  // No email here — the scheduled routine folds `done` into one combined digest.
+  // No email here: the scheduled routine folds `done` into one combined digest.
   return NextResponse.json({ applied: done.length, done });
 }

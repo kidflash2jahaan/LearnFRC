@@ -35,11 +35,11 @@ export async function generateMetadata({
   const { username } = await params;
   return {
     title: `@${username}`,
-    description: `@${username}'s FRC learning profile on LearnFRC — XP, level, completed lessons, and achievements across every department.`,
+    description: `@${username}'s FRC learning profile on LearnFRC: XP, level, completed lessons, and achievements across every department.`,
     alternates: { canonical: `/u/${username}` },
     openGraph: {
       title: `@${username} · LearnFRC`,
-      description: `@${username}'s FRC learning profile — XP, level, and achievements on LearnFRC.`,
+      description: `@${username}'s FRC learning profile: XP, level, and achievements on LearnFRC.`,
       url: `/u/${username}`,
       type: "profile",
     },
@@ -70,8 +70,8 @@ export default async function PublicProfilePage({
 }) {
   const { username } = await params;
   // Service-role, NOT the request-scoped client. `profiles` and
-  // `user_achievements` are no longer SELECTable by the anon API role — that is
-  // what stops a stranger from paging every account off /rest/v1 — and a
+  // `user_achievements` are no longer SELECTable by the anon API role, which
+  // is what stops a stranger from paging every account off /rest/v1. A
   // logged-out visitor's client IS the anon role, so this page has to read
   // server-side to stay public and indexable.
   //
@@ -89,7 +89,7 @@ export default async function PublicProfilePage({
   if (!profile) notFound();
 
   const p = profile as Profile;
-  // Public profile — identify by username only; real names are never public.
+  // Public profile: identify by username only; real names are never public.
   const displayName = p.username || username;
   const level = Math.floor(p.xp / 100) + 1;
   const xpIntoLevel = p.xp % 100;

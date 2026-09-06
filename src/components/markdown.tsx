@@ -117,7 +117,7 @@ export function Markdown({
   /** Hard cap on auto-links for this document. */
   glossaryLinkMax?: number;
 }) {
-  // Recomputed per render (cheap — one lesson's worth of text) so the id
+  // Recomputed per render (cheap, one lesson's worth of text) so the id
   // sequence always matches this exact content string; a mutable index
   // walks it in document order as ReactMarkdown renders each heading node.
   const headings = extractHeadings(content);
@@ -170,7 +170,7 @@ export function Markdown({
             );
           },
           a: ({ node: _node, href, className: nodeClass, ...p }) => {
-            // Internal links (same-origin paths/anchors) must stay internal —
+            // Internal links (same-origin paths/anchors) must stay internal:
             // rendering them target=_blank made crawlers count our own lesson
             // cross-links as outbound external links. External links keep the
             // new-tab + noopener treatment.

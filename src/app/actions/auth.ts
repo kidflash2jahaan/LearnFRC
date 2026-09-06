@@ -48,8 +48,8 @@ export async function signIn(
     const admin = createAdminClient();
     // Service-role: the caller is signed OUT here, so `supabase` is the anon
     // role, and anon can no longer SELECT `profiles` at all. Single-row lookup
-    // by exact username, `id` only — it resolves one handle the user already
-    // typed, it can't be walked into a roster.
+    // by exact username, `id` only: it resolves one handle the user already
+    // typed, so it can't be walked into a roster.
     const { data: prof } = await admin
       .from("profiles")
       .select("id")
@@ -64,7 +64,7 @@ export async function signIn(
   const { error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) return { error: error.message };
 
-  // No revalidatePath here — it would rebuild /login inside the action
+  // No revalidatePath here: it would rebuild /login inside the action
   // response, whose authed-redirect then soft-navigates and unmounts the form
   // before the client can run window.location.assign(redirectTo). The full
   // page load the client performs makes revalidation redundant anyway.
@@ -82,7 +82,7 @@ export async function signUp(
   const teamNumber = String(formData.get("team_number") || "").trim();
   const next = String(formData.get("next") || "/dashboard");
   // A `ref` is normally a referrer's username. Conversion hooks (lesson/article
-  // signup CTAs) instead pass a known hook token that names the surface — those
+  // signup CTAs) instead pass a known hook token that names the surface. Those
   // are recorded as a last-touch `source`, not treated as a referral.
   const rawRef = String(formData.get("ref") || "").trim().toLowerCase();
   const hookSource = hookSourceFor(rawRef);
@@ -122,7 +122,7 @@ export async function signUp(
 
   const supabase = await createClient();
 
-  // Client IP (Vercel forwards it) — used for the ban list and stored per-account
+  // Client IP (Vercel forwards it), used for the ban list and stored per-account
   // so a repeat offender's whole IP can be banned by the scheduled scan.
   const hdrs = await headers();
   const signupIp =
@@ -130,7 +130,7 @@ export async function signUp(
     hdrs.get("x-real-ip") ||
     null;
 
-  // Ban list — reject banned emails or banned IPs with a generic message.
+  // Ban list: reject banned emails or banned IPs with a generic message.
   {
     const banAdmin = createAdminClient();
     const [{ data: bannedEmail }, { data: bannedIp }] = await Promise.all([
@@ -147,7 +147,7 @@ export async function signUp(
 
   // Friendly pre-check for username collision (avoids cryptic DB error).
   // Service-role: signup runs signed OUT, and the anon role can no longer
-  // SELECT `profiles`. Exact-match, `id` only — a taken/not-taken answer for
+  // SELECT `profiles`. Exact-match, `id` only: a taken/not-taken answer for
   // one handle, which the unique index would give away on submit anyway.
   if (username) {
     const { data: taken } = await createAdminClient()
@@ -175,7 +175,7 @@ export async function signUp(
   if (error) return { error: error.message };
 
   // Supabase's signUp deliberately succeeds (no error, no email) when the email
-  // is already registered — it returns a user with an EMPTY identities array to
+  // is already registered. It returns a user with an EMPTY identities array to
   // avoid leaking which emails exist. Without this check the user is sent to a
   // dead "check your inbox" screen for an email that never arrives. Detect it
   // and route them to log in instead. Skip the profile update below so we don't
@@ -194,7 +194,7 @@ export async function signUp(
   // The profile row is created by a trigger. Self-referrals are blocked.
   if (data.user) {
     const cookieStore = await cookies();
-    // Shared with the Google/OAuth path (/auth/callback) — see
+    // Shared with the Google/OAuth path (/auth/callback); see
     // src/lib/signup-attribution.ts. The reward itself is paid later, on email
     // confirmation, which is what keeps it farm-resistant here.
     await attributeSignup({
@@ -207,7 +207,7 @@ export async function signUp(
     });
   }
 
-  // Email confirmation is required — send them to a "check your inbox" screen.
+  // Email confirmation is required, so send them to a "check your inbox" screen.
   redirect(`/auth/verify-email?email=${encodeURIComponent(email)}`);
 }
 
@@ -236,7 +236,7 @@ export async function resendConfirmation(
 export type ResetState = { error?: string; success?: boolean } | undefined;
 
 /**
- * Step 1 of password reset — email the user a recovery link. The recovery email
+ * Step 1 of password reset: email the user a recovery link. The recovery email
  * template links to /auth/confirm?type=recovery (token-hash flow, cross-device
  * safe), which verifies and lands them on /account/password to set a new one.
  *
@@ -269,7 +269,7 @@ export async function requestPasswordReset(
 }
 
 /**
- * Step 2 of password reset — set the new password. Requires an active session
+ * Step 2 of password reset: set the new password. Requires an active session
  * (the recovery session minted by /auth/confirm). No session ⇒ the link was
  * never followed or has expired.
  */

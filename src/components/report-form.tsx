@@ -8,7 +8,7 @@ import * as React from "react";
  * This exists because the site had no reachable contact path at all: the domain
  * publishes no MX record, so every `mailto:` bounced, and the only "tell us
  * something is wrong" control on the site asks signed-out readers to create an
- * account first. Nothing here requires one — the email field is optional and
+ * account first. Nothing here requires one: the email field is optional and
  * exists only so someone who wants an answer can get one.
  *
  * Deliberately plain: no motion (nothing to desync at hydration) and no
@@ -46,7 +46,7 @@ export function ReportForm({
   const [error, setError] = React.useState<string | null>(null);
 
   // The form is replaced by the confirmation panel, so keyboard focus would
-  // otherwise land back at the top of the document. Move it to the panel — that
+  // otherwise land back at the top of the document. Move it to the panel, which
   // also guarantees the confirmation is announced, which a freshly-inserted
   // live region does not always do.
   React.useEffect(() => {
@@ -73,7 +73,7 @@ export function ReportForm({
         body: JSON.stringify({ kind, message, page, email }),
       });
       // The endpoint always answers with JSON, but a proxy or an offline tab
-      // can hand back something else — don't let that surface as a raw crash.
+      // can hand back something else, so don't let that surface as a raw crash.
       const data: { ok?: boolean; error?: string } | null = await res
         .json()
         .catch(() => null);

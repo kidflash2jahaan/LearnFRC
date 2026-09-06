@@ -105,7 +105,7 @@ function sentencesOf(s?: string | null): string[] {
 /** Trim to `max` chars on a word boundary, no ellipsis (titles must read clean). */
 function clampWords(s: string, max: number): string {
   if (s.length <= max) return s;
-  return s.slice(0, max).replace(/[\s,;:—-]+\S*$/, "").trim();
+  return s.slice(0, max).replace(/[\s,;:\u2014-]+\S*$/, "").trim();
 }
 
 /**
@@ -157,9 +157,9 @@ function moduleTitleTag(title: string, kw: string | undefined, n: number): strin
   const plural = n === 1 ? "Lesson" : "Lessons";
   if (!kw) {
     return (
-      [`${title} — ${n} FRC ${plural}`, `${title} — FRC`].find(
+      [`${title}, ${n} FRC ${plural}`, `${title}, FRC`].find(
         (c) => c.length <= TITLE_MAX
-      ) ?? `${clampWords(title, TITLE_MAX - 6)} — FRC`
+      ) ?? `${clampWords(title, TITLE_MAX - 6)}, FRC`
     );
   }
   const base = dedupeDeptWord(title, kw);
@@ -168,17 +168,17 @@ function moduleTitleTag(title: string, kw: string | undefined, n: number): strin
     ? [
         // A title that already contains a colon gets the qualifier as a suffix,
         // so we never emit an unreadable "FRC X: Y: Z"…
-        `${base} — ${n} FRC ${kw} ${plural}`,
-        `${base} — FRC ${kw}`,
+        `${base}, ${n} FRC ${kw} ${plural}`,
+        `${base}, FRC ${kw}`,
         // …unless it's too long to keep whole, at which point the half after
         // the colon is the part that names the subject.
-        `FRC ${kw}: ${spec} — ${n} ${plural}`,
+        `FRC ${kw}: ${spec}, ${n} ${plural}`,
         `FRC ${kw}: ${spec}`,
       ]
     : [
-        `FRC ${kw}: ${base} — ${n} ${plural}`,
+        `FRC ${kw}: ${base}, ${n} ${plural}`,
         `FRC ${kw}: ${base}`,
-        `${base} — FRC ${kw}`,
+        `${base}, FRC ${kw}`,
       ];
   const fit = candidates.find((c) => c.length <= TITLE_MAX);
   if (fit) return fit;
@@ -230,7 +230,7 @@ function moduleDescription({
     const ov = squash(overview);
     lead = ov
       ? `${clampWords(ov, DESC_MAX - 1)}…`
-      : `${title} — ${n} free FRC ${plural} in the LearnFRC ${deptName} guide.`;
+      : `${title}. ${n} free FRC ${plural} in the LearnFRC ${deptName} guide.`;
   } else if (lead.length < 70 && i < sents.length) {
     // "Start here." is a legal sentence and a useless snippet. When the lead is
     // this short only because the NEXT sentence wouldn't fit whole, take a
@@ -331,7 +331,7 @@ function moduleFit({
   const plural = lessons === 1 ? "lesson" : "lessons";
 
   const where = isPre
-    ? `${title} is the prerequisite module of the ${deptName} guide — the ground the ${count - 1} numbered modules after it assume you already have`
+    ? `${title} is the prerequisite module of the ${deptName} guide. It is the ground the ${count - 1} numbered modules after it assume you already have`
     : !prev
       ? `${title} opens the ${deptName} guide`
       : !next
@@ -531,7 +531,7 @@ function moduleTerms(text: {
 function shortDefinition(def: string): string {
   const first = sentencesOf(def)[0] ?? squash(def);
   if (first.length <= 165) return first;
-  return `${first.slice(0, 164).replace(/[\s,;:—-]+\S*$/, "")}…`;
+  return `${first.slice(0, 164).replace(/[\s,;:\u2014-]+\S*$/, "")}…`;
 }
 
 // ─── Articles that genuinely cover this module ─────────────────────────────
@@ -664,7 +664,7 @@ export default async function ModulePage({
   // sentence derived from where this module sits in the department.
   const overview =
     squash(mod.overview) ||
-    `${mod.title} is ${isPre ? "the recommended starting point" : `module ${label}`} of ${modules.length} in the LearnFRC ${dept.name} guide — ${lessons.length} free ${lessons.length === 1 ? "lesson" : "lessons"} you can read in any order.`;
+    `${mod.title} is ${isPre ? "the recommended starting point" : `module ${label}`} of ${modules.length} in the LearnFRC ${dept.name} guide: ${lessons.length} free ${lessons.length === 1 ? "lesson" : "lessons"} you can read in any order.`;
 
   const fit = moduleFit({
     title: mod.title,
@@ -733,7 +733,7 @@ export default async function ModulePage({
         data={{
           "@context": "https://schema.org",
           "@type": "ItemList",
-          name: `${mod.title} — ${dept.name} lessons`,
+          name: `${mod.title}, ${dept.name} lessons`,
           description: squash(mod.overview) || undefined,
           url: `${SITE}${modulePath}`,
           numberOfItems: lessons.length,

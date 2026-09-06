@@ -107,7 +107,7 @@ export async function setLessonComplete(
 
   if (completed) {
     // Server-enforced quiz gate: if the lesson has a quiz, it only counts as
-    // complete when every answer is correct. Verified here — not just in the UI —
+    // complete when every answer is correct. Verified here, not just in the UI,
     // so a completion can't be recorded by calling this action directly.
     const { data: lesson } = await supabase
       .from("lessons")
@@ -150,7 +150,7 @@ export async function setLessonComplete(
     // completion is a server-verified fact (the quiz gate above has already
     // passed and the row is in lesson_progress), so the event cannot be minted
     // by anyone POSTing at /api/funnel-event. recordFunnelEvent never throws and
-    // treats a repeat as success, so neither call can fail a completion — the
+    // treats a repeat as success, so neither call can fail a completion; the
     // worst case is a missing data point. Awaited rather than fired-and-forgotten
     // because a serverless invocation can be frozen the moment this action
     // returns.

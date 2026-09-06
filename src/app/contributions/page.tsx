@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   // The root template appends " · LearnFRC", so it is not repeated here.
   title: "Community contributions",
   description:
-    "See what the LearnFRC community is improving in the open — pending edit suggestions and new-lesson proposals, plus what's recently been merged. Anyone with an account can suggest a change.",
+    "See what the LearnFRC community is improving in the open: pending edit suggestions and new-lesson proposals, plus what's recently been merged. Anyone with an account can suggest a change.",
   alternates: { canonical: "/contributions" },
 };
 

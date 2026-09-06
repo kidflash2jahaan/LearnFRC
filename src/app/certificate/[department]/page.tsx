@@ -24,7 +24,7 @@ export async function generateMetadata({
   const { department } = await params;
   const dept = await getDepartmentBySlug(department).catch(() => null);
   return {
-    title: dept ? `${dept.name} — Certificate` : "Certificate",
+    title: dept ? `${dept.name}: Certificate` : "Certificate",
     robots: { index: false, follow: false },
   };
 }

@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   // The root template appends " · LearnFRC", so don't repeat it here.
   title: "Leaderboard",
   description:
-    "See the top FRC learners climbing the ranks — earn XP, level up, and represent your team on the global LearnFRC leaderboard.",
+    "See the top FRC learners climbing the ranks. Earn XP, level up, and represent your team on the global LearnFRC leaderboard.",
   alternates: { canonical: "/leaderboard" },
   // This page lists usernames and team numbers of learners, many of whom are
   // minors. It's user-generated personal data with no search value, so keep it

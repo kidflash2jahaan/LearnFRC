@@ -41,7 +41,7 @@ export default function GlobalError({
   unstable_retry: () => void;
 }) {
   React.useEffect(() => {
-    // Error emails are disabled — log locally only.
+    // Error emails are disabled; log locally only.
     console.error(error);
   }, [error]);
 

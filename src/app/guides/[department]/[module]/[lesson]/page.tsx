@@ -110,7 +110,7 @@ export async function generateMetadata({
   // FRC-modified queries people actually type ("Assemblies and Mates" alone
   // matches nothing). Skip the qualifier when it would blow past ~60 chars.
   const keyword = DEPT_TITLE_KEYWORD[department];
-  const qualified = keyword ? `${les.title} — FRC ${keyword}` : les.title;
+  const qualified = keyword ? `${les.title}, FRC ${keyword}` : les.title;
   const pageTitle = qualified.length <= 62 ? qualified : les.title;
   return {
     title: { absolute: pageTitle },

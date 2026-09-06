@@ -23,7 +23,7 @@ export type SubteamRow = {
 };
 
 /**
- * THE SIGN-OUT SHEET — the point of the whole /teams page.
+ * THE SIGN-OUT SHEET: the point of the whole /teams page.
  *
  * Every pit has a board with the subteams down one side and names written
  * against them, and the useful thing about that board is never the names: it is

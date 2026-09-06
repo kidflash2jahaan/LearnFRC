@@ -51,7 +51,7 @@ export async function submitContentEdit(input: {
   });
   if (error) return { error: error.message };
 
-  // No admin notification on submit — the daily moderation routine reviews the
+  // No admin notification on submit: the daily moderation routine reviews the
   // queue and emails a digest only when it actually acts on something.
   return { ok: true };
 }

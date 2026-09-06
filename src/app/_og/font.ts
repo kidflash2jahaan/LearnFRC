@@ -14,21 +14,21 @@ import { fileURLToPath } from "node:url";
  * WHY THIS ISN'T `fetch(new URL(...))`
  * ------------------------------------
  * Turbopack rewrites `new URL("./x.woff", import.meta.url)` to the asset it
- * emitted into the *server* build output — a `file:` URL, e.g.
+ * emitted into the *server* build output, a `file:` URL, e.g.
  *   file:///…/.next/dev/server/assets/bricolage-800.0qba4ek51r-in.woff
  * Node's fetch (undici) does not implement the `file:` protocol: it throws
  * `TypeError: fetch failed` with `cause: Error: not implemented... yet...`.
  * The old try/catch swallowed that, returned undefined, and every OG image
- * site-wide silently rendered in the fallback sans — including in production.
+ * site-wide silently rendered in the fallback sans, including in production.
  *
  * So: resolve the asset through the bundler exactly as before (that part was
  * fine, and it's what guarantees the .woff ships with the server bundle), then
  * read it off disk with fs. The http(s)/data branch is kept so the loader still
  * works if the asset is ever emitted as a URL instead (edge runtime).
  *
- * The URLs are built at module scope with *literal* specifiers — a dynamic
- * specifier is not statically analysable, so the bundler would not emit the
- * asset and production would 404.
+ * The URLs are built at module scope with *literal* specifiers, because a
+ * dynamic specifier is not statically analysable, so the bundler would not
+ * emit the asset and production would 404.
  *
  * These are WOFF, not WOFF2. Satori, which is what renders an ImageResponse,
  * cannot decompress WOFF2, and it fails by drawing nothing rather than by
@@ -88,7 +88,7 @@ export async function ogFonts(): Promise<OgFont[] | undefined> {
     cache = loaded;
     return cache;
   } catch (err) {
-    // Loud, always — a silent fallback here is what let the brand font go
+    // Loud, always: a silent fallback here is what let the brand font go
     // missing from every link preview on the site for weeks.
     console.error("[og-font] failed to load the notebook faces for OG images:", err);
     if (process.env.NODE_ENV === "development") {

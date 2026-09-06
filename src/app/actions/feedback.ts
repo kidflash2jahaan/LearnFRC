@@ -38,7 +38,7 @@ export async function sendFeedback(
   } = await supabase.auth.getUser();
 
   // Prefer the signed-in email; otherwise use whatever they typed so we can
-  // reply. Either may be null (a truly anonymous note) — that's fine.
+  // reply. Either may be null (a truly anonymous note), and that's fine.
   const fromEmail = user?.email || emailRaw || null;
 
   // Persist for the admin inbox / reply system. Service-role client because
@@ -75,7 +75,7 @@ export async function sendFeedback(
 
 /**
  * Admin-only: reply to a stored feedback submission. Emails the sender from the
- * verified LearnFRC domain and marks the item replied. Gated on isAdmin — this
+ * verified LearnFRC domain and marks the item replied. Gated on isAdmin: this
  * is a public "use server" endpoint, so the authorization check is mandatory.
  */
 export async function replyToFeedback(

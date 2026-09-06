@@ -5,9 +5,9 @@ import { OnboardingStrip, type OnboardingStep } from "./_onboarding-rail";
 import { RosterSheet, type RosterMember } from "./_team-panel";
 
 export const metadata: Metadata = {
-  title: "LearnFRC for Teams — free onboarding curriculum for FRC teams",
+  title: "LearnFRC for Teams: free onboarding curriculum for FRC teams",
   description:
-    "Onboard your whole FRC team with a ready-made curriculum across every department. Everyone who signs up with your team number is grouped automatically — and you can all see each other's progress. Free.",
+    "Onboard your whole FRC team with a ready-made curriculum across every department. Everyone who signs up with your team number is grouped automatically, and you can all see each other's progress. Free.",
   alternates: { canonical: "/for-teams" },
 };
 

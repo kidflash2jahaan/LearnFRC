@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   // The root template appends " · LearnFRC", so don't repeat it here.
   title: "Corrections log",
   description:
-    "Every substantive correction to a LearnFRC lesson or article: what was wrong, what it says now, and the source we checked it against — plus the problems we know about and haven't fixed yet.",
+    "Every substantive correction to a LearnFRC lesson or article: what was wrong, what it says now, and the source we checked it against, plus the problems we know about and haven't fixed yet.",
   alternates: { canonical: "/corrections" },
 };
 

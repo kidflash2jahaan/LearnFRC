@@ -6,9 +6,9 @@ export const dynamic = "force-dynamic";
 /**
  * Deterministic leaderboard-integrity scan the scheduled routine calls.
  * POST ?secret=CRON_SECRET -> finds accounts that *scripted* their completions
- * (many lessons finished within seconds of each other — impossible for a real
- * learner), deletes them, bans the email, and — if a second banned account
- * shares the same signup IP — bans that IP. Returns what it did (no email; the
+ * (many lessons finished within seconds of each other, impossible for a real
+ * learner), deletes them, bans the email, and, if a second banned account
+ * shares the same signup IP, bans that IP. Returns what it did (no email; the
  * routine folds this into one digest). No AI needed.
  */
 
@@ -19,7 +19,7 @@ function authed(req: Request): boolean {
   return (url.searchParams.get("secret") || req.headers.get("x-cron-secret")) === secret;
 }
 
-// Conservative by design — bias to NEVER remove a real user. A human can't
+// Conservative by design: bias to NEVER remove a real user. A human can't
 // finish 8+ lessons each within 4 seconds of the last; a script does exactly that.
 const BURST_GAP_SECONDS = 4;
 const MIN_BURST_GAPS = 8;

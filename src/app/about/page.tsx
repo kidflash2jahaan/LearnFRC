@@ -15,14 +15,14 @@ const AUTHOR = "Jahaan Pardhanani";
 const MANUAL = "https://www.firstinspires.org/robotics/frc/game-and-season";
 
 export const metadata: Metadata = {
-  title: "About LearnFRC — who writes it and how it's checked",
+  title: "About LearnFRC: who writes it and how it's checked",
   description:
     "LearnFRC is a free FRC curriculum built and maintained by Jahaan Pardhanani, a high-school student. Here's how lessons are drafted from primary sources, reviewed for accuracy, and corrected in the open.",
   alternates: { canonical: "/about" },
   openGraph: {
     type: "website",
     url: `${SITE}/about`,
-    title: "About LearnFRC — who writes it and how it's checked",
+    title: "About LearnFRC: who writes it and how it's checked",
     description:
       "Who builds LearnFRC, how its lessons are drafted from primary sources and reviewed, and how to suggest a correction.",
   },

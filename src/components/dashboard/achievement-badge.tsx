@@ -11,7 +11,7 @@ export type AchievementView = {
   /**
    * How close this badge is, derived from the SAME `achievements.criteria`
    * shapes the award logic already uses (see `achievementProgress` in
-   * src/lib/streaks.ts) — nothing new is stored, and a caller that doesn't
+   * src/lib/streaks.ts). Nothing new is stored, and a caller that doesn't
    * supply it gets exactly the previous behaviour.
    *
    * Why it matters: a zero-progress learner otherwise scrolls past eleven

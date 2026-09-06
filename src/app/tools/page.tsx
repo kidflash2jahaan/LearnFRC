@@ -10,7 +10,7 @@ export const metadata: Metadata = {
     "Free interactive FRC calculators: team budget, wire gauge & voltage drop, robot tip-over stability, and current draw / brownout. Every number sourced from official FIRST and vendor specs.",
   alternates: { canonical: `${SITE}/tools` },
   openGraph: {
-    title: "Free FRC Tools & Calculators — LearnFRC",
+    title: "Free FRC Tools & Calculators · LearnFRC",
     description:
       "Team budget, wire gauge, tip-over stability, and brownout calculators for FRC teams. Free, sourced, and accurate.",
     url: `${SITE}/tools`,
@@ -137,7 +137,7 @@ function ToolCard({ t }: { t: (typeof TOOLS)[number] }) {
 }
 
 export default function ToolsPage() {
-  // Collection structured data — the six calculators as an ordered list.
+  // Collection structured data: the six calculators as an ordered list.
   const collectionLd = {
     "@context": "https://schema.org",
     "@type": "ItemList",

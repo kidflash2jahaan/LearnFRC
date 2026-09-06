@@ -24,7 +24,7 @@ export function NewsletterForm({
   className?: string;
   /** Slim variant for tight rows (e.g. the post-lesson prompt). */
   compact?: boolean;
-  /** Fired exactly once when a subscribe succeeds — lets callers persist a
+  /** Fired exactly once when a subscribe succeeds, letting callers persist a
    *  "don't nag again" flag without owning the form's action state. */
   onSuccess?: () => void;
 }) {

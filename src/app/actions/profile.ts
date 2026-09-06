@@ -86,7 +86,7 @@ export async function updateProfile(
       return { error: "Username must be at least 3 characters (a–z, 0–9, _)." };
     // Service-role: `profiles` is no longer SELECTable by the anon OR the
     // authenticated API role, so no session-scoped client can read this. Exact
-    // match on one handle, `id` only — a taken/not-taken answer, not a listing.
+    // match on one handle, `id` only: a taken/not-taken answer, not a listing.
     const { data: taken } = await createAdminClient()
       .from("profiles")
       .select("id")
@@ -130,7 +130,7 @@ export async function updateProfile(
  * Finish the profile of an account that never saw the signup form.
  *
  * Google sign-in collects only name/email/avatar, so those profiles land with
- * no username (rendering as "Learner" everywhere) and — for 70% of them — no
+ * no username (rendering as "Learner" everywhere) and, for 70% of them, no
  * team number, which keeps them out of team clustering entirely.
  *
  * Writes the username only when the account has none or is still carrying a
@@ -212,7 +212,7 @@ export async function saveProfileSetup(
   // Service-role because this chains `.select("id")` to detect a lost race, and
   // SELECT on `profiles` is revoked for every API role. The RLS policy that
   // used to scope this write (profiles_update_own: auth.uid() = id) is replaced
-  // by the `.eq("id", user.id)` below — `user.id` came from auth.getUser(),
+  // by the `.eq("id", user.id)` below. `user.id` came from auth.getUser(),
   // which validates the JWT against the auth server, so it is the same check.
   // If you ever widen this filter, you remove the only thing stopping this
   // action from writing to somebody else's row.

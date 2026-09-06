@@ -2,7 +2,7 @@ import { ShareButton } from "@/components/share-button";
 import { cn } from "@/lib/utils";
 
 /**
- * "Challenge your team" — the small referral ask, shown at the two moments
+ * "Challenge your team" is the small referral ask, shown at the two moments
  * somebody is actually pleased with themselves: the instant a lesson is passed,
  * and on an earned certificate.
  *

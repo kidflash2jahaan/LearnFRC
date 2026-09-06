@@ -6,8 +6,8 @@ import { cn } from "@/lib/utils";
  *
  * The binder has exactly two motions, and they are both in globals.css:
  *
- *   1. `.nb-route` — the page exposing in two steps, once per navigation.
- *   2. `.nb-lift`  — a taped card straightening and rising 3px under the cursor.
+ *   1. `.nb-route` is the page exposing in two steps, once per navigation.
+ *   2. `.nb-lift` is a taped card straightening and rising 3px under the cursor.
  *
  * That is the whole vocabulary. Paper on a shop wall does not fade up section
  * by section as you scroll, and it does not have coloured light drifting behind

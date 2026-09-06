@@ -116,7 +116,7 @@ export async function SocialProof() {
       )}
 
       {/* Quotes render only when a real one has arrived. Nothing here is ever
-          written by me or by an AI — see src/lib/team-quotes.ts. */}
+          written by me or by an AI. See src/lib/team-quotes.ts. */}
       {TEAM_QUOTES.length > 0 && (
         <ul className="mt-6 flex flex-col gap-4">
           {TEAM_QUOTES.map((q) => (

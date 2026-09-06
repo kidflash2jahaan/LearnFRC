@@ -5,11 +5,11 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 
 /* ------------------------------------------------------------------ *
- * VERIFIED CONSTANTS — every value below is primary-sourced.
+ * VERIFIED CONSTANTS: every value below is primary-sourced.
  * Season/as-listed dates and source URLs are carried next to each
  * figure and surfaced to the user via the line-item source links and
  * the notes section. Values that vary by team/region/season are NOT
- * hardcoded as facts — they are editable inputs (see state below).
+ * hardcoded as facts: they are editable inputs (see state below).
  * ------------------------------------------------------------------ */
 
 const SEASON = "2025-2026";
@@ -17,7 +17,7 @@ const AS_LISTED = "as listed 2026-07";
 
 type SourcedNumber = {
   value: number;
-  cite: string; // short "$X — source, season" line for the footnote list
+  cite: string; // short "$X: source, season" line for the footnote list
   url: string;
 };
 
@@ -25,71 +25,71 @@ const FEES = {
   // FIRST registration (published 2025-2026)
   baseReg: {
     value: 6300,
-    cite: "$6,300 — FIRST base team/season registration, all teams incl. rookies (2025-2026)",
+    cite: "$6,300: FIRST base team/season registration, all teams incl. rookies (2025-2026)",
     url: "https://community.firstinspires.org/2025-2026-first-program-registration-pricing",
   },
   addlRegional: {
     value: 3000,
-    cite: "$3,000 — each additional Regional beyond the first (FIRST 2025-2026)",
+    cite: "$3,000: each additional Regional beyond the first (FIRST 2025-2026)",
     url: "https://community.firstinspires.org/2025-2026-first-program-registration-pricing",
   },
   // Drivetrain
   am14u6: {
     value: 940,
-    cite: "$940 — AndyMark AM14U6 KOP drive base (2026 Kit of Parts)",
+    cite: "$940: AndyMark AM14U6 KOP drive base (2026 Kit of Parts)",
     url: "https://andymark.com/products/am14u6-6-wheel-drop-center-robot-drive-base-2025-frc-kit-of-parts-drive-base",
   },
   // Core control system
   roboRIO: {
     value: 485,
-    cite: `$485 — NI roboRIO 2.0 (${AS_LISTED})`,
+    cite: `$485: NI roboRIO 2.0 (${AS_LISTED})`,
     url: "https://andymark.com/products/ni-roborio-2",
   },
   pdh: {
     value: 250,
-    cite: `$250 — REV Power Distribution Hub, REV-11-1850 (${AS_LISTED})`,
+    cite: `$250: REV Power Distribution Hub, REV-11-1850 (${AS_LISTED})`,
     url: "https://www.revrobotics.com/rev-11-1850/",
   },
   radio: {
     value: 184.99,
-    cite: "$184.99 — Vivid-Hosting VH-109 FRC Radio, FRC/education price (2025-2026)",
+    cite: "$184.99: Vivid-Hosting VH-109 FRC Radio, FRC/education price (2025-2026)",
     url: "https://store.ctr-electronics.com/products/frc-radio",
   },
   radioPowerModule: {
     value: 34,
-    cite: `$34 — REV Radio Power Module, REV-11-1856 (${AS_LISTED})`,
+    cite: `$34: REV Radio Power Module, REV-11-1856 (${AS_LISTED})`,
     url: "https://www.revrobotics.com/rev-11-1856/",
   },
   battery: {
     value: 58,
-    cite: `$58 ea — MK ES17-12 12V 18Ah SLA battery (set of 2 = $116, ${AS_LISTED})`,
+    cite: `$58 ea: MK ES17-12 12V 18Ah SLA battery (set of 2 = $116, ${AS_LISTED})`,
     url: "https://andymark.com/products/mk-es17-12-12v-sla-battery-set-of-2",
   },
   // Motors & controllers
   neo: {
     value: 42.5,
-    cite: `$42.50 — REV NEO Brushless Motor V1.1 (sale, down from $50.00, ${AS_LISTED})`,
+    cite: `$42.50: REV NEO Brushless Motor V1.1 (sale, down from $50.00, ${AS_LISTED})`,
     url: "https://www.revrobotics.com/rev-21-1650/",
   },
   sparkMax: {
     value: 100,
-    cite: `$100 — REV SPARK MAX controller, one required per NEO (${AS_LISTED})`,
+    cite: `$100: REV SPARK MAX controller, one required per NEO (${AS_LISTED})`,
     url: "https://www.revrobotics.com/rev-11-2158/",
   },
   kraken: {
     value: 217.99,
-    cite: `$217.99 — Kraken X60 w/ integrated Talon FX, FRC price (MSRP $399.99, ${AS_LISTED}); no separate controller`,
+    cite: `$217.99: Kraken X60 w/ integrated Talon FX, FRC price (MSRP $399.99, ${AS_LISTED}); no separate controller`,
     url: "https://wcproducts.com/products/kraken",
   },
   // All-in-one anchors
   bundle3230: {
     value: 3230,
-    cite: `$3,230 — AndyMark FRC Basic Starter Bundle WITH roboRIO (${AS_LISTED})`,
+    cite: `$3,230: AndyMark FRC Basic Starter Bundle WITH roboRIO (${AS_LISTED})`,
     url: "https://andymark.com/products/frc-basic-starter-bundle-1",
   },
   bundle2750: {
     value: 2750,
-    cite: `$2,750 — AndyMark FRC Basic Starter Bundle WITHOUT roboRIO (${AS_LISTED})`,
+    cite: `$2,750: AndyMark FRC Basic Starter Bundle WITHOUT roboRIO (${AS_LISTED})`,
     url: "https://andymark.com/products/frc-basic-starter-bundle-1",
   },
 } as const satisfies Record<string, SourcedNumber>;
@@ -112,7 +112,7 @@ const RANGES = {
   travelPerEvent: { low: 500, high: 5000 },
 } as const;
 
-/* FIRST Championship fee — NOT published for 2026. Per verification,
+/* FIRST Championship fee: NOT published for 2026. Per verification,
  * do NOT ship $5,000 as a fact; seed with the last publicly-cited
  * figure (~$5,750, 2024) as an editable, clearly-flagged estimate. */
 const CHAMPS_FEE_LAST_KNOWN = 5750;

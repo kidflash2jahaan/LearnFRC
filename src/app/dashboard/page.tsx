@@ -162,14 +162,14 @@ export default async function DashboardPage() {
   const completedIds = new Set(progressRows.map((r) => r.lesson_id));
   const completedCount = completedIds.size;
   // Which starter goal this learner picked on /start, if any. Only read for a
-  // zero-progress learner — it decides between showing their five-lesson plan
-  // and offering the question that produces one.
+  // zero-progress learner, where it decides between showing their five-lesson
+  // plan and offering the question that produces one.
   const startGoalId = completedCount === 0 ? await readStartGoalId() : null;
   const streak = streakFromDates(progressRows.map((r) => r.completed_at));
   // Lesson XP = 10 + 1 per streak-day, capped at 20 (max 2x). Show the multiplier.
   const xpMultiplier = (1 + Math.min(10, Math.max(0, streak - 1)) / 10).toFixed(1);
 
-  // "Streak at risk": has an active streak but hasn't done a lesson today yet —
+  // "Streak at risk": has an active streak but hasn't done a lesson today yet, so
   // one lesson before midnight keeps it alive. Drives a return nudge.
   const dayKey = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
   const todayKey = dayKey(new Date());
@@ -253,12 +253,12 @@ export default async function DashboardPage() {
 
   // ── Invite: ask in proportion to what the learner has actually done ──
   // Referral converts far better than any other channel precisely because the
-  // sender has context to lend — they can vouch for the thing. So the ask is
+  // sender has context to lend; they can vouch for the thing. So the ask is
   // only worth making once there is something to vouch FOR.
   //
   // Threshold picked from production (Aug 2026, 186 learners with any
-  // progress). There is a steep trial cliff in the first few lessons —
-  // 34 learners stop at 1, 29 at 2, 14 at 3, 6 at 4 — and then a stable tail:
+  // progress). There is a steep trial cliff in the first few lessons:
+  // 34 learners stop at 1, 29 at 2, 14 at 3, 6 at 4. Then a stable tail:
   // 103 learners have cleared 5 or more, and the median among learners with
   // any progress at all is 8. Five is the first point where someone has worked
   // through a real chunk of a module rather than sampled the site, so five is
@@ -285,8 +285,8 @@ export default async function DashboardPage() {
             : ""
         }. If someone on your team asks how you learned this, the link below is the short answer.`;
 
-  // One card, one anchor (#invite-card is the target of the What's New CTA) —
-  // only ever rendered in a single slot, chosen by engagement below.
+  // One card, one anchor (#invite-card is the target of the What's New CTA),
+  // so it is only ever rendered in a single slot, chosen by engagement below.
   const inviteNode = profile?.username ? (
     <div id="invite-card" className="scroll-mt-28">
       {inviteEarned && (

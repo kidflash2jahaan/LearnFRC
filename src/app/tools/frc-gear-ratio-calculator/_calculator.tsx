@@ -254,7 +254,7 @@ function parseNum(v: string): number {
 }
 
 function fmt(n: number, digits: number): string {
-  if (!Number.isFinite(n)) return "—";
+  if (!Number.isFinite(n)) return "n/a";
   return n.toLocaleString("en-US", {
     minimumFractionDigits: digits,
     maximumFractionDigits: digits,
@@ -759,7 +759,7 @@ export default function GearRatioCalculator({
                       {Number.isFinite(ratio) ? `${fmt(ratio, 3)}:1 here` : "check this stage"}
                     </p>
                     <p className="nb-count mt-1">
-                      {Number.isFinite(running) ? fmt(running, 2) : "—"}
+                      {Number.isFinite(running) ? fmt(running, 2) : "n/a"}
                       <small>:1 so far</small>
                     </p>
                   </div>
@@ -820,7 +820,7 @@ export default function GearRatioCalculator({
             <p className="nb-slug !text-ink">overall reduction, every mesh multiplied</p>
             <p className="flex items-baseline gap-2 font-mono font-bold tabular-nums">
               <span className="text-[clamp(2.2rem,1.4rem+3vw,3.8rem)] leading-none tracking-[-0.04em] text-blue">
-                {r.stagesValid ? fmt(r.G, 2) : "—"}
+                {r.stagesValid ? fmt(r.G, 2) : "n/a"}
               </span>
               <span className="text-[1.1rem] text-ink">:1</span>
             </p>
@@ -1296,9 +1296,9 @@ export default function GearRatioCalculator({
                     // restate the answer, so skip it.
                     r.stageRatios.length > 1
                       ? `G = ${r.stageRatios
-                          .map((v) => (Number.isFinite(v) ? fmt(v, 3) : "?"))
-                          .join(" x ")} = ${r.stagesValid ? fmt(r.G, 4) : "—"}`
-                      : `G = ${r.stagesValid ? fmt(r.G, 4) : "—"}`
+                          .map((v) => (Number.isFinite(v) ? fmt(v, 3) : "n/a"))
+                          .join(" x ")} = ${r.stagesValid ? fmt(r.G, 4) : "n/a"}`
+                      : `G = ${r.stagesValid ? fmt(r.G, 4) : "n/a"}`
                   }
                 />
                 <MathRow

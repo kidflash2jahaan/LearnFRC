@@ -3,7 +3,7 @@ import type { LifecycleSegment } from "@/lib/email";
 /**
  * Win-back segmentation policy for the lifecycle email.
  *
- * Deliberately PURE — no `server-only`, no DB, no catalog fetch (that lives in
+ * Deliberately PURE: no `server-only`, no DB, no catalog fetch (that lives in
  * ./catalog.ts). Keeping it dependency-free is what lets src/lib/retention.ts
  * import the same thresholds the job runs on, so the founder's retention panel
  * can never again describe a different audience than the one being mailed.
@@ -11,7 +11,7 @@ import type { LifecycleSegment } from "@/lib/email";
  * The old job had one audience ("completed >= 1 lesson, dormant 5 days") and
  * one message. That excluded every zero-completion account by construction, so
  * the 156 users who signed up and never started had received exactly zero
- * recovery emails, ever — 45% of the user base was structurally unreachable.
+ * recovery emails, ever, leaving 45% of the user base structurally unreachable.
  * It also pointed everyone at the globally-first uncompleted lesson, which for
  * 125 of 191 learners with progress meant "What Is FIRST?" no matter how deep
  * into CAD or programming they actually were.
@@ -54,14 +54,14 @@ export const NEVER_STARTED_MIN_AGE_DAYS = 1;
 export const NEVER_STARTED_QUIET_DAYS = 2;
 /** Past this the relationship is too stale for an onboarding nudge to read as
  * anything but unsolicited mail. Today's oldest such account is 51 days, so
- * this excludes nobody now — it is a guard for later. */
+ * this excludes nobody now; it is a guard for later. */
 export const NEVER_STARTED_MAX_AGE_DAYS = 90;
 
 /**
  * Reserved / non-routable TLDs (RFC 2606 + RFC 6761). Mail to these ALWAYS hard
  * bounces. Two such accounts exist today (@learnfrc.test) and both sit in the
  * never_started lane, so the first run of the widened job would have posted a
- * ~7% hard-bounce rate from a young sending domain — Resend and every inbox
+ * ~7% hard-bounce rate from a young sending domain, and Resend and every inbox
  * provider treat 5% as the point where delivery starts being throttled. This
  * costs nothing to check and protects the one asset the win-back depends on.
  */
@@ -204,7 +204,7 @@ export type NextLesson = {
  *
  * The old code did a plain `catalog.find(l => !done.has(l.id))`, which returns
  * the globally-first uncompleted lesson. Measured against live data that points
- * 125 of 191 learners with progress at a department they weren't in — including
+ * 125 of 191 learners with progress at a department they weren't in, including
  * telling someone 94 lessons deep that their next lesson is "The FIRST
  * Progression: FLL, FTC, and FRC". That is the single most obvious tell that an
  * email is automated and doesn't know you.

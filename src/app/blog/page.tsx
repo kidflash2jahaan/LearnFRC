@@ -13,12 +13,12 @@ const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com";
 export const metadata: Metadata = {
   title: "FRC Guides & Articles",
   description:
-    "In-depth FRC guides: how to start a team, swerve drive explained, how to win the Impact Award, and more — free, from an FRC student.",
+    "In-depth FRC guides: how to start a team, swerve drive explained, how to win the Impact Award, and more. Free, from an FRC student.",
   alternates: { canonical: `${SITE}/blog` },
   openGraph: {
     title: "FRC Guides & Articles · LearnFRC",
     description:
-      "In-depth FRC guides for every department — free, from an FRC student.",
+      "In-depth FRC guides for every department. Free, from an FRC student.",
     url: `${SITE}/blog`,
     type: "website",
   },

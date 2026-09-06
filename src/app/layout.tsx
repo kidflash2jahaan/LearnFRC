@@ -74,7 +74,7 @@ export const metadata: Metadata = {
   // NOTE: feed autodiscovery is deliberately NOT declared here as
   // `alternates.types`. Metadata is *shallow* merged, so every page that sets
   // its own `alternates` (all public pages do, for `canonical`) would replace
-  // the whole object and drop the feed link — verified: it never reached the
+  // the whole object and drop the feed link. Verified: it never reached the
   // homepage <head>. It's rendered as a real <link> in the body instead, which
   // React hoists into <head> on every route. Declaring it in both places
   // emits the tag twice on the pages that don't override `alternates`.
@@ -86,7 +86,7 @@ export const metadata: Metadata = {
       "Structured, web-grounded guides for every FRC department. Build robots, write code, win awards.",
     siteName: "LearnFRC",
   },
-  // Card type only — leaving title/description unset lets every page's own
+  // Card type only: leaving title/description unset lets every page's own
   // OpenGraph values mirror into its Twitter card (hard-coding them here made
   // all 578 pages share the homepage card).
   twitter: {
@@ -161,7 +161,7 @@ export default function RootLayout({
                 logo: `${SITE_URL}/opengraph-image`,
                 description:
                   "A free, complete learning platform for the FIRST Robotics Competition.",
-                // Only URLs that are verifiably ours belong here — the public
+                // Only URLs that are verifiably ours belong here: the public
                 // source repo. No invented social profiles.
                 sameAs: ["https://github.com/kidflash2jahaan/LearnFRC"],
                 founder: { "@id": `${SITE_URL}/#person` },
@@ -199,7 +199,7 @@ export default function RootLayout({
             sibling passive effects in mount order, and the beacon's request is
             what carries the lf_src cookie to /api/page-view. The beacon also
             calls ensureSourceCookie() itself, so correctness no longer *depends*
-            on this order — but keeping it makes the dependency legible. */}
+            on this order, but keeping it makes the dependency legible. */}
         <SourceCapture />
         <PageViewBeacon />
       </body>

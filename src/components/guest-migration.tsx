@@ -21,12 +21,12 @@ type MigrateResult = {
   /** Rows inserted by THIS call. */
   migrated: number;
   xp: number;
-  /** The lesson ids behind `migrated` — the only ids this call proves are in
+  /** The lesson ids behind `migrated`: the only ids this call proves are in
    *  the account, and so the only ones it is safe to delete locally. */
   lessonIds: string[];
 };
 
-/** Returns null for every "we don't actually know what happened" outcome —
+/** Returns null for every "we don't actually know what happened" outcome:
  *  offline, non-2xx, unreadable body. Callers must treat null as "change
  *  nothing locally", because the local copy may be the last one. */
 async function migrate(visitorId: string): Promise<MigrateResult | null> {
@@ -108,18 +108,18 @@ async function fetchAccountLessons(): Promise<Set<string> | null> {
  * Why it is mounted in <MyProgressProvider> (every guides page) and not only on
  * /dashboard: every guest-facing signup CTA passes `?next=<lessonPath>`, and
  * both auth routes honour `next`, so a guest who signs up from a lesson lands
- * back on the LESSON — never on the dashboard. With the dashboard as the only
+ * back on the LESSON, never on the dashboard. With the dashboard as the only
  * mount, migration never ran for exactly the readers it exists for. Measured:
  * all 67 guest rows across 27 visitors survived an 18-day window, i.e. zero
  * migrations had ever completed, while the ask promised "keep your progress".
  *
  * Order matters: flush the retry queue first so a completion that never reached
- * the server still gets there, THEN migrate — otherwise the very lessons the
+ * the server still gets there, THEN migrate. Otherwise the very lessons the
  * queue exists to protect would be the ones left behind.
  *
  * NOTHING LOCAL IS DELETED WITHOUT PROOF. The previous version ran
  * `if (migrated > 0 || hadLocal) clearGuestLessons()`, so a response of
- * `migrated: 0` — the server holds no guest rows for this visitor — still wiped
+ * `migrated: 0` (the server holds no guest rows for this visitor) still wiped
  * the browser's completions. A lesson whose server row was missing (older code
  * path, or a POST that never landed) was destroyed at the exact moment the
  * reader signed up to keep it. Now each id must be shown to be in the account
@@ -139,7 +139,7 @@ export function GuestMigration({ enabled = true }: { enabled?: boolean }) {
       try {
         if (sessionStorage.getItem(ONCE_KEY)) return;
       } catch {
-        /* storage blocked — fall through and just try once per mount */
+        /* storage blocked, so fall through and just try once per mount */
       }
 
       const visitorId = getVisitorId();
@@ -151,7 +151,7 @@ export function GuestMigration({ enabled = true }: { enabled?: boolean }) {
       if (cancelled) return;
 
       const res = await migrate(visitorId);
-      // Unknown outcome — leave every local completion exactly where it is and
+      // Unknown outcome: leave every local completion exactly where it is and
       // let the next session try again. Deliberately does NOT set ONCE_KEY.
       if (cancelled || !res) return;
 

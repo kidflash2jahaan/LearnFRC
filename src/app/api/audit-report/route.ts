@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 /**
  * Receives the daily accuracy-audit report from the scheduled cloud agent and
  * emails it to the admin. CRON_SECRET-gated so only the audit routine can post
- * here — this keeps the Resend key server-side (the routine never holds it).
+ * here, which keeps the Resend key server-side (the routine never holds it).
  *
  * The report is a page of corrections, so it is set like one: card stock ruled
  * in ink, the wrong line struck through in pencil grey, the line that replaced

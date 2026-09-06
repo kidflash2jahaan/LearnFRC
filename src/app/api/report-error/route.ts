@@ -16,7 +16,7 @@ export const dynamic = "force-dynamic";
  * Deliberately never reads the session: a signed-in reader who wants to report
  * something anonymously gets to. The richer, attributable path (rewrite the
  * markdown yourself, land in the public queue) is still the "Suggest an edit"
- * control on every lesson and article — this is the fallback, not a
+ * control on every lesson and article; this is the fallback, not a
  * replacement.
  *
  * Rows land in the existing `feedback` table, so they show up in the admin
@@ -37,8 +37,8 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /**
  * Submission kinds and the label prefixed onto the stored message so the admin
- * inbox can tell a bug report from a privacy request at a glance. Allow-listed
- * — an unknown value falls back to "contact" rather than being stored.
+ * inbox can tell a bug report from a privacy request at a glance. Allow-listed,
+ * so an unknown value falls back to "contact" rather than being stored.
  */
 const KIND_LABEL = {
   error: "Error report",
@@ -56,8 +56,8 @@ function fail(status: number, error: string) {
 
 /**
  * Strip C0/C1 control characters that would corrupt the stored row or the
- * notification email. Tab, newline and carriage return survive — people write
- * multi-line reports.
+ * notification email. Tab, newline and carriage return survive, because people
+ * write multi-line reports.
  */
 function cleanBody(s: string): string {
    
@@ -159,7 +159,7 @@ export async function POST(req: Request) {
 
   // Notification is best-effort: the row above is the durable record, so a
   // mail outage must not turn a saved report into an error for the reader.
-  // It is still logged — a silent email failure is how this project lost 24
+  // It is still logged: a silent email failure is how this project lost 24
   // days of referral data.
   const adminEmail = (process.env.ADMIN_EMAILS || "").split(",")[0]?.trim();
   if (adminEmail) {

@@ -11,12 +11,12 @@ export const metadata: Metadata = {
   // title tag, so emit it as-is.
   title: { absolute: "FRC Learning Paths: Guided Tracks by Goal" },
   description:
-    "Free, guided FRC learning paths — new-member onboarding, robot programming, build & design, the FIRST Impact Award, and competition day. No login needed.",
+    "Free, guided FRC learning paths: new-member onboarding, robot programming, build & design, the FIRST Impact Award, and competition day. No login needed.",
   alternates: { canonical: "/paths" },
   openGraph: {
     title: "FRC Learning Paths: Guided Tracks by Goal",
     description:
-      "Free, guided FRC learning paths — onboarding, robot programming, build & design, the Impact Award, and competition day.",
+      "Free, guided FRC learning paths: onboarding, robot programming, build & design, the Impact Award, and competition day.",
     url: "/paths",
     type: "website",
   },

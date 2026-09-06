@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ShareButton } from "@/components/share-button";
 
 /**
- * "Nobody's on Electrical" — the ask, made specific.
+ * "Nobody's on Electrical": the ask, made specific.
  *
  * The generic invite ("share LearnFRC with your team") is already on this page.
  * This is the other half: it names the subteams the team has literally nobody
