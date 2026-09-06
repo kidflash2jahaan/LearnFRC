@@ -55,8 +55,50 @@
 
   --pad: clamp(1.1rem, 3.4vw, 2.2rem);   /* inside a box */
   --gut: clamp(1.1rem, 4vw, 3.4rem);     /* page gutter */
-  --step: cubic-bezier(0.2, 0.9, 0.3, 1);
   --tap: 2.75rem;                        /* 44px minimum touch target */
+
+  /* ---- Motion -------------------------------------------------------
+     Paper motion. A card lifts off the wall, a rule draws itself, ink
+     lands, a taped sheet straightens. Nothing loops, nothing breathes,
+     nothing floats while idle, and nothing overshoots, because paper and
+     a marker have no spring in them.
+
+     The one rule that outranks the look: anything a person triggers has
+     to start inside the first frame. `steps()` cannot do that, so it is
+     gone from every hover, press, focus and open, and survives in exactly
+     one place (--nb-step-expose, below) where the stutter is the point
+     and nobody is waiting on it.
+
+     Twelve places should not invent twelve timings. These are the timings.
+     ------------------------------------------------------------------ */
+
+  /* Three curves. All blunt: hard off the mark, short settle, no tail
+     that hangs around and no overshoot. */
+  --nb-ease-out:  cubic-bezier(0.2, 0.9, 0.3, 1);    /* everything a person triggers: hover, press, focus, open, arrive */
+  --nb-ease-move: cubic-bezier(0.65, 0, 0.35, 1);    /* something already on screen travelling from A to B */
+  --nb-ease-draw: cubic-bezier(0.33, 0.85, 0.25, 1); /* a stroke leaving a pen: fast off the mark, eased into the stop */
+
+  /* The one surviving stepped easing. A sheet coming off a copier exposes
+     in passes, and `jump-start` puts the first pass on the FIRST frame, so
+     the page is visible immediately and then firms up. `steps(2, end)`,
+     which this replaces, showed nothing at all for the first half of its
+     duration: a stutter you have to wait for is just latency. */
+  --nb-step-expose: steps(2, jump-start);
+
+  /* Five durations, longest to shortest job. */
+  --nb-t-press: 90ms;    /* :active. Press feedback, and nothing slower than this */
+  --nb-t-hover: 140ms;   /* hover and focus on a link, tag, row, tab or nav item */
+  --nb-t-lift:  180ms;   /* the card lift. Fixed by docs/NOTEBOOK-SYSTEM.md, do not drift */
+  --nb-t-enter: 300ms;   /* an entrance: a card or a band arriving */
+  --nb-t-draw:  520ms;   /* a ruled line drawing itself across a heading */
+
+  /* Deprecated alias, now with ZERO callers: the three components that wrote
+     `ease-[var(--step)]` (the admin drawer, its caret, the blog desk index)
+     all name --nb-ease-out directly. Kept only so a stray `ease-[var(--step)]`
+     in unrebuilt markup still resolves to the right curve instead of to
+     nothing. Do not write it in new code, and delete it once the rebuild is
+     signed off. */
+  --step: var(--nb-ease-out);
 
   /* shadcn/radix components read this. Zero, because nothing in the notebook
      has a machined corner: shapes get their radius from --hand-*. */
@@ -139,10 +181,68 @@
   to   { background-position: -200% 0; }
 }
 
-/* Two-pass photocopier exposure. Used by the route transition. */
+/* Two-pass photocopier exposure. Used by the route transition and by any
+   surface that appears without travelling (a menu, a dialog). */
 @keyframes nb-expose {
   from { opacity: 0; }
   to   { opacity: 1; }
+}
+
+/* ------------------------------------------------------------------ */
+/*  The four paper motions                                             */
+/*                                                                     */
+/*  Every one of these is written with the INDEPENDENT transform        */
+/*  properties (`translate`, `rotate`, `scale`) rather than a           */
+/*  `transform` string. That matters: .nb-tilt already owns `transform`,*/
+/*  so a keyframe written as `transform: translateY(...)` would wipe a  */
+/*  card's resting angle the moment it played. Written this way they    */
+/*  compose, and a taped card arrives crooked and lands on ITS OWN      */
+/*  tilt, not on zero.                                                  */
+/*                                                                      */
+/*  None of them touches opacity, and that is deliberate. Paper does not */
+/*  fade in, and an entrance that starts at opacity 0 can strand content */
+/*  invisible the first time somebody drops it inside a container that   */
+/*  never scrolls. These land wrong-side-up at worst: a few pixels low.  */
+/* ------------------------------------------------------------------ */
+
+/* nb-settle: a card or a band arriving, laid down onto the page. Use for
+   a section coming into view on scroll. Travel only, no rotation, so it
+   is safe on a full-bleed band whose corners would otherwise swing wide. */
+@keyframes nb-settle {
+  from { translate: 0 14px; }
+  to   { translate: 0 0; }
+}
+
+/* nb-straighten: a taped item arriving. It goes up crooked and then gets
+   pushed square, the way you actually put a card on a wall. Composes with
+   .nb-tilt, so it settles onto that card's resting angle. */
+@keyframes nb-straighten {
+  from { rotate: -1.6deg; translate: 0 8px; }
+  to   { rotate: 0deg;    translate: 0 0; }
+}
+
+/* nb-rule-draw: a ruled line drawing itself, left to right, the way a pen
+   crosses a straightedge. Put it on the element that IS the line (an hr, a
+   span, .nb-marker's blue stroke), and give that element
+   `transform-origin: left center`. Scales one axis only: no layout, no paint. */
+@keyframes nb-rule-draw {
+  from { scale: 0 1; }
+  to   { scale: 1 1; }
+}
+
+/* nb-ink: ink landing on a figure. The number comes down and stops dead,
+   which is what a stamp does. No bounce: a stamp does not bounce. */
+@keyframes nb-ink {
+  from { translate: 0 -5px; scale: 1.04; }
+  to   { translate: 0 0;    scale: 1; }
+}
+
+/* nb-rule-draw-y: the same stroke, drawn downwards. Only the reading rail's
+   margin pen needs it, and it exists because `scale` takes two numbers and a
+   vertical rule has to hold its width at 1 while its height grows. */
+@keyframes nb-rule-draw-y {
+  from { scale: 1 0; }
+  to   { scale: 1 1; }
 }
 
 /* ------------------------------------------------------------------ */
@@ -183,17 +283,43 @@
   }
 
   /* Photocopier grain, laid over everything so the ink block overprints.
-     Fixed and pointer-events:none, so it composites once and never repaints
-     with scroll. Exact SVG carried over from the approved reference. */
+     Fixed and pointer-events:none.
+
+     THE DARKENING IS PRE-BAKED, THERE IS NO BLEND MODE. There used to be
+     `mix-blend-mode: multiply` here, and it was the single most expensive
+     thing on the page. A blend mode makes this layer a backdrop reader:
+     the compositor cannot draw it as its own quad, it has to allocate an
+     off-screen render surface, draw everything underneath into it, read it
+     back and run the blend, on every scrolled frame. Chrome's own trace
+     named the reasons out loud, "blend mode" and "backdrop scope", 5328
+     render surfaces over 1224 frames on /guides. Without it: zero. None of
+     that is visible to a layout benchmark, which is why it survived.
+
+     Nothing is lost, because the two are the same arithmetic. Multiplying
+     a backdrop by BLACK at layer opacity o gives B x (1 - o), and normal-
+     compositing black at alpha o gives B x (1 - o) as well. So the noise
+     below is black, its alpha carries the turbulence, and feFuncA doubles
+     that alpha's contrast around its midpoint to put back the speckle the
+     old colour noise got from varying all four channels at once. Measured
+     against the same no-grain plate: paper darkens 2.15/255 with a speckle
+     sd of 0.94, where multiply gave 2.15 and 0.96. It is the same paper.
+
+     What is LEFT is one full-viewport translucent layer, which the GPU
+     composites for free and a machine with no GPU at all does not: with
+     software compositing this layer still costs about 9fps. If the site ever
+     has to serve that hardware, the fix is to move this exact background-image
+     onto `body` as a third background layer at `200px 200px` and delete this
+     rule. That costs nothing anywhere, but the grain then scrolls under the
+     content instead of over it, and the ink stops overprinting, which is a
+     change to the look and needs to be a decision, not a silent optimisation. */
   body::after {
     content: "";
     position: fixed;
     inset: 0;
     z-index: 90;
     pointer-events: none;
-    mix-blend-mode: multiply;
     opacity: 0.5;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.14'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n' color-interpolation-filters='sRGB'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0'/%3E%3CfeComponentTransfer%3E%3CfeFuncA type='linear' slope='2' intercept='-0.5'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
   }
 
   h1, h2, h3 {
@@ -346,30 +472,221 @@
 .nb-tilt-3 { transform: rotate(-0.45deg); }
 .nb-tilt-4 { transform: rotate(0.9deg); }
 
-/* nb-lift: the one hover in the system. A taped card straightens and rises
-   2 to 3px, the drop deepens, 180ms. Nothing loops, nothing floats idle. */
+/* nb-lift: A CARD LIFTING OFF THE PAGE. The one hover in the system. A taped
+   card straightens and rises 3px and the drop deepens, 180ms on the response
+   curve. It starts moving in the first frame, which the old `steps()` version
+   could not: two visible jumps read as a dropped frame, not as a stutter. */
 .nb-lift {
   box-shadow: var(--drop-1);
   transition:
-    transform 180ms var(--step),
-    box-shadow 180ms var(--step);
+    transform var(--nb-t-lift) var(--nb-ease-out),
+    box-shadow var(--nb-t-lift) var(--nb-ease-out);
 }
-.nb-lift:hover,
+/* Keyboard focus lifts on every device. Pointer hover is gated, because a
+   touch screen fires :hover on tap and would leave the card stuck up. */
 .nb-lift:focus-visible {
   transform: rotate(0deg) translateY(-3px);
   box-shadow: var(--drop-2);
 }
+@media (hover: hover) and (pointer: fine) {
+  .nb-lift:hover {
+    transform: rotate(0deg) translateY(-3px);
+    box-shadow: var(--drop-2);
+  }
+}
 
-/* nb-route: the route transition. Opacity only, in two visible steps, like a
-   page coming off the copier. No transform, deliberately: a transformed
-   ancestor would become the containing block for every `position: fixed`
-   child and quietly break sticky headers and modals on every navigation. */
-.nb-route { animation: nb-expose 140ms steps(2, end) both; }
+/* nb-route: the route transition, and the one place a stepped easing earns
+   its keep. Opacity only, deliberately: a transformed ancestor would become
+   the containing block for every `position: fixed` child and quietly break
+   sticky headers and modals on every navigation.
+
+   Two passes, `jump-start`, so the first pass lands on the first frame and
+   the page is on screen immediately. The old `steps(2, end)` showed nothing
+   for the first 70ms of a navigation, which is the worst possible moment to
+   spend on an effect. Shorter now, and it starts sooner.
+
+   FILL IS `backwards`, NOT `both`, AND THAT IS A PERFORMANCE DECISION.
+   `template.tsx` puts this class on a div that wraps the ENTIRE page, so
+   whatever Chrome does to this element it does to the whole document. A
+   filling opacity animation never leaves its "in effect" phase, and an
+   accelerated opacity animation that is in effect holds a render surface:
+   the compositor draws the whole page into an off-screen surface and then
+   composites that surface at opacity 1.0, on every scrolled frame, forever.
+   Measured on /guides with `both`: an "opacity animation" render surface on
+   334 of 334 frames. With `backwards`: zero. It is the same shape of cost as
+   the `mix-blend-mode` that used to be on `body::after`, just cheaper.
+
+   Nothing is lost. There is no `animation-delay` here, so `backwards` and
+   `both` are pixel-identical while the animation plays; `backwards` only
+   declines to keep holding the element hostage after it has finished. The
+   end state is opacity 1, which is already the div's base style, so the page
+   stays exactly where the animation left it. */
+.nb-route { animation: nb-expose var(--nb-t-hover) var(--nb-step-expose) backwards; }
+
+/* ---- 3b. Arrivals ------------------------------------------------ */
+/*
+   Four classes, one per keyframe. They are scroll-driven with `view()`, so
+   there is no IntersectionObserver, no `useEffect` and no "use client": a
+   Server Component page just puts the class on.
+
+   Two safety properties, both load-bearing:
+     - Transform only. If a timeline never runs, the element sits a few
+       pixels low. It is never invisible, and never at opacity 0.
+     - Before `@supports`, the animation is time-based and plays once on
+       load. A browser without scroll-driven animations still lands every
+       element at its end state.
+
+   Put these on a card or a band, not on a 3000px section: the `entry` range
+   is measured in element heights, so a very tall element animates for a very
+   long scroll.
+*/
+
+/* nb-reveal: A SECTION ARRIVING ON SCROLL. The default arrival.
+   nb-reveal-group: the same arrival across a row of children, dealt out one
+   after another. Put it on the grid, not on each card. */
+.nb-reveal,
+.nb-reveal-group > * { animation: nb-settle var(--nb-t-enter) var(--nb-ease-out) both; }
+
+/* nb-straighten: A TAPED ITEM STRAIGHTENING as it arrives. Use on a card that
+   also carries .nb-tilt / .nb-tape; it lands on that card's own angle. */
+.nb-straighten { animation: nb-straighten var(--nb-t-enter) var(--nb-ease-out) both; }
+
+/* nb-draw: A RULED LINE DRAWING ITSELF. Put it on the line, not on the box
+   around it: an <hr>, a <span>, the blue stroke on .nb-marker. */
+.nb-draw {
+  transform-origin: left center;
+  animation: nb-rule-draw var(--nb-t-draw) var(--nb-ease-draw) both;
+}
+
+/* nb-ink: INK LANDING ON A STAT. Put it on the figure itself, not the block:
+   .nb-count, .nb-stamp b, a table total. */
+.nb-ink { animation: nb-ink var(--nb-t-lift) var(--nb-ease-out) both; }
+
+@supports (animation-timeline: view()) {
+  .nb-reveal, .nb-straighten, .nb-draw, .nb-ink,
+  .nb-reveal-group > * {
+    animation-timeline: view();
+    /* `auto` hands timing to the scroll position. A time duration here would
+       fight the range and finish early. */
+    animation-duration: auto;
+  }
+  .nb-reveal, .nb-straighten, .nb-reveal-group > * { animation-range: entry 0% entry 55%; }
+  .nb-draw { animation-range: entry 5% entry 70%; }
+  .nb-ink  { animation-range: entry 10% entry 50%; }
+
+  /* The stagger. Scroll-driven animations ignore animation-delay, so each
+     child gets a range shifted a little further into its own entry instead.
+     Six is the cap on purpose: past that the cards are off-screen anyway and
+     a longer cascade only makes the page feel slower. */
+  .nb-reveal-group > *:nth-child(1) { animation-range: entry 0%  entry 55%; }
+  .nb-reveal-group > *:nth-child(2) { animation-range: entry 5%  entry 60%; }
+  .nb-reveal-group > *:nth-child(3) { animation-range: entry 10% entry 65%; }
+  .nb-reveal-group > *:nth-child(4) { animation-range: entry 15% entry 70%; }
+  .nb-reveal-group > *:nth-child(5) { animation-range: entry 20% entry 75%; }
+  .nb-reveal-group > *:nth-child(n + 6) { animation-range: entry 25% entry 80%; }
+
+  /* nb-meter-draw: THE ONE PLACE .nb-draw CANNOT DRIVE ITSELF.
+     Put this on the .nb-meter trough when its bar carries .nb-draw.
+
+     `.nb-meter` is `overflow: hidden`, which is what clips the blue fill to the
+     trough's hand-drawn corners. In CSS that also makes it a scroll container,
+     and `view()` resolves against the nearest one, so the bar was measuring its
+     entry into the 13px box it already fills: progress pinned at 50%, fully
+     drawn, forever. Measured live: source DIV.nb-meter, progress 49.9112%, on a
+     bar 960px below the fold.
+
+     The fix is to measure the thing that actually enters the page. The trough
+     names a view timeline, resolved against ITS nearest scroll container, which
+     is the document, and the bar animates on that name instead. Nothing else
+     changes: duration stays `auto` and the range stays the one .nb-draw sets.
+
+     Opt-in on purpose. Twenty files use .nb-meter and none of the others should
+     move; a progress bar you are reading is not a place to spend motion. */
+  .nb-meter-draw { view-timeline-name: --nb-meter; }
+  .nb-meter-draw > .nb-draw { animation-timeline: --nb-meter; }
+}
+
+/* ---- 3c. Scroll readouts ----------------------------------------- */
+/*
+   nb-progress-x / nb-progress-y: A RULE THAT REPORTS HOW FAR DOWN THE SHEET
+   YOU ARE. Two of them exist: the ballpoint line across the very top of the
+   page (x), and the pen overprint down the lesson margin (y).
+
+   These are NOT arrivals. An arrival plays once and is over; this answers the
+   reader's own scroll, frame for frame, and is only ever as far along as they
+   are. It uses `scroll(root)`, not `view()`: `view()` measures ONE element's
+   pass through the scrollport, and neither of these elements travels at all,
+   because both are pinned. `scroll(root)` names the document scroller
+   explicitly rather than letting `nearest` resolve up an ancestor chain that,
+   for a `position: fixed` bar, is not the thing being scrolled.
+
+   WHY THIS IS CSS AND NOT `useScroll`. Both bars used to be framer-motion
+   `motion.div`s, and the top one lives in the ROOT LAYOUT, so the animation
+   runtime was in the first-load bundle of every page on the site: measured at
+   124 kB raw / 41 kB gzip, to draw a 3px line. It also put a scroll subscriber
+   and a rAF loop on the main thread of every page, which is the thread that is
+   busy during exactly the navigations when scrolling most needs to stay smooth.
+   A scroll timeline runs off the main thread and costs no bytes. This is the
+   same argument `components/motion/primitives.tsx` makes about reveals, and
+   these two bars are the last two places it had not been applied.
+
+   THE BASE STATE IS UNDRAWN, which is the safe direction. A browser without
+   scroll-driven animations gets no bar at all rather than a full one lying
+   about the reader's position, and both bars are `aria-hidden` decoration
+   whose information is available in words elsewhere on the page. */
+.nb-progress-x { transform-origin: left center; scale: 0 1; }
+.nb-progress-y { transform-origin: center top;  scale: 1 0; }
+
+@supports (animation-timeline: scroll()) {
+  /* Longhands, not the `animation` shorthand: `auto` is only a legal duration
+     on a progress-based timeline, and a shorthand carrying it is thrown away
+     wholesale by any parser that disagrees. The arrivals above set duration the
+     same way for the same reason.
+
+     `linear`, and it has to be: this maps scroll position to line length, so
+     any easing here would make the bar disagree with the scrollbar next to it.
+
+     NO FILL MODE. A scroll timeline has no before or after phase to fill, and
+     the note on .nb-route explains what a needlessly filling animation costs. */
+  .nb-progress-x, .nb-progress-y {
+    animation-duration: auto;
+    animation-timing-function: linear;
+    animation-timeline: scroll(root block);
+  }
+  .nb-progress-x { animation-name: nb-rule-draw; }
+  .nb-progress-y { animation-name: nb-rule-draw-y; }
+}
+
+/* nb-ink-on-load: THE SAME INK LANDING, OFF THE CLOCK INSTEAD OF THE SCROLL.
+   Pair it with .nb-ink.
+
+   A `view()` timeline takes its progress from where the element sits in the
+   scrollport, so anything ALREADY on screen when the page paints is past its
+   entry range and lands at the end state having played nothing. That is the
+   right default for the arrivals: a section you have not scrolled to yet has
+   no business animating. But it means the one mark that should move the
+   instant you arrive, the stamp on a signed-off certificate, would never move
+   at all.
+
+   So this hands that one case back to the document timeline: 180ms, once, on
+   load, ending exactly where the base style already puts it.
+
+   Spend it only where a person arrives ONCE and the arrival is the event. Not
+   on a surface they open every day: something that replays every visit stops
+   being a moment and becomes a tic. Reduced motion is already covered, because
+   `.nb-ink` is switched off by name at the bottom of this file. */
+.nb-ink-on-load {
+  animation-timeline: auto;
+  animation-duration: var(--nb-t-lift);
+}
 
 /* ---- 4. Controls ------------------------------------------------- */
 
 /* nb-btn: the primary action. Blue fill, ink offset drop, and it physically
-   presses into its own shadow when you push it. */
+   presses into its own shadow when you push it.
+   The press is the fastest thing on the site (--nb-t-press) and the release is
+   slower, because the user is deciding on the way down and the system is just
+   answering on the way back up. */
 .nb-btn {
   display: inline-flex;
   align-items: center;
@@ -390,12 +707,18 @@
   border-radius: var(--hand-s);
   box-shadow: var(--drop-ink);
   transition:
-    transform 90ms steps(2, end),
-    box-shadow 90ms steps(2, end),
-    background-color 10ms steps(1);
+    transform var(--nb-t-hover) var(--nb-ease-out),
+    box-shadow var(--nb-t-hover) var(--nb-ease-out),
+    background-color var(--nb-t-hover) var(--nb-ease-out);
 }
-.nb-btn:hover  { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
-.nb-btn:active { transform: translate(3px, 3px); box-shadow: 0 0 0 var(--ink); }
+@media (hover: hover) and (pointer: fine) {
+  .nb-btn:hover { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
+}
+.nb-btn:active {
+  transform: translate(3px, 3px);
+  box-shadow: 0 0 0 var(--ink);
+  transition-duration: var(--nb-t-press);
+}
 .nb-btn:disabled,
 .nb-btn[aria-disabled="true"] {
   background: var(--paper);
@@ -428,12 +751,18 @@
   border-radius: var(--hand-s);
   box-shadow: 3px 3px 0 rgba(22, 24, 27, 0.22);
   transition:
-    transform 90ms steps(2, end),
-    box-shadow 90ms steps(2, end),
-    background-color 10ms steps(1);
+    transform var(--nb-t-hover) var(--nb-ease-out),
+    box-shadow var(--nb-t-hover) var(--nb-ease-out),
+    background-color var(--nb-t-hover) var(--nb-ease-out);
 }
-.nb-btn-ghost:hover  { transform: translate(2px, 2px); box-shadow: 1px 1px 0 rgba(22, 24, 27, 0.22); background: rgba(27, 54, 200, 0.06); }
-.nb-btn-ghost:active { transform: translate(3px, 3px); box-shadow: 0 0 0 rgba(22, 24, 27, 0.22); }
+@media (hover: hover) and (pointer: fine) {
+  .nb-btn-ghost:hover { transform: translate(2px, 2px); box-shadow: 1px 1px 0 rgba(22, 24, 27, 0.22); background: rgba(27, 54, 200, 0.06); }
+}
+.nb-btn-ghost:active {
+  transform: translate(3px, 3px);
+  box-shadow: 0 0 0 rgba(22, 24, 27, 0.22);
+  transition-duration: var(--nb-t-press);
+}
 .nb-btn-ghost:disabled,
 .nb-btn-ghost[aria-disabled="true"] {
   color: var(--graphite);
@@ -460,7 +789,9 @@
   color: var(--graphite);
   white-space: nowrap;
   border-bottom: 2px solid transparent;
-  transition: color 10ms steps(1), border-color 10ms steps(1);
+  transition:
+    color var(--nb-t-hover) var(--nb-ease-out),
+    border-color var(--nb-t-hover) var(--nb-ease-out);
 }
 .nb-navlink:hover,
 .nb-navlink[aria-current] { color: var(--ink); border-bottom-color: var(--blue); }
@@ -473,7 +804,7 @@
   text-decoration-color: rgba(27, 54, 200, 0.4);
   text-decoration-thickness: 2px;
   text-underline-offset: 3px;
-  transition: text-decoration-color 10ms steps(1);
+  transition: text-decoration-color var(--nb-t-hover) var(--nb-ease-out);
 }
 .nb-link:hover { text-decoration-color: var(--blue); }
 
@@ -539,7 +870,7 @@
   background: var(--card);
   border: 2px solid var(--ink);
   border-radius: var(--hand-s);
-  transition: border-color 10ms steps(1);
+  transition: border-color var(--nb-t-hover) var(--nb-ease-out);
 }
 .nb-input:focus { border-color: var(--blue); }
 .nb-input:disabled { background: var(--paper); color: var(--graphite); border-color: var(--rule); cursor: not-allowed; }
@@ -719,6 +1050,33 @@ textarea.nb-input { min-height: 8rem; line-height: 1.5; resize: vertical; }
   border-color: var(--blue);
   color: var(--card);
 }
+/* The press, and only on the button form. `.nb-tag` is a static caption on a
+   dozen pages ("Team 254", "Joined March", "admin") and a caption that flinches
+   when you touch the card it sits on is a lie about what is clickable. As a
+   button it is the most-pressed control on the four calculators, and it was the
+   one control in the kit with no answer to a finger at all.
+
+   `scale`, not the offset translate the buttons use: those press INTO a 3px ink
+   drop and a chip has no drop to press into, so a translate would read as the
+   chip sliding rather than being pushed into the paper. The independent `scale`
+   property is used so this composes with a tilt instead of wiping it.
+
+   Fill stays instant. Selecting a preset rewrites every field on the page, and
+   the fastest possible confirmation that the click landed is the chip going
+   blue on the same frame. Only the press is eased, on the same asymmetry as
+   .nb-btn: down on --nb-t-press, back up on --nb-t-hover. */
+button.nb-tag {
+  transition: scale var(--nb-t-hover) var(--nb-ease-out);
+}
+button.nb-tag:active {
+  scale: 0.97;
+  transition-duration: var(--nb-t-press);
+}
+button.nb-tag:disabled,
+button.nb-tag[aria-disabled="true"] {
+  scale: 1;
+  cursor: not-allowed;
+}
 
 /* nb-brand: the LearnFRC logotype. Wrap the last syllable in <b> to get the
    hand-drawn blue box around it. Shared by the header and the footer. */
@@ -774,12 +1132,21 @@ textarea.nb-input { min-height: 8rem; line-height: 1.5; resize: vertical; }
   border-bottom: 1px dashed var(--rule);
   text-decoration: none;
   color: inherit;
-  transition: background-color 10ms steps(1), transform 100ms steps(2, end);
+  transition:
+    background-color var(--nb-t-hover) var(--nb-ease-out),
+    transform var(--nb-t-hover) var(--nb-ease-out);
 }
-.nb-row:hover,
+/* Keyboard focus slides on every device; pointer hover is gated so a tap on a
+   touch screen does not leave the row parked 10px to the right. */
 .nb-row:focus-visible {
   background: rgba(27, 54, 200, 0.055);
   transform: translateX(10px);
+}
+@media (hover: hover) and (pointer: fine) {
+  .nb-row:hover {
+    background: rgba(27, 54, 200, 0.055);
+    transform: translateX(10px);
+  }
 }
 .nb-row:hover h3,
 .nb-row:focus-visible h3 {
@@ -947,6 +1314,26 @@ textarea.nb-input { min-height: 8rem; line-height: 1.5; resize: vertical; }
     animation: none !important;
     opacity: 1 !important;
   }
+  /* A scroll-driven animation takes its progress from the scroll position,
+     not from a clock, so zeroing animation-duration above does nothing to
+     it. The arrivals have to be switched off by name. Every one of them is
+     transform-only and its base style IS its end state, so `animation: none`
+     leaves the element exactly where it belongs: nothing is left offset,
+     rotated, or invisible. */
+  .nb-reveal, .nb-reveal-group > *,
+  .nb-straighten, .nb-draw, .nb-ink {
+    animation: none !important;
+    animation-timeline: auto !important;
+  }
+  /* The two scroll readouts STAY. They are not motion the reader has to sit
+     through: the line is only ever as far along as they have scrolled, it stops
+     dead when they stop, and switching it off would delete a readout rather
+     than calm one down. What it does need is `auto` put back: the `*` rule
+     above stamps `animation-duration: 0.001ms` on everything, and on a
+     progress-based timeline a time duration is read as a FRACTION of the
+     timeline, which would slam both bars to full inside the first pixel of
+     scroll. Named here so the later, more specific rule wins. */
+  .nb-progress-x, .nb-progress-y { animation-duration: auto !important; }
   .nb-skeleton { animation: none !important; background: var(--paper); }
   .nb-tilt, .nb-tilt-1, .nb-tilt-2, .nb-tilt-3, .nb-tilt-4,
   .nb-brand b, .nb-tape,
@@ -956,6 +1343,10 @@ textarea.nb-input { min-height: 8rem; line-height: 1.5; resize: vertical; }
   .nb-row:hover, .nb-row:focus-visible {
     transform: none !important;
   }
+  /* The chip press is written with the independent `scale` property, which the
+     `transform: none` above does not reach. Named separately so it lies flat
+     like everything else. */
+  button.nb-tag:active { scale: none !important; }
 }
 
 /* The grain is a screen effect. On paper it is just toner. */

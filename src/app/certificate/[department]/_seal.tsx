@@ -13,12 +13,26 @@
  * own, a drop shadow and an infinite animation. All four are out of the system.
  * The stamp is two borders, four lines of Space Mono and one tilt.
  *
- * Both marks are Server Components: nothing here has state and nothing moves.
+ * Both marks are Server Components: nothing here has state, and the one motion
+ * on the earned stamp is CSS off the document timeline, so neither ships a
+ * byte of JavaScript.
  */
 
 /**
  * The earned mark. Pressed into the top corner of the certificate, the way an
  * inspector stamps a drawing, not centred like a sticker.
+ *
+ * IT PRESSES ON ARRIVAL. `.nb-ink` is the system's ink-landing motion: the mark
+ * comes down 5px, 4% oversize, and stops dead, because that is what a stamp
+ * does and a stamp does not bounce. `.nb-ink-on-load` runs it off the clock
+ * rather than off the scroll, because this stamp sits at the top of the page
+ * and a scroll-driven arrival on something already on screen plays nothing.
+ *
+ * This is the one page in the account area that earns a load-time animation:
+ * you finish a whole department once, you see this page once, and the stamp
+ * coming down IS the event the page exists to report. Everywhere else the
+ * arrivals wait for a scroll. `.nb-ink` writes `translate` and `scale`, the
+ * independent properties, so the -4.5deg press angle below survives it.
  */
 export function CertificateStamp({
   deptSlug,
@@ -31,7 +45,7 @@ export function CertificateStamp({
 }) {
   return (
     <span
-      className="relative inline-block rotate-[-4.5deg] select-none print:rotate-[-4.5deg]"
+      className="nb-ink nb-ink-on-load relative inline-block rotate-[-4.5deg] select-none print:rotate-[-4.5deg]"
       role="img"
       aria-label={`Stamped: LearnFRC certified, ${deptSlug}, ${year}`}
     >

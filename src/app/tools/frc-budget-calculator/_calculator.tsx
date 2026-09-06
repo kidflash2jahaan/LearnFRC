@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { Ink } from "@/components/motion/primitives";
 
 /* ------------------------------------------------------------------ *
  * VERIFIED CONSTANTS: every value below is primary-sourced.
@@ -1001,13 +1002,28 @@ export default function BudgetCalculator({ authed }: { authed: boolean }) {
             <LedgerSection title="Travel" items={calc.travelItems} subtotal={calc.travel} />
             <LedgerSection title="Spares and other" items={calc.spareItems} subtotal={calc.spares} />
 
-            {/* The bottom line, on the heaviest rule on the page. */}
+            {/* The bottom line, on the heaviest rule on the page.
+
+                This is the only figure on the sheet that gets the ink landing.
+                Seven subtotals land above it and every one of them is a real
+                number, but inking all eight would turn a ledger into a slot
+                machine: the point of a ledger is that the eye runs straight
+                down a still column. So the motion is spent once, on the line
+                everybody scrolled here to read.
+
+                The copy of this total taped up in the hero gets nothing, and
+                that is deliberate: it is above the fold, so any arrival would
+                fire on load, which is a beat the reader has to wait through
+                before they can read the number they came for. */}
             <div className="mt-[clamp(1.6rem,3.2vw,2.4rem)] border-t-2 border-ink pt-4">
               <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
                 <h3 className="text-[clamp(1.2rem,1rem+0.8vw,1.6rem)]">Grand total</h3>
-                <p className="font-mono text-[clamp(1.6rem,1.2rem+1.6vw,2.4rem)] font-bold leading-none tracking-[-0.03em] text-blue tabular-nums">
+                <Ink
+                  as="p"
+                  className="block font-mono text-[clamp(1.6rem,1.2rem+1.6vw,2.4rem)] font-bold leading-none tracking-[-0.03em] text-blue tabular-nums"
+                >
                   {fmt0.format(calc.grand)}
-                </p>
+                </Ink>
               </div>
               <p className="nb-slug mt-3 max-w-[60ch]">
                 {hasBand

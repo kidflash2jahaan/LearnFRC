@@ -24,6 +24,15 @@ export const metadata: Metadata = {
  *
  * The figures are the drawer label: how much is filed in here, printed once,
  * in mono, at the top, the way the front of a card drawer is labelled.
+ *
+ * NO ARRIVALS ON THIS PAGE, and that is a decision rather than an omission.
+ * Everything this sheet owns is above the fold by design, and the arrivals are
+ * scroll-driven: a `view()` timeline on an element that is already fully in
+ * view at scroll 0 is past its entry range, so it sits at its end state and
+ * plays nothing. An `Ink` on the tally would be a no-op for every reader on a
+ * laptop and a stutter in front of the search field for everyone else. The one
+ * thing below the fold here is the catalogue itself, and its cards already
+ * carry `.nb-lift`, which is the hover this system has.
  */
 export default function GlossaryPage() {
   // How many of the 26 letters actually open a term. It is the one figure here

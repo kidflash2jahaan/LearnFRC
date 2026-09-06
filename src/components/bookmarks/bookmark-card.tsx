@@ -93,7 +93,7 @@ export function BookmarkCard({ data }: { data: BookmarkCardData }) {
 
   return (
     <li className="group relative border-b border-dashed border-rule last:border-b-0">
-      <div className="grid items-baseline gap-x-[clamp(1rem,3vw,2.2rem)] gap-y-2 px-[clamp(1rem,2.4vw,1.7rem)] py-[clamp(1rem,2.2vw,1.4rem)] transition-[background-color] duration-100 group-hover:bg-[rgba(27,54,200,0.055)] min-[760px]:grid-cols-[minmax(0,13rem)_minmax(0,1fr)_auto]">
+      <div className="grid items-baseline gap-x-[clamp(1rem,3vw,2.2rem)] gap-y-2 px-[clamp(1rem,2.4vw,1.7rem)] py-[clamp(1rem,2.2vw,1.4rem)] transition-[background-color] duration-[var(--nb-t-hover)] ease-[var(--nb-ease-out)] group-hover:bg-[rgba(27,54,200,0.055)] min-[760px]:grid-cols-[minmax(0,13rem)_minmax(0,1fr)_auto]">
         {/* The filing line: where it came from and when it went in. */}
         <p className="nb-slug min-w-0">
           <span className="block truncate">dept / {data.deptSlug}</span>

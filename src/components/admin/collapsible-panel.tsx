@@ -70,7 +70,7 @@ export function CollapsiblePanel({
           onClick={toggle}
           aria-expanded={open}
           aria-controls={panelId}
-          className="grid w-full cursor-pointer grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1 px-1 py-4 text-left transition-[background-color] duration-100 hover:bg-[rgba(27,54,200,0.055)]"
+          className="grid w-full cursor-pointer grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1 px-1 py-4 text-left transition-[background-color] duration-[var(--nb-t-hover)] ease-[var(--nb-ease-out)] hover:bg-[rgba(27,54,200,0.055)]"
         >
           <span className="nb-slug col-start-1 row-start-1">{slug}</span>
 
@@ -102,7 +102,7 @@ export function CollapsiblePanel({
               viewBox="0 0 14 9"
               aria-hidden="true"
               focusable="false"
-              className={`transition-transform duration-[180ms] ease-[var(--step)] motion-reduce:transition-none ${
+              className={`transition-transform duration-[var(--nb-t-hover)] ease-[var(--nb-ease-out)] motion-reduce:transition-none ${
                 open ? "rotate-180" : ""
               }`}
             >
@@ -123,7 +123,7 @@ export function CollapsiblePanel({
         role="region"
         aria-label={title}
         inert={!open}
-        className={`grid transition-[grid-template-rows,opacity] duration-300 ease-[var(--step)] motion-reduce:transition-none ${
+        className={`grid transition-[grid-template-rows,opacity] duration-[var(--nb-t-enter)] ease-[var(--nb-ease-out)] motion-reduce:transition-none ${
           open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
         }`}
       >

@@ -22,7 +22,10 @@ export type RosterMember = {
  */
 export function RosterSheet({ roster }: { roster: RosterMember[] }) {
   return (
-    <div className="nb-box nb-tilt-2 p-[clamp(1.1rem,2.4vw,1.6rem)]">
+    // MOTION: taped at both corners, so it straightens as you reach it. The
+    // one motion on this half of the spread; the running text beside it is
+    // read, not watched.
+    <div className="nb-box nb-tilt-2 nb-straighten p-[clamp(1.1rem,2.4vw,1.6rem)]">
       <span
         className="nb-tape -top-3 left-[19%] rotate-[-3.8deg]"
         aria-hidden="true"

@@ -4,6 +4,7 @@ import { getDepartments, getCompletedLessonIds } from "@/lib/queries";
 import { getSession } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { CatalogueWall } from "./_pit-row";
+import { Ink, nbMotion } from "@/components/motion/primitives";
 import { JsonLd } from "@/components/json-ld";
 
 const SITE =
@@ -163,16 +164,21 @@ export default async function GuidesPage() {
             </p>
           </div>
 
+          {/* MOTION: the three figures are the page's whole claim, so they
+              land like a stamp rather than scrolling into view already set:
+              down 5px, scale 1.04 to 1, stopped dead. No bounce, because a
+              stamp does not bounce. `block` is required inside `.nb-stamp`,
+              which needs its <b> on its own line. */}
           <p className="nb-stamp">
-            <b>{departments.length}</b>
+            <Ink as="b" className="block">{departments.length}</Ink>
             <span>departments</span>
           </p>
           <p className="nb-stamp">
-            <b>{totalModules.toLocaleString()}</b>
+            <Ink as="b" className="block">{totalModules.toLocaleString()}</Ink>
             <span>modules</span>
           </p>
           <p className="nb-stamp">
-            <b>{totalLessons.toLocaleString()}</b>
+            <Ink as="b" className="block">{totalLessons.toLocaleString()}</Ink>
             <span>lessons</span>
           </p>
         </div>
@@ -194,7 +200,11 @@ export default async function GuidesPage() {
           </p>
         </div>
 
+        {/* MOTION: same wall, same rule as the home page. The group class goes
+            on the <ol>; each <li> carries `nb-straighten` itself, so the cards
+            are dealt out one after another instead of arriving as a block. */}
         <CatalogueWall
+          className={nbMotion.revealGroup}
           departments={departments}
           progress={user ? progress : undefined}
         />
@@ -207,7 +217,8 @@ export default async function GuidesPage() {
           obviously fits. That is a sentence, so it is written as one. */}
       <section className="nb-wrap pb-[clamp(3rem,6vw,5rem)]">
         <div className="nb-rule pt-[clamp(1.8rem,3.5vw,2.6rem)]">
-          <div className="nb-box nb-tilt-3 max-w-[46rem] p-[clamp(1.2rem,2.6vw,1.9rem)]">
+          {/* MOTION: taped at both corners, so it straightens on arrival. */}
+          <div className="nb-box nb-tilt-3 nb-straighten max-w-[46rem] p-[clamp(1.2rem,2.6vw,1.9rem)]">
             <span className="nb-tape -top-3 left-[18%] rotate-[-3.2deg]" aria-hidden="true" />
             <span className="nb-tape -bottom-3 right-[14%] rotate-[2.6deg]" aria-hidden="true" />
 

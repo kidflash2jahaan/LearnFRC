@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { Draw, Ink, Straighten } from "@/components/motion/primitives";
 
 /* ------------------------------------------------------------------ *
  * Exact unit conversions (defined constants, not estimates)
@@ -818,10 +819,19 @@ export default function GearRatioCalculator({
             aria-live="polite"
           >
             <p className="nb-slug !text-ink">overall reduction, every mesh multiplied</p>
+            {/* The one figure this whole section exists to produce, so it is
+                the one that gets the ink landing: it comes down 5px onto the
+                rule and stops dead.
+
+                It is safe on a live number because the timeline is view(), not
+                a clock. Typing in a stage above re-renders the text node and
+                nothing restarts, so the figure never flickers while you edit.
+                A mount-driven count-up here would restart on every keystroke,
+                which is the exact thing that reads as lag. */}
             <p className="flex items-baseline gap-2 font-mono font-bold tabular-nums">
-              <span className="text-[clamp(2.2rem,1.4rem+3vw,3.8rem)] leading-none tracking-[-0.04em] text-blue">
+              <Ink className="text-[clamp(2.2rem,1.4rem+3vw,3.8rem)] leading-none tracking-[-0.04em] text-blue">
                 {r.stagesValid ? fmt(r.G, 2) : "n/a"}
-              </span>
+              </Ink>
               <span className="text-[1.1rem] text-ink">:1</span>
             </p>
           </div>
@@ -852,8 +862,14 @@ export default function GearRatioCalculator({
           </h2>
 
           <div className="mt-[clamp(1.4rem,3vw,2.2rem)] grid items-start gap-[clamp(1.2rem,2.8vw,2.2rem)] lg:grid-cols-2">
-            {/* --- Card A: speed --- */}
-            <div className="nb-box nb-tilt-2 p-[clamp(1.1rem,2.4vw,1.7rem)]">
+            {/* --- Card A: speed ---
+                Two cards pinned at two angles, so they arrive the way they
+                were put up: crooked, then pushed square onto their own resting
+                tilt. `nb-straighten` writes the independent `rotate` and
+                `translate`, so it composes with `nb-tilt-2` instead of wiping
+                it. Card B sits 2rem lower at lg, so the two land a beat apart
+                without a stagger to configure. */}
+            <Straighten className="nb-box nb-tilt-2 p-[clamp(1.1rem,2.4vw,1.7rem)]">
               <p className="nb-slug border-b border-dashed border-rule pb-2.5">
                 {isDrive ? "speed on carpet" : "speed at the output shaft"}
               </p>
@@ -954,10 +970,10 @@ export default function GearRatioCalculator({
                   </div>
                 )}
               </div>
-            </div>
+            </Straighten>
 
             {/* --- Card B: force --- */}
-            <div className="nb-box nb-tilt-3 relative p-[clamp(1.1rem,2.4vw,1.7rem)] lg:mt-8">
+            <Straighten className="nb-box nb-tilt-3 relative p-[clamp(1.1rem,2.4vw,1.7rem)] lg:mt-8">
               <span
                 className="nb-tape -top-3 right-[14%] rotate-[2.8deg]"
                 aria-hidden="true"
@@ -1008,8 +1024,20 @@ export default function GearRatioCalculator({
                   {/* The meter never stands alone: the number and the verdict
                       sentence carry the same information in words. */}
                   <div className="mt-4">
-                    <div className="nb-meter">
-                      <span
+                    {/* The bar draws itself out to the proportion it already
+                        has: `width` stays the real number and `nb-draw` scales
+                        the X axis 0 to 1 from the left, so nothing lays out and
+                        nothing paints. Editing an input above changes the width
+                        underneath a finished transform, so the bar re-sizes
+                        without re-drawing.
+
+                        `nb-meter-draw` on the trough is not optional. The trough
+                        is `overflow: hidden`, which makes it a scroll container,
+                        and without this the bar would time itself against the
+                        13px box it already fills and sit fully drawn forever. */}
+                    <div className="nb-meter nb-meter-draw">
+                      <Draw
+                        as="span"
                         className="nb-meter-bar"
                         style={{ width: `${pushPct}%` }}
                       />
@@ -1089,7 +1117,7 @@ export default function GearRatioCalculator({
                   </p>
                 </div>
               ) : null}
-            </div>
+            </Straighten>
           </div>
         </div>
       </section>
@@ -1116,8 +1144,9 @@ export default function GearRatioCalculator({
               </p>
 
               <div className="mt-3">
-                <div className="nb-meter">
-                  <span
+                <div className="nb-meter nb-meter-draw">
+                  <Draw
+                    as="span"
                     className="nb-meter-bar"
                     style={{
                       width: `${Math.min(100, (r.iTotal / MAIN_BREAKER_A) * 100)}%`,

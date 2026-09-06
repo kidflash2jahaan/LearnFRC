@@ -48,7 +48,7 @@ export function DeskIndex({ desks }: { desks: DeskCount[] }) {
                   from here and reaching one from the log read as one gesture. */}
               <Link
                 href={`#${d.slug}`}
-                className="group flex items-baseline gap-3 py-2.5 transition-transform duration-150 ease-[var(--step)] hover:translate-x-1.5 focus-visible:translate-x-1.5"
+                className="group flex items-baseline gap-3 py-2.5 transition-transform duration-[var(--nb-t-hover)] ease-[var(--nb-ease-out)] motion-safe:hover:translate-x-1.5 motion-safe:focus-visible:translate-x-1.5"
               >
                 <span className="nb-slug w-[2.2ch] shrink-0 tabular-nums">
                   {String(i + 1).padStart(2, "0")}

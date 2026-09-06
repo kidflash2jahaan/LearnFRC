@@ -57,11 +57,30 @@ type Me = {
   isAdmin: boolean;
 };
 
-/** The caret under the account name, drawn at the same weight as the one the
- *  kit puts inside a select, so the two read as the same pen. */
+/**
+ * The caret under the account name, drawn at the same weight as the one the
+ * kit puts inside a select, so the two read as the same pen.
+ *
+ * It turns over when the menu is open. That is the only motion in the header,
+ * and it is here because it is the only thing in the header that was saying
+ * something untrue: a chevron pointing down under an open menu is still
+ * advertising the thing it already did. Radix stamps `data-state` on the
+ * trigger, so the mark answers the state rather than a click handler.
+ *
+ * 140ms on the response curve, the hover/focus timing, because that is what
+ * this is: the interface acknowledging a pointer. Under reduced motion the
+ * global rule zeroes the duration and the caret simply arrives pointing up,
+ * which is the whole point of it, so nothing is lost.
+ */
 function Caret() {
   return (
-    <svg width="11" height="7" viewBox="0 0 14 9" aria-hidden="true" className="shrink-0">
+    <svg
+      width="11"
+      height="7"
+      viewBox="0 0 14 9"
+      aria-hidden="true"
+      className="shrink-0 transition-[rotate] duration-[var(--nb-t-hover)] ease-[var(--nb-ease-out)] group-data-[state=open]:rotate-180"
+    >
       <path
         d="M1 1.4 7 7.6 13 1.4"
         fill="none"
@@ -190,7 +209,11 @@ export function Navbar() {
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
-                  className="flex min-h-11 cursor-pointer items-center gap-1.5 text-[var(--graphite)]"
+                  /* `group` so the caret can read this trigger's data-state.
+                     The colour move is the same one every nav item makes, on
+                     the same timing, so the avatar stops being the one control
+                     in the header that does not answer a pointer. */
+                  className="group flex min-h-11 cursor-pointer items-center gap-1.5 text-[var(--graphite)] transition-colors duration-[var(--nb-t-hover)] ease-[var(--nb-ease-out)] hover:text-[var(--ink)] data-[state=open]:text-[var(--ink)]"
                   aria-label="Account menu"
                 >
                   <Avatar

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { Avatar } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { DepartmentCard } from "@/components/department-card";
+import { RevealGroup } from "@/components/motion/primitives";
 import { TeamInvite } from "@/components/team/team-invite";
 import { FirstRunGuide } from "@/components/dashboard/first-run-guide";
 import { FirstRunLaunch } from "@/components/onboarding/first-run-launch";
@@ -59,7 +60,7 @@ import { WhatsNew } from "./_whats-new";
  */
 
 export const metadata: Metadata = {
-  title: "Dashboard · LearnFRC",
+  title: "Dashboard",
   description: "Your progress, streak, and achievements across every FRC department.",
   robots: { index: false, follow: false },
 };
@@ -602,7 +603,23 @@ export default async function DashboardPage() {
         </div>
 
         {deptProgress.length > 0 ? (
-          <div className="grid gap-[clamp(0.9rem,1.9vw,1.4rem)] min-[640px]:grid-cols-2 min-[1024px]:grid-cols-3">
+          /* THE WALL IS DEALT OUT. `RevealGroup` targets its direct children,
+             so eleven cards get the system's arrival with no wrapper and no
+             marker component: each travels 14px up over its own entry into the
+             viewport, and the stagger comes from shifted entry ranges because
+             a scroll-driven animation ignores `animation-delay`.
+
+             This is the one arrival on the dashboard, and it is two screens
+             down on purpose. The masthead, the tally and the resume card are
+             all above it and all still: this is the page a learner opens every
+             day, and a page that re-animates its own header on every visit
+             feels slower than one that never moves. The wall is the one place
+             you have to scroll to reach, and eleven cards appearing as a
+             single block is the jarring change worth bridging.
+
+             Travel only, so a card is never invisible: if the timeline never
+             runs, the worst case is a card sitting 14px low. */
+          <RevealGroup className="grid gap-[clamp(0.9rem,1.9vw,1.4rem)] min-[640px]:grid-cols-2 min-[1024px]:grid-cols-3">
             {deptProgress.map(({ dept, pct }, i) => (
               <DepartmentCard
                 key={dept.slug}
@@ -615,7 +632,7 @@ export default async function DashboardPage() {
                 index={i}
               />
             ))}
-          </div>
+          </RevealGroup>
         ) : (
           <div className="nb-box max-w-[44rem] p-[clamp(1.2rem,2.6vw,1.9rem)]">
             <p className="nb-slug">departments</p>

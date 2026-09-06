@@ -132,7 +132,7 @@ export function LessonStickyCta({
     <div
       inert={!visible}
       aria-hidden={!visible}
-      className={`fixed inset-x-0 bottom-0 z-40 transition-opacity duration-150 print:hidden ${
+      className={`fixed inset-x-0 bottom-0 z-40 transition-opacity duration-[var(--nb-t-hover)] ease-[var(--nb-ease-out)] print:hidden ${
         visible ? "opacity-100" : "pointer-events-none opacity-0"
       }`}
     >

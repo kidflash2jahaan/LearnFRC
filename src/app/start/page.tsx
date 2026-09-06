@@ -55,7 +55,7 @@ import {
  */
 
 export const metadata: Metadata = {
-  title: "Start here · LearnFRC",
+  title: "Start here",
   description:
     "Answer one question and we'll turn 394 lessons into the five that get you started.",
   // Signed-in only, and a thin router. Keep it out of the index entirely so it

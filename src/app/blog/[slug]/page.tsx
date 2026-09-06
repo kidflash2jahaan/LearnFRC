@@ -12,6 +12,7 @@ import { ShareButton } from "@/components/share-button";
 import { ArticleViewBeacon } from "@/components/article-view-beacon";
 import { ArticleSignupHook } from "@/components/blog/article-signup-hook";
 import { ArticleNextStep } from "@/components/blog/article-next-step";
+import { Reveal } from "@/components/motion/primitives";
 import { ReadingRail } from "./_reading-rail";
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com";
@@ -242,8 +243,28 @@ export default async function ArticlePage({
           {/* The breakpoint is 861px, not md: `.nb-panel + .nb-panel` keeps its
               horizontal 2px divider up to and including 860px, so the columns
               split at 861. Splitting any earlier leaves the panels side by side
-              with the rules still running across them. */}
-          <div className="nb-box grid overflow-hidden min-[861px]:grid-cols-3">
+              with the rules still running across them.
+
+              THE ONLY MOTION ON AN ARTICLE PAGE. Nothing in the prose column
+              moves: a person is reading that, and a paragraph arriving while
+              you are three lines into the one above it is an interruption
+              wearing a nice curve. This frame is what is left when the reading
+              stops, so it is the one thing that gets laid down as you reach it.
+
+              It is also the only block on the page the right SIZE to be laid
+              down, which was measured rather than guessed. A `view()` entry
+              range is min(element height, viewport height), so with
+              `entry 0% -> 55%` the motion plays over `0.55 * min(S, V)` of
+              scrolling. On a 500x635 phone this frame stacks to 621px and
+              plays over 342px, about 280ms at a normal flick. The ruled band
+              that closes the page is 101px and would play over 56px, roughly
+              50ms: real, and over before anyone could see it. An arrival
+              nobody registers has not earned its place.
+
+              `Reveal` on the frame, not `RevealGroup` on the three panels: the
+              divider rules belong to the panels, so staggering them would run
+              the rules around inside a frame that stayed still. */}
+          <Reveal className="nb-box grid overflow-hidden min-[861px]:grid-cols-3">
             {related.map((r) => (
               <Link
                 key={r.slug}
@@ -262,7 +283,7 @@ export default async function ArticlePage({
                 </span>
               </Link>
             ))}
-          </div>
+          </Reveal>
         </section>
       )}
 
@@ -270,7 +291,10 @@ export default async function ArticlePage({
           Not a fourth call to action. By this point the reader has been handed
           the lessons that continue the subject and the three articles nearest
           to it, so the only thing left is the two doors out of the binder,
-          written as one line. */}
+          written as one line.
+
+          Measured at 101px tall, which is why it does not move: its arrival
+          would be over in 56px of scroll. See the note on the frame above. */}
       <section className="nb-wrap pb-[clamp(3rem,6vw,5rem)] pt-[clamp(2.4rem,5vw,3.6rem)]">
         <div className="nb-rule flex flex-wrap items-center gap-x-6 gap-y-3 pt-[clamp(1.2rem,2.4vw,1.8rem)]">
           <p className="nb-slug">end of sheet</p>

@@ -78,9 +78,19 @@ function Offsite() {
  * rows is a 29px target, and the system's floor has no small-screen exception.
  * The hover is an underline rather than a bottom border, because a border would
  * sit at the foot of the 44px box instead of under the word.
+ *
+ * The colour is eased on the shared hover timing, which is the only change the
+ * footer needed. It was the one hover on the site that snapped: `nb-navlink`
+ * and `nb-link` both ride --nb-t-hover, and nineteen links in the back cover
+ * were cutting straight to blue. Only `color` is transitioned. The underline
+ * arrives with it and `text-decoration-line` cannot be interpolated, so easing
+ * the decoration colour as well would just draw a line that fades in late.
+ *
+ * Nothing else here moves, on purpose. See the report: an arrival on the back
+ * cover is decoration on chrome that appears at the foot of every page.
  */
 const COL_LINK =
-  "inline-flex min-h-11 items-center text-[0.95rem] text-[var(--ink)] no-underline decoration-2 underline-offset-4 hover:text-[var(--blue)] hover:underline";
+  "inline-flex min-h-11 items-center text-[0.95rem] text-[var(--ink)] no-underline decoration-2 underline-offset-4 transition-[color] duration-[var(--nb-t-hover)] ease-[var(--nb-ease-out)] hover:text-[var(--blue)] hover:underline";
 
 export function Footer() {
   return (
@@ -146,9 +156,15 @@ export function Footer() {
             it, what it contains, and the two legal pages. Mono, because all of
             it is catalogue data. */}
         <div className="nb-hair nb-slug mt-[clamp(1.8rem,3.5vw,2.6rem)] flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2 pt-4">
+          {/* FIRST is a registered mark, and this line exists precisely to
+              respect it, so it carries the symbol on first use. The rebuild
+              dropped both the symbol and the copyright year; the legal pages
+              kept theirs, which made the footer the one place on the site
+              understating the notice it is there to make. */}
           <span>
-            Built by <span className="font-bold text-[var(--ink)]">Jahaan Pardhanani</span>. Not
-            affiliated with or endorsed by FIRST.
+            &copy; {new Date().getFullYear()} LearnFRC. Built by{" "}
+            <span className="font-bold text-[var(--ink)]">Jahaan Pardhanani</span>. Not
+            affiliated with or endorsed by FIRST&reg;.
           </span>
           <span className="flex flex-wrap items-baseline gap-x-4 gap-y-2">
             {/* These two are standalone targets rather than links inside a

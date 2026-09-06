@@ -26,7 +26,7 @@ import { HandoutSheet } from "@/components/team/handout-sheet";
  */
 
 export const metadata: Metadata = {
-  title: "Team handout · LearnFRC",
+  title: "Team handout",
   description:
     "A printable one-page handout for getting your FRC team onto LearnFRC.",
   // /teams is already disallowed in robots.ts, which covers this route. The

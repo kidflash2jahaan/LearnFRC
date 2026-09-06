@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { motion, useScroll } from "framer-motion";
 import { DayStrip } from "@/components/progress/day-strip";
 import { rhythmMicrocopy, type Rhythm } from "@/lib/streaks";
 import type { TocHeading } from "@/components/markdown";
@@ -24,10 +23,16 @@ import { cn } from "@/lib/utils";
  *
  * THE PEN LINE. The one instrument. It is the margin rule itself: 2px of ink
  * down the left of the contents, overprinted in ballpoint as far as you have
- * read. Driven by `useScroll`, never by a scroll listener, and with no spring
- * on it: input-driven, so it stops the instant you stop and there is nothing
- * to settle. That also means it needs no reduced-motion branch, because it
- * never animates on its own.
+ * read. It is `.nb-progress-y`: a scroll-driven CSS animation on
+ * `scroll(root block)`, with no spring and no scroll listener. Input-driven, so
+ * it stops the instant you stop and there is nothing to settle, and it needs no
+ * reduced-motion branch because it never animates on its own.
+ *
+ * It used to be a framer-motion `motion.span` reading a `useScroll` value. That
+ * was the last import of the animation runtime left in the app, and it kept
+ * both the runtime and a main-thread rAF loop on every lesson page to draw a
+ * 2px rule. The CSS timeline gives the same reading off the main thread for no
+ * bytes at all.
  *
  * The active heading is marked TWICE, never by colour alone: a blue bar in the
  * gutter and the label going bold ink. Same rule as everywhere else in the
@@ -71,7 +76,6 @@ export function ReadingRail({
   /** Server-computed week rhythm. Null → the week block is simply absent. */
   rhythm?: Rhythm | null;
 }) {
-  const { scrollYProgress } = useScroll();
   const [activeId, setActiveId] = React.useState<string | null>(
     headings[0]?.id ?? null
   );
@@ -111,10 +115,9 @@ export function ReadingRail({
             aria-hidden="true"
             className="absolute inset-y-0 left-0 w-0.5 bg-ink"
           />
-          <motion.span
+          <span
             aria-hidden="true"
-            className="absolute inset-y-0 left-0 w-0.5 origin-top bg-blue"
-            style={{ scaleY: scrollYProgress }}
+            className="nb-progress-y absolute inset-y-0 left-0 w-0.5 bg-blue"
           />
 
           <ul className="grid">

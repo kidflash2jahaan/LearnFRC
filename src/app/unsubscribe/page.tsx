@@ -3,7 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 export const metadata = {
-  title: "Unsubscribe · LearnFRC",
+  title: "Unsubscribe",
   robots: { index: false, follow: false },
 };
 

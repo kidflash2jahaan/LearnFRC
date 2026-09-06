@@ -28,6 +28,7 @@ import {
   LessonNextStep,
   type NextStepLink,
 } from "@/components/lesson/lesson-next-step";
+import { Reveal } from "@/components/motion/primitives";
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com";
 
@@ -381,9 +382,20 @@ export default async function LessonPage({
 
             {/* Key takeaways. `nb-note` is the system's callout, and this is
                 the archetypal one: the thing the student underlined twice at
-                the bottom of the page before closing the binder. */}
+                the bottom of the page before closing the binder.
+
+                THE ONLY MOTION ON A LESSON PAGE, and it gets exactly one for a
+                reason that has nothing to do with taste. A student working
+                through a department opens this route ten or twenty times in a
+                sitting, which is the frequency tier where animation stops
+                reading as craft and starts reading as a wait. So: nothing in
+                the header, nothing in the prose, nothing on the pagination,
+                and one 14px settle on the single block whose whole job is to
+                be noticed after the reading stops. It marks the seam between
+                the lesson and its distillation, and it fires once, well below
+                the fold, on a transform only. */}
             {takeaways.length > 0 && (
-              <section aria-labelledby="takeaways-heading" className="nb-note mt-[clamp(2rem,4vw,3rem)]">
+              <Reveal as="section" aria-labelledby="takeaways-heading" className="nb-note mt-[clamp(2rem,4vw,3rem)]">
                 <p className="nb-slug">the part worth keeping</p>
                 <h2 id="takeaways-heading" className="mt-1.5 text-[clamp(1.15rem,1rem+0.6vw,1.45rem)]">
                   Key takeaways
@@ -398,7 +410,7 @@ export default async function LessonPage({
                     </li>
                   ))}
                 </ul>
-              </section>
+              </Reveal>
             )}
 
             {/* Continuation FIRST. Measured: the old page put the only "next
@@ -509,7 +521,13 @@ export default async function LessonPage({
                 Every lesson in the guide, closed by default because a reader
                 mid-lesson did not ask for a 394-line index. Open, it is the
                 contents page: modules ruled off, lessons under them, the one
-                you are on marked in ink and not only in colour. */}
+                you are on marked in ink and not only in colour.
+
+                It opens instantly, on purpose. Sliding a `<details>` open means
+                animating height, and the only ways to do that are a layout
+                animation on every frame or `::details-content` plus
+                `interpolate-size`, which is one engine only. Both are outside
+                the budget: transform and opacity, or it does not ship. */}
             <details className="nb-box mt-[clamp(2rem,4vw,3rem)] overflow-hidden">
               <summary className="nb-slug flex min-h-[3.4rem] cursor-pointer list-none items-center justify-between gap-3 px-[clamp(1rem,2.2vw,1.5rem)] py-3 text-ink">
                 <span className="min-w-0 truncate font-bold">

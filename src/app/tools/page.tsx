@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { JsonLd } from "@/components/json-ld";
+import { Straighten } from "@/components/motion/primitives";
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com";
 
@@ -98,41 +99,58 @@ const TOOLS = [
 
 function ToolCard({ t }: { t: (typeof TOOLS)[number] }) {
   return (
-    <Link
-      href={t.href}
-      className={`nb-box nb-lift group flex flex-col p-[clamp(1.1rem,2.1vw,1.7rem)] no-underline ${t.tilt}`}
-    >
-      {t.tape && (
-        <span
-          className="nb-tape -top-3 left-6 rotate-[-4deg]"
-          aria-hidden="true"
-        />
-      )}
+    // The card goes up on the wall crooked and gets pushed square, over its
+    // own entry into the viewport. `asChild` so the class lands on the <Link>
+    // itself: a wrapper would draw a square box around four hand-drawn corners.
+    //
+    // No `tilt` prop here on purpose. Each card already carries a preset
+    // `nb-tilt-N`, and `tilt` would add `.nb-tilt` alongside it, so two rules
+    // would be writing the same `transform` and the resting angle would depend
+    // on source order in globals.css. `nb-straighten` animates the INDEPENDENT
+    // `rotate` and `translate` properties, so it composes with whichever tilt
+    // is there and the card lands on its own angle rather than on zero.
+    //
+    // The two columns are offset by 3.5rem at lg, and each card runs on its own
+    // view() timeline, so they arrive at six different moments with no stagger
+    // to configure. That is also why there is no RevealGroup on the columns:
+    // the cards never enter together, so a group range would fight the offset.
+    <Straighten asChild>
+      <Link
+        href={t.href}
+        className={`nb-box nb-lift group flex flex-col p-[clamp(1.1rem,2.1vw,1.7rem)] no-underline ${t.tilt}`}
+      >
+        {t.tape && (
+          <span
+            className="nb-tape -top-3 left-6 rotate-[-4deg]"
+            aria-hidden="true"
+          />
+        )}
 
-      <p className="nb-slug flex items-baseline justify-between gap-3">
-        <span className="min-w-0 truncate">tools / {t.slug}</span>
-        <span className="shrink-0">{t.tag}</span>
-      </p>
+        <p className="nb-slug flex items-baseline justify-between gap-3">
+          <span className="min-w-0 truncate">tools / {t.slug}</span>
+          <span className="shrink-0">{t.tag}</span>
+        </p>
 
-      <h2 className="mt-3 text-[clamp(1.2rem,1.02rem+0.7vw,1.6rem)]">
-        {t.title}
-      </h2>
+        <h2 className="mt-3 text-[clamp(1.2rem,1.02rem+0.7vw,1.6rem)]">
+          {t.title}
+        </h2>
 
-      <p className="mt-2.5 text-[1.02rem] font-medium leading-snug text-ink">
-        {t.ask}
-      </p>
+        <p className="mt-2.5 text-[1.02rem] font-medium leading-snug text-ink">
+          {t.ask}
+        </p>
 
-      <p className="mt-2 mb-4 text-[0.93rem] leading-relaxed text-graphite">
-        {t.body}
-      </p>
+        <p className="mt-2 mb-4 text-[0.93rem] leading-relaxed text-graphite">
+          {t.body}
+        </p>
 
-      <div className="nb-hair mt-auto flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 pt-4">
-        <span className="nb-slug">{t.gives}</span>
-        <span className="nb-slug shrink-0 border-b-2 border-b-transparent text-ink group-hover:border-b-blue group-hover:text-blue">
-          open
-        </span>
-      </div>
-    </Link>
+        <div className="nb-hair mt-auto flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 pt-4">
+          <span className="nb-slug">{t.gives}</span>
+          <span className="nb-slug shrink-0 border-b-2 border-b-transparent text-ink group-hover:border-b-blue group-hover:text-blue">
+            open
+          </span>
+        </div>
+      </Link>
+    </Straighten>
   );
 }
 

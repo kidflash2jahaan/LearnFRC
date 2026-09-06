@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ShareButton } from "@/components/profile/share-button";
+import { Ink } from "@/components/motion/primitives";
 import { RankStamp } from "./_trophy-panel";
 import type { Profile } from "@/lib/types";
 
@@ -191,12 +192,26 @@ export default async function PublicProfilePage({
 
       {/* ===================== THE FIGURES =====================
           The one inverted surface on the page. A record sheet states its own
-          totals once, in figures big enough to read from across the pit. */}
+          totals once, in figures big enough to read from across the pit.
+
+          THE FOUR FIGURES LAND. `Ink` is the system's ink-landing motion: the
+          number comes down 5px and stops dead, no bounce, because a stamp does
+          not bounce. It is on the <b>, never the band, per the kit's own rule
+          that the motion goes on the figure and not the block around it.
+
+          They land together rather than one after another, which is the point:
+          this is a totals row, so it gets stamped once, the way a total is.
+          Nothing else on this page moves as you scroll it, so the only thing
+          that does is the only thing a stranger came here to read. Transform
+          only, and the caption keeps its own line because `.nb-stamp b` is a
+          block and the primitive is told to stay one. */}
       <section className="nb-slab py-[clamp(2rem,4.5vw,3.4rem)]">
         <div className="nb-wrap grid gap-[clamp(1.2rem,3vw,2.4rem)] min-[520px]:grid-cols-2 min-[860px]:grid-cols-4">
           {figures.map((f) => (
             <p key={f.label} className="nb-stamp">
-              <b>{f.value}</b>
+              <Ink as="b" className="block">
+                {f.value}
+              </Ink>
               <span>{f.label}</span>
             </p>
           ))}

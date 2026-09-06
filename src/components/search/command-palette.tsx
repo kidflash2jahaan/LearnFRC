@@ -38,6 +38,28 @@ type ResultItem =
  *
  * Behaviour is unchanged: same shortcut, same `open-search` event, same lazily
  * fetched index, same filtering, same arrow/enter handling, same ARIA combobox.
+ *
+ * THIS SURFACE DOES NOT ANIMATE, AND THAT IS THE DESIGN
+ * ----------------------------------------------------
+ * The overlay does not fade, the sheet does not scale in from the trigger, and
+ * the rows do not stagger. Every one of those was considered and every one was
+ * rejected on the same ground: this is opened with a keystroke, hundreds of
+ * times a day by anyone who actually uses the site. Motion on a keyboard-
+ * initiated action is not polish, it is latency you cannot skip. Raycast has no
+ * open animation for the same reason, and it is the right answer.
+ *
+ * The two things that could look like gaps are not:
+ *
+ *   - The highlight on a row is instant (`.nb-menu-item`, a blue wash and a
+ *     blue bar). Arrow-key navigation fires as fast as the key repeats, so a
+ *     transition here would smear the cursor across four rows and you would
+ *     lose track of where you are. Instant is the feature.
+ *   - There is no press state on a result. Pressing a result navigates, and the
+ *     page changing is the feedback. A 90ms press in front of that is a 90ms
+ *     delay in front of that.
+ *
+ * If a future pass wants to make the palette feel better, the lever is the
+ * index fetch, not motion.
  */
 export function CommandPalette() {
   const router = useRouter();

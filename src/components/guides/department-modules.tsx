@@ -151,7 +151,12 @@ export function DepartmentModules({
               id={`mod-panel-${m.id}`}
               inert={!isOpen}
               className={cn(
-                "grid transition-[grid-template-rows,opacity] duration-300 ease-[cubic-bezier(0.2,0.9,0.3,1)] motion-reduce:transition-none",
+                // The curve and the duration are the system's tokens, not a
+                // hand-typed copy of them. `cubic-bezier(0.2,0.9,0.3,1)` and
+                // `300ms` were literals here, which is the same disclosure
+                // spelled a second way: the admin panel opens on
+                // `--nb-t-enter` / `--nb-ease-out` and so does this.
+                "grid transition-[grid-template-rows,opacity] duration-[var(--nb-t-enter)] ease-[var(--nb-ease-out)] motion-reduce:transition-none",
                 isOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
               )}
             >

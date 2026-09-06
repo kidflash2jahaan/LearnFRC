@@ -3,6 +3,7 @@ import Link from "next/link";
 import { type PodiumEntry } from "@/components/leaderboard/podium";
 import { LeaderboardTabs } from "@/components/leaderboard/leaderboard-tabs";
 import { InviteCard } from "@/components/leaderboard/invite-card";
+import { Ink } from "@/components/motion/primitives";
 import {
   getLeaderboard,
   getWeeklyLeaderboard,
@@ -171,7 +172,16 @@ export default async function LeaderboardPage() {
 
       {/* ===================== THE TOTALS =====================
           The one inverted surface on this page. Figures big enough to read
-          from the other side of the shop, printed once and nowhere else. */}
+          from the other side of the shop, printed once and nowhere else.
+
+          BOTH FIGURES LAND. Same motion, same reasoning as the record sheet at
+          /u/[username]: `Ink` on the <b>, never on the band, so the number
+          comes down 5px and stops dead like a stamp. Both together, because a
+          totals row is stamped once.
+
+          It is the only thing that moves between the masthead and the board,
+          and it moves on the sentence it belongs to: nobody was paid to be
+          here, and here is how many turned up anyway. */}
       <section className="nb-slab py-[clamp(2rem,4.2vw,3.2rem)]">
         <div className="nb-wrap grid items-end gap-[clamp(1.3rem,3vw,2.6rem)] min-[900px]:grid-cols-[1.15fr_repeat(2,minmax(0,0.62fr))]">
           <div>
@@ -185,11 +195,15 @@ export default async function LeaderboardPage() {
           </div>
 
           <p className="nb-stamp">
-            <b>{xpTotals.learners.toLocaleString()}</b>
+            <Ink as="b" className="block">
+              {xpTotals.learners.toLocaleString()}
+            </Ink>
             <span>{xpTotals.learners === 1 ? "learner" : "learners"}</span>
           </p>
           <p className="nb-stamp">
-            <b>{totalXp.toLocaleString()}</b>
+            <Ink as="b" className="block">
+              {totalXp.toLocaleString()}
+            </Ink>
             <span>xp earned</span>
           </p>
         </div>

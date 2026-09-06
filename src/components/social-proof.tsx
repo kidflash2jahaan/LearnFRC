@@ -72,7 +72,9 @@ export async function SocialProof() {
       <ul className="mt-8 flex flex-col gap-5">
         {LISTED_TEAMS.map((t, i) => (
           <li key={t.team}>
-            <div className={`nb-box ${TILT[i % TILT.length]} p-[clamp(1.2rem,2.6vw,1.8rem)]`}>
+            {/* MOTION: a taped card straightens on arrival, the same rule the
+                department wall above it runs on. */}
+            <div className={`nb-box nb-straighten ${TILT[i % TILT.length]} p-[clamp(1.2rem,2.6vw,1.8rem)]`}>
               <span className="nb-tape -top-3 left-[12%] rotate-[-3.8deg]" aria-hidden="true" />
               <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
                 <span

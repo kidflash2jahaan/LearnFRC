@@ -19,11 +19,12 @@ import {
 import { subteamLabel } from "@/components/team/subteam-label";
 import { SubteamGapCard } from "@/components/team/subteam-gap-card";
 import { TeamInvite } from "@/components/team/team-invite";
+import { Straighten } from "@/components/motion/primitives";
 import { Roster, type RosterMember } from "./_roster";
 import { CrewPanel, type CrewMember } from "./_crew-panel";
 
 export const metadata: Metadata = {
-  title: "My Team · LearnFRC",
+  title: "My Team",
   description:
     "See your whole FRC team's progress. Everyone who signs up with your team number is grouped automatically.",
   robots: { index: false, follow: false },
@@ -280,7 +281,21 @@ async function renderTeam(
 
         <SubteamMeter rows={subteamRows} />
 
-        <div className="mt-[clamp(1.4rem,3vw,2.2rem)]">
+        {/* THE ASK GOES UP CROOKED AND GETS PUSHED SQUARE.
+            `Straighten` is the taped-item arrival: the card comes in at
+            -1.6deg and lands on its OWN resting angle, not on zero, because the
+            motion writes `rotate` and `translate` rather than a `transform`
+            string that would wipe the card's `nb-tilt-3`.
+
+            It is the one card on this page that moves, and it is the one card
+            worth moving. "Nobody is on Electrical" is the highest-leverage
+            thing on the sheet, it is already a taped, tilted card, and it sits
+            well below the fold, so the arrival actually plays instead of
+            landing at its end state before anyone sees it.
+
+            The wrapper carries the motion rather than the card, so the card's
+            own hand-ruled border and its API are both untouched. */}
+        <Straighten className="mt-[clamp(1.4rem,3vw,2.2rem)]">
           <SubteamGapCard
             teamNumber={teamNumber}
             username={username}
@@ -291,7 +306,7 @@ async function renderTeam(
             teamCompleted={distinctDone}
             totalLessons={totalLessons}
           />
-        </div>
+        </Straighten>
 
         <div className="mt-[clamp(1.6rem,3.4vw,2.6rem)]">
           <SubteamBoard rows={subteamRows} />

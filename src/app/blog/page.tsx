@@ -4,6 +4,7 @@ import { type Article } from "@/lib/blog-data";
 import { getArticles } from "@/lib/queries";
 import { NewsletterForm } from "@/components/newsletter-form";
 import { JsonLd } from "@/components/json-ld";
+import { Straighten } from "@/components/motion/primitives";
 import { DeskIndex, type DeskCount } from "./_desk-index";
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com";
@@ -255,7 +256,22 @@ export default async function BlogPage() {
             </div>
 
             {/* overflow-hidden clips the panels to the frame's hand-drawn
-                corners; without it the 2px divider runs past the border. */}
+                corners; without it the 2px divider runs past the border.
+
+                NO ARRIVAL ON THIS FRAME, and it is the one place on the page
+                where that was measured rather than argued. At 500px wide the
+                six entries stack and the frame is 990px tall, a full 1.56x a
+                phone viewport, so an arrival on it would still be settling
+                while the reader is already inside reading entry two. That is
+                the same objection that keeps motion out of the prose: a thing
+                you read does not move under you. It is comfortably short at
+                desktop, but a motion that only works on one class of screen is
+                not a motion this system has.
+
+                It would also be wrong as a `RevealGroup` on the two columns:
+                the 2px divider is the second column's own border, so dealing
+                them out separately would slide the rule around inside a frame
+                that stayed put and open a gap at the top edge of the box. */}
             <div className="nb-box grid overflow-hidden min-[861px]:grid-cols-2">
               {featuredColumns.map((col, colIndex) => (
                 <ol key={colIndex} className="nb-panel min-w-0 list-none">
@@ -376,10 +392,21 @@ export default async function BlogPage() {
 
       {/* ===================== THE LIST =====================
           One ask, at the bottom, after the reader has seen everything on
-          offer. Taped to the page like a sign-up sheet on a shop wall. */}
+          offer. Taped to the page like a sign-up sheet on a shop wall.
+
+          The one place on this page that gets the taped arrival: it is the
+          only sheet here that is physically taped down, it is the only thing
+          the page asks the reader to do, and it is far enough below the fold
+          that it is always scrolled to rather than met on load. It straightens
+          onto its own -0.45deg resting angle, not onto zero, because `nb-tilt-3`
+          sets `transform` and the keyframe uses the independent `rotate`.
+
+          It does NOT lift. The card holds a text input, and a card that rises
+          while the cursor is travelling toward the field it contains is a card
+          fighting the person filling it in. */}
       <section className="nb-wrap pb-[clamp(3rem,6vw,5rem)]">
         <div className="nb-rule pt-[clamp(1.8rem,3.5vw,2.6rem)]">
-          <div className="nb-box nb-tilt-3 grid gap-[clamp(1.2rem,3vw,2.4rem)] p-[clamp(1.3rem,2.8vw,2.1rem)] min-[820px]:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] min-[820px]:items-center">
+          <Straighten className="nb-box nb-tilt-3 grid gap-[clamp(1.2rem,3vw,2.4rem)] p-[clamp(1.3rem,2.8vw,2.1rem)] min-[820px]:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] min-[820px]:items-center">
             <span
               className="nb-tape -top-3 left-[12%] rotate-[-3.4deg]"
               aria-hidden="true"
@@ -401,7 +428,7 @@ export default async function BlogPage() {
             </div>
 
             <NewsletterForm className="min-[820px]:justify-self-end" />
-          </div>
+          </Straighten>
         </div>
       </section>
     </>

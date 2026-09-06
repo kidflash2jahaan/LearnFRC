@@ -641,9 +641,39 @@ export function LessonComplete({
                           onClick={() => setAnswers((a) => ({ ...a, [qi]: oi }))}
                           className={cn(
                             "flex min-h-11 w-full items-center gap-3 border-2 px-3.5 py-2.5 text-left text-[0.95rem] leading-snug",
-                            "rounded-[var(--hand-s)] transition-[transform,background-color] duration-100 [transition-timing-function:steps(2,end)]",
+                            // The hover slide rides the shared hover timing.
+                            // It used to be `steps(2, end)` at 100ms, which put
+                            // the first pass at the END of the first step: the
+                            // option did nothing for 50ms after the cursor
+                            // landed, then jumped twice. On the one control a
+                            // learner touches on every question of every quiz,
+                            // that is not a photocopier stutter, it is the
+                            // feeling of a dropped frame.
+                            //
+                            // The property list changed too, and that fixed a
+                            // second thing. It read `transform,background-color`,
+                            // but in Tailwind v4 `translate-x-1` writes the
+                            // INDEPENDENT `translate` property, not `transform`,
+                            // so the slide was never in the list and never
+                            // transitioned at all: it teleported 4px while the
+                            // wash stepped. Naming `translate` transitions the
+                            // thing that actually moves.
+                            //
+                            // `motion-safe:` on the hover, not a reduced-motion
+                            // override: under a reduced-motion preference the
+                            // utility is simply not emitted, so the option stops
+                            // travelling while the blue wash, which is the part
+                            // that carries the meaning, stays.
+                            //
+                            // Selection is deliberately NOT in the list. Picking
+                            // an option repaints its border and fill on the same
+                            // frame as the click, which is the fastest possible
+                            // confirmation that the answer landed. Same rule as
+                            // `button.nb-tag` in globals.css: the press is eased,
+                            // the fill is instant.
+                            "rounded-[var(--hand-s)] transition-[translate,background-color] duration-[var(--nb-t-hover)] ease-[var(--nb-ease-out)]",
                             state === "idle" &&
-                              "cursor-pointer border-ink bg-card hover:translate-x-1 hover:bg-[rgba(27,54,200,0.06)]",
+                              "cursor-pointer border-ink bg-card motion-safe:hover:translate-x-1 hover:bg-[rgba(27,54,200,0.06)]",
                             state === "selected" &&
                               "cursor-pointer border-blue bg-[rgba(27,54,200,0.08)]",
                             state === "correct" && "border-blue bg-[rgba(27,54,200,0.08)]",

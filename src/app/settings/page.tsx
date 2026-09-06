@@ -8,7 +8,7 @@ import { PerfModeCard } from "@/components/perf-mode";
 import { IdentityCard } from "./_identity-card";
 
 export const metadata = {
-  title: "Settings · LearnFRC",
+  title: "Settings",
   description:
     "Update your profile, username, team, and how you appear across LearnFRC.",
   robots: { index: false, follow: false },

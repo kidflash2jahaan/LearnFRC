@@ -80,7 +80,11 @@ export function CatalogueWall({
       {departments.map((d, i) => (
         <li
           key={d.slug}
-          className="min-[1080px]:[grid-column:var(--span)]"
+          // MOTION: each cell is a taped card, so it arrives crooked and gets
+          // pushed square onto the card's own resting tilt. `nb-straighten`
+          // wins over the settle the parent `.nb-reveal-group` would otherwise
+          // hand its children, and inherits that group's staggered entry range.
+          className="nb-straighten min-[1080px]:[grid-column:var(--span)]"
           style={{ "--span": `span ${spans[i]}` } as CSSProperties}
         >
           <DepartmentCard

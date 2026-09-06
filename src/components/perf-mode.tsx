@@ -126,17 +126,34 @@ export function PerfModeCard() {
           onClick={() => setPerfMode(!on)}
           className="inline-flex min-h-[var(--tap)] shrink-0 cursor-pointer items-center gap-2.5"
         >
+          {/* The knob slides on `translate`, not on `left`. `left` is a layout
+              property: every frame of the throw cost a layout, a paint and a
+              composite, which is a peculiar thing for the Performance-mode
+              switch itself to be doing. `translate` is composited on its own.
+
+              The travel is exact rather than eyeballed. The track is 3.75rem
+              wide with a 2px border and `box-sizing: border-box`, so its
+              padding box is 56px; the knob is 20px and used to run from
+              `left: 4px` to `left: calc(100% - 1.5rem)` = 32px. 28px of travel
+              on a 20px box is 140%, and a percentage in `translate` resolves
+              against the element's own size, so it stays right whatever the
+              track is later set to.
+
+              Both halves ride the shared hover timing, so the track colour and
+              the knob arrive together instead of on two different curves. */}
           <span
             aria-hidden="true"
             className={cn(
-              "nb-box-sm relative block h-8 w-[3.75rem] transition-colors",
+              "nb-box-sm relative block h-8 w-[3.75rem]",
+              "transition-[background-color] duration-[var(--nb-t-hover)] ease-[var(--nb-ease-out)]",
               on ? "bg-blue" : "bg-paper"
             )}
           >
             <span
               className={cn(
-                "absolute top-1/2 block h-5 w-5 -translate-y-1/2 border-2 border-ink transition-[left] duration-150",
-                on ? "left-[calc(100%-1.5rem)] bg-card" : "left-1 bg-card"
+                "absolute left-1 top-1/2 block h-5 w-5 -translate-y-1/2 border-2 border-ink bg-card",
+                "transition-[translate] duration-[var(--nb-t-hover)] ease-[var(--nb-ease-out)]",
+                on ? "translate-x-[140%]" : "translate-x-0"
               )}
               style={{ borderRadius: "var(--hand-s)" }}
             />

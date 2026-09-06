@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { getPathBySlug, getAllPathSlugs } from "@/lib/paths-data";
 import { getDepartmentBySlug } from "@/lib/queries";
 import { JsonLd } from "@/components/json-ld";
+import { Ink } from "@/components/motion/primitives";
 import { RouteStopRow } from "./_route-line";
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com";
@@ -298,8 +299,10 @@ export default async function PathPage({
               Not topics covered. These are the jobs you can be handed on a real
               team once the route is behind you.
             </p>
+            {/* MOTION: the one figure the whole route is arguing for, so it
+                lands like ink instead of arriving already printed. */}
             <p className="nb-stamp mt-[clamp(1.4rem,3vw,2.2rem)]">
-              <b>{path.outcomes.length}</b>
+              <Ink as="b" className="block">{path.outcomes.length}</Ink>
               <span>skills, signed off by quiz</span>
             </p>
           </div>
@@ -327,8 +330,10 @@ export default async function PathPage({
       {/* ===================== THE WAY IN ===================== */}
       {firstStep && (
         <section className="nb-wrap py-[clamp(2.6rem,5vw,4.2rem)]">
+          {/* MOTION: taped down, so it straightens onto its own -0.5deg as you
+              reach it. Same rule as every other taped card on the front door. */}
           <div
-            className="nb-box nb-tilt max-w-[44rem] p-[clamp(1.3rem,2.8vw,2rem)]"
+            className="nb-box nb-tilt nb-straighten max-w-[44rem] p-[clamp(1.3rem,2.8vw,2rem)]"
             style={{ "--tilt": "-0.5deg" } as CSSProperties}
           >
             <span

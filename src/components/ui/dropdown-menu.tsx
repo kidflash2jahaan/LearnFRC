@@ -15,6 +15,15 @@ import { cn } from "@/lib/utils";
  * be cut by the sheet's drawn corners; the rows' focus ring is inset by the
  * kit so clipping never eats it.
  *
+ * The exposure runs on --nb-step-expose, which is `steps(2, jump-start)`. This
+ * used to be `steps(2, end)`, and `end` puts the first pass at the END of the
+ * first step: the sheet was invisible for the first 60ms after the click, then
+ * appeared half-lit, then finished. That is not a stutter, it is 60ms of
+ * nothing between a person's click and any evidence the interface heard it,
+ * which is exactly what dropped frames feel like. `jump-start` puts the first
+ * pass on the first frame, so the menu is on screen immediately and firms up
+ * after. Timing comes from the tokens now rather than a number written here.
+ *
  * `z-50` is not decoration: the sticky header sits at `z-40`, and a portalled
  * sheet with an auto z-index would render underneath it.
  */
@@ -34,7 +43,7 @@ export function DropdownMenuContent({
         sideOffset={sideOffset}
         className={cn(
           "nb-surface z-50 min-w-[12rem] overflow-hidden py-1",
-          "data-[state=open]:animate-[nb-expose_120ms_steps(2,end)_both]",
+          "data-[state=open]:animate-[nb-expose_var(--nb-t-hover)_var(--nb-step-expose)_both]",
           className
         )}
         {...props}

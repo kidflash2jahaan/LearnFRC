@@ -15,6 +15,7 @@ import {
   type GlossaryTerm,
 } from "@/lib/glossary-data";
 import { JsonLd } from "@/components/json-ld";
+import { Straighten } from "@/components/motion/primitives";
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com";
 
@@ -943,10 +944,19 @@ export default async function ModulePage({
           A taped index card of the terms this module's own text actually uses.
           A card, because a definition list is a thing you pull out and keep
           beside the lesson, and because after two ruled sections the page
-          needs something that sits on top of the paper. */}
+          needs something that sits on top of the paper.
+
+          THE ONE MOTION ON THIS PAGE, and it goes here because this is the one
+          block on the page that is physically taped down. It arrives 1.6deg
+          crooked and gets pushed square onto its own -0.45deg resting angle:
+          the keyframe uses the independent `rotate` property, so it composes
+          with `.nb-tilt-3`'s `transform` instead of wiping it and landing the
+          card flat. Everything above it is a ruled log you run your finger
+          down, and a log that deals itself out row by row is a page that makes
+          you wait for its own contents. */}
       {terms.length > 0 && (
         <section className="nb-wrap pb-[clamp(2rem,4vw,3rem)]" aria-labelledby="terms-heading">
-          <div className="nb-box nb-tilt-3 relative p-[clamp(1.2rem,2.6vw,2rem)]">
+          <Straighten className="nb-box nb-tilt-3 relative p-[clamp(1.2rem,2.6vw,2rem)]">
             {/* Inline transform, not a utility: the reduced-motion block in
                 globals.css flattens `.nb-tape` by overriding `transform`, and
                 an inline declaration is what that override is written against. */}
@@ -992,7 +1002,7 @@ export default async function ModulePage({
                 </div>
               ))}
             </dl>
-          </div>
+          </Straighten>
         </section>
       )}
 

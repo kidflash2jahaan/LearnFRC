@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getDepartments } from "@/lib/queries";
+import { Ink } from "@/components/motion/primitives";
 import { OnboardingStrip, type OnboardingStep } from "./_onboarding-rail";
 import { RosterSheet, type RosterMember } from "./_team-panel";
 
@@ -254,8 +255,10 @@ export default async function ForTeamsPage() {
             </div>
           </div>
 
+          {/* MOTION: the page's punchline, so it lands like ink on the figure
+              rather than arriving already printed. */}
           <p className="nb-stamp">
-            <b>$0</b>
+            <Ink as="b" className="block">$0</Ink>
             <span>no seats, no upgrade, no ads</span>
           </p>
         </div>

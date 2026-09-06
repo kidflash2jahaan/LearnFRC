@@ -5,6 +5,7 @@ import { getDepartmentBySlug, getAllDepartmentSlugs, flattenLessons } from "@/li
 import { JsonLd } from "@/components/json-ld";
 import type { Resource } from "@/lib/types";
 import { MyProgressProvider } from "@/components/progress/my-progress";
+import { Reveal, Straighten } from "@/components/motion/primitives";
 import { TITLE_BLOCK_CELL, TITLE_BLOCK_FIGURE } from "./_mastery-panel";
 import {
   DeptMastery,
@@ -280,9 +281,18 @@ export default async function DepartmentPage({
 
           The grid flips to one column at the width `.nb-panel` turns its
           dividing rule from vertical to horizontal, so the cells and the rules
-          between them can never disagree about which way the block runs. */}
+          between them can never disagree about which way the block runs.
+
+          It arrives taped: crooked, then pushed square. That is the same
+          gesture `.nb-lift` performs on every card in the system when you
+          hover it, so the arrival teaches the hover before the reader has
+          hovered anything. On a tall desktop the block is already fully in
+          view at scroll 0, and a `view()` timeline is past its entry range
+          there, so it simply sits at its end state and nothing plays. That is
+          the correct behaviour, not a gap: the arrival exists for the phone,
+          where the masthead pushes this block a long way down the sheet. */}
       <section className="nb-wrap pb-[clamp(2rem,4vw,3rem)]">
-        <div className="nb-box grid grid-cols-1 min-[861px]:grid-cols-4">
+        <Straighten className="nb-box grid grid-cols-1 min-[861px]:grid-cols-4">
           <span className="nb-tape -top-3 left-[8%] rotate-[-3.4deg]" aria-hidden="true" />
 
           <div className={TITLE_BLOCK_CELL}>
@@ -304,7 +314,7 @@ export default async function DepartmentPage({
           </div>
 
           <DeptMastery lessons={lessons} />
-        </div>
+        </Straighten>
       </section>
 
       {/* ===================== THE PATH, AND THE MARGIN ===================== */}
@@ -355,7 +365,13 @@ export default async function DepartmentPage({
             against an 800px viewport, and a sticky element taller than the
             viewport pins at the top and puts its own tail permanently out of
             reach: the sources list simply could not be scrolled to. Margin
-            notes are read once, beside the page, so they scroll with it. */}
+            notes are read once, beside the page, so they scroll with it.
+
+            It gets no arrival either, for the same reason it is not sticky. A
+            `view()` entry range is measured in the element's own height, and
+            this sheet runs past 1700px on a real department, so a 14px settle
+            would be spread over 1700px of scrolling and read as the page
+            lagging behind the wheel. Arrivals go on a card or a band. */}
         {hasMargin && (
           <aside aria-label="Field notes">
             <div className="nb-box nb-tilt-2 p-[clamp(1.1rem,2.2vw,1.5rem)]">
@@ -455,9 +471,14 @@ export default async function DepartmentPage({
       {/* ===================== THE SIGN-OFF =====================
           A ruled band, not a fourth card. The page has already handed over a
           module log full of links; what is left is one line telling the reader
-          what happens if they finish, and the button that starts it. */}
+          what happens if they finish, and the button that starts it.
+
+          The band travels 14px up as you reach it, and the 2px ink rule is its
+          own top border, so the rule slides into place with the band rather
+          than being there waiting. This one is always below the fold on every
+          viewport, which is why it carries the page's dependable arrival. */}
       <section className="nb-wrap pb-[clamp(3rem,6vw,5rem)]">
-        <div className="nb-rule pt-[clamp(1.8rem,3.5vw,2.6rem)]">
+        <Reveal className="nb-rule pt-[clamp(1.8rem,3.5vw,2.6rem)]">
           <DeptFooterHeading deptName={dept.name} lessons={lessons} />
 
           <p className="nb-sub mt-3">
@@ -470,7 +491,7 @@ export default async function DepartmentPage({
           <div className="mt-[clamp(1.4rem,2.6vw,2rem)]">
             <DeptCtaRow variant="footer" deptSlug={dept.slug} lessons={lessons} />
           </div>
-        </div>
+        </Reveal>
       </section>
     </MyProgressProvider>
   );

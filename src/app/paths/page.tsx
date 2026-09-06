@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { PATHS } from "@/lib/paths-data";
 import { JsonLd } from "@/components/json-ld";
+import { RevealGroup } from "@/components/motion/primitives";
 import { RouteSlip } from "./_route-preview";
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com";
@@ -189,7 +190,13 @@ export default function PathsPage() {
           </p>
         </div>
 
-        <div className="grid gap-[clamp(1.1rem,2.4vw,1.8rem)]">
+        {/* MOTION: the slips SETTLE, they do not straighten. A slip is the full
+            1280px of the gutter, where `nb-straighten`'s 1.6deg would be 36px
+            of vertical drift at the far corner and read as a broken grid, which
+            is the same reason SLIP_TILT above is an order of magnitude smaller
+            than an index card's angle. So they travel 14px and are laid down
+            flat: no rotation on full-width paper. */}
+        <RevealGroup className="grid gap-[clamp(1.1rem,2.4vw,1.8rem)]">
           {PATHS.map((p, i) => (
             <RouteSlip
               key={p.slug}
@@ -205,7 +212,7 @@ export default function PathsPage() {
               tilt={SLIP_TILT[i % SLIP_TILT.length]}
             />
           ))}
-        </div>
+        </RevealGroup>
       </section>
 
       {/* ===================== THE TWO WAYS OUT =====================

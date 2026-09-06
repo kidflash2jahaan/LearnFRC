@@ -4,6 +4,7 @@ import { getDepartments, getOverviewStats } from "@/lib/queries";
 import { DEPT_CATALOG } from "@/lib/dept-catalog";
 import { PATHS } from "@/lib/paths-data";
 import { SocialProof } from "@/components/social-proof";
+import { RevealGroup } from "@/components/motion/primitives";
 import { HeroPanel, type HeroDept } from "./_hero-panel";
 
 // Title/description/OG are inherited from the root layout defaults (which are
@@ -189,7 +190,10 @@ export default async function HomePage() {
     }));
 
   return (
-    <div className="nb-route">
+    // No `.nb-route` here: src/app/template.tsx already wraps every route in
+    // one. Nesting a second copy multiplied the two-pass exposure by itself,
+    // so the home page's first pass landed at 0.25 opacity instead of 0.5.
+    <>
       {/* ===================== 1. HERO ==========================
           Asymmetric split: the claim on the left, the catalogue taped up on
           the right. No eyebrow, no trust strip, no badge. Four things only. */}
@@ -239,7 +243,13 @@ export default async function HomePage() {
             is left.
           </p>
 
-          <div className="mt-[clamp(1.6rem,3.4vw,2.6rem)] grid grid-cols-12 gap-[clamp(0.85rem,1.7vw,1.35rem)]">
+          {/* MOTION: the wall goes up the way a wall of paper goes up. Each
+              card arrives crooked and gets pushed square onto its own resting
+              tilt (`nb-straighten` on the card), dealt out left to right by
+              RevealGroup's shifted entry ranges. Scroll-driven and
+              transform-only, so it costs no layout, no paint and no client JS,
+              and a card that never animates just sits 8px low. */}
+          <RevealGroup className="mt-[clamp(1.6rem,3.4vw,2.6rem)] grid grid-cols-12 gap-[clamp(0.85rem,1.7vw,1.35rem)]">
             {departments.map((d, i) => {
               const cell = WALL[i % WALL.length];
               const lessons = d.lessonCount ?? 0;
@@ -247,7 +257,7 @@ export default async function HomePage() {
                 <Link
                   key={d.slug}
                   href={`/guides/${d.slug}`}
-                  className={`nb-box nb-lift ${cell.tilt} ${cell.span} col-span-12 flex flex-col p-[clamp(1rem,1.9vw,1.45rem)] no-underline ${
+                  className={`nb-box nb-lift nb-straighten ${cell.tilt} ${cell.span} col-span-12 flex flex-col p-[clamp(1rem,1.9vw,1.45rem)] no-underline ${
                     "wide" in cell && cell.wide
                       ? "lg:flex-row lg:items-center lg:gap-[clamp(1.2rem,3vw,2.6rem)]"
                       : ""
@@ -296,7 +306,7 @@ export default async function HomePage() {
                 </Link>
               );
             })}
-          </div>
+          </RevealGroup>
         </div>
       </section>
 
@@ -485,7 +495,9 @@ export default async function HomePage() {
           so the page only ever asks for two things. */}
       <section className="nb-rule">
         <div className="nb-wrap py-[clamp(2.6rem,5vw,4.4rem)]">
-          <div className="nb-box nb-tilt-4 grid gap-[clamp(1.2rem,3vw,2.4rem)] p-[clamp(1.4rem,3vw,2.4rem)] lg:grid-cols-[minmax(0,1.4fr)_minmax(0,0.7fr)] lg:items-center">
+          {/* MOTION: taped down, so it straightens as you reach it. Same rule
+              as every other taped card on this page. */}
+          <div className="nb-box nb-tilt-4 nb-straighten grid gap-[clamp(1.2rem,3vw,2.4rem)] p-[clamp(1.4rem,3vw,2.4rem)] lg:grid-cols-[minmax(0,1.4fr)_minmax(0,0.7fr)] lg:items-center">
             <span
               aria-hidden="true"
               className="nb-tape -top-3 left-[38%] rotate-[-2.8deg]"
@@ -509,6 +521,6 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
-    </div>
+    </>
   );
 }
