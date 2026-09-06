@@ -1,12 +1,12 @@
 {
-  "capturedAt": "2026-09-06T22:47:58.216Z",
+  "capturedAt": "2026-09-06T22:53:12.246Z",
   "window": {
     "since": "2025-09-06",
     "until": "2026-09-06"
   },
   "traffic": {
     "visitors": 8936,
-    "pageviews": 43985
+    "pageviews": 43990
   },
   "byMonth": [
     {
@@ -27,7 +27,7 @@
     {
       "timestamp": "2026-09-01T00:00:00.000Z",
       "visitors": 752,
-      "pageviews": 5167
+      "pageviews": 5172
     }
   ],
   "database": {
