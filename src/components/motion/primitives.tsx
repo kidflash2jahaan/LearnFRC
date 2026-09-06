@@ -1,80 +1,78 @@
-"use client";
-
 import * as React from "react";
-import { motion, useReducedMotion, type Variants } from "framer-motion";
+import { cn } from "@/lib/utils";
 
 /**
- * ARENA CLAY 2 motion primitives.
+ * Motion primitives for the notebook.
  *
- * Hydration-safety contract (do not break):
- *  - The rendered TREE and TEXT are identical on server and client. Reduced
- *    motion only ever changes `transition` timing (duration 0), never what
- *    gets rendered.
- *  - Springs for interactive feel, 150–400ms for micro-moves, stagger
- *    30–90ms, transform/opacity only.
+ * The binder has exactly two motions, and they are both in globals.css:
+ *
+ *   1. `.nb-route` — the page exposing in two steps, once per navigation.
+ *   2. `.nb-lift`  — a taped card straightening and rising 3px under the cursor.
+ *
+ * That is the whole vocabulary. Paper on a shop wall does not fade up section
+ * by section as you scroll, and it does not have coloured light drifting behind
+ * it, so every spring, scroll-reveal and ambient blob this module used to ship
+ * is gone. What is left is layout: these render the element and its className
+ * and nothing else.
+ *
+ * WHY THE EXPORTS AND PROPS SURVIVED
+ * ----------------------------------
+ * Fifty files across the site compose with these names. Keeping the surface
+ * identical means the motion could be removed in one place instead of in fifty,
+ * and it means none of those call sites has to be edited to stop animating.
+ * Props that described the old motion (`delay`, `y`, `stagger`, `once`, `lift`,
+ * `scale`) are still accepted and are deliberately ignored: a caller asking for
+ * a 0.22s delay is asking for something the system no longer has.
+ *
+ * These are Server Components now. Every page that used them for entrances gets
+ * its client bundle back, and there is no hydration boundary left to mismatch.
  */
 
-const SPRING = { type: "spring", stiffness: 260, damping: 26 } as const;
-const EASE = [0.21, 0.47, 0.32, 0.98] as const;
+type Tag = "div" | "section" | "span" | "header" | "li" | "article";
 
-function useT(base: object) {
-  const reduce = useReducedMotion();
-  return reduce ? { duration: 0 } : base;
+function Box({
+  as = "div",
+  className,
+  children,
+}: {
+  as?: Tag;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  const El = as;
+  return <El className={className}>{children}</El>;
 }
 
-/* ---------------- On-load hero entrance ---------------- */
+/* ---------------- Entrances (now: just the element) ---------------- */
 
 export function Rise({
   children,
-  delay = 0,
-  y = 18,
   className,
   as = "div",
 }: {
   children: React.ReactNode;
+  /** Accepted for compatibility. The binder has one entrance, on the route. */
   delay?: number;
   y?: number;
   className?: string;
   as?: "div" | "section" | "span" | "header";
 }) {
-  const t = useT({ ...SPRING, delay });
-  const M = motion[as] as typeof motion.div;
   return (
-    <M className={className} initial={{ opacity: 0, y }} animate={{ opacity: 1, y: 0 }} transition={t}>
+    <Box as={as} className={className}>
       {children}
-    </M>
+    </Box>
   );
 }
-
-const itemVariants: Variants = {
-  hidden: { opacity: 0, y: 16 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: EASE } },
-};
-const itemVariantsStill: Variants = {
-  hidden: { opacity: 0, y: 16 },
-  show: { opacity: 1, y: 0, transition: { duration: 0 } },
-};
 
 export function RiseGroup({
   children,
   className,
-  stagger = 0.08,
 }: {
   children: React.ReactNode;
   className?: string;
   stagger?: number;
 }) {
-  const reduce = useReducedMotion();
-  return (
-    <motion.div
-      className={className}
-      initial="hidden"
-      animate="show"
-      variants={{ hidden: {}, show: { transition: { staggerChildren: reduce ? 0 : stagger } } }}
-    >
-      {children}
-    </motion.div>
-  );
+  return <div className={className}>{children}</div>;
 }
 
 export function RiseItem({
@@ -84,22 +82,14 @@ export function RiseItem({
   children: React.ReactNode;
   className?: string;
 }) {
-  const reduce = useReducedMotion();
-  return (
-    <motion.div className={className} variants={reduce ? itemVariantsStill : itemVariants}>
-      {children}
-    </motion.div>
-  );
+  return <div className={className}>{children}</div>;
 }
 
-/* ---------------- Scroll reveals (framer whileInView) ---------------- */
+/* ---------------- Scroll reveals (now: just the element) ---------------- */
 
 export function Reveal({
   children,
   className,
-  delay = 0,
-  y = 22,
-  once = true,
   as = "div",
 }: {
   children: React.ReactNode;
@@ -109,44 +99,23 @@ export function Reveal({
   once?: boolean;
   as?: "div" | "section" | "li" | "span" | "article";
 }) {
-  const t = useT({ duration: 0.55, delay, ease: EASE });
-  const M = motion[as] as typeof motion.div;
   return (
-    <M
-      className={className}
-      initial={{ opacity: 0, y }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once, margin: "-60px" }}
-      transition={t}
-    >
+    <Box as={as} className={className}>
       {children}
-    </M>
+    </Box>
   );
 }
 
 export function RevealGroup({
   children,
   className,
-  stagger = 0.07,
-  once = true,
 }: {
   children: React.ReactNode;
   className?: string;
   stagger?: number;
   once?: boolean;
 }) {
-  const reduce = useReducedMotion();
-  return (
-    <motion.div
-      className={className}
-      initial="hidden"
-      whileInView="show"
-      viewport={{ once, margin: "-60px" }}
-      variants={{ hidden: {}, show: { transition: { staggerChildren: reduce ? 0 : stagger } } }}
-    >
-      {children}
-    </motion.div>
-  );
+  return <div className={className}>{children}</div>;
 }
 
 export function RevealItem({
@@ -158,86 +127,68 @@ export function RevealItem({
   className?: string;
   as?: "div" | "li" | "article" | "span";
 }) {
-  const reduce = useReducedMotion();
-  const M = motion[as] as typeof motion.div;
   return (
-    <M className={className} variants={reduce ? itemVariantsStill : itemVariants}>
+    <Box as={as} className={className}>
       {children}
-    </M>
+    </Box>
   );
 }
 
-/* ---------------- Hover micro-interaction ---------------- */
+/* ---------------- The one hover ---------------- */
 
+/**
+ * The taped-card lift.
+ *
+ * It clones the child rather than wrapping it, because `.nb-lift` paints an
+ * offset ink drop and that drop has to follow the card's own hand-drawn radius.
+ * A wrapper div would draw a square shadow behind a card with four different
+ * corner radii and leave a sliver showing at every corner. Cloning puts the
+ * class on the card itself, which is where the reference draws it.
+ *
+ * `lift` and `scale` are accepted and ignored: there is one lift in the system,
+ * 3px, and letting callers dial it is how a system grows a second one.
+ */
 export function Hover({
   children,
   className,
-  lift = -4,
-  scale = 1.02,
 }: {
   children: React.ReactNode;
   className?: string;
   lift?: number;
   scale?: number;
 }) {
-  const reduce = useReducedMotion();
-  // NOTE: no whileTap here — framer adds tabindex="0" to tap-enabled elements,
-  // which (a) hydration-mismatches when reduced-motion clients skip it and
-  // (b) creates phantom tab stops. The inner link/button is the focus target.
-  return (
-    <motion.div
-      className={className}
-      whileHover={reduce ? undefined : { y: lift, scale }}
-      transition={{ type: "spring", stiffness: 320, damping: 22 }}
-    >
-      {children}
-    </motion.div>
-  );
+  // A Fragment passes isValidElement but cannot take a className, so it has to
+  // fall through to the wrapper or React warns on every render.
+  if (
+    React.isValidElement<{ className?: string }>(children) &&
+    children.type !== React.Fragment
+  ) {
+    return React.cloneElement(children, {
+      className: cn("nb-lift", children.props.className, className),
+    });
+  }
+  return <div className={cn("nb-lift", className)}>{children}</div>;
 }
 
-/* ---------------- Ambient drifting glow blobs ---------------- */
+/* ---------------- Ambient light: deleted ---------------- */
 
 export type GlowBlob = {
-  /** CSS size, e.g. "560px" */
   size: string;
-  /** Absolute position styles, e.g. { left: "-160px", top: "-200px" } */
   pos: React.CSSProperties;
-  /** Blob color (soft pastels: #8bbcff, #6ff0ea, #c8b6ff, or a dept accent) */
   color: string;
-  /** Drift phase offset in seconds */
   delay?: number;
-  /** 0–1 opacity, default 0.55 */
   opacity?: number;
 };
 
 /**
- * Full-bleed ambient light. MUST live inside the page's full-width
- * `relative overflow-x-clip` wrapper (never inside a max-width container),
- * so blobs fade at the viewport edge with no mid-page seam.
+ * Renders nothing, on purpose.
+ *
+ * `Glow` used to lay blurred pastel blobs behind a page and drift them forever.
+ * The notebook gets its depth from a double rule and a strip of tape, never
+ * from a blur, and nothing in it moves while you are reading. The export stays
+ * so the pages still carrying a `<Glow blobs={...} />` keep compiling while
+ * they are rebuilt; the blobs themselves are gone from every one of them.
  */
-export function Glow({ blobs }: { blobs: GlowBlob[] }) {
-  const reduce = useReducedMotion();
-  return (
-    <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-x-clip">
-      {blobs.map((b, i) => (
-        <motion.span
-          key={i}
-          className="absolute rounded-full blur-3xl"
-          style={{
-            width: b.size,
-            height: b.size,
-            opacity: b.opacity ?? 0.55,
-            background: `radial-gradient(circle, ${b.color}, transparent 70%)`,
-            ...b.pos,
-          }}
-          animate={reduce ? undefined : { x: [0, 34, 0], y: [0, 22, 0], scale: [1, 1.07, 1] }}
-          transition={
-            reduce
-              ? { duration: 0 }
-              : { duration: 17 + i * 4, repeat: Infinity, ease: "easeInOut", delay: b.delay ?? 0 }
-          }
-        />
-      ))}
-    </div>
-  );
+export function Glow(_props: { blobs: GlowBlob[] }) {
+  return null;
 }

@@ -2,14 +2,20 @@ import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 
 /**
- * Shared font loader for every Open Graph image, so link-preview thumbnails use
- * the site's display face (Baloo 2) instead of next/og's default sans.
+ * Shared font loader for every Open Graph image, so a link preview is set in
+ * the binder's own faces rather than next/og's default sans.
  *
- * WHY THIS ISN'T `fetch(new URL(...))` ANYMORE
- * --------------------------------------------
+ * Two families, the same two jobs they have on the site: Bricolage Grotesque
+ * carries everything structural (800 for the headline, 400 for running text)
+ * and Space Mono carries the data furniture (slugs, counts, the domain). Caveat
+ * is deliberately not loaded: a pen annotation is a margin note on a page
+ * someone is reading, and a social card is not that.
+ *
+ * WHY THIS ISN'T `fetch(new URL(...))`
+ * ------------------------------------
  * Turbopack rewrites `new URL("./x.woff", import.meta.url)` to the asset it
  * emitted into the *server* build output — a `file:` URL, e.g.
- *   file:///…/.next/dev/server/assets/baloo-800.0qba4ek51r-in.woff
+ *   file:///…/.next/dev/server/assets/bricolage-800.0qba4ek51r-in.woff
  * Node's fetch (undici) does not implement the `file:` protocol: it throws
  * `TypeError: fetch failed` with `cause: Error: not implemented... yet...`.
  * The old try/catch swallowed that, returned undefined, and every OG image
@@ -23,17 +29,40 @@ import { fileURLToPath } from "node:url";
  * The URLs are built at module scope with *literal* specifiers — a dynamic
  * specifier is not statically analysable, so the bundler would not emit the
  * asset and production would 404.
+ *
+ * These are WOFF, not WOFF2. Satori, which is what renders an ImageResponse,
+ * cannot decompress WOFF2, and it fails by drawing nothing rather than by
+ * throwing.
  */
+
+/** Structural type. Use it for headings and body in an ImageResponse. */
+export const OG_DISPLAY = "Bricolage Grotesque";
+/** Data furniture: slugs, counts, codes, the domain line. */
+export const OG_MONO = "Space Mono";
+
 type OgFont = {
   name: string;
   data: ArrayBuffer | Buffer;
-  weight: 400 | 800;
+  weight: 400 | 700 | 800;
   style: "normal";
 };
 
 const SOURCES = [
-  { weight: 800 as const, url: new URL("./baloo-800.woff", import.meta.url) },
-  { weight: 400 as const, url: new URL("./baloo-400.woff", import.meta.url) },
+  {
+    name: OG_DISPLAY,
+    weight: 800 as const,
+    url: new URL("./bricolage-800.woff", import.meta.url),
+  },
+  {
+    name: OG_DISPLAY,
+    weight: 400 as const,
+    url: new URL("./bricolage-400.woff", import.meta.url),
+  },
+  {
+    name: OG_MONO,
+    weight: 700 as const,
+    url: new URL("./spacemono-700.woff", import.meta.url),
+  },
 ];
 
 let cache: OgFont[] | undefined;
@@ -49,8 +78,8 @@ export async function ogFonts(): Promise<OgFont[] | undefined> {
   if (cache) return cache;
   try {
     const loaded = await Promise.all(
-      SOURCES.map(async ({ weight, url }) => ({
-        name: "Baloo 2",
+      SOURCES.map(async ({ name, weight, url }) => ({
+        name,
         data: await readAsset(url),
         weight,
         style: "normal" as const,
@@ -61,7 +90,7 @@ export async function ogFonts(): Promise<OgFont[] | undefined> {
   } catch (err) {
     // Loud, always — a silent fallback here is what let the brand font go
     // missing from every link preview on the site for weeks.
-    console.error("[og-font] failed to load Baloo 2 for OG images:", err);
+    console.error("[og-font] failed to load the notebook faces for OG images:", err);
     if (process.env.NODE_ENV === "development") {
       // In dev, fail the image outright so the regression is impossible to
       // miss. In production we still degrade to the default sans rather than

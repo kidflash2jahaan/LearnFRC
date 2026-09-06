@@ -51,10 +51,22 @@ const FAQS: { q: string; a: string }[] = [
   },
 ];
 
+/**
+ * Shell only. The root layout already owns the page's <main> landmark, so this
+ * renders a fragment: a second one would break the skip link and every screen
+ * reader's "jump to main" affordance.
+ *
+ * This is the only tool page with long-form copy under the calculator, so it
+ * carries two extra bands. The explainer is set as a single ruled column at
+ * the reading measure, and the FAQ is a carbon-copy log: question in the left
+ * column, answer in the right, one dashed rule per entry. It is deliberately
+ * not an accordion — the answers are the reason search sends people here, so
+ * hiding them behind a click helps nobody.
+ */
 export default async function Page() {
   const { user } = await getSession();
   return (
-    <main className="relative mx-auto max-w-6xl px-4 pb-20 pt-28 sm:px-6 lg:px-8 lg:pt-32">
+    <>
       <JsonLd
         data={{
           "@context": "https://schema.org",
@@ -99,212 +111,213 @@ export default async function Page() {
 
       <Calculator authed={!!user} />
 
-      {/* ------------------------------ EXPLAINER ------------------------------ */}
-      <section className="mt-14 max-w-3xl">
-        <span className="ac-chip inline-flex items-center gap-2">
-          <span className="ac-eyebrow">The theory behind the numbers</span>
-        </span>
-        <h2 className="mt-4 text-balance font-display text-2xl font-bold tracking-tight sm:text-3xl">
-          How FRC gear ratios actually work
-        </h2>
+      {/* ---------------------------------------------------------------- */}
+      {/* The theory, set as a reading column with the sub-arguments ruled   */}
+      {/* off from each other the way a worked page in a notebook is.        */}
+      {/* ---------------------------------------------------------------- */}
+      <section className="nb-rule py-[clamp(2.4rem,5vw,4rem)]">
+        <div className="nb-wrap">
+          <div className="grid gap-[clamp(1.2rem,3vw,2.4rem)] lg:grid-cols-[minmax(0,68ch)_minmax(0,1fr)] lg:items-start">
+            <div>
+              <p className="nb-marker">the theory behind the numbers</p>
+              <h2 className="max-w-[20ch]">How FRC gear ratios actually work</h2>
 
-        <div className="mt-6 space-y-4 text-[15px] leading-relaxed text-foreground/75">
-          <p>
-            A gearbox is a trade, and only a trade. It cannot create power — it
-            can only convert the power a motor already makes from one shape into
-            another. Reduce by 10:1 and the output shaft turns a tenth as fast
-            and delivers about ten times the torque. That is the whole idea, and
-            almost every drivetrain argument your team will have is really an
-            argument about where on that trade you want to sit.
-          </p>
-          <p>
-            One reduction is just the driven gear&apos;s tooth count over the
-            driving gear&apos;s. A 14-tooth pinion turning a 50-tooth gear is
-            50 ÷ 14, or 3.571:1. Stack stages and you multiply them: the KOP
-            ToughBox Mini that everyone calls &ldquo;8.45:1&rdquo; is really a
-            14T into 50T followed by a 19T into 45T, which works out to 8.459.
-            Chain and belt runs count exactly the same way — sprocket teeth over
-            sprocket teeth — so a 12T to 36T chain run is another 3:1 on top of
-            whatever the gearbox already did.
-          </p>
-        </div>
+              <div className="nb-prose mt-6">
+                <p>
+                  A gearbox is a trade, and only a trade. It cannot create power — it
+                  can only convert the power a motor already makes from one shape into
+                  another. Reduce by 10:1 and the output shaft turns a tenth as fast
+                  and delivers about ten times the torque. That is the whole idea, and
+                  almost every drivetrain argument your team will have is really an
+                  argument about where on that trade you want to sit.
+                </p>
+                <p>
+                  One reduction is just the driven gear&apos;s tooth count over the
+                  driving gear&apos;s. A 14-tooth pinion turning a 50-tooth gear is
+                  50 ÷ 14, or 3.571:1. Stack stages and you multiply them: the KOP
+                  ToughBox Mini that everyone calls &ldquo;8.45:1&rdquo; is really a
+                  14T into 50T followed by a 19T into 45T, which works out to 8.459.
+                  Chain and belt runs count exactly the same way — sprocket teeth over
+                  sprocket teeth — so a 12T to 36T chain run is another 3:1 on top of
+                  whatever the gearbox already did.
+                </p>
+              </div>
 
-        <h3 className="mt-8 font-display text-lg font-bold tracking-tight">
-          Free speed is a fiction you should still calculate
-        </h3>
-        <div className="mt-3 space-y-4 text-[15px] leading-relaxed text-foreground/75">
-          <p>
-            Free speed is what you get from pure geometry: take the motor&apos;s
-            no-load RPM, divide by the reduction, and multiply by the wheel
-            circumference. It is exact, and your robot will never once achieve
-            it. A motor only reaches free speed when it is doing no work at all,
-            and a robot on carpet is always doing work — squashing tread,
-            dragging bearings, scrubbing wheels sideways through every turn.
-          </p>
-          <p>
-            So the convention is to derate. Multiplying free speed by 80–85%
-            gets you a number that matches what teams actually clock on a field,
-            and that is the figure worth comparing between designs. It is an
-            empirical allowance, not a derivation from first principles, which
-            is exactly why the calculator above puts it in an editable box
-            rather than hiding it inside the result. If your robot only ever
-            travels twenty feet at a stretch, you may not even reach the
-            adjusted number before it is time to brake.
-          </p>
-          <p>
-            Efficiency is a separate thing, and it is easy to double-count. Gear
-            losses take torque, not speed. A 90%-efficient gearbox still spins
-            its output at very nearly the full free speed with nothing attached;
-            what it loses is roughly a tenth of the force you can get out of it.
-            That is why the calculator applies efficiency to torque and pushing
-            force but leaves free speed alone. Budget about 95% per gear mesh
-            and 97% per chain or belt run — two stages lands near 90%, a
-            three-stage swerve module near 86%.
-          </p>
-        </div>
+              <h3 className="nb-rule mt-10 pt-6">
+                Free speed is a fiction you should still calculate
+              </h3>
+              <div className="nb-prose mt-4">
+                <p>
+                  Free speed is what you get from pure geometry: take the motor&apos;s
+                  no-load RPM, divide by the reduction, and multiply by the wheel
+                  circumference. It is exact, and your robot will never once achieve
+                  it. A motor only reaches free speed when it is doing no work at all,
+                  and a robot on carpet is always doing work — squashing tread,
+                  dragging bearings, scrubbing wheels sideways through every turn.
+                </p>
+                <p>
+                  So the convention is to derate. Multiplying free speed by 80–85%
+                  gets you a number that matches what teams actually clock on a field,
+                  and that is the figure worth comparing between designs. It is an
+                  empirical allowance, not a derivation from first principles, which
+                  is exactly why the calculator above puts it in an editable box
+                  rather than hiding it inside the result. If your robot only ever
+                  travels twenty feet at a stretch, you may not even reach the
+                  adjusted number before it is time to brake.
+                </p>
+                <p>
+                  Efficiency is a separate thing, and it is easy to double-count. Gear
+                  losses take torque, not speed. A 90%-efficient gearbox still spins
+                  its output at very nearly the full free speed with nothing attached;
+                  what it loses is roughly a tenth of the force you can get out of it.
+                  That is why the calculator applies efficiency to torque and pushing
+                  force but leaves free speed alone. Budget about 95% per gear mesh
+                  and 97% per chain or belt run — two stages lands near 90%, a
+                  three-stage swerve module near 86%.
+                </p>
+              </div>
 
-        <h3 className="mt-8 font-display text-lg font-bold tracking-tight">
-          Picking a drivetrain ratio
-        </h3>
-        <div className="mt-3 space-y-4 text-[15px] leading-relaxed text-foreground/75">
-          <p>
-            Rookie teams tend to ask &ldquo;what ratio should we use?&rdquo; when
-            the useful question is &ldquo;what is currently limiting us?&rdquo;
-            There are only two answers. If your gearing can generate more force
-            at the wheel than friction with the carpet can hold, you are{" "}
-            <strong className="text-foreground">traction-limited</strong>: the
-            wheels break loose and spin, and adding reduction makes you slower
-            without making you push any harder. If the carpet could hold more
-            than your motors can deliver, you are{" "}
-            <strong className="text-foreground">torque-limited</strong>: the
-            wheels grip, the motors bog down, and more reduction genuinely does
-            help.
-          </p>
-          <p>
-            The calculator tells you which one you are, because the fix is
-            completely different in each case. Traction-limited robots need
-            grippier tread, more weight over the driven wheels, or simply a
-            lower current limit to stop wasting energy spinning wheels.
-            Torque-limited robots need more reduction, more motors, or a higher
-            current limit — if the breakers can stand it. Which wheels are even
-            driven matters here too, and that depends on the layout you chose;
-            our guide to{" "}
-            <Link
-              href="/blog/frc-drivetrain-types"
-              className="font-medium text-primary underline underline-offset-2"
-            >
-              FRC drivetrain types
-            </Link>{" "}
-            walks through how tank, swerve and mecanum differ on this point.
-          </p>
-          <p>
-            One caution on the traction number: the coefficient of friction is
-            not a specification anybody publishes. Community measurements put
-            smooth and Colson wheels somewhere around 0.8–1.0 and nitrile or
-            roughtop tread around 1.1–1.4 on FRC carpet, but that swings with
-            tread wear, dust, and how the test was run. If grip is deciding your
-            design, drag your actual robot across actual carpet with a luggage
-            scale and use your own number.
-          </p>
-        </div>
+              <h3 className="nb-rule mt-10 pt-6">Picking a drivetrain ratio</h3>
+              <div className="nb-prose mt-4">
+                <p>
+                  Rookie teams tend to ask &ldquo;what ratio should we use?&rdquo; when
+                  the useful question is &ldquo;what is currently limiting us?&rdquo;
+                  There are only two answers. If your gearing can generate more force
+                  at the wheel than friction with the carpet can hold, you are{" "}
+                  <strong>traction-limited</strong>: the wheels break loose and spin,
+                  and adding reduction makes you slower without making you push any
+                  harder. If the carpet could hold more than your motors can deliver,
+                  you are <strong>torque-limited</strong>: the wheels grip, the motors
+                  bog down, and more reduction genuinely does help.
+                </p>
+                <p>
+                  The calculator tells you which one you are, because the fix is
+                  completely different in each case. Traction-limited robots need
+                  grippier tread, more weight over the driven wheels, or simply a
+                  lower current limit to stop wasting energy spinning wheels.
+                  Torque-limited robots need more reduction, more motors, or a higher
+                  current limit — if the breakers can stand it. Which wheels are even
+                  driven matters here too, and that depends on the layout you chose;
+                  our guide to{" "}
+                  <Link href="/blog/frc-drivetrain-types" className="nb-link">
+                    FRC drivetrain types
+                  </Link>{" "}
+                  walks through how tank, swerve and mecanum differ on this point.
+                </p>
+                <p>
+                  One caution on the traction number: the coefficient of friction is
+                  not a specification anybody publishes. Community measurements put
+                  smooth and Colson wheels somewhere around 0.8–1.0 and nitrile or
+                  roughtop tread around 1.1–1.4 on FRC carpet, but that swings with
+                  tread wear, dust, and how the test was run. If grip is deciding your
+                  design, drag your actual robot across actual carpet with a luggage
+                  scale and use your own number.
+                </p>
+              </div>
 
-        <h3 className="mt-8 font-display text-lg font-bold tracking-tight">
-          Picking a mechanism ratio
-        </h3>
-        <div className="mt-3 space-y-4 text-[15px] leading-relaxed text-foreground/75">
-          <p>
-            Arms, elevators and turrets get designed backwards from drivetrains.
-            With a drivetrain you usually start from a target speed; with a
-            mechanism you start from the torque you need and let speed fall out
-            of it. For an arm, the worst case is horizontal: torque equals the
-            weight of the arm plus whatever it is carrying, times the distance
-            from the pivot to the combined centre of mass. Size the reduction so
-            you can produce that at a current the motor can hold continuously,
-            not at its stall current — a motor held near stall turns almost all
-            of its power into heat and will fade or trip within a match.
-          </p>
-          <p>
-            Then sanity-check the speed you got. A 100:1 reduction on a NEO
-            gives you about 57 RPM at the output, which is roughly a second for a
-            quarter turn — fine for an arm, hopeless for a shooter. And check
-            back-drive: a low reduction lets gravity spin the mechanism down when
-            the robot is disabled, while a high reduction (especially a worm or a
-            planetary) may hold it in place on its own. Switch the calculator to
-            Mechanism mode, enter your lever radius, and read the force at the
-            end of the arm directly.
-          </p>
-        </div>
+              <h3 className="nb-rule mt-10 pt-6">Picking a mechanism ratio</h3>
+              <div className="nb-prose mt-4">
+                <p>
+                  Arms, elevators and turrets get designed backwards from drivetrains.
+                  With a drivetrain you usually start from a target speed; with a
+                  mechanism you start from the torque you need and let speed fall out
+                  of it. For an arm, the worst case is horizontal: torque equals the
+                  weight of the arm plus whatever it is carrying, times the distance
+                  from the pivot to the combined centre of mass. Size the reduction so
+                  you can produce that at a current the motor can hold continuously,
+                  not at its stall current — a motor held near stall turns almost all
+                  of its power into heat and will fade or trip within a match.
+                </p>
+                <p>
+                  Then sanity-check the speed you got. A 100:1 reduction on a NEO
+                  gives you about 57 RPM at the output, which is roughly a second for a
+                  quarter turn — fine for an arm, hopeless for a shooter. And check
+                  back-drive: a low reduction lets gravity spin the mechanism down when
+                  the robot is disabled, while a high reduction (especially a worm or a
+                  planetary) may hold it in place on its own. Switch the calculator to
+                  Mechanism mode, enter your lever radius, and read the force at the
+                  end of the arm directly.
+                </p>
+              </div>
 
-        <h3 className="mt-8 font-display text-lg font-bold tracking-tight">
-          Current limits are part of the ratio decision
-        </h3>
-        <div className="mt-3 space-y-4 text-[15px] leading-relaxed text-foreground/75">
-          <p>
-            Torque is proportional to current, so your smart-current limit sets a
-            ceiling on force just as firmly as your gear ratio does. A CIM at a
-            40 A limit produces only about 29% of its stall torque; a Kraken X60
-            at the same limit produces about 10% of its. Doubling your reduction
-            and halving your current limit can land in the same place — except
-            one of those changes also halves your top speed and the other keeps
-            it.
-          </p>
-          <p>
-            Then there is the ceiling above all of that. Four drive motors at
-            40 A is 160 A, already beyond the 120 A main breaker, and that is
-            before the intake or the elevator moves. The breaker is thermal, so a
-            momentary spike while you shove someone is fine; a sustained draw is
-            not. Meanwhile every amp pulls the bus voltage down by roughly the
-            battery&apos;s internal resistance times the current, and at about
-            6.75 V the roboRIO starts shutting your outputs off. Add up the rest
-            of the robot in the{" "}
-            <Link
-              href="/tools/frc-current-budget"
-              className="font-medium text-primary underline underline-offset-2"
-            >
-              current &amp; brownout calculator
-            </Link>
-            , and if you are already browning out at events, work through{" "}
-            <Link
-              href="/guides/getting-started/common-mistakes-troubleshooting/brownouts"
-              className="font-medium text-primary underline underline-offset-2"
-            >
-              our brownout troubleshooting lesson
-            </Link>
-            .
-          </p>
-          <p>
-            If any of this was new, the long-form version — with worked examples
-            and diagrams — is in{" "}
-            <Link
-              href="/blog/frc-gear-ratios-explained"
-              className="font-medium text-primary underline underline-offset-2"
-            >
-              FRC gear ratios explained
-            </Link>
-            .
-          </p>
+              <h3 className="nb-rule mt-10 pt-6">
+                Current limits are part of the ratio decision
+              </h3>
+              <div className="nb-prose mt-4">
+                <p>
+                  Torque is proportional to current, so your smart-current limit sets a
+                  ceiling on force just as firmly as your gear ratio does. A CIM at a
+                  40 A limit produces only about 29% of its stall torque; a Kraken X60
+                  at the same limit produces about 10% of its. Doubling your reduction
+                  and halving your current limit can land in the same place — except
+                  one of those changes also halves your top speed and the other keeps
+                  it.
+                </p>
+                <p>
+                  Then there is the ceiling above all of that. Four drive motors at
+                  40 A is 160 A, already beyond the 120 A main breaker, and that is
+                  before the intake or the elevator moves. The breaker is thermal, so a
+                  momentary spike while you shove someone is fine; a sustained draw is
+                  not. Meanwhile every amp pulls the bus voltage down by roughly the
+                  battery&apos;s internal resistance times the current, and at about
+                  6.75 V the roboRIO starts shutting your outputs off. Add up the rest
+                  of the robot in the{" "}
+                  <Link href="/tools/frc-current-budget" className="nb-link">
+                    current &amp; brownout calculator
+                  </Link>
+                  , and if you are already browning out at events, work through{" "}
+                  <Link
+                    href="/guides/getting-started/common-mistakes-troubleshooting/brownouts"
+                    className="nb-link"
+                  >
+                    our brownout troubleshooting lesson
+                  </Link>
+                  .
+                </p>
+                <p>
+                  If any of this was new, the long-form version — with worked examples
+                  and diagrams — is in{" "}
+                  <Link href="/blog/frc-gear-ratios-explained" className="nb-link">
+                    FRC gear ratios explained
+                  </Link>
+                  .
+                </p>
+              </div>
+            </div>
+
+            {/* The one annotation on this band, parked in the outside margin
+                where a student would actually have written it. */}
+            <p className="nb-pen max-w-[22ch] rotate-[1.2deg] lg:sticky lg:top-24 lg:pt-24">
+              the ratio is never the question, what is limiting you is
+            </p>
+          </div>
         </div>
       </section>
 
-      {/* ------------------------------ FAQ ------------------------------ */}
-      <section className="mt-14 max-w-3xl">
-        <h2 className="text-balance font-display text-2xl font-bold tracking-tight sm:text-3xl">
-          Gear ratio FAQ
-        </h2>
-        <div className="mt-6 space-y-3">
-          {FAQS.map((f) => (
-            <details
-              key={f.q}
-              className="rounded-2xl border border-border bg-white/60 p-4"
-            >
-              <summary className="min-h-[44px] cursor-pointer py-1.5 text-[15px] font-semibold text-foreground">
-                {f.q}
-              </summary>
-              <p className="mt-2 text-[15px] leading-relaxed text-foreground/75">
-                {f.a}
-              </p>
-            </details>
-          ))}
+      {/* ---------------------------------------------------------------- */}
+      {/* FAQ as a carbon-copy log. Question left, answer right, one dashed  */}
+      {/* rule per entry, everything visible.                                */}
+      {/* ---------------------------------------------------------------- */}
+      <section className="nb-rule py-[clamp(2.4rem,5vw,4rem)]">
+        <div className="nb-wrap">
+          <p className="nb-marker">gear ratios / six questions</p>
+          <h2 className="max-w-[18ch]">The ones people actually ask</h2>
+
+          <dl className="nb-list mt-[clamp(1.4rem,3vw,2.2rem)]">
+            {FAQS.map((f) => (
+              <div
+                key={f.q}
+                className="grid gap-x-[clamp(1rem,3vw,2.4rem)] gap-y-2 border-b border-dashed border-rule py-[clamp(1.1rem,2.2vw,1.6rem)] md:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]"
+              >
+                <dt className="text-[clamp(1.02rem,0.95rem+0.4vw,1.2rem)] font-bold leading-tight [font-variation-settings:'wdth'_96,'opsz'_24]">
+                  {f.q}
+                </dt>
+                <dd className="m-0 max-w-[62ch] text-[0.98rem] leading-relaxed text-graphite">
+                  {f.a}
+                </dd>
+              </div>
+            ))}
+          </dl>
         </div>
       </section>
 
@@ -315,6 +328,6 @@ export default async function Page() {
           { href: "/tools/frc-current-budget", label: "Current & brownout checker" },
         ]}
       />
-    </main>
+    </>
   );
 }

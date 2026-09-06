@@ -2,13 +2,24 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Check, Circle, Bookmark, BookmarkCheck, Loader2, ListChecks } from "lucide-react";
 import { toast } from "sonner";
 import { setLessonComplete, toggleBookmark } from "@/app/actions/progress";
 import { Button } from "@/components/ui/button";
 import { Confetti } from "@/components/lesson/confetti";
-import { cn } from "@/lib/utils";
 
+/**
+ * The two controls in the lesson header: finish the lesson, and keep it.
+ *
+ * Both used to be icon-only or icon-led, which put the meaning of the control
+ * in a glyph. The binder writes on its controls: a drawn button says "Save",
+ * and it says "Saved" once it is, so the state survives a greyscale photocopy
+ * and a screen reader reads the same thing the eye does. `aria-pressed` on the
+ * toggle carries it for assistive tech.
+ *
+ * Every branch below is the behaviour that was already here: the quiz gate
+ * runs before the auth gate, an unresolved store no-ops rather than
+ * misrouting a click, and a failed write rolls the optimistic state back.
+ */
 export function LessonActions({
   lessonId,
   deptSlug,
@@ -30,11 +41,11 @@ export function LessonActions({
   quizRequired?: boolean;
   // False until the client progress store has loaded (/api/me/progress). While
   // false the true auth state is unknown, so the controls are disabled and the
-  // handlers no-op — a click must NOT prematurely fire requireAuth (which would
+  // handlers no-op, a click must NOT prematurely fire requireAuth (which would
   // wrongly prompt a signed-in user to sign up).
   ready?: boolean;
   // Optional hooks so the (client-fetched) progress store on the static lesson
-  // page can stay in lockstep with completions/bookmarks made here — replacing
+  // page can stay in lockstep with completions/bookmarks made here, replacing
   // what a server round-trip used to keep in sync.
   onCompletedChange?: (completed: boolean) => void;
   onBookmarkedChange?: (bookmarked: boolean) => void;
@@ -50,7 +61,7 @@ export function LessonActions({
   React.useEffect(() => setBookmarked(initialBookmarked), [initialBookmarked]);
 
   const requireAuth = (verb: string) => {
-    // First-time FRC readers dominate this path — send them to signup (which
+    // First-time FRC readers dominate this path, send them to signup (which
     // has a "log in" link for the rare returning user), not the returning-user
     // login screen. Routing account-creation moments to /login was silently
     // bleeding signups.
@@ -64,16 +75,15 @@ export function LessonActions({
   };
 
   const onComplete = () => {
-    // Auth state not yet known — ignore the click rather than misroute it.
+    // Auth state not yet known, ignore the click rather than misroute it.
     if (!ready) return;
-    // A required quiz can't be bypassed — send them to it. This runs BEFORE the
+    // A required quiz can't be bypassed, send them to it. This runs BEFORE the
     // auth gate on purpose: guest completion is fully supported (localStorage +
     // a verified server row, migrated at signup), but this button used to hit
     // `requireAuth` first, so a logged-out reader who pressed the only action in
-    // the lesson hero got a "create an account" toast instead of the quiz. That
-    // is the first viewport of every SEO landing, and it contradicted the page's
-    // own "free, no login to read a guide" promise. Everyone gets the quiz; only
-    // the no-quiz "mark complete" fallback below still needs an account.
+    // the lesson header got a "create an account" toast instead of the quiz.
+    // That is the first viewport of every SEO landing, and it contradicted the
+    // page's own "free, no login to read a guide" promise.
     if (quizRequired && !completed) {
       document
         .getElementById("lesson-quiz")
@@ -98,7 +108,7 @@ export function LessonActions({
   };
 
   const onBookmark = () => {
-    // Auth state not yet known — ignore the click rather than misroute it.
+    // Auth state not yet known, ignore the click rather than misroute it.
     if (!ready) return;
     if (!authed) return requireAuth("save lessons");
     const next = !bookmarked;
@@ -116,48 +126,40 @@ export function LessonActions({
     });
   };
 
+  const primaryLabel = completed
+    ? "Completed"
+    : quizRequired
+      ? "Take the quiz"
+      : "Mark complete";
+
   return (
     <div className="relative flex flex-wrap items-center gap-3">
       <Confetti trigger={burst} />
       <span role="status" aria-live="polite" className="sr-only">
-        {pending ? "Saving…" : ""}
+        {pending ? "Saving" : ""}
       </span>
+
       <Button
         onClick={onComplete}
         disabled={pending || !ready}
         aria-busy={pending}
-        variant={completed ? "secondary" : quizRequired ? "outline" : "brand"}
-        size="lg"
+        variant={completed ? "ghost" : "brand"}
       >
-        {pending ? (
-          <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-        ) : completed ? (
-          <Check className="h-4 w-4" aria-hidden />
-        ) : quizRequired ? (
-          <ListChecks className="h-4 w-4" aria-hidden />
-        ) : (
-          <Circle className="h-4 w-4" aria-hidden />
-        )}
-        {completed ? "Completed" : quizRequired ? "Take the quiz" : "Mark complete"}
+        {/* The word carries the pending state. A spinner would be a seventh
+            thing on a page whose whole visual argument is ink on paper. */}
+        {pending ? "Saving…" : primaryLabel}
       </Button>
-      <button
+
+      <Button
         onClick={onBookmark}
         disabled={pending || !ready}
         aria-busy={pending}
-        aria-label={bookmarked ? "Remove bookmark" : "Bookmark lesson"}
-        className={cn(
-          "inline-flex h-12 w-12 items-center justify-center rounded-2xl border bg-card transition-all cursor-pointer hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-55",
-          bookmarked
-            ? "border-primary/40 bg-primary/10 text-primary shadow-[0_6px_16px_rgba(60,95,160,0.12)]"
-            : "border-border text-muted-foreground hover:border-[#0e7490]/40 hover:text-[#0e7490] hover:shadow-[0_6px_16px_rgba(60,95,160,0.10)]"
-        )}
+        aria-pressed={bookmarked}
+        variant="ghost"
+        className={bookmarked ? "border-blue text-blue" : undefined}
       >
-        {bookmarked ? (
-          <BookmarkCheck className="h-5 w-5" aria-hidden />
-        ) : (
-          <Bookmark className="h-5 w-5" aria-hidden />
-        )}
-      </button>
+        {bookmarked ? "Saved" : "Save"}
+      </Button>
     </div>
   );
 }

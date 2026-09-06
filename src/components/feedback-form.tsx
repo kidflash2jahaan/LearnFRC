@@ -2,14 +2,24 @@
 
 import * as React from "react";
 import { useActionState } from "react";
-import { Send, Loader2, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { sendFeedback } from "@/app/actions/feedback";
-import { Textarea, Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 
+/**
+ * The suggestion slip: what should be in the binder that isn't.
+ *
+ * Both fields get a visible label rather than a placeholder standing in for
+ * one, and the optional field says it is optional in its own label instead of
+ * hiding that in grey placeholder text a screen reader announces last.
+ *
+ * The action wiring is unchanged: same server action, same error toast, same
+ * success swap.
+ */
 export function FeedbackForm({ page = "/" }: { page?: string }) {
   const [state, action, pending] = useActionState(sendFeedback, undefined);
+  const uid = React.useId();
+  const messageId = `${uid}-message`;
+  const emailId = `${uid}-email`;
 
   React.useEffect(() => {
     if (state?.error) toast.error(state.error);
@@ -17,48 +27,62 @@ export function FeedbackForm({ page = "/" }: { page?: string }) {
 
   if (state?.success) {
     return (
-      <div className="ac-card flex items-center gap-3 rounded-2xl border-success/30 bg-success/10 p-4 text-[15px]">
-        <CheckCircle2 className="h-5 w-5 shrink-0 text-success" aria-hidden />
-        <span>Thanks! Your suggestion was sent — we read every one.</span>
+      <div className="nb-note" role="status">
+        <p className="nb-slug">sent</p>
+        <p className="mt-1.5 text-[0.95rem]">
+          Thanks. Every one of these gets read, and the ones that turn into
+          lessons get read twice.
+        </p>
       </div>
     );
   }
 
   return (
-    <form action={action} className="space-y-3">
+    <form action={action} className="flex flex-col gap-4">
       <input type="hidden" name="page" value={page} />
-      <label htmlFor="feedback-message" className="sr-only">
-        Your suggestion
-      </label>
-      <Textarea
-        id="feedback-message"
-        name="message"
-        required
-        minLength={5}
-        placeholder="Suggest a topic, resource, or improvement…"
-        aria-label="Your suggestion"
-      />
-      <div>
-        <label htmlFor="feedback-email" className="sr-only">
-          Email (optional)
+
+      <div className="nb-field">
+        <label htmlFor={messageId} className="nb-label">
+          Your suggestion
         </label>
-        <Input
-          id="feedback-email"
+        <textarea
+          id={messageId}
+          name="message"
+          required
+          minLength={5}
+          rows={5}
+          disabled={pending}
+          placeholder="A topic that isn't covered, a resource worth linking, or something that reads wrong."
+          className="nb-input"
+        />
+        <p className="nb-hint">
+          Be specific. &ldquo;Nothing on chain tensioning&rdquo; is more useful
+          than &ldquo;more mechanical please&rdquo;.
+        </p>
+      </div>
+
+      <div className="nb-field">
+        <label htmlFor={emailId} className="nb-label">
+          Email, optional
+        </label>
+        <input
+          id={emailId}
           name="email"
           type="email"
           inputMode="email"
           autoComplete="email"
-          placeholder="Email (optional — so we can reply)"
+          disabled={pending}
+          placeholder="you@team.org"
+          className="nb-input"
         />
+        <p className="nb-hint">Only if you want an answer back.</p>
       </div>
-      <Button type="submit" variant="brand" disabled={pending}>
-        {pending ? (
-          <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-        ) : (
-          <Send className="h-4 w-4" aria-hidden />
-        )}
-        Send suggestion
-      </Button>
+
+      <div>
+        <button type="submit" className="nb-btn" disabled={pending} aria-busy={pending}>
+          {pending ? "Sending" : "Send suggestion"}
+        </button>
+      </div>
     </form>
   );
 }

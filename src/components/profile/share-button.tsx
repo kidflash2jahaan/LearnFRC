@@ -1,10 +1,20 @@
 "use client";
 
 import * as React from "react";
-import { Share2, Check } from "lucide-react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
 
+/**
+ * Hand this page to someone.
+ *
+ * It uses the OS share sheet where there is one (which is where sharing a
+ * profile actually happens, on a phone in a pit) and falls back to copying the
+ * link. The label says what just happened rather than only changing an icon,
+ * because "copied" is the whole confirmation and it has to survive being read
+ * at arm's length.
+ *
+ * Drawn as the secondary button: on the record sheet the thing to press is the
+ * link into the guides, not this.
+ */
 export function ShareButton({
   username,
   name,
@@ -13,6 +23,15 @@ export function ShareButton({
   name: string;
 }) {
   const [copied, setCopied] = React.useState(false);
+
+  // A `setTimeout` that outlives the component would set state on an unmounted
+  // tree, so the id is held and cleared.
+  const timer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  React.useEffect(() => {
+    return () => {
+      if (timer.current) clearTimeout(timer.current);
+    };
+  }, []);
 
   const onShare = async () => {
     const url = `${window.location.origin}/u/${username}`;
@@ -26,28 +45,23 @@ export function ShareButton({
         await navigator.share(data);
         return;
       } catch {
-        return; // user cancelled the share sheet
+        return; // the share sheet was dismissed
       }
     }
     try {
       await navigator.clipboard.writeText(url);
       setCopied(true);
       toast.success("Profile link copied");
-      setTimeout(() => setCopied(false), 2000);
+      if (timer.current) clearTimeout(timer.current);
+      timer.current = setTimeout(() => setCopied(false), 2000);
     } catch {
-      toast.error("Couldn't copy link");
+      toast.error("Couldn't copy the link");
     }
   };
 
   return (
-    <Button
-      variant="outline"
-      size="sm"
-      onClick={onShare}
-      className="font-mono hover:border-primary/50 hover:text-primary hover:shadow-[var(--glow-primary)]"
-    >
-      {copied ? <Check className="h-4 w-4" /> : <Share2 className="h-4 w-4" />}
-      {copied ? "copied" : "share"}
-    </Button>
+    <button type="button" onClick={onShare} className="nb-btn-ghost">
+      {copied ? "Link copied" : "Share this page"}
+    </button>
   );
 }

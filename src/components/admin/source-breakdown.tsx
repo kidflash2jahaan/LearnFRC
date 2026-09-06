@@ -1,25 +1,20 @@
 "use client";
 
 import * as React from "react";
-import { SourcePie } from "@/components/admin/source-pie";
-import { cn } from "@/lib/utils";
+import { SourceChart } from "@/components/admin/source-pie";
 
 type Range = "7d" | "all";
 type Metric = "users" | "visitors";
 type Series = { name: string; count: number }[];
 
-/** Segmented-control pill. Layout is Tailwind-only; ac-chip is skin on the group. */
-const PILL =
-  "inline-flex min-h-9 cursor-pointer items-center justify-center whitespace-nowrap rounded-full px-3 text-[13px] leading-none transition-colors duration-200 ease-out motion-reduce:transition-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
-
-/** Selected reads as selected via weight + fill + ring — never colour alone. */
-const PILL_ON = "bg-primary/15 font-semibold text-primary ring-1 ring-primary/25";
-const PILL_OFF =
-  "font-medium text-muted-foreground hover:bg-foreground/[0.04] hover:text-foreground";
-
-const GROUP = "ac-chip inline-flex shrink-0 items-center gap-1 p-1";
-
-function Segmented<T extends string>({
+/**
+ * A strip of `.nb-tab`s. The selected one is a solid blue rule and bold ink,
+ * the rest are a dashed hairline, so the state reads with the colour taken
+ * away. `aria-pressed` rather than `role="tab"`: these are buttons that swap
+ * the figures below, and claiming tab semantics would promise arrow-key
+ * navigation that is not implemented.
+ */
+function Strip<T extends string>({
   label,
   value,
   options,
@@ -31,14 +26,15 @@ function Segmented<T extends string>({
   onChange: (next: T) => void;
 }) {
   return (
-    <div className={GROUP} role="group" aria-label={label}>
+    <div className="flex items-center gap-4" role="group" aria-label={label}>
       {options.map(([key, text]) => (
         <button
           key={key}
           type="button"
           onClick={() => onChange(key)}
           aria-pressed={value === key}
-          className={cn(PILL, value === key ? PILL_ON : PILL_OFF)}
+          data-active={value === key || undefined}
+          className="nb-tab"
         >
           {text}
         </button>
@@ -48,8 +44,13 @@ function Segmented<T extends string>({
 }
 
 /**
- * "Where they come from" — toggle between signed-up USERS and all UNIQUE
- * VISITORS, each with a Last-7-days / All-time range.
+ * "Where they come from": signed-up USERS or all UNIQUE VISITORS, over the last
+ * seven days or everything on record.
+ *
+ * The two halves do not cover the same span and the page says so in the note
+ * under this control. Users come from `profiles.source`, i.e. every signup
+ * ever; visitors come from first-touch pageviews, which only carry a visitor id
+ * from the day the beacon started sending one.
  */
 export function SourceBreakdown({
   userWeek,
@@ -79,9 +80,9 @@ export function SourceBreakdown({
 
   return (
     <div className="min-w-0">
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <Segmented<Metric>
-          label="Metric"
+      <div className="mb-5 flex flex-wrap items-center gap-x-7 gap-y-1 border-b border-dashed border-rule">
+        <Strip<Metric>
+          label="Count"
           value={metric}
           onChange={setMetric}
           options={
@@ -91,13 +92,13 @@ export function SourceBreakdown({
             ] as const
           }
         />
-        <Segmented<Range>
-          label="Range"
+        <Strip<Range>
+          label="Window"
           value={range}
           onChange={setRange}
           options={
             [
-              ["7d", "7d"],
+              ["7d", "Last 7 days"],
               ["all", "All-time"],
             ] as const
           }
@@ -105,13 +106,13 @@ export function SourceBreakdown({
       </div>
 
       {total === 0 ? (
-        <p className="py-8 text-center text-sm text-muted-foreground">
+        <p className="nb-slug py-6">
           {range === "7d"
-            ? `No ${noun} in the last 7 days yet.`
-            : `No ${noun} attributed yet.`}
+            ? `Nothing recorded in the last 7 days. No ${noun} attributed yet in that window.`
+            : `No ${noun} attributed to a source yet.`}
         </p>
       ) : (
-        <SourcePie data={data} />
+        <SourceChart data={data} noun={noun} />
       )}
     </div>
   );

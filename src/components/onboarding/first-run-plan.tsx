@@ -1,35 +1,63 @@
-import type { CSSProperties } from "react";
 import Link from "next/link";
-import { ArrowRight, Check, Clock3, Route, Settings2 } from "lucide-react";
-import { Icon } from "@/lib/icon-map";
-import { deptInk } from "@/lib/departments";
 import { cn } from "@/lib/utils";
 import type { StarterPlan } from "@/lib/recommend";
+
+/** The tick that marks a cleared lesson. Drawn, because the shape has to carry
+ *  the state on its own: a blue fill and nothing else would vanish the moment
+ *  the page is printed or read by anyone who cannot separate blue from ink. */
+function Tick() {
+  return (
+    <svg
+      viewBox="0 0 14 12"
+      className="h-3.5 w-3.5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2.4}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path d="M1.4 6.4 L5 10.3 L12.6 1.7" />
+    </svg>
+  );
+}
 
 /**
  * THE PLAN — one obvious next action, and a finish line five lessons away.
  *
- * This replaces the zero-progress dashboard experience, which currently offers
- * a brand-new learner FIVE competing calls to action pointing at four
- * different destinations, and puts them below six gauges reading 0, eleven
- * department cards at 0%, and eleven locked badges. A page that is mostly a
- * monument to having done nothing is not an onboarding surface.
+ * This replaces the zero-progress dashboard experience, which offers a
+ * brand-new learner FIVE competing calls to action pointing at four different
+ * destinations, and puts them below six gauges reading 0, eleven department
+ * cards at 0%, and eleven locked badges. A page that is mostly a monument to
+ * having done nothing is not an onboarding surface.
  *
  * Two things are load-bearing here:
  *
  *  1. ONE primary button. It names a specific lesson, its department, and its
  *     REAL read time (derived from the word count, not the `estimated_minutes`
- *     column, which overstates the first lesson a rookie meets by 12x — 25
- *     minutes claimed against a ~2-minute read. A 25-minute price tag at the
+ *     column, which overstates the first lesson a rookie meets by 12x, 25
+ *     minutes claimed against a two-minute read. A 25-minute price tag at the
  *     decision point is a reason to leave).
  *
  *  2. A five-row checklist. Five is the measured retention threshold: 21.4% of
  *     learners who finish five lessons in week one are still completing
- *     lessons on days 8-28, against 3.7% who do not, and d21 survival is 32%
- *     vs 6%. One through four is worth nothing over zero, so a "first lesson"
- *     celebration aims at a milestone the data says does not hold anyone. The
+ *     lessons on days 8 to 28, against 3.7% who do not, and d21 survival is 32%
+ *     against 6%. One through four is worth nothing over zero, so a "first
+ *     lesson" celebration aims at a milestone the data says holds nobody. The
  *     visible finish line is therefore five, and it is drawn before the first
  *     lesson is opened so the learner knows what they are aiming at.
+ *
+ * HOW THE REBUILD DRAWS IT. The card is a checklist taped inside the binder
+ * cover, and every state on it survives a photocopy: a cleared row is a filled
+ * marker with a drawn tick and the word "done", the next row is a blue bar plus
+ * the word "next". The old version leaned on a green wash and a coloured ring,
+ * neither of which this palette owns and neither of which says anything on its
+ * own.
+ *
+ * `compact` is the dashboard embed. It loses the tape and the tilt, because a
+ * crooked card in a column of straight ones reads as a rendering fault rather
+ * than as a card somebody pinned up in a hurry.
  *
  * Pure Server Component: no client state, no motion, nothing read from the
  * browser during render, so the markup is identical on both sides of hydration.
@@ -41,7 +69,6 @@ export function FirstRunPlan({
   plan: StarterPlan;
   compact?: boolean;
 }) {
-  const accent = plan.pathColor;
   const total = plan.lessons.length;
   const next = plan.next;
 
@@ -49,86 +76,77 @@ export function FirstRunPlan({
     <section
       aria-labelledby="first-run-plan-title"
       className={cn(
-        "relative overflow-hidden",
-        compact ? "ac-card p-5 sm:p-6" : "ac-glass p-6 sm:p-8"
+        "nb-box",
+        compact
+          ? "p-[clamp(1.05rem,2.2vw,1.5rem)]"
+          : "nb-tilt-3 p-[clamp(1.2rem,2.6vw,1.9rem)]"
       )}
-      style={{ "--a": accent } as CSSProperties}
     >
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full opacity-25 blur-3xl"
-        style={{ background: accent }}
-      />
+      {!compact && (
+        <span
+          className="nb-tape -top-3 left-[14%] rotate-[-3.2deg]"
+          aria-hidden="true"
+        />
+      )}
 
-      <div className="relative flex flex-wrap items-center gap-2">
-        <span className="ac-chip inline-flex items-center gap-2">
-          <Route className="h-3.5 w-3.5 text-primary" aria-hidden />
-          <span className="ac-eyebrow">Your route</span>
+      {/* The header line is the filing label: which route this is, and how far
+          down it you are. Both are identifiers, so both are in Space Mono. */}
+      <p className="nb-slug flex flex-wrap gap-x-3 gap-y-1 border-b border-dashed border-rule pb-3">
+        <span>route / {plan.pathSlug}</span>
+        <span aria-hidden="true">/</span>
+        <span className="text-ink">
+          {plan.doneCount} of {total} cleared
         </span>
-        <span className="inline-flex items-center gap-2 rounded-full bg-white/60 px-2.5 py-1 text-xs font-semibold text-foreground/70 ring-1 ring-white/70">
-          <Icon name={plan.pathIconName} className="h-3.5 w-3.5" />
-          {plan.pathTitle}
-        </span>
-      </div>
+      </p>
 
       <h2
         id="first-run-plan-title"
         className={cn(
-          "relative mt-4 text-balance font-display font-bold tracking-tight",
-          compact ? "text-xl" : "text-2xl sm:text-3xl"
+          "mt-4 max-w-[20ch]",
+          compact
+            ? "text-[clamp(1.25rem,1.05rem+0.7vw,1.6rem)]"
+            : "text-[clamp(1.5rem,1.2rem+1.2vw,2.1rem)]"
         )}
       >
         {plan.doneCount === 0
-          ? `Your first ${total} lessons`
+          ? `Your first ${total} lessons.`
           : plan.doneCount >= total
-            ? `You cleared all ${total}`
-            : `${plan.doneCount} of ${total} done — keep going`}
+            ? `All ${total} cleared.`
+            : `${plan.doneCount} down, ${total - plan.doneCount} to go.`}
       </h2>
 
-      <p
-        className={cn(
-          "relative mt-2 max-w-xl leading-relaxed text-foreground/70",
-          compact ? "text-sm" : "text-[15px]"
-        )}
-      >
+      <p className="nb-sub mt-2.5 text-[0.98rem] leading-snug">
         {plan.doneCount >= total
-          ? "That's the threshold that makes it stick. Keep going down your route — everything below is unlocked and free."
-          : "Learners who finish five lessons in their first week are five times more likely to still be building three weeks later. One at a time."}
+          ? "That is the threshold that makes it stick. Keep working down the route, everything below it is open and free."
+          : "Learners who clear five lessons in their first week are about five times more likely to still be building three weeks later. One at a time."}
       </p>
 
-      {/* ── THE single action ─────────────────────────────────────────── */}
+      {/* ── The single action ────────────────────────────────────────── */}
       {next && (
-        <div className="relative mt-5 flex flex-col gap-2">
-          <Link
-            href={next.href}
-            className="ac-btn h-auto max-w-full items-start gap-3 self-start whitespace-normal py-3 text-left text-sm"
-          >
-            <span className="min-w-0">
-              <span className="block text-[11px] font-semibold uppercase tracking-[0.14em] text-white/75">
-                {plan.doneCount === 0 ? "Start here" : "Next up"}
-                {/* `step` runs past the plan once all five are ticked — the
-                    route continues, but "lesson 6 of 5" does not. */}
-                {next.step <= total ? ` · Lesson ${next.step} of ${total}` : " · Further down your route"}
-              </span>
-              <span className="mt-0.5 block font-bold">{next.title}</span>
-            </span>
-            <ArrowRight className="mt-1 h-4 w-4 flex-none" aria-hidden />
+        <div className="mt-[clamp(1.1rem,2.4vw,1.5rem)] border-t-2 border-ink pt-[clamp(1rem,2.2vw,1.4rem)]">
+          <p className="nb-slug">
+            {plan.doneCount === 0 ? "start here" : "next up"} /{" "}
+            {/* `step` runs past the plan once all five are ticked: the route
+                keeps going, but "lesson 6 of 5" does not. */}
+            {next.step <= total
+              ? `lesson ${next.step} of ${total}`
+              : "further down your route"}
+          </p>
+
+          <h3 className="mt-2 max-w-[26ch]">{next.title}</h3>
+
+          <p className="nb-slug mt-2">
+            {next.deptName} / {next.readMins} min read / quiz at the end
+          </p>
+
+          <Link href={next.href} className="nb-btn mt-4">
+            {plan.doneCount === 0 ? "Open the first lesson" : "Open this lesson"}
           </Link>
-          <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
-            <span>{next.deptName}</span>
-            <span aria-hidden>·</span>
-            <span className="inline-flex items-center gap-1">
-              <Clock3 className="h-3.5 w-3.5" aria-hidden />
-              {next.readMins} min read
-            </span>
-            <span aria-hidden>·</span>
-            <span>Pass the quiz to bank it</span>
-          </span>
         </div>
       )}
 
-      {/* ── The finish line, drawn before the work starts ─────────────── */}
-      <ol className="relative mt-5 space-y-1.5">
+      {/* ── The finish line, drawn before the work starts ────────────── */}
+      <ol className="nb-list mt-[clamp(1.1rem,2.4vw,1.5rem)]">
         {plan.lessons.map((lesson, i) => {
           const isNext = next?.step === i + 1;
           return (
@@ -136,51 +154,46 @@ export function FirstRunPlan({
               <Link
                 href={lesson.href}
                 className={cn(
-                  "flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors",
-                  isNext
-                    ? "bg-white/80 ring-1 ring-primary/25"
-                    : "hover:bg-white/60"
+                  "flex items-start gap-3 border-b border-dashed border-rule py-3 pl-2 pr-1 no-underline",
+                  // Blue wash plus a blue bar plus the word "next" in the
+                  // right-hand column. Three markers, one of which is not a
+                  // colour, which is the rule the whole system runs on.
+                  isNext &&
+                    "bg-[rgba(27,54,200,0.06)] shadow-[inset_3px_0_0_var(--blue)]"
                 )}
               >
                 <span
                   className={cn(
-                    "flex h-7 w-7 flex-none items-center justify-center rounded-lg text-xs font-bold tabular-nums ring-1",
+                    "nb-box-sm grid h-7 w-7 flex-none place-items-center font-mono text-[0.78rem] font-bold tabular-nums",
                     lesson.done
-                      ? "bg-[#12b565]/15 text-[#0a7a43] ring-[#12b565]/25"
+                      ? "border-blue bg-blue text-card"
                       : isNext
-                        ? "ring-white/70"
-                        : "bg-white/55 text-foreground/50 ring-white/70"
+                        ? "border-blue text-blue"
+                        : "border-rule text-graphite"
                   )}
-                  style={
-                    !lesson.done && isNext
-                      ? ({
-                          background: `color-mix(in srgb, ${lesson.accent} 24%, #fff)`,
-                          color: deptInk(lesson.deptSlug),
-                        } as CSSProperties)
-                      : undefined
-                  }
+                  aria-hidden="true"
                 >
-                  {lesson.done ? (
-                    <Check className="h-4 w-4" aria-hidden />
-                  ) : (
-                    i + 1
-                  )}
+                  {lesson.done ? <Tick /> : i + 1}
                 </span>
+
                 <span className="min-w-0 flex-1">
                   <span
                     className={cn(
-                      "block truncate text-sm font-semibold",
-                      lesson.done ? "text-foreground/55" : "text-foreground"
+                      "block text-[0.96rem] font-semibold leading-snug",
+                      lesson.done ? "text-graphite" : "text-ink"
                     )}
                   >
                     {lesson.title}
                   </span>
-                  <span className="block truncate text-xs text-muted-foreground">
+                  <span className="nb-slug mt-0.5 block truncate">
                     {lesson.deptName}
                   </span>
                 </span>
-                {lesson.done && (
-                  <span className="sr-only">Completed</span>
+
+                {(lesson.done || isNext) && (
+                  <span className="nb-slug flex-none whitespace-nowrap">
+                    {lesson.done ? "done" : "next"}
+                  </span>
                 )}
               </Link>
             </li>
@@ -188,24 +201,23 @@ export function FirstRunPlan({
         })}
       </ol>
 
-      {/* ── Everything else is deferred until after lesson one ────────── */}
-      <div className="relative mt-5 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-border/60 pt-4 text-xs">
+      {/* ── Everything else is deferred until after lesson one ─────────
+          No rule above this row: the checklist's last dashed line already
+          closes the list, and a second hairline 4px under it is the doubled
+          border that makes a spec sheet look like ruled paper by accident. */}
+      <p className="mt-[clamp(1.1rem,2.4vw,1.5rem)] flex flex-wrap gap-x-6 gap-y-2 text-[0.92rem]">
         <Link
           href={plan.tailored ? "/start?change=1" : "/start"}
-          className="inline-flex items-center gap-1.5 font-semibold text-primary hover:underline"
+          className="nb-link"
         >
-          <Settings2 className="h-3.5 w-3.5" aria-hidden />
           {plan.tailored
-            ? "Not your subteam? Change your route"
-            : "Tell us what you do and we'll tailor this"}
+            ? "Not your subteam? Change the route"
+            : "Tell us what you do and we'll cut this to fit"}
         </Link>
-        <Link
-          href={`/paths/${plan.pathSlug}`}
-          className="text-muted-foreground hover:text-foreground hover:underline"
-        >
+        <Link href={`/paths/${plan.pathSlug}`} className="nb-link">
           See the whole route
         </Link>
-      </div>
+      </p>
     </section>
   );
 }

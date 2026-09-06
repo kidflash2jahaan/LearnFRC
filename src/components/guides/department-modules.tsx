@@ -1,20 +1,8 @@
 "use client";
 
 import * as React from "react";
-import type { CSSProperties } from "react";
 import Link from "next/link";
-import { motion, useReducedMotion } from "framer-motion";
-import {
-  ChevronDown,
-  ChevronRight,
-  CheckCircle2,
-  Circle,
-  Sparkles,
-  ArrowRight,
-  Clock,
-} from "lucide-react";
 import { cn } from "@/lib/utils";
-import { inkFor } from "@/lib/departments";
 
 type Lesson = {
   id: string;
@@ -32,217 +20,188 @@ type ModuleT = {
   lessons: Lesson[];
 };
 
+/**
+ * The tick in the margin. Drawn, not an icon set: this system is type, rules
+ * and tape, and it is the only mark on the page that means "done".
+ *
+ * It is never the only signal. Every row that carries a tick also carries the
+ * word "done" for screen readers, and every module prints its own count in
+ * figures, so the state survives both greyscale and no CSS at all.
+ */
+function Tick({ done }: { done: boolean }) {
+  return (
+    <span
+      aria-hidden="true"
+      className="mt-0.5 grid size-[1.15rem] shrink-0 place-items-center rounded-[var(--hand-s)] border-2 border-ink"
+    >
+      {done && (
+        <svg viewBox="0 0 12 12" className="size-3" fill="none" aria-hidden="true">
+          <path
+            d="M1.6 6.3 4.4 9.2 10.4 2.6"
+            stroke="var(--blue)"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      )}
+    </span>
+  );
+}
+
+/**
+ * The department's curriculum, as the log it is.
+ *
+ * The old version was a stack of glass cards with a gradient hairline that swept
+ * in on hover and a coloured ring per module. This is the same information as a
+ * page of the binder: each module opens on a heavy ink rule, states its number,
+ * its title and its count, and unfolds into the carbon-copy list of its lessons.
+ *
+ * WHY THE LESSON LIST IS ALWAYS MOUNTED. These `<a href>`s are the only crawl
+ * paths from the eleven department hubs to the ~394 lesson pages. Collapsing
+ * animates the panel shut rather than unmounting it, so every lesson link ships
+ * in the server HTML; unmounting hid all but module one from crawlers. The
+ * 0fr to 1fr grid row is the height:auto transition, deterministic, with no
+ * measurement and no hydration branch, and `inert` keeps a collapsed panel out
+ * of the tab order and the accessibility tree without removing it from the
+ * document.
+ *
+ * Client, and only just: the single piece of state is which modules are open.
+ */
 export function DepartmentModules({
   departmentSlug,
   modules,
   completedIds,
-  accent,
 }: {
   departmentSlug: string;
   modules: ModuleT[];
   completedIds: string[];
-  accent: string;
 }) {
   const completed = React.useMemo(() => new Set(completedIds), [completedIds]);
-  const prefersReducedMotion = useReducedMotion();
-  // Legible-on-light tone for accent text/icons (bright accents wash out).
-  const ink = inkFor(accent);
   const [open, setOpen] = React.useState<Record<string, boolean>>(() =>
     Object.fromEntries(modules.map((m, i) => [m.id, i === 0]))
   );
 
-  // Number regular modules 1..N; prerequisite modules show a "start here" mark.
+  // Number the regular modules 1..N. A prerequisite module is not part of that
+  // sequence, so it gets a slug rather than a place in the count.
   let regular = 0;
   const labels = modules.map((m) => (m.is_prerequisite ? "pre" : String(++regular)));
 
   return (
-    <div className="space-y-4">
+    <ol className="m-0 list-none p-0">
       {modules.map((m, mi) => {
         const total = m.lessons.length;
         const done = m.lessons.filter((l) => completed.has(l.id)).length;
         const pct = total ? Math.round((done / total) * 100) : 0;
-        const isOpen = open[m.id];
+        const isOpen = !!open[m.id];
         const isPre = !!m.is_prerequisite;
         const label = labels[mi];
-        const moduleComplete = done === total && total > 0;
+        const moduleComplete = total > 0 && done === total;
+
         return (
-          <motion.div
-            key={m.id}
-            initial={{ opacity: 0, y: 16 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-60px" }}
-            transition={
-              prefersReducedMotion
-                ? { duration: 0 }
-                : { duration: 0.45, delay: mi * 0.04 }
-            }
-            className={cn("ac-card group/mod relative overflow-hidden")}
-            style={
-              isPre
-                ? ({
-                    "--a": accent,
-                    borderColor: `color-mix(in srgb, ${accent} 40%, transparent)`,
-                    background: `color-mix(in srgb, ${accent} 4%, transparent)`,
-                  } as CSSProperties)
-                : undefined
-            }
-          >
-            {/* top accent line on hover */}
-            <span
-              aria-hidden
-              className="absolute inset-x-0 top-0 h-px origin-left scale-x-0 transition-transform duration-300 group-hover/mod:scale-x-100"
-              style={{ background: `linear-gradient(90deg, ${accent}, transparent)` }}
-            />
-
-            <button
-              onClick={() => setOpen((o) => ({ ...o, [m.id]: !o[m.id] }))}
-              className="flex min-h-11 w-full cursor-pointer items-center gap-4 rounded-[20px] p-5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-              aria-expanded={isOpen}
-              aria-controls={`mod-panel-${m.id}`}
-            >
-              <span
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border font-display text-sm font-semibold transition-transform duration-300 group-hover/mod:scale-105"
-                style={{
-                  color: ink,
-                  borderColor: `color-mix(in srgb, ${accent} 40%, transparent)`,
-                  background: `color-mix(in srgb, ${accent} 12%, transparent)`,
-                }}
+          <li key={m.id} className="nb-rule">
+            <h3 className="m-0 text-base">
+              <button
+                type="button"
+                onClick={() => setOpen((o) => ({ ...o, [m.id]: !o[m.id] }))}
+                aria-expanded={isOpen}
+                aria-controls={`mod-panel-${m.id}`}
+                className="flex w-full cursor-pointer items-center gap-[clamp(0.7rem,2vw,1.15rem)] py-[clamp(0.9rem,2vw,1.3rem)] text-left hover:bg-[rgba(27,54,200,0.045)]"
               >
-                {isPre ? (
-                  <Sparkles className="h-5 w-5" aria-hidden="true" />
-                ) : (
-                  String(Number(label)).padStart(2, "0")
-                )}
-              </span>
+                {/* the module's number, boxed the way a part is stamped */}
+                <span className="nb-box-sm grid size-11 shrink-0 place-items-center font-mono text-[0.86rem] font-bold tabular-nums">
+                  {isPre ? "pre" : String(Number(label)).padStart(2, "0")}
+                </span>
 
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  {isPre && (
-                    <span
-                      className="ac-chip text-[11px] font-bold uppercase tracking-wider"
-                      style={{
-                        color: ink,
-                        borderColor: `color-mix(in srgb, ${accent} 40%, transparent)`,
-                        background: `color-mix(in srgb, ${accent} 12%, transparent)`,
-                      }}
-                    >
-                      Start here · Prerequisite
+                <span className="min-w-0 flex-1">
+                  <span className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
+                    {isPre && <span className="nb-tag">start here</span>}
+                    <span className="font-display text-[clamp(1.05rem,0.95rem+0.5vw,1.3rem)] font-extrabold leading-tight tracking-[-0.025em]">
+                      {m.title}
                     </span>
-                  )}
-                  <h3 className="truncate font-display text-[16px] font-bold tracking-tight">
-                    {m.title}
-                  </h3>
-                  {moduleComplete && (
-                    <>
-                      <CheckCircle2
-                        className="h-4 w-4 shrink-0 text-success"
-                        aria-hidden="true"
-                      />
-                      <span className="sr-only">Module complete</span>
-                    </>
-                  )}
-                </div>
-                <p className="mt-0.5 text-sm text-muted-foreground">
-                  {isPre ? "recommended before you start · " : ""}
-                  {done}/{total} lessons · <span className="tabular-nums">{pct}%</span>
-                </p>
-              </div>
+                    {moduleComplete && (
+                      <>
+                        <Tick done />
+                        <span className="sr-only">Module complete</span>
+                      </>
+                    )}
+                  </span>
+                  <span className="nb-slug mt-1 block">
+                    {isPre ? "recommended first, " : ""}
+                    {done} of {total} {total === 1 ? "lesson" : "lessons"}, {pct}%
+                  </span>
+                </span>
 
-              <div className="hidden h-1.5 w-24 overflow-hidden rounded-full bg-muted sm:block">
-                <div
-                  className="h-full rounded-full transition-[width] duration-500"
-                  style={{
-                    width: `${pct}%`,
-                    background: accent,
-                  }}
-                />
-              </div>
+                {/* The bar never travels alone: the figure is in the line above. */}
+                <span className="nb-meter hidden w-24 shrink-0 sm:block" aria-hidden="true">
+                  <span className="nb-meter-bar" style={{ width: `${pct}%` }} />
+                </span>
 
-              <ChevronDown
-                aria-hidden="true"
-                className={cn(
-                  "h-5 w-5 shrink-0 text-muted-foreground transition-transform duration-300",
-                  isOpen && "rotate-180"
-                )}
-              />
-            </button>
+                {/* Decorative: the button's own aria-expanded is the real state. */}
+                <span
+                  aria-hidden="true"
+                  className="nb-box-sm grid size-8 shrink-0 place-items-center font-mono text-base font-bold leading-none text-blue"
+                >
+                  {isOpen ? "-" : "+"}
+                </span>
+              </button>
+            </h3>
 
-            {/* SEO: the lesson list is ALWAYS mounted — collapsing animates it
-                shut instead of unmounting it — so every lesson <a href> ships
-                in the server HTML. These are the only crawl paths from the 11
-                department hubs to the ~394 lesson pages; conditionally mounting
-                the panel (the old AnimatePresence) hid all but module 1 from
-                crawlers. The 0fr→1fr grid row is the CSS height:auto transition
-                — deterministic, no measurement, no hydration branch — and
-                `inert` keeps collapsed rows out of the tab order and the a11y
-                tree without removing them from the document. */}
             <div
               id={`mod-panel-${m.id}`}
               inert={!isOpen}
               className={cn(
-                "grid transition-[grid-template-rows,opacity] duration-300 ease-[cubic-bezier(0.21,0.47,0.32,0.98)] motion-reduce:transition-none",
+                "grid transition-[grid-template-rows,opacity] duration-300 ease-[cubic-bezier(0.2,0.9,0.3,1)] motion-reduce:transition-none",
                 isOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
               )}
             >
               <div className="overflow-hidden">
-                <div className="border-t border-border px-3 pb-3 pt-1">
+                <div className="pb-[clamp(1rem,2.4vw,1.6rem)] pl-0 sm:pl-[3.6rem]">
                   {m.overview && (
-                    <p className="px-2 py-3 text-sm leading-relaxed text-muted-foreground">
+                    <p className="max-w-[62ch] text-[0.95rem] text-graphite">
                       {m.overview}
                     </p>
                   )}
-                  {/* The module hub page. The accordion header can't be this
-                      link (it's the disclosure button, and nesting a link in a
-                      button is invalid), so the overview links it instead —
-                      which also means every module hub has a real inbound
-                      link in the department page's server HTML. */}
-                  <Link
-                    href={`/guides/${departmentSlug}/${m.slug}`}
-                    className="mx-2 mb-2 inline-flex min-h-11 items-center gap-1.5 text-sm font-medium hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                    style={{ color: ink }}
-                  >
-                    Module overview: {m.title}
-                    <ChevronRight className="h-4 w-4" aria-hidden="true" />
-                  </Link>
-                  <ul className="space-y-1">
+
+                  {/* The accordion header cannot be this link, because it is the
+                      disclosure button and a link inside a button is invalid.
+                      Putting it here also means every module hub keeps a real
+                      inbound link in the department page's server HTML. */}
+                  <p className={cn("nb-slug", m.overview ? "mt-3" : "")}>
+                    <Link
+                      href={`/guides/${departmentSlug}/${m.slug}`}
+                      className="nb-link inline-flex min-h-11 items-center"
+                    >
+                      Read the module overview
+                    </Link>
+                  </p>
+
+                  <ul className="nb-list mt-3 list-none p-0">
                     {m.lessons.map((l, li) => {
                       const isDone = completed.has(l.id);
                       return (
                         <li key={l.id}>
                           <Link
                             href={`/guides/${departmentSlug}/${m.slug}/${l.slug}`}
-                            className="group/les flex min-h-11 items-center gap-3 rounded-lg px-2.5 py-3 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                            className="nb-row group grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-x-3 gap-y-1 py-3"
                           >
-                            {isDone ? (
-                              <CheckCircle2
-                                className="h-5 w-5 shrink-0"
-                                style={{ color: ink }}
-                                aria-hidden="true"
-                              />
-                            ) : (
-                              <Circle className="h-5 w-5 shrink-0 text-muted-foreground/70 transition-colors group-hover/les:text-foreground" aria-hidden="true" />
-                            )}
-                            <span className="min-w-0 flex-1">
-                              <span className="block truncate text-sm font-medium text-foreground/90 group-hover/les:text-foreground">
-                                <span
-                                  className="mr-2 text-xs tabular-nums"
-                                  style={{ color: ink }}
-                                >
-                                  {isPre ? "P" : label}.{li + 1}
-                                </span>
+                            <Tick done={isDone} />
+                            <span className="min-w-0">
+                              <span className="nb-slug mr-2 font-bold text-blue">
+                                {isPre ? "P" : label}.{li + 1}
+                              </span>
+                              <span className="text-[0.97rem] leading-snug group-hover:underline group-hover:decoration-blue group-hover:decoration-2 group-hover:underline-offset-4">
                                 {l.title}
                               </span>
+                              {isDone && <span className="sr-only"> (done)</span>}
                             </span>
                             {l.estimated_minutes ? (
-                              <span className="hidden shrink-0 items-center gap-1 text-xs text-muted-foreground sm:inline-flex">
-                                <Clock className="h-3 w-3" aria-hidden="true" />
-                                <span className="tabular-nums">{l.estimated_minutes}</span>m
+                              <span className="nb-slug hidden shrink-0 sm:block">
+                                {l.estimated_minutes} min
                               </span>
-                            ) : null}
-                            <ArrowRight
-                              aria-hidden="true"
-                              className="h-4 w-4 shrink-0 -translate-x-1 text-muted-foreground opacity-0 transition-all group-hover/les:translate-x-0 group-hover/les:opacity-100"
-                            />
+                            ) : (
+                              <span aria-hidden="true" />
+                            )}
                           </Link>
                         </li>
                       );
@@ -251,9 +210,9 @@ export function DepartmentModules({
                 </div>
               </div>
             </div>
-          </motion.div>
+          </li>
         );
       })}
-    </div>
+    </ol>
   );
 }

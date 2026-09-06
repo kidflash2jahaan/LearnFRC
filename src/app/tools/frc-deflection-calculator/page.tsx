@@ -21,10 +21,19 @@ export const metadata: Metadata = {
   },
 };
 
+/**
+ * Shell only. The root layout already owns the page's <main> landmark, so this
+ * renders a fragment: a second one would break the skip link and every screen
+ * reader's "jump to main" affordance.
+ *
+ * The calculator draws its own full-width bands (some of them ruled edge to
+ * edge), so it is deliberately NOT wrapped in a gutter container here. Each
+ * band puts its own nb-wrap inside itself.
+ */
 export default async function Page() {
   const { user } = await getSession();
   return (
-    <main className="relative mx-auto max-w-6xl px-4 pb-20 pt-28 sm:px-6 lg:px-8 lg:pt-32">
+    <>
       <JsonLd
         data={{
           "@context": "https://schema.org",
@@ -95,6 +104,6 @@ export default async function Page() {
           { href: "/guides", label: "All FRC guides" },
         ]}
       />
-    </main>
+    </>
   );
 }

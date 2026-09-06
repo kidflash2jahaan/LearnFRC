@@ -1,41 +1,33 @@
 "use client";
 
-import * as React from "react";
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
-import { AtSign, Hash, Loader2, ArrowRight, AlertCircle } from "lucide-react";
 import { saveProfileSetup, skipProfileSetup } from "@/app/actions/profile";
 import type { ProfileState } from "@/app/actions/profile";
 import type { ProfileSetupMode } from "@/lib/onboarding";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 
 const SAVE_FORM_ID = "profile-setup-save";
 
-/** Ghost "skip" control. `useFormStatus` reports the nearest ANCESTOR form, so
- *  this must render inside the skip form — not merely point at it. */
+/** The way out. `useFormStatus` reports the nearest ANCESTOR form, so this has
+ *  to render inside the skip form rather than merely point at it by id. Drawn
+ *  rather than filled, because saving is the thing to do here and only one
+ *  button in a view gets to look like the thing to do. */
 function SkipButton({ disabled }: { disabled: boolean }) {
   const { pending } = useFormStatus();
   return (
-    <Button
+    <button
       type="submit"
-      variant="ghost"
-      size="md"
+      className="nb-btn-ghost"
       disabled={disabled || pending}
       aria-busy={pending}
     >
-      {pending ? (
-        <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-      ) : (
-        "Skip for now"
-      )}
-    </Button>
+      {pending ? "Skipping" : "Skip for now"}
+    </button>
   );
 }
 
 /**
- * Post-signup profile completion, shown on the dashboard.
+ * Post-signup profile completion: the correction slip clipped to the dashboard.
  *
  * `username` mode is the Google case: the account has no handle (or a
  * machine-minted placeholder) and usually no team number. `team` mode is the
@@ -53,6 +45,19 @@ function SkipButton({ disabled }: { disabled: boolean }) {
  *
  * Nothing here gates READING the site. Guides and articles never needed an
  * account and still do not.
+ *
+ * WHAT THE REBUILD CHANGED. The fields carry their labels above them instead of
+ * an at-sign and a hash glyph parked inside the input, which cost 36px of every
+ * field to repeat what the label already said. The error moved from the bottom
+ * of the card to directly above the fields it is about, so it is next to the
+ * thing you have to fix rather than below the buttons. Severity is an ink bar,
+ * because the palette has no red and adding one for this would put a seventh
+ * colour on the site to say what the sentence already says.
+ *
+ * Behaviour is untouched: same two server actions, same field names, same
+ * validation attributes, and the buttons still sit outside the save form with
+ * the save button reaching back by id, because forms cannot nest and the skip
+ * button has to own one.
  */
 export function ProfileSetupForm({
   mode,
@@ -75,152 +80,114 @@ export function ProfileSetupForm({
   return (
     <section
       aria-labelledby="profile-setup-title"
-      className="ac-card p-5 sm:p-6"
-      style={{ "--a": "#2560e6" } as React.CSSProperties}
+      className="nb-box p-[clamp(1.05rem,2.2vw,1.5rem)]"
     >
-      <div className="flex min-w-0 items-center gap-3">
-        <span className="ac-badge flex h-11 w-11 shrink-0 items-center justify-center">
-          {needsUsername ? (
-            <AtSign className="h-5 w-5" aria-hidden />
-          ) : (
-            <Hash className="h-5 w-5" aria-hidden />
-          )}
-        </span>
-        <div className="min-w-0">
-          <h2
-            id="profile-setup-title"
-            className="font-display text-[17px] font-bold text-foreground"
-          >
-            {needsUsername
-              ? required
-                ? "Pick a username to finish your account"
-                : "You're showing up under a generated name"
-              : "Add your team number"}
-          </h2>
-          <p className="mt-0.5 text-sm leading-relaxed text-muted-foreground">
-            {needsUsername
-              ? required
-                ? "Signing in with Google skipped the signup form, so you still need a username. It's your profile link and how teammates find you. Team number is optional."
-                : "Your handle was assigned automatically, so it's not really yours. Pick one you'd want on the leaderboard. Team number is optional."
-              : "Add your FRC team number so you show up alongside your teammates on the leaderboard and team pages."}
-          </p>
-        </div>
-      </div>
+      <span
+        className="nb-tape -top-3 left-[8%] rotate-[-3.4deg]"
+        aria-hidden="true"
+      />
+
+      <p className="nb-slug border-b border-dashed border-rule pb-3">
+        {needsUsername ? "profile / no handle yet" : "profile / no team number"}
+      </p>
+
+      <h2
+        id="profile-setup-title"
+        className="mt-4 max-w-[24ch] text-[clamp(1.18rem,1.05rem+0.6vw,1.5rem)]"
+      >
+        {needsUsername
+          ? required
+            ? "Pick a username to finish the account."
+            : "You're showing up under a name you didn't pick."
+          : "Add your team number."}
+      </h2>
+
+      <p className="mt-2.5 max-w-[56ch] text-[0.95rem] leading-snug text-graphite">
+        {needsUsername
+          ? required
+            ? "Signing in with Google skips the roster line, so an account can land without a handle. It is your profile link and it is how teammates find you. The team number is optional and can wait."
+            : "Your handle was minted for you, so it is not really yours. Pick one you would want next to your name on the leaderboard. The team number is optional."
+          : "Put your FRC team number in and you show up alongside your teammates on the team page and on the leaderboard."}
+      </p>
+
+      {state?.error && (
+        <p className="nb-error mt-4" role="alert" aria-live="assertive">
+          {state.error}
+        </p>
+      )}
 
       <form
         id={SAVE_FORM_ID}
         action={formAction}
         className={
           needsUsername
-            ? "mt-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_9rem]"
-            : "mt-4 grid gap-3 sm:max-w-[9rem]"
+            ? "mt-5 grid gap-4 sm:grid-cols-[minmax(0,1fr)_10rem]"
+            : "mt-5 grid gap-4 sm:max-w-[13rem]"
         }
       >
         {needsUsername && (
-          <div className="min-w-0">
-            <Label
-              htmlFor="setup-username"
-              className="text-sm font-medium text-foreground"
-            >
+          <div className="nb-field min-w-0">
+            <label htmlFor="setup-username" className="nb-label">
               Username
-            </Label>
-            <div className="relative mt-1">
-              <AtSign
-                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-                aria-hidden
-              />
-              <Input
-                id="setup-username"
-                name="username"
-                type="text"
-                autoComplete="nickname"
-                required
-                minLength={3}
-                maxLength={20}
-                pattern="[A-Za-z0-9_]+"
-                defaultValue={suggested}
-                placeholder="janebuilds"
-                className="pl-9"
-                disabled={busy}
-              />
-            </div>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Public — letters, numbers and underscores.
+            </label>
+            <input
+              id="setup-username"
+              name="username"
+              type="text"
+              // "nickname" so the browser does not autofill the saved login
+              // email here. This is a public handle, never an address.
+              autoComplete="nickname"
+              required
+              minLength={3}
+              maxLength={20}
+              pattern="[A-Za-z0-9_]+"
+              defaultValue={suggested}
+              disabled={busy}
+              className="nb-input"
+            />
+            <p className="nb-hint">
+              Public. Letters, numbers and underscores.
             </p>
           </div>
         )}
 
-        <div className="min-w-0">
-          <Label
-            htmlFor="setup-team"
-            className="text-sm font-medium text-foreground"
-          >
-            Team #{" "}
-            {needsUsername && (
-              <span className="font-normal text-muted-foreground">
-                (optional)
-              </span>
-            )}
-          </Label>
-          <div className="relative mt-1">
-            <Hash
-              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-              aria-hidden
-            />
-            <Input
-              id="setup-team"
-              name="team_number"
-              type="number"
-              inputMode="numeric"
-              required={!needsUsername}
-              min={1}
-              max={99999}
-              placeholder="254"
-              className="pl-9"
-              disabled={busy}
-            />
-          </div>
-          <p className="mt-1 text-xs text-muted-foreground">Reps your team.</p>
+        <div className="nb-field min-w-0">
+          <label htmlFor="setup-team" className="nb-label">
+            {needsUsername ? "Team #, optional" : "Team #"}
+          </label>
+          <input
+            id="setup-team"
+            name="team_number"
+            type="number"
+            inputMode="numeric"
+            required={!needsUsername}
+            min={1}
+            max={99999}
+            disabled={busy}
+            className="nb-input"
+          />
+          <p className="nb-hint">Like 254.</p>
         </div>
       </form>
 
-      {/* Actions sit outside the save form so the skip button can own its own
-          form (forms cannot nest). The save button reaches back by id.
-          Skip is hidden only when a handle is genuinely missing. */}
-      <div className="mt-4 flex flex-wrap items-center gap-2">
-        <Button
+      {/* The actions sit outside the save form so the skip button can own its
+          own form. The save button reaches back to it by id. */}
+      <div className="nb-hair mt-5 flex flex-wrap items-center gap-3 pt-4">
+        <button
           type="submit"
           form={SAVE_FORM_ID}
-          variant="brand"
-          size="md"
+          className="nb-btn"
           disabled={busy}
           aria-busy={busy}
         >
-          {busy ? (
-            <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-          ) : (
-            <>
-              Save
-              <ArrowRight className="h-4 w-4" aria-hidden />
-            </>
-          )}
-        </Button>
+          {busy ? "Saving" : "Save it"}
+        </button>
         {!required && (
           <form action={skipProfileSetup}>
             <SkipButton disabled={busy} />
           </form>
         )}
       </div>
-
-      {state?.error && (
-        <p
-          role="alert"
-          className="mt-3 flex items-start gap-2 rounded-xl border border-destructive/30 bg-destructive/10 px-3.5 py-2.5 text-sm text-destructive"
-        >
-          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-          {state.error}
-        </p>
-      )}
     </section>
   );
 }

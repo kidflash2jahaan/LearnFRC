@@ -6,13 +6,16 @@ import { qrCode } from "@/lib/qr";
  *
  * The point of this thing is someone putting it on the projector at a team
  * meeting, or on a printed handout: fifteen phones scan it at once and nobody
- * types a URL. That is also why it is NOT an <img> pointed at a QR web service
- * — that would post a member's referral link to a third party on every render,
+ * types a URL. That is also why it is NOT an <img> pointed at a QR web service.
+ * That would post a member's referral link to a third party on every render,
  * and it would leave the page (and the handout) blank in a pit with no wifi.
  *
- * Fixed black-on-white, deliberately, in both themes: a scanner needs dark
- * modules on a light field, and a "dark mode" QR is an unscannable QR. The
- * white plate is part of the code (it is the quiet zone), not decoration.
+ * IT IS NOT DRAWN IN THE PALETTE, ON PURPOSE. Every other mark on this site is
+ * ink on card stock, and this one is black on pure white, in every context.
+ * A scanner needs maximum contrast between dark modules and a light field, the
+ * white plate IS the quiet zone rather than decoration, and a code tinted to
+ * match a page is a code that fails to scan across a classroom. The notebook
+ * treatment goes on the frame around it, never on the code itself.
  */
 export function InviteQr({
   url,
@@ -35,13 +38,13 @@ export function InviteQr({
       role="img"
       aria-label={title}
       className={className}
-      // Keeps module edges hard at any scale — antialiased edges are what makes
+      // Keeps module edges hard at any scale. Antialiased edges are what makes
       // an on-screen QR fail to scan.
       shapeRendering="crispEdges"
       style={{ imageRendering: "pixelated" } as CSSProperties}
     >
       <rect width={code.viewBox} height={code.viewBox} fill="#ffffff" />
-      <path d={code.path} fill="#0b1220" />
+      <path d={code.path} fill="#000000" />
     </svg>
   );
 }

@@ -3,287 +3,107 @@ import { Skeleton } from "@/components/ui/skeleton";
 /**
  * Fallback for /tools/frc-budget-calculator.
  *
- * The page is dynamic — it awaits getSession() (cookies + a Supabase auth
- * round-trip) before the calculator renders — so without this the browser sits
- * on the previous route with no feedback.
+ * The page awaits getSession() (cookies plus a Supabase round-trip), so it is
+ * never prerendered and navigation blocks until that resolves.
  *
- * Both columns are drawn from _calculator.tsx's FIRST-PAINT state (rookie ·
- * Regional · KOP · "New (itemized)" control system, both Championship boxes
- * unchecked): 17 field rows on the left, and on the right the grand-total
- * panel, the rookie-benefit callout and four of the seven CategoryBlocks.
- * The body grid stretches its items, so under-drawing the left column was
- * shortening the whole grid and pulling ToolCTA up several hundred pixels.
- *
- * Containers below are copied from the real page, not approximated:
- *   page.tsx  <main className="relative mx-auto max-w-6xl px-4 pb-20 pt-28 sm:px-6 lg:px-8 lg:pt-32">
- *   _calculator.tsx  <div className="mx-auto w-full max-w-6xl">
- *   header  <div className="mb-6">  ·  body  grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]
- *   notes   <details className="ac-glass mt-6 rounded-2xl p-5">  (collapsed)
- *   footer  <ToolCTA> — <section className="mt-14">
- * Rendered as a <div> rather than <main> so the fallback does not add a second
- * <main> landmark under the root layout's.
+ * The shape below is the real page's three bands in order, so nothing jumps
+ * when the calculator arrives: question with the taped total, the three-panel
+ * assumptions frame, then the ledger. Rendered as a <div> because the root
+ * layout already owns the <main> landmark.
  */
 export default function BudgetCalculatorLoading() {
   return (
-    <div className="relative mx-auto max-w-6xl px-4 pb-20 pt-28 sm:px-6 lg:px-8 lg:pt-32">
-      <div className="mx-auto w-full max-w-6xl">
-        {/* ── Header ─────────────────────────────────────────────── */}
-        <div className="mb-6">
-          {/* ac-chip supplies its own padding/radius; only its label shimmers */}
-          <span className="ac-chip inline-flex items-center gap-2">
-            <Skeleton className="h-4 w-28 rounded" />
-          </span>
-          {/* h1: text-2xl (2 lines on mobile) → sm:text-3xl (1 line) */}
-          <Skeleton className="mt-3 h-8 w-full max-w-lg rounded-lg sm:h-9" />
-          <Skeleton className="mt-1 h-8 w-2/3 rounded-lg sm:hidden" />
-          {/* lead paragraph: text-sm, max-w-2xl */}
-          <div className="mt-2 max-w-2xl space-y-1.5">
-            <Skeleton className="h-3.5 rounded" />
-            <Skeleton className="h-3.5 rounded" />
-            <Skeleton className="h-3.5 w-11/12 rounded sm:w-3/4" />
-            <Skeleton className="h-3.5 w-5/6 rounded sm:hidden" />
-            <Skeleton className="h-3.5 w-1/2 rounded sm:hidden" />
-          </div>
-          {/* source note: text-xs */}
-          <div className="mt-2 max-w-2xl space-y-1.5">
-            <Skeleton className="h-3 rounded" />
-            <Skeleton className="h-3 w-3/5 rounded" />
-          </div>
-        </div>
-
-        {/* ── Body grid ──────────────────────────────────────────── */}
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
-          {/* LEFT: inputs
-           *
-           * _calculator.tsx's initial state is rookie · Regional · KOP
-           * drivetrain · "New (itemized)" control system, with both
-           * Championship checkboxes off. That renders 17 field rows, laid out
-           * as 18 direct children of <div className="mt-4 space-y-4">.
-           *
-           * Row maths (Field = 20px label + mt-0.5 helper lines of 16px +
-           * mt-1.5 control):
-           *   NumberInput  px-3 py-2 text-sm + 1px border  → 38px
-           *   SegBtn       p-1 + 32px pills + 1px border   → 42px
-           */}
-          <div className="ac-card rounded-2xl p-5">
-            {/* icon + "Your team" (text-base h3) */}
-            <Skeleton className="h-6 w-32 rounded" />
-
-            <div className="mt-4 space-y-4">
-              {/* 1 · Team type — 2-line helper, 2-pill segmented control */}
-              <div>
-                <Skeleton className="h-5 w-24 rounded" />
-                <Skeleton className="mt-0.5 h-4 w-full rounded" />
-                <Skeleton className="h-4 w-3/5 rounded" />
-                <Skeleton className="mt-1.5 h-[42px] w-full rounded-xl" />
-              </div>
-
-              {/* 2 · Program / event model — 2-line helper, 2 pills */}
-              <div>
-                <Skeleton className="h-5 w-44 rounded" />
-                <Skeleton className="mt-0.5 h-4 w-full rounded" />
-                <Skeleton className="h-4 w-4/5 rounded" />
-                <Skeleton className="mt-1.5 h-[42px] w-full rounded-xl" />
-              </div>
-
-              {/* 3 · Additional Regional events (Regional model is default) */}
-              <div>
-                <Skeleton className="h-5 w-52 rounded" />
-                <Skeleton className="mt-0.5 h-4 w-full rounded" />
-                <Skeleton className="h-4 w-2/5 rounded" />
-                <Skeleton className="mt-1.5 h-[38px] w-full rounded-xl" />
-              </div>
-
-              {/* 4 · "Attending FIRST Championship?" checkbox row */}
-              <div className="flex items-center gap-2">
-                <Skeleton className="h-4 w-4 rounded" />
-                <Skeleton className="h-5 w-56 max-w-full rounded" />
-              </div>
-
-              {/* 5 · Grants & sponsor vouchers */}
-              <div>
-                <Skeleton className="h-5 w-64 max-w-full rounded" />
-                <Skeleton className="mt-0.5 h-4 w-2/5 rounded" />
-                <Skeleton className="mt-1.5 h-[38px] w-full rounded-xl" />
-              </div>
-
-              <div className="ac-divider" />
-
-              {/* 6 · Drivetrain — 3-pill segmented control */}
-              <div>
-                <Skeleton className="h-5 w-28 rounded" />
-                <Skeleton className="mt-0.5 h-4 w-full rounded" />
-                <Skeleton className="h-4 w-3/5 rounded" />
-                <Skeleton className="mt-1.5 h-[42px] w-full rounded-xl" />
-              </div>
-
-              <div className="ac-divider" />
-
-              {/* 7 · Control system — 4 pills */}
-              <div>
-                <Skeleton className="h-5 w-36 rounded" />
-                <Skeleton className="mt-0.5 h-4 w-full rounded" />
-                <Skeleton className="h-4 w-3/4 rounded" />
-                <Skeleton className="mt-1.5 h-[42px] w-full rounded-xl" />
-              </div>
-
-              {/* 8–9 · Batteries + Consumables (grid-cols-2, shown because the
-                  default control-system path is "New (itemized)") */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Skeleton className="h-5 w-24 rounded" />
-                  <Skeleton className="mt-0.5 h-4 w-3/5 rounded" />
-                  <Skeleton className="mt-1.5 h-[38px] w-full rounded-xl" />
-                </div>
-                <div>
-                  <Skeleton className="h-5 w-28 rounded" />
-                  <Skeleton className="mt-0.5 h-4 w-full rounded" />
-                  <Skeleton className="mt-1.5 h-[38px] w-full rounded-xl" />
-                </div>
-              </div>
-
-              <div className="ac-divider" />
-
-              {/* "Motors & controllers" section label (not a field) */}
-              <Skeleton className="h-5 w-44 rounded" />
-
-              {/* 10–13 · NEO / Kraken / Other qty / Other unit (grid-cols-2) */}
-              <div className="grid grid-cols-2 gap-3">
-                {[
-                  "w-28",
-                  "w-28",
-                  "w-28",
-                  "w-32",
-                ].map((w, i) => (
-                  <div key={i}>
-                    <Skeleton className={`h-5 ${w} rounded`} />
-                    <Skeleton className="mt-0.5 h-4 w-4/5 rounded" />
-                    <Skeleton className="mt-1.5 h-[38px] w-full rounded-xl" />
-                  </div>
-                ))}
-              </div>
-
-              <div className="ac-divider" />
-
-              {/* 14–16 · Tools · Travel · Spares */}
-              {["w-52", "w-60", "w-64"].map((w, i) => (
-                <div key={i}>
-                  <Skeleton className={`h-5 ${w} max-w-full rounded`} />
-                  <Skeleton className="mt-0.5 h-4 w-4/5 rounded" />
-                  <Skeleton className="mt-1.5 h-[38px] w-full rounded-xl" />
-                </div>
-              ))}
-
-              {/* 17 · Team size (optional) */}
-              <div>
-                <Skeleton className="h-5 w-40 rounded" />
-                <Skeleton className="mt-0.5 h-4 w-3/5 rounded" />
-                <Skeleton className="mt-1.5 h-[38px] w-full rounded-xl" />
-              </div>
+    <div>
+      {/* 1 · the question, with the total taped beside it */}
+      <div className="nb-wrap py-[clamp(2.2rem,5vw,3.6rem)]">
+        <div className="grid items-start gap-[clamp(1.6rem,4vw,3.4rem)] lg:grid-cols-[minmax(0,1.5fr)_minmax(0,0.82fr)]">
+          <div>
+            <Skeleton className="h-4 w-56" />
+            <Skeleton className="mt-4 h-[clamp(2.2rem,1.6rem+2.4vw,3.4rem)] w-full max-w-[24ch]" />
+            <Skeleton className="mt-2 h-[clamp(2.2rem,1.6rem+2.4vw,3.4rem)] w-2/5" />
+            <div className="mt-5 max-w-[46ch]">
+              <Skeleton className="h-4" />
+              <Skeleton className="mt-2 h-4" />
+              <Skeleton className="mt-2 h-4 w-4/5" />
             </div>
           </div>
 
-          {/* RIGHT: live results
-           *
-           * At first paint the grand-total panel, the rookie-benefit callout
-           * (rookie + KOP) and four CategoryBlocks render — Registration (1
-           * line item), Drivetrain (1), Control system (6, itemized) and
-           * Motors & controllers (2). Tools / Travel / Spares start at $0 and
-           * their blocks return null, so they are not drawn.
-           */}
-          <div className="ac-card rounded-2xl p-5">
-            {/* icon + "Season budget" (text-base h3) */}
-            <Skeleton className="h-6 w-36 rounded" />
-
-            {/* grand total panel — rounded-2xl border p-5 */}
-            <div className="mt-4 rounded-2xl border border-border p-5">
-              <Skeleton className="h-4 w-40 rounded" />
-              <Skeleton className="mt-1 h-12 w-56 max-w-full rounded-lg" />
-              <Skeleton className="mt-1 h-5 w-3/4 rounded" />
-            </div>
-
-            {/* rookie-benefit callout — p-3 around two text-sm lines */}
-            <Skeleton className="mt-3 h-16 w-full rounded-xl" />
-
-            {/* itemized categories */}
-            <div className="mt-4 space-y-3">
-              {[
-                { items: 1, lastNoteLines: 2 },
-                { items: 1, lastNoteLines: 1 },
-                { items: 6, lastNoteLines: 1 },
-                { items: 2, lastNoteLines: 1 },
-              ].map((block, b) => (
-                <div key={b} className="rounded-xl border border-border p-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <Skeleton className="h-5 w-32 rounded" />
-                    <Skeleton className="h-5 w-16 shrink-0 rounded" />
-                  </div>
-                  <div className="ac-divider my-2" />
-                  {Array.from({ length: block.items }).map((_, i) => (
-                    <div key={i} className="flex items-start justify-between gap-3 py-1.5">
-                      <div className="min-w-0 flex-1">
-                        <Skeleton className="h-5 w-3/5 rounded" />
-                        {i === block.items - 1
-                          ? Array.from({ length: block.lastNoteLines }).map((__, n) => (
-                              <Skeleton
-                                key={n}
-                                className={n === 0 ? "h-4 w-11/12 rounded" : "h-4 w-1/2 rounded"}
-                              />
-                            ))
-                          : null}
-                      </div>
-                      <Skeleton className="h-5 w-16 shrink-0 rounded" />
-                    </div>
-                  ))}
-                </div>
+          <div className="nb-box nb-tilt-1 mt-2 p-[clamp(1.2rem,2.4vw,1.7rem)]">
+            <Skeleton className="h-3.5 w-40" />
+            <Skeleton className="mt-4 h-[clamp(2rem,1.3rem+2.4vw,3rem)] w-3/4" />
+            <Skeleton className="mt-3 h-3.5" />
+            <div className="nb-hair mt-4 grid gap-2 pt-3.5">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <Skeleton key={i} className="h-3.5" />
               ))}
             </div>
-
-            {/* verdict badge — px-2.5 py-1 text-xs pill */}
-            <Skeleton className="mt-4 h-6 w-64 max-w-full rounded-lg" />
-
-            {/* actions — ac-btn is min-h-11 / 16px radius */}
-            <div className="mt-5 flex flex-wrap gap-3">
-              <Skeleton className="h-11 w-44 rounded-2xl" />
-              <Skeleton className="h-11 w-36 rounded-2xl" />
-            </div>
-
-            {/* signed-out "create a free account" notice */}
-            <div className="mt-3 rounded-xl border border-dashed border-border p-3">
-              <Skeleton className="h-5 w-72 max-w-full rounded" />
-              <Skeleton className="mt-1 h-4 w-full rounded" />
-            </div>
           </div>
-        </div>
-
-        {/* Notes & sources — a collapsed <details>, so only its summary shows */}
-        <div className="ac-glass mt-6 rounded-2xl p-5">
-          <Skeleton className="h-5 w-52 rounded" />
         </div>
       </div>
 
-      {/* ── ToolCTA ────────────────────────────────────────────── */}
-      <section className="mt-14">
-        <div className="ac-glass relative overflow-hidden p-8 text-center sm:px-14 sm:py-10">
-          <Skeleton className="mx-auto h-11 w-11 rounded-2xl" />
-          <Skeleton className="mx-auto mt-4 h-8 w-full max-w-md rounded-lg sm:h-9" />
-          <Skeleton className="mx-auto mt-1 h-8 w-2/3 max-w-xs rounded-lg lg:hidden" />
-          <div className="mx-auto mt-3 max-w-md space-y-1.5">
-            <Skeleton className="h-4 rounded" />
-            <Skeleton className="h-4 rounded" />
-            <Skeleton className="mx-auto h-4 w-3/5 rounded" />
-          </div>
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-            <Skeleton className="h-11 w-56 rounded-2xl" />
-            <Skeleton className="h-11 w-40 rounded-2xl" />
+      {/* 2 · the three-panel assumptions frame */}
+      <section className="nb-rule py-[clamp(2.2rem,5vw,3.6rem)]">
+        <div className="nb-wrap">
+          <Skeleton className="h-4 w-44" />
+          <Skeleton className="mt-4 h-9 w-full max-w-[22ch]" />
+
+          <div className="nb-box mt-[clamp(1.4rem,3vw,2.2rem)] grid overflow-hidden lg:grid-cols-[1.05fr_1fr_0.92fr]">
+            {Array.from({ length: 3 }).map((_, panel) => (
+              <div key={panel} className="nb-panel gap-4">
+                <Skeleton className="h-3.5 w-32" />
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i}>
+                    <Skeleton className="h-3.5 w-28" />
+                    <Skeleton className="mt-2 h-[2.75rem]" />
+                    <Skeleton className="mt-2 h-3 w-4/5" />
+                  </div>
+                ))}
+              </div>
+            ))}
           </div>
         </div>
-        <div className="mt-8">
-          <Skeleton className="h-4 w-28 rounded" />
-          <div className="mt-3 grid gap-3 sm:grid-cols-3">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <Skeleton key={i} className="h-[52px] rounded-2xl" />
+      </section>
+
+      {/* 3 · the ledger: ruled category heads with lines under each */}
+      <section className="nb-rule py-[clamp(2.2rem,5vw,3.6rem)]">
+        <div className="nb-wrap">
+          <div className="grid gap-x-[clamp(1.5rem,4vw,3rem)] gap-y-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+            <div>
+              <Skeleton className="h-4 w-40" />
+              <Skeleton className="mt-4 h-9 w-full max-w-[20ch]" />
+            </div>
+            <div className="flex flex-wrap gap-3 lg:pb-1">
+              <Skeleton className="h-[2.75rem] w-40" />
+              <Skeleton className="h-[2.75rem] w-48" />
+            </div>
+          </div>
+
+          <div className="mt-[clamp(1.6rem,3vw,2.2rem)] max-w-[74ch]">
+            {[3, 1, 6, 2].map((rows, sec) => (
+              <div key={sec} className="mt-[clamp(1.4rem,2.8vw,2.1rem)] first:mt-0">
+                <div className="flex items-baseline justify-between gap-4 border-b-2 border-ink pb-2">
+                  <Skeleton className="h-5 w-36" />
+                  <Skeleton className="h-5 w-24" />
+                </div>
+                {Array.from({ length: rows }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-4 border-b border-dashed border-rule py-2.5"
+                  >
+                    <Skeleton className="h-4" />
+                    <Skeleton className="h-4 w-20" />
+                  </div>
+                ))}
+              </div>
             ))}
+
+            <div className="mt-[clamp(1.6rem,3.2vw,2.4rem)] border-t-2 border-ink pt-4">
+              <div className="flex items-baseline justify-between gap-6">
+                <Skeleton className="h-7 w-40" />
+                <Skeleton className="h-8 w-36" />
+              </div>
+              <Skeleton className="mt-4 h-3.5 w-3/5" />
+            </div>
           </div>
         </div>
       </section>

@@ -1,29 +1,28 @@
 "use client";
 
 import * as React from "react";
-import { Icon } from "@/lib/icon-map";
-import { inkFor } from "@/lib/departments";
-import { cn } from "@/lib/utils";
 
-export type RailItem = {
-  id: string;
-  label: string;
-  count: number;
-  icon: string;
-  color: string;
-};
+export type RailItem = { id: string; label: string; count: number };
 
 /**
- * Sticky "shelves" index for the toolbox — highlights the shelf currently in
- * view as you scroll, via IntersectionObserver (client-only side effect; the
- * initial render is deterministic so SSR/first-paint text never mismatches).
+ * The index tab down the side of the toolbox.
+ *
+ * This is the one leaf on the page that genuinely needs the client: which shelf
+ * you are looking at is a fact about the scroll position, and there is no way
+ * to know it on the server. It is marked with `data-highlighted` as well as
+ * `aria-current`, because the system draws that state as a blue wash AND a blue
+ * bar rather than as colour alone, so it survives being printed in greyscale.
+ *
+ * The observer's rootMargin ignores the top 100px (the sticky header) and the
+ * bottom 65% of the viewport, so the "current" shelf is the one under the
+ * reader's eye rather than whichever one happens to be entering from below.
  */
 export function ShelfRail({ items }: { items: RailItem[] }) {
   const [active, setActive] = React.useState<string>(items[0]?.id ?? "");
 
   React.useEffect(() => {
     const sections = items
-      .map((it) => document.getElementById(it.id))
+      .map((item) => document.getElementById(item.id))
       .filter((el): el is HTMLElement => Boolean(el));
     if (sections.length === 0) return;
 
@@ -34,43 +33,31 @@ export function ShelfRail({ items }: { items: RailItem[] }) {
           .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
         if (visible[0]) setActive(visible[0].target.id);
       },
-      { rootMargin: "-100px 0px -65% 0px", threshold: 0 }
+      { rootMargin: "-100px 0px -65% 0px", threshold: 0 },
     );
     sections.forEach((el) => observer.observe(el));
     return () => observer.disconnect();
   }, [items]);
 
   return (
-    <nav aria-label="Shelf sections" className="space-y-1">
-      {items.map((it) => {
-        const isActive = it.id === active;
+    <nav aria-label="Shelves" className="nb-surface overflow-hidden pb-1">
+      <p className="nb-slug border-b border-dashed border-rule px-3.5 pb-2 pt-3">
+        the shelves
+      </p>
+      {items.map((item) => {
+        const isActive = item.id === active;
         return (
           <a
-            key={it.id}
-            href={`#${it.id}`}
+            key={item.id}
+            href={`#${item.id}`}
             aria-current={isActive ? "true" : undefined}
-            className={cn(
-              "group flex min-h-11 items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
-              isActive
-                ? "bg-primary/10 text-primary"
-                : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
-            )}
+            data-highlighted={isActive ? "" : undefined}
+            className="nb-menu-item justify-between gap-3"
           >
-            <span
-              className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg transition-colors"
-              style={{
-                color: isActive ? inkFor(it.color) : undefined,
-                background: isActive
-                  ? `color-mix(in srgb, ${it.color} 16%, transparent)`
-                  : "transparent",
-              }}
-            >
-              <Icon name={it.icon} className="h-3.5 w-3.5" />
+            <span className="min-w-0 text-[0.92rem] leading-snug">
+              {item.label}
             </span>
-            <span className="min-w-0 flex-1 truncate">{it.label}</span>
-            <span className="shrink-0 text-xs tabular-nums text-muted-foreground/80">
-              {it.count}
-            </span>
+            <span className="nb-slug shrink-0">{item.count}</span>
           </a>
         );
       })}

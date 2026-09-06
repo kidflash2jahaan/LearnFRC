@@ -1,8 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { motion, useReducedMotion } from "framer-motion";
-import { List } from "lucide-react";
 
 export interface TocItem {
   id: string;
@@ -10,47 +8,38 @@ export interface TocItem {
 }
 
 /**
- * Reading rail — the article page's signature device.
+ * The margin index of the sheet.
  *
- * 1. A thin top reading-progress bar tracking scroll through the article.
- * 2. A sticky table of contents (desktop) built from the article's H2s, with
- *    scroll-spy highlighting the section you're currently reading.
+ * What this is NOT any more:
  *
- * The TOC is derived server-side from the markdown; on mount we tag the
- * rendered <h2> headings (in order) with the matching ids so the anchors and
- * IntersectionObserver work without touching the Markdown renderer.
- * No ancestor of the sticky nav uses overflow-hidden, so it tracks correctly.
+ *  - It is not a second reading-progress bar. The site already rules one in
+ *    ballpoint across the very top of every page (`ScrollProgress`), tracking
+ *    the same document scroll from a motion value. This one tracked it from
+ *    React state on a `scroll` listener, so every frame of every scroll on
+ *    every article re-rendered a component, to draw a line that was already
+ *    there.
+ *  - It is not a card. The article body is the page; a boxed panel beside it
+ *    would read as a second document. This is what a student writes down the
+ *    edge of a page instead: a rule, then the sections, numbered.
+ *
+ * What is left is the one genuinely interactive thing, which is why this is
+ * still a client leaf: an IntersectionObserver saying which section you are
+ * in, and a jump that lands the heading clear of the sticky header and moves
+ * focus there so a keyboard reader ends up where the click pointed.
+ *
+ * The ids are NOT assigned here. `Markdown` stamps every heading with the id
+ * `extractHeadings` derived from the same markdown string, and the page builds
+ * this list from that same function, so both sides agree by construction
+ * rather than by walking the DOM in index order and hoping.
  */
 export function ReadingRail({ items }: { items: TocItem[] }) {
-  const [progress, setProgress] = React.useState(0);
   const [activeId, setActiveId] = React.useState<string>(items[0]?.id ?? "");
-  const reduce = useReducedMotion();
 
-  // Tag the rendered headings with stable ids (once, on mount).
-  React.useEffect(() => {
-    if (items.length === 0) return;
-    const body = document.querySelector("[data-article-body]");
-    if (!body) return;
-    const headings = Array.from(body.querySelectorAll("h2"));
-    items.forEach((it, i) => {
-      const el = headings[i];
-      if (el && !el.id) el.id = it.id;
-    });
-  }, [items]);
-
-  // Reading progress + scroll-spy.
   React.useEffect(() => {
     if (items.length === 0) return;
 
-    const onScroll = () => {
-      const doc = document.documentElement;
-      const scrollable = doc.scrollHeight - doc.clientHeight;
-      const pct = scrollable > 0 ? (doc.scrollTop / scrollable) * 100 : 0;
-      setProgress(Math.min(100, Math.max(0, pct)));
-    };
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-
+    // Bottom margin at -66% so a heading counts as "current" only while it is
+    // in the top third of the viewport, which is where a reader's eye is.
     const observer = new IntersectionObserver(
       (entries) => {
         const visible = entries
@@ -58,86 +47,72 @@ export function ReadingRail({ items }: { items: TocItem[] }) {
           .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
         if (visible[0]?.target.id) setActiveId(visible[0].target.id);
       },
-      { rootMargin: "-96px 0px -66% 0px", threshold: 0 },
+      { rootMargin: "-96px 0px -66% 0px", threshold: 0 }
     );
-    items.forEach((it) => {
+    for (const it of items) {
       const el = document.getElementById(it.id);
       if (el) observer.observe(el);
-    });
-
-    return () => {
-      window.removeEventListener("scroll", onScroll);
-      observer.disconnect();
-    };
+    }
+    return () => observer.disconnect();
   }, [items]);
 
   const onJump = (e: React.MouseEvent<HTMLAnchorElement>, id: string) => {
     const el = document.getElementById(id);
     if (!el) return;
     e.preventDefault();
-    const top = el.getBoundingClientRect().top + window.scrollY - 88;
-    window.scrollTo({ top, behavior: reduce ? "auto" : "smooth" });
+    // `scroll-behavior: smooth` is set on <html> and is already dropped under
+    // a reduced-motion preference, so this inherits the right one either way.
+    window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 88 });
     setActiveId(id);
     el.setAttribute("tabindex", "-1");
     el.focus({ preventScroll: true });
   };
 
-  return (
-    <>
-      {/* Top reading-progress bar */}
-      <div className="fixed inset-x-0 top-16 z-40 h-1 bg-transparent" aria-hidden>
-        <motion.div
-          className="h-full origin-left rounded-r-full"
-          style={{ background: "linear-gradient(90deg,#2560e6,#1aa9d6)" }}
-          animate={{ width: `${progress}%` }}
-          transition={reduce ? { duration: 0 } : { duration: 0.15, ease: "easeOut" }}
-        />
-      </div>
+  // One heading is not a contents list, it is a heading.
+  if (items.length < 2) return null;
 
-      {/* Sticky table of contents (desktop only) */}
-      {items.length > 1 && (
-        <nav aria-label="On this page" className="hidden xl:block">
-          <div className="sticky top-28">
-            <div className="ac-card rounded-2xl p-4">
-              <p className="ac-eyebrow mb-3 flex items-center gap-1.5">
-                <List aria-hidden className="h-3.5 w-3.5" /> On this page
-              </p>
-              <ul className="space-y-0.5">
-                {items.map((it) => {
-                  const active = it.id === activeId;
-                  return (
-                    <li key={it.id}>
-                      <a
-                        href={`#${it.id}`}
-                        onClick={(e) => onJump(e, it.id)}
-                        aria-current={active ? "location" : undefined}
-                        className={[
-                          "group flex min-h-[28px] items-start gap-2.5 rounded-lg py-1.5 pl-2.5 pr-2 text-sm leading-snug transition-colors",
-                          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
-                          active
-                            ? "font-semibold text-primary"
-                            : "text-muted-foreground hover:text-foreground",
-                        ].join(" ")}
-                      >
-                        <span
-                          aria-hidden
-                          className={[
-                            "mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full transition-all duration-200",
-                            active
-                              ? "scale-125 bg-primary"
-                              : "bg-border group-hover:bg-primary/60",
-                          ].join(" ")}
-                        />
-                        {it.text}
-                      </a>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          </div>
-        </nav>
-      )}
-    </>
+  return (
+    <nav aria-label="On this page" className="hidden xl:block">
+      <div className="sticky top-[5.5rem] max-h-[calc(100dvh-7rem)] overflow-y-auto">
+        <p className="nb-slug border-b-2 border-[var(--ink)] pb-2">
+          on this sheet / {items.length}
+        </p>
+
+        <ol className="mt-1">
+          {items.map((it, i) => {
+            const active = it.id === activeId;
+            return (
+              <li
+                key={it.id}
+                className="border-b border-dashed border-rule last:border-b-0"
+              >
+                <a
+                  href={`#${it.id}`}
+                  onClick={(e) => onJump(e, it.id)}
+                  aria-current={active ? "location" : undefined}
+                  className={[
+                    "flex min-h-[var(--tap)] items-baseline gap-2.5 border-l-2 py-2 pl-2.5",
+                    // The state is a bar plus weight plus colour, so it still
+                    // reads when the page is printed in greyscale.
+                    active
+                      ? "border-l-blue bg-[rgba(27,54,200,0.055)] font-bold text-ink"
+                      : "border-l-transparent text-graphite hover:text-ink",
+                  ].join(" ")}
+                >
+                  {/* `text-inherit` so the ordinal takes the row's state
+                      colour instead of nb-slug's own graphite. */}
+                  <span className="nb-slug shrink-0 tabular-nums text-inherit">
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                  <span className="min-w-0 text-[0.88rem] leading-snug">
+                    {it.text}
+                  </span>
+                </a>
+              </li>
+            );
+          })}
+        </ol>
+      </div>
+    </nav>
   );
 }

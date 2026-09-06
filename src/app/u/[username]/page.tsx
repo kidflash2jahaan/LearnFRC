@@ -1,23 +1,29 @@
-import type { CSSProperties } from "react";
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Calendar, Zap, Trophy, BookOpen, Medal, Sparkles } from "lucide-react";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { Badge } from "@/components/ui/badge";
-import { Icon } from "@/lib/icon-map";
-import {
-  Glow,
-  RiseGroup,
-  RiseItem,
-  Reveal,
-  RevealGroup,
-  RevealItem,
-  Hover,
-} from "@/components/motion/primitives";
 import { ShareButton } from "@/components/profile/share-button";
-import { AnimatedCounter } from "@/components/animated-counter";
-import { TrophyPanel } from "./_trophy-panel";
+import { RankStamp } from "./_trophy-panel";
 import type { Profile } from "@/lib/types";
+
+/**
+ * Somebody's public page, rebuilt as a record of work.
+ *
+ * This is the one page in the account area a stranger opens, usually from a
+ * link a member sent their team. So it is a single sheet, the way a signed-off
+ * certificate is a single sheet: one drawn card carrying the handle, the rank
+ * stamp and the share link; a ruled band of figures under it; then the badges
+ * as a roster you read down.
+ *
+ * NO RANK COLOURS. The old page gave each of the five tiers its own hue and
+ * painted the ring, the pill, the glow and the XP rail with it, which is four
+ * colours this palette does not own to say a thing the word "Veteran" already
+ * says. The tier is stamped in mono instead.
+ *
+ * Behaviour is unchanged: same `force-dynamic`, same admin client with the same
+ * explicit column allow-lists, same three queries, same `notFound()`, same
+ * generated metadata.
+ */
 
 export const dynamic = "force-dynamic";
 
@@ -48,21 +54,14 @@ const ROLE_LABEL: Record<string, string> = {
   other: "Member",
 };
 
-/** Rank tiers earned by level — the trophy card's headline honor. */
-function tierFor(level: number): { name: string; color: string } {
-  if (level >= 25) return { name: "Champion", color: "#e0a415" };
-  if (level >= 15) return { name: "All-Star", color: "#8b7fff" };
-  if (level >= 8) return { name: "Veteran", color: "#1aa9d6" };
-  if (level >= 3) return { name: "Contender", color: "#2560e6" };
-  return { name: "Rookie", color: "#12b565" };
+/** Rank tiers earned by level. A name, not a colour: see RankStamp. */
+function tierFor(level: number): string {
+  if (level >= 25) return "Champion";
+  if (level >= 15) return "All-Star";
+  if (level >= 8) return "Veteran";
+  if (level >= 3) return "Contender";
+  return "Rookie";
 }
-
-const BRAND_GRADIENT: CSSProperties = {
-  background: "linear-gradient(120deg, #2560e6, #1aa9d6, #e0a415, #2560e6)",
-  WebkitBackgroundClip: "text",
-  backgroundClip: "text",
-  color: "transparent",
-};
 
 export default async function PublicProfilePage({
   params,
@@ -96,7 +95,7 @@ export default async function PublicProfilePage({
   const xpIntoLevel = p.xp % 100;
   const xpToNext = 100 - xpIntoLevel;
   const levelFraction = xpIntoLevel / 100;
-  const tier = tierFor(level);
+  const tierName = tierFor(level);
 
   // Real completed-lesson count (lesson_progress is RLS-private → admin client).
   const { count: lessonsCount } = await supabase
@@ -124,161 +123,140 @@ export default async function PublicProfilePage({
     year: "numeric",
   });
 
-  const stats = [
-    { label: "Total XP", value: p.xp, icon: Zap, color: "#2560e6" },
-    { label: "Level", value: level, icon: Trophy, color: "#1aa9d6" },
-    { label: "Lessons", value: lessons, icon: BookOpen, color: "#12b565" },
-    { label: "Badges", value: achievements.length, icon: Medal, color: "#e0a415" },
+  const figures = [
+    { value: p.xp.toLocaleString(), label: "xp" },
+    { value: level.toLocaleString(), label: "level" },
+    { value: lessons.toLocaleString(), label: lessons === 1 ? "lesson" : "lessons" },
+    {
+      value: achievements.length.toLocaleString(),
+      label: achievements.length === 1 ? "badge" : "badges",
+    },
   ];
 
   return (
-    <div className="relative overflow-x-clip">
-      <Glow
-        blobs={[
-          { size: "620px", pos: { left: "-180px", top: "-200px" }, color: "#8bbcff", opacity: 0.6 },
-          { size: "480px", pos: { right: "-160px", top: "60px" }, color: `${tier.color}`, opacity: 0.32, delay: 2.5 },
-          { size: "460px", pos: { left: "34%", top: "560px" }, color: "#c8b6ff", opacity: 0.4, delay: 5 },
-        ]}
-      />
+    <>
+      {/* ===================== THE RECORD SHEET =====================
+          One card, the whole identity. It is the thing a screenshot of this
+          page is a screenshot of, so nothing else on the sheet competes with
+          it. */}
+      <section className="nb-wrap pb-[clamp(2rem,4vw,3rem)] pt-[clamp(2.2rem,5vw,4rem)]">
+        <div className="nb-box nb-tilt-3 mx-auto max-w-[58rem] p-[clamp(1.3rem,3vw,2.4rem)]">
+          <span className="nb-tape -top-3 left-[18%] rotate-[-3.4deg]" aria-hidden="true" />
+          <span className="nb-tape -bottom-3 right-[14%] rotate-[2.2deg]" aria-hidden="true" />
 
-      {/* ============================ HERO ============================ */}
-      <section className="mx-auto grid max-w-6xl items-center gap-10 px-4 pb-14 pt-28 sm:px-6 lg:grid-cols-[1fr_360px] lg:gap-12 lg:pb-20 lg:pt-36 lg:px-8">
-        <RiseGroup>
-          <RiseItem>
-            <span className="ac-chip inline-flex items-center gap-2">
-              <Sparkles className="h-3.5 w-3.5 text-primary" aria-hidden />
-              <span className="ac-eyebrow">Learner trophy card</span>
-            </span>
-          </RiseItem>
-          <RiseItem>
-            <h1 className="mt-5 text-balance font-display text-4xl font-extrabold leading-[1.05] sm:text-5xl">
-              <span style={BRAND_GRADIENT}>@{displayName}</span>
-            </h1>
-          </RiseItem>
-          <RiseItem>
-            <div className="mt-5 flex flex-wrap items-center gap-2">
-              <Badge>{ROLE_LABEL[p.role] ?? "Member"}</Badge>
-              {p.team_number && <Badge variant="accent">Team {p.team_number}</Badge>}
-              <Badge variant="outline">
-                <Calendar aria-hidden className="h-3 w-3" />
-                Joined {joined}
-              </Badge>
+          <p className="nb-slug border-b border-dashed border-rule pb-2.5">
+            learnfrc / record of work
+          </p>
+
+          <div className="mt-[clamp(1.2rem,2.6vw,1.8rem)] grid items-start gap-[clamp(1.4rem,3.4vw,2.6rem)] min-[760px]:grid-cols-[minmax(0,1fr)_auto]">
+            <div className="min-w-0">
+              <h1 className="text-[clamp(2rem,1.3rem+2.6vw,3.4rem)]">
+                @{displayName}
+              </h1>
+
+              <div className="mt-[clamp(1rem,2.2vw,1.4rem)] flex flex-wrap gap-2">
+                <span className="nb-tag">{ROLE_LABEL[p.role] ?? "Member"}</span>
+                {p.team_number && (
+                  <span className="nb-tag">Team {p.team_number}</span>
+                )}
+                <span className="nb-tag">Joined {joined}</span>
+              </div>
+
+              {p.bio && (
+                <p className="mt-[clamp(1rem,2.2vw,1.4rem)] max-w-[54ch] text-[0.99rem] leading-relaxed text-graphite">
+                  {p.bio}
+                </p>
+              )}
             </div>
-          </RiseItem>
-          {p.bio && (
-            <RiseItem>
-              <p className="mt-5 max-w-xl text-pretty text-lg leading-relaxed text-foreground/70">
-                {p.bio}
-              </p>
-            </RiseItem>
-          )}
-          <RiseItem>
-            <div className="mt-7">
-              <ShareButton username={username} name={displayName} />
+
+            <div className="min-[760px]:justify-self-end">
+              <RankStamp
+                level={level}
+                levelFraction={levelFraction}
+                xpToNext={xpToNext}
+                tierName={tierName}
+                avatarName={displayName}
+                avatarSrc={p.avatar_url}
+                avatarSeed={p.id}
+              />
             </div>
-          </RiseItem>
-        </RiseGroup>
-
-        <TrophyPanel
-          level={level}
-          levelFraction={levelFraction}
-          xpToNext={xpToNext}
-          tierName={tier.name}
-          tierColor={tier.color}
-          avatarName={displayName}
-          avatarSrc={p.avatar_url}
-          avatarSeed={p.id}
-        />
-      </section>
-
-      {/* ================== Stat ribbon — clay tiles ================== */}
-      <section className="mx-auto max-w-6xl px-4 pb-4 sm:px-6 lg:px-8">
-        <RevealGroup className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-          {stats.map((s) => (
-            <RevealItem key={s.label}>
-              <Hover className="h-full" lift={-4}>
-                <div
-                  className="ac-tile flex h-full flex-col items-center rounded-3xl p-5 text-center"
-                  style={{ "--a": s.color } as CSSProperties}
-                >
-                  <span
-                    className="ac-badge flex h-11 w-11 items-center justify-center rounded-2xl"
-                    style={{ "--a": s.color } as CSSProperties}
-                  >
-                    <s.icon aria-hidden focusable="false" className="h-5 w-5" />
-                  </span>
-                  <div className="mt-3 font-display text-3xl font-extrabold tabular-nums text-foreground">
-                    <AnimatedCounter value={s.value} />
-                  </div>
-                  <div className="text-[11px] font-medium uppercase tracking-wider text-foreground/70">
-                    {s.label}
-                  </div>
-                </div>
-              </Hover>
-            </RevealItem>
-          ))}
-        </RevealGroup>
-      </section>
-
-      {/* ================= Medal wall — achievements ================= */}
-      <section className="mx-auto max-w-6xl px-4 pb-12 pt-10 sm:px-6 lg:px-8">
-        <Reveal>
-          <div className="mb-5 flex items-end justify-between gap-4">
-            <div>
-              <p className="ac-eyebrow">Every badge, earned</p>
-              <h2 className="mt-2 font-display text-2xl font-bold sm:text-3xl">
-                Medal wall
-              </h2>
-            </div>
-            {achievements.length > 0 && (
-              <Badge>
-                <AnimatedCounter value={achievements.length} /> earned
-              </Badge>
-            )}
           </div>
-        </Reveal>
+
+          <div className="nb-hair mt-[clamp(1.4rem,3vw,2.2rem)] flex flex-wrap items-center gap-x-4 gap-y-3 pt-[clamp(1rem,2.2vw,1.4rem)]">
+            <ShareButton username={username} name={displayName} />
+            <p className="nb-slug">learnfrc.com/u/{displayName}</p>
+          </div>
+        </div>
+      </section>
+
+      {/* ===================== THE FIGURES =====================
+          The one inverted surface on the page. A record sheet states its own
+          totals once, in figures big enough to read from across the pit. */}
+      <section className="nb-slab py-[clamp(2rem,4.5vw,3.4rem)]">
+        <div className="nb-wrap grid gap-[clamp(1.2rem,3vw,2.4rem)] min-[520px]:grid-cols-2 min-[860px]:grid-cols-4">
+          {figures.map((f) => (
+            <p key={f.label} className="nb-stamp">
+              <b>{f.value}</b>
+              <span>{f.label}</span>
+            </p>
+          ))}
+        </div>
+      </section>
+
+      {/* ===================== THE ROSTER ===================== */}
+      <section className="nb-wrap py-[clamp(2.2rem,4.5vw,3.6rem)]">
+        <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-3">
+          <div>
+            <h2 className="text-[clamp(1.5rem,1.1rem+1.4vw,2.3rem)]">
+              Badges earned
+            </h2>
+            <p className="nb-sub mt-3">
+              Each one is signed off by a quiz, not by time spent on the page.
+            </p>
+          </div>
+          {achievements.length > 0 && (
+            <p className="nb-count shrink-0">
+              {achievements.length}
+              <small>{achievements.length === 1 ? "badge" : "badges"}</small>
+            </p>
+          )}
+        </div>
 
         {achievements.length === 0 ? (
-          <Reveal>
-            <div className="ac-card flex flex-col items-center gap-3 rounded-3xl border border-dashed p-10 text-center">
-              <span
-                className="ac-badge flex h-12 w-12 items-center justify-center rounded-2xl"
-                style={{ "--a": "#e0a415" } as CSSProperties}
-              >
-                <Medal aria-hidden className="h-6 w-6" />
-              </span>
-              <p className="text-base text-foreground/70">
-                No medals yet — the first ones unlock during build season.
-              </p>
-            </div>
-          </Reveal>
+          <div className="nb-note mt-[clamp(1.2rem,2.6vw,1.8rem)] max-w-[46rem]">
+            <p className="nb-slug">nothing signed off yet</p>
+            <p className="mt-1.5 text-[0.95rem] leading-snug">
+              The first badges land after a handful of lessons.{" "}
+              <Link href="/guides" className="nb-link">
+                The same catalogue
+              </Link>{" "}
+              is open to you, and it needs no account to read.
+            </p>
+          </div>
         ) : (
-          <RevealGroup className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <ul className="nb-list mt-[clamp(1.2rem,2.6vw,1.8rem)]">
             {achievements.map((a) => (
-              <RevealItem key={a.slug}>
-                <Hover className="h-full" lift={-3}>
-                  <div className="ac-card flex h-full items-center gap-4 rounded-3xl p-5">
-                    <span
-                      className="ac-badge flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl"
-                      style={{ "--a": "#e0a415" } as CSSProperties}
-                    >
-                      <Icon name={a.icon} className="h-6 w-6" />
-                    </span>
-                    <div className="min-w-0">
-                      <div className="truncate text-base font-semibold text-foreground">
-                        {a.name}
-                      </div>
-                      <div className="truncate text-sm text-foreground/65">
-                        {a.description}
-                      </div>
-                    </div>
-                  </div>
-                </Hover>
-              </RevealItem>
+              <li
+                key={a.slug}
+                className="grid items-baseline gap-x-[clamp(1rem,3vw,2.2rem)] gap-y-1.5 border-b border-dashed border-rule py-[clamp(0.9rem,2vw,1.3rem)] min-[720px]:grid-cols-[minmax(0,18rem)_minmax(0,1fr)]"
+              >
+                <h3 className="text-[1.02rem] leading-tight">{a.name}</h3>
+                <p className="text-[0.93rem] leading-snug text-graphite">
+                  {a.description}
+                </p>
+              </li>
             ))}
-          </RevealGroup>
+          </ul>
         )}
+
+        <p className="nb-sub mt-[clamp(1.4rem,3vw,2.2rem)]">
+          Everything on this page came out of{" "}
+          <Link href="/guides" className="nb-link">
+            394 free lessons
+          </Link>
+          . No account is needed to read them.
+        </p>
       </section>
-    </div>
+    </>
   );
 }

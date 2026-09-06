@@ -2,22 +2,20 @@ import type { ReactNode } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowLeft, UserPlus } from "lucide-react";
 import { getSession } from "@/lib/auth";
 import { PrintButton } from "@/components/certificate/print-button";
 import { HandoutSheet } from "@/components/team/handout-sheet";
 
 /**
- * THE MEETING HANDOUT — one printed page you hand round at a first meeting.
+ * THE MEETING HANDOUT: one printed page you hand round at a first meeting.
  *
  * WHY PAPER, ON A WEBSITE
- * -----------------------
  * Every in-app prompt this site can fire is bounded by the people already on
  * LearnFRC, and that pool is tiny: 109 of 144 teams here have exactly one
- * member. A sheet handed out at a build-season meeting is the one surface whose
- * reach is NOT bounded by our user count — it reaches the thirty students in
- * the room, none of whom have an account. That is the whole argument for this
- * route.
+ * member. A sheet handed out at a build-season meeting is the one surface
+ * whose reach is NOT bounded by our user count. It reaches the thirty students
+ * in the room, none of whom have an account. That is the whole argument for
+ * this route.
  *
  * This file is only the gate: session, username, and the print chrome. The
  * artifact itself is <HandoutSheet>, which needs nothing but a username.
@@ -37,7 +35,7 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-/** Hidden for print, lifted `#sheet` to the page origin. */
+/** Everything hidden for print except `#sheet`, lifted to the page origin. */
 const PRINT_CSS = `
 @media print {
   body * { visibility: hidden !important; }
@@ -47,17 +45,13 @@ const PRINT_CSS = `
     left: 0;
     top: 0;
     width: 100%;
-    border: none !important;
     border-radius: 0 !important;
-    box-shadow: none !important;
     background: #ffffff !important;
   }
-  /* Browsers strip background colours when printing, to save ink. On this
-     sheet that is not a cosmetic loss: the numbered step markers are white
-     text on a #1d4fd0 circle, so dropping the fill prints white on white and
-     the numbers disappear entirely. Opt back in so the handout prints as
-     designed. The sheet's own background stays white above, so this costs
-     ink only where the design actually uses colour. */
+  /* The sheet is drawn so that nothing depends on a fill surviving: its
+     numerals are ruled boxes, not knocked-out white on a disc. Opting colour
+     adjustment back in is therefore about fidelity, not legibility, and it
+     costs ink only on the two rules that are actually blue. */
   #sheet, #sheet * {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
@@ -73,42 +67,33 @@ export default async function TeamHandoutPage() {
   const username = profile?.username ?? null;
   // No username means no `?ref=`, which means a QR that credits nobody. Print
   // nothing rather than a handout that quietly loses the reward for both sides.
-  if (!username) return <Shell><NoUsername /></Shell>;
+  if (!username)
+    return (
+      <Shell>
+        <NoUsername />
+      </Shell>
+    );
 
   const teamNumber = profile?.team_number ?? null;
 
   return (
     <Shell>
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-2 print:hidden">
-        <Link
-          href="/teams"
-          className="group inline-flex min-h-11 items-center gap-1.5 rounded-xl py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-        >
-          <ArrowLeft
-            aria-hidden
-            className="h-4 w-4 transition-transform duration-300 group-hover:-translate-x-0.5"
-          />
-          Back to your team
+      <div className="mb-[clamp(1.2rem,2.6vw,1.8rem)] flex flex-wrap items-center justify-between gap-3 print:hidden">
+        <Link href="/teams" className="nb-navlink">
+          back to your team
         </Link>
         <PrintButton />
       </div>
 
-      <div className="mb-5 rounded-2xl border border-[color:var(--border)] bg-white/70 px-5 py-4 print:hidden">
-        <p className="text-sm leading-relaxed text-foreground/75">
+      <div className="nb-note mb-[clamp(1.2rem,2.6vw,1.8rem)] print:hidden">
+        <p className="nb-slug">before you print</p>
+        <p className="mt-2 text-[0.95rem] leading-snug">
           One page, one code. Print a stack before your next meeting and hand
-          them out — anyone who scans it lands on a free signup credited to you.
-          The code has no expiry and no limit, so the same sheet works all
+          them round: anyone who scans it lands on a free signup credited to
+          you. The code has no expiry and no limit, so the same sheet works all
           season
-          {teamNumber ? (
-            <>
-              {" "}
-              for{" "}
-              <strong className="font-semibold text-foreground">
-                Team {teamNumber}
-              </strong>
-            </>
-          ) : null}
-          , and you both get +25 XP for every teammate who confirms their email.
+          {teamNumber ? ` for team ${teamNumber}` : ""}, and you both get +25 XP
+          for every teammate who confirms their email.
         </p>
       </div>
 
@@ -117,16 +102,16 @@ export default async function TeamHandoutPage() {
   );
 }
 
-/* ----------------------------------------------------------------- */
-/*  Page frame + the one state that has no sheet to show              */
-/* ----------------------------------------------------------------- */
+/* ------------------------------------------------------------------ */
+/*  Page frame, and the one state that has no sheet to show            */
+/* ------------------------------------------------------------------ */
 
 function Shell({ children }: { children: ReactNode }) {
   return (
-    <div className="relative">
+    <section className="nb-wrap pb-[clamp(3rem,6vw,5rem)] pt-[clamp(1.6rem,4vw,2.8rem)]">
       <style>{PRINT_CSS}</style>
-      <div className="mx-auto max-w-3xl px-4 pb-16 pt-28 sm:px-6">{children}</div>
-    </div>
+      <div className="mx-auto max-w-[52rem]">{children}</div>
+    </section>
   );
 }
 
@@ -136,20 +121,22 @@ function Shell({ children }: { children: ReactNode }) {
  */
 function NoUsername() {
   return (
-    <div className="ac-card px-6 py-12 text-center print:hidden">
-      <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[color:var(--primary)]/10 text-primary">
-        <UserPlus aria-hidden className="h-6 w-6" />
-      </span>
-      <p className="mt-4 font-display text-xl font-bold text-foreground">
-        Pick a username first
+    <div className="nb-box nb-tilt-2 relative p-[clamp(1.4rem,3.2vw,2.2rem)] print:hidden">
+      <span className="nb-tape -top-3 left-[18%] rotate-[-4deg]" aria-hidden="true" />
+
+      <p className="nb-marker">handout / needs a username</p>
+
+      <h1 className="text-[clamp(1.6rem,1.2rem+1.8vw,2.4rem)]">
+        Pick a username first.
+      </h1>
+
+      <p className="nb-lede mt-3">
+        The code on the handout is your own invite link, so it needs a username
+        to credit. Choose one and the sheet is ready to print.
       </p>
-      <p className="mx-auto mt-2 max-w-md text-[15px] leading-relaxed text-foreground/70">
-        The code on the handout is your personal invite link, so it needs a
-        username to credit. Choose one in Settings and the sheet is ready to
-        print.
-      </p>
-      <div className="mt-6 flex justify-center">
-        <Link href="/settings" className="ac-btn text-sm">
+
+      <div className="mt-[clamp(1.2rem,2.4vw,1.7rem)]">
+        <Link href="/settings" className="nb-btn">
           Choose a username
         </Link>
       </div>

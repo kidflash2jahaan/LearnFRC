@@ -20,13 +20,13 @@ export async function subscribe(
     !(await rateLimit("subscribe", 5, 3600)) ||
     !(await rateLimit("subscribe-email", 2, 86400, email))
   )
-    return { error: "Too many requests — please try again later." };
+    return { error: "Too many requests. Please try again later." };
 
   const supabase = await createClient();
   const { error } = await supabase
     .from("subscribers")
     .upsert({ email }, { onConflict: "email", ignoreDuplicates: true });
-  if (error) return { error: "Couldn't subscribe right now — try again." };
+  if (error) return { error: "Couldn't subscribe right now. Try again in a moment." };
 
   void sendEmail({
     to: email,

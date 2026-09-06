@@ -2,31 +2,10 @@ import type { CSSProperties } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import {
-  ArrowLeft,
-  ArrowRight,
-  Check,
-  Target,
-  Route,
-  Flag,
-  MapPin,
-  Sparkles,
-} from "lucide-react";
 import { getPathBySlug, getAllPathSlugs } from "@/lib/paths-data";
 import { getDepartmentBySlug } from "@/lib/queries";
-import { deptMeta, deptInk, inkFor } from "@/lib/departments";
-import { Icon } from "@/lib/icon-map";
-import { Button } from "@/components/ui/button";
 import { JsonLd } from "@/components/json-ld";
-import { AnimatedCounter } from "@/components/animated-counter";
-import {
-  RiseGroup,
-  RiseItem,
-  Reveal,
-  Hover,
-  Glow,
-} from "@/components/motion/primitives";
-import { RouteLine } from "./_route-line";
+import { RouteStopRow } from "./_route-line";
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com";
 
@@ -91,6 +70,19 @@ export async function generateMetadata({
   };
 }
 
+/**
+ * One route, opened.
+ *
+ * The page has exactly one job: show the order, and get the reader into stop
+ * one. So it is drawn as three things and stops. A masthead that names the
+ * route and prints its extent in figures. The itinerary itself as a log, one
+ * ruled line per stop, each line the size of the click target. Then the payoff
+ * printed once on the single inverted surface the system owns, because "what
+ * you can do at the end" is the claim the whole route is making and it should
+ * be the loudest thing on the page after the itinerary.
+ *
+ * Server Component. Same fetches as before, only the presentation is new.
+ */
 export default async function PathPage({
   params,
 }: {
@@ -100,7 +92,7 @@ export default async function PathPage({
   const path = getPathBySlug(slug);
   if (!path) notFound();
 
-  // One cached fetch per department on the route — the same cache entries the
+  // One cached fetch per department on the route, the same cache entries the
   // department pages use, so these are warm in practice. They give us the real
   // department names for the route AND the real lesson-minute total behind the
   // Course schema, so the declared workload isn't invented.
@@ -121,7 +113,7 @@ export default async function PathPage({
             (lAcc, lesson) => lAcc + (lesson.estimated_minutes ?? 0),
             0,
           ),
-        0,
+          0,
       ),
     0,
   );
@@ -129,20 +121,21 @@ export default async function PathPage({
 
   const firstStep = path.steps[0];
   const lastStep = path.steps[path.steps.length - 1];
-  const pathInk = inkFor(path.color);
+  const routeNumber = String(getAllPathSlugs().indexOf(path.slug) + 1).padStart(
+    2,
+    "0",
+  );
+  const deptsVisited = routeSlugs.length;
 
-  const heroStats: { n: number; label: string; icon: typeof MapPin }[] = [
-    { n: path.steps.length, label: "stops on the route", icon: MapPin },
-    { n: path.outcomes.length, label: "skills you'll leave with", icon: Target },
-    {
-      n: new Set(path.steps.map((s) => s.deptSlug)).size,
-      label: "departments visited",
-      icon: Route,
-    },
-  ];
+  const firstName = firstStep
+    ? (nameBySlug.get(firstStep.deptSlug) ?? firstStep.label)
+    : "";
+  const lastName = lastStep
+    ? (nameBySlug.get(lastStep.deptSlug) ?? lastStep.label)
+    : "";
 
   return (
-    <div className="relative overflow-x-clip">
+    <>
       <JsonLd
         data={{
           "@context": "https://schema.org",
@@ -192,296 +185,178 @@ export default async function PathPage({
           ],
         }}
       />
-      <Glow
-        blobs={[
-          { size: "600px", pos: { left: "50%", top: "-220px" }, color: path.color, opacity: 0.4 },
-          { size: "560px", pos: { right: "-190px", top: "180px" }, color: "#6ff0ea", opacity: 0.4, delay: 3 },
-          { size: "520px", pos: { left: "-180px", top: "700px" }, color: "#c8b6ff", opacity: 0.32, delay: 6 },
-        ]}
-      />
 
-      <div className="mx-auto max-w-5xl px-4 pb-24 pt-28 sm:px-6 lg:px-8">
-        <RiseGroup>
-          <RiseItem>
-            <Link
-              href="/paths"
-              className="-ml-1 inline-flex min-h-11 items-center gap-1.5 rounded-full px-1 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-            >
-              <ArrowLeft className="h-4 w-4" aria-hidden />
-              All learning paths
+      {/* ===================== MASTHEAD ===================== */}
+      <section className="nb-wrap pb-[clamp(2rem,4vw,3rem)] pt-[clamp(1.4rem,3vw,2.4rem)]">
+        <Link
+          href="/paths"
+          className="nb-slug inline-flex min-h-11 items-center hover:text-blue"
+        >
+          &larr; all {getAllPathSlugs().length} routes
+        </Link>
+
+        <p className="nb-marker mt-2">
+          route {routeNumber} / {path.slug}
+        </p>
+
+        <h1 className="max-w-[17ch]">{path.title}</h1>
+
+        <p className="nb-lede mt-[clamp(1rem,2vw,1.5rem)]">{path.description}</p>
+
+        <div className="mt-[clamp(1.4rem,2.6vw,2rem)] flex flex-wrap gap-3">
+          {firstStep && (
+            <Link href={`/guides/${firstStep.deptSlug}`} className="nb-btn">
+              Start at stop 01
             </Link>
-          </RiseItem>
+          )}
+          <Link href="#outcomes" className="nb-btn-ghost">
+            What you leave with
+          </Link>
+        </div>
 
-          {/* ============================ HERO ============================ */}
-          <header className="relative mt-6">
-            <RiseItem>
-              <p className="ac-eyebrow inline-flex items-center gap-1.5">
-                <Route className="h-3.5 w-3.5" aria-hidden /> Learning path
-              </p>
-            </RiseItem>
+        {/* The extent of the route, ruled off. Three figures, printed once, on
+            the same line rather than in three separate boxes: they describe one
+            thing and they are not three separate decisions. */}
+        <div className="nb-rule mt-[clamp(1.6rem,3.4vw,2.4rem)] flex flex-wrap gap-x-[clamp(1.6rem,5vw,4rem)] gap-y-3 pt-[clamp(0.9rem,2vw,1.3rem)]">
+          <p className="nb-count">
+            {path.steps.length}
+            <small>stops</small>
+          </p>
+          <p className="nb-count">
+            {deptsVisited}
+            <small>departments</small>
+          </p>
+          <p className="nb-count">
+            {path.outcomes.length}
+            <small>skills at the end</small>
+          </p>
+          <p className="nb-count">
+            {workloadHours}
+            <small>hours of reading</small>
+          </p>
+        </div>
+      </section>
 
-            <RiseItem>
-              <div className="mt-4 flex items-start gap-3 sm:gap-5">
-                <span
-                  className="ac-badge flex h-16 w-16 shrink-0 items-center justify-center sm:h-[76px] sm:w-[76px]"
-                  style={{ "--a": path.color } as CSSProperties}
-                >
-                  <Icon name={path.icon} className="h-8 w-8 sm:h-9 sm:w-9" />
-                </span>
-                <h1
-                  className="min-w-0 text-balance break-words font-display text-3xl font-extrabold leading-[1.04] sm:text-4xl md:text-[3.1rem]"
-                  style={{
-                    background: `linear-gradient(120deg, ${path.color}, #1aa9d6)`,
-                    WebkitBackgroundClip: "text",
-                    backgroundClip: "text",
-                    color: "transparent",
-                  }}
-                >
-                  {path.title}
-                </h1>
-              </div>
-            </RiseItem>
-
-            <RiseItem>
-              <p className="mt-5 max-w-2xl text-pretty text-lg leading-relaxed text-foreground/75">
-                {path.description}
-              </p>
-            </RiseItem>
-
-            {/* stat strip */}
-            <RiseItem>
-              <div className="mt-7 grid grid-cols-3 gap-3 sm:max-w-lg">
-                {heroStats.map((s) => (
-                  <div key={s.label} className="ac-card rounded-2xl p-3.5 text-center sm:p-4">
-                    <s.icon className="mx-auto h-4 w-4 text-primary" aria-hidden />
-                    <div className="mt-1.5 font-display text-2xl font-extrabold leading-none text-foreground sm:text-[1.75rem]">
-                      <AnimatedCounter value={s.n} />
-                    </div>
-                    <div className="mt-1 text-[12px] leading-tight text-muted-foreground">
-                      {s.label}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </RiseItem>
-
-            <RiseItem>
-              <div className="mt-7 flex flex-wrap items-center gap-3">
-                {firstStep && (
-                  <Button asChild variant="brand" size="lg">
-                    <Link href={`/guides/${firstStep.deptSlug}`}>
-                      Start this path
-                      <ArrowRight className="h-4 w-4" aria-hidden />
-                    </Link>
-                  </Button>
-                )}
-                <Link href="#outcomes" className="ac-btn-ghost text-sm">
-                  What you&apos;ll learn
-                </Link>
-              </div>
-            </RiseItem>
-          </header>
-        </RiseGroup>
-
-        {/* ==================== SIGNATURE: THE ROUTE ==================== */}
-        <section className="mt-16" aria-labelledby="route-heading">
-          <Reveal className="mb-7 flex items-center gap-3">
-            <h2 id="route-heading" className="ac-eyebrow inline-flex items-center gap-1.5">
-              <MapPin className="h-3.5 w-3.5" aria-hidden /> The route
+      {/* ===================== THE ITINERARY ===================== */}
+      <section
+        className="nb-wrap pb-[clamp(2.4rem,5vw,3.6rem)]"
+        aria-labelledby="route-heading"
+      >
+        <div className="mb-[clamp(1.2rem,2.6vw,1.9rem)] flex flex-wrap items-end justify-between gap-x-8 gap-y-3">
+          <div>
+            <h2 id="route-heading" className="max-w-[18ch]">
+              The order to read it in.
             </h2>
-            <span className="ac-divider flex-1" />
-            <span
-              className="ac-chip ac-tile inline-flex items-center gap-1"
-              style={{ "--a": path.color } as CSSProperties}
+            <p className="nb-sub mt-3">
+              Every stop is a department guide you can also reach on its own.
+              Work down the list. Nothing here is locked and nothing needs an
+              account to read.
+            </p>
+          </div>
+          <p className="nb-pen max-w-[18ch] rotate-[-1.1deg] min-[900px]:text-right">
+            skip a stop you already do all season
+          </p>
+        </div>
+
+        <ol className="nb-list">
+          {path.steps.map((step, i) => (
+            <RouteStopRow
+              key={step.deptSlug + i}
+              index={i}
+              deptSlug={step.deptSlug}
+              deptName={nameBySlug.get(step.deptSlug) ?? step.label}
+              label={step.label}
+              note={step.note}
+            />
+          ))}
+        </ol>
+
+        <p className="nb-slug mt-4">
+          end of route / starts in {firstName} / ends in {lastName}
+        </p>
+      </section>
+
+      {/* ===================== THE PAYOFF =====================
+          The single inverted surface on this page, spent on the one claim the
+          route is making. Numbered, because the outcomes are the same list the
+          Course structured data declares and a reader should be able to count
+          them against the stops above. */}
+      <section
+        id="outcomes"
+        className="nb-slab py-[clamp(2.4rem,5vw,3.8rem)]"
+        aria-labelledby="outcomes-heading"
+      >
+        <div className="nb-wrap grid gap-[clamp(1.6rem,4vw,3.4rem)] min-[900px]:grid-cols-[minmax(0,0.85fr)_minmax(0,1.35fr)]">
+          <div>
+            <h2
+              id="outcomes-heading"
+              className="max-w-[15ch] text-[clamp(1.6rem,1.1rem+1.9vw,2.55rem)]"
             >
-              <AnimatedCounter value={path.steps.length} />
-              &nbsp;stops
-            </span>
-          </Reveal>
+              What you can do at the end.
+            </h2>
+            <p className="mt-3 max-w-[34ch] text-[0.95rem] text-[rgba(245,246,242,0.85)]">
+              Not topics covered. These are the jobs you can be handed on a real
+              team once the route is behind you.
+            </p>
+            <p className="nb-stamp mt-[clamp(1.4rem,3vw,2.2rem)]">
+              <b>{path.outcomes.length}</b>
+              <span>skills, signed off by quiz</span>
+            </p>
+          </div>
 
-          <ol className="relative space-y-4">
-            <RouteLine color={path.color} />
-
-            {/* START marker */}
-            <Reveal as="li" className="relative">
-              <div className="flex items-center gap-4 pl-1">
-                <span
-                  className="relative z-10 flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-white shadow-[0_10px_28px_-10px_rgba(37,96,230,0.7)]"
-                  style={{ background: "linear-gradient(160deg,#2560e6,#0f7fb0)" }}
-                >
-                  <Sparkles className="h-6 w-6" aria-hidden />
+          <ol>
+            {path.outcomes.map((outcome, i) => (
+              <li
+                key={outcome}
+                className={
+                  i === 0
+                    ? "flex gap-4 pb-3"
+                    : "nb-hair flex gap-4 pb-3 pt-3.5"
+                }
+              >
+                <span className="nb-slug shrink-0 font-bold text-[rgba(245,246,242,0.72)]">
+                  {String(i + 1).padStart(2, "0")}
                 </span>
-                <div>
-                  <div className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">
-                    Begin
-                  </div>
-                  <p className="font-display text-lg font-semibold text-foreground">
-                    Depart with no experience needed
-                  </p>
-                </div>
-              </div>
-            </Reveal>
-
-            {/* STEP NODES — each <li> is a direct child of the <ol> (valid
-                markup) and reveals independently with a staggered delay. */}
-            {path.steps.map((step, i) => {
-              const m = deptMeta(step.deptSlug);
-              const deptName = nameBySlug.get(step.deptSlug) ?? step.label;
-              const stepInk = deptInk(step.deptSlug);
-              return (
-                <Reveal key={step.deptSlug + i} as="li" delay={i * 0.06} className="relative">
-                  <Hover lift={-3} scale={1.01}>
-                    <Link
-                      href={`/guides/${step.deptSlug}`}
-                      className="ac-card group flex items-center gap-4 p-5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                    >
-                      <span className="relative z-10 flex shrink-0 flex-col items-center">
-                        <span
-                          className="ac-badge flex h-14 w-14 items-center justify-center transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6"
-                          style={{ "--a": m.color } as CSSProperties}
-                        >
-                          <Icon name={m.icon} className="h-6 w-6" />
-                        </span>
-                        <span
-                          className="mt-2 rounded-full border border-border bg-card px-2 py-0.5 text-[11px] font-bold tabular-nums"
-                          style={{ color: stepInk }}
-                        >
-                          {String(i + 1).padStart(2, "0")}
-                        </span>
-                      </span>
-
-                      <div className="min-w-0 flex-1 self-start">
-                        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                          <span className="whitespace-nowrap">Stop {i + 1}</span>
-                          <span aria-hidden>/</span>
-                          <span className="leading-snug" style={{ color: stepInk }}>
-                            {deptName}
-                          </span>
-                        </div>
-                        <h3 className="mt-1 font-display text-lg font-semibold text-foreground transition-colors group-hover:text-primary">
-                          {step.label}
-                        </h3>
-                        <p className="mt-1 text-[15px] leading-relaxed text-muted-foreground">
-                          {step.note}
-                        </p>
-                      </div>
-
-                      <ArrowRight
-                        className="h-5 w-5 shrink-0 self-center text-muted-foreground transition-transform duration-200 group-hover:translate-x-1 group-hover:text-primary"
-                        aria-hidden
-                      />
-                    </Link>
-                  </Hover>
-                </Reveal>
-              );
-            })}
-
-            {/* DESTINATION marker */}
-            <Reveal as="li" className="relative">
-              <div className="flex items-center gap-4 pl-1">
-                <span
-                  className="relative z-10 flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-white shadow-[0_10px_28px_-10px_rgba(15,127,176,0.7)]"
-                  style={{ background: "linear-gradient(160deg,#1478a6,#5b4fd6)" }}
-                >
-                  <Flag className="h-6 w-6" aria-hidden />
-                </span>
-                <div>
-                  <div className="text-xs font-semibold uppercase tracking-[0.16em] text-accent">
-                    Arrive
-                  </div>
-                  <p className="font-display text-lg font-semibold text-foreground">
-                    Path complete — you&apos;ve got the whole role
-                  </p>
-                </div>
-              </div>
-            </Reveal>
+                <span className="text-[1rem] leading-[1.5]">{outcome}</span>
+              </li>
+            ))}
           </ol>
-        </section>
+        </div>
+      </section>
 
-        {/* ===================== DESTINATION: OUTCOMES ==================== */}
-        <section id="outcomes" className="mt-16 scroll-mt-28">
-          <Reveal>
-            <div className="ac-glass relative overflow-hidden p-6 sm:p-8">
-              <span
-                aria-hidden
-                className="pointer-events-none absolute -right-10 -top-10 h-44 w-44 rounded-full blur-3xl"
-                style={{ background: `radial-gradient(closest-side, ${path.color}33, transparent)` }}
-              />
-              <h2 className="flex items-center gap-2.5 font-display text-xl font-bold text-foreground sm:text-2xl">
-                <span className="ac-badge flex h-10 w-10 items-center justify-center" style={{ "--a": path.color } as CSSProperties}>
-                  <Target className="h-5 w-5" aria-hidden />
-                </span>
-                What you&apos;ll be able to do
-              </h2>
-              <p className="mt-2 text-base text-muted-foreground">
-                The skills waiting at the end of the route.
-              </p>
-              <ul className="mt-6 grid gap-3 sm:grid-cols-2">
-                {path.outcomes.map((o, i) => (
-                  <Reveal
-                    key={i}
-                    as="li"
-                    delay={i * 0.05}
-                    className="ac-card flex items-start gap-3 p-4 text-base leading-relaxed text-foreground/90"
-                  >
-                    <span
-                      className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-white"
-                      style={{ background: "linear-gradient(160deg,#2560e6,#0f7fb0)" }}
-                    >
-                      <Check className="h-3.5 w-3.5" strokeWidth={3} aria-hidden />
-                    </span>
-                    <span>{o}</span>
-                  </Reveal>
-                ))}
-              </ul>
+      {/* ===================== THE WAY IN ===================== */}
+      {firstStep && (
+        <section className="nb-wrap py-[clamp(2.6rem,5vw,4.2rem)]">
+          <div
+            className="nb-box nb-tilt max-w-[44rem] p-[clamp(1.3rem,2.8vw,2rem)]"
+            style={{ "--tilt": "-0.5deg" } as CSSProperties}
+          >
+            <span
+              className="nb-tape -top-3 left-[17%] rotate-[-3.4deg]"
+              aria-hidden="true"
+            />
+
+            <p className="nb-slug">stop 01 / {firstStep.deptSlug}</p>
+            <h2 className="mt-2 text-[clamp(1.4rem,1.1rem+1.1vw,2rem)]">
+              It starts in {firstName}.
+            </h2>
+            <p className="mt-3 max-w-[52ch] text-graphite">
+              {firstStep.note} From there the route works down to {lastName},
+              and you can stop at any line and stay in that department for the
+              rest of the season.
+            </p>
+
+            <div className="mt-[clamp(1.2rem,2.4vw,1.7rem)] flex flex-wrap gap-3">
+              <Link href={`/guides/${firstStep.deptSlug}`} className="nb-btn">
+                Start at stop 01
+              </Link>
+              <Link href="/paths" className="nb-btn-ghost">
+                Compare the other routes
+              </Link>
             </div>
-          </Reveal>
+          </div>
         </section>
-
-        {/* ============================= CTA ============================= */}
-        {firstStep && (
-          <section className="mt-14">
-            <Reveal>
-              <div className="ac-glass px-6 py-10 text-center sm:px-12">
-                <h2 className="text-balance font-display text-2xl font-bold text-foreground sm:text-3xl">
-                  Ready to leave{" "}
-                  <span
-                    style={{
-                      background: "linear-gradient(120deg, #2560e6, #1aa9d6)",
-                      WebkitBackgroundClip: "text",
-                      backgroundClip: "text",
-                      color: "transparent",
-                    }}
-                  >
-                    Stop 01
-                  </span>
-                  ?
-                </h2>
-                <p className="mx-auto mt-3 max-w-xl text-pretty text-base text-muted-foreground">
-                  Begin with{" "}
-                  <span className="font-semibold" style={{ color: pathInk }}>
-                    {nameBySlug.get(firstStep.deptSlug) ?? firstStep.label}
-                  </span>{" "}
-                  and work your way to{" "}
-                  {lastStep ? nameBySlug.get(lastStep.deptSlug) ?? lastStep.label : "the finish"}
-                  . Free — no login needed to start reading.
-                </p>
-                <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
-                  <Button asChild variant="brand" size="lg">
-                    <Link href={`/guides/${firstStep.deptSlug}`}>
-                      Start this path
-                      <ArrowRight className="h-4 w-4" aria-hidden />
-                    </Link>
-                  </Button>
-                  <Link href="/paths" className="ac-btn-ghost text-sm">
-                    Browse other paths
-                  </Link>
-                </div>
-              </div>
-            </Reveal>
-          </section>
-        )}
-      </div>
-    </div>
+      )}
+    </>
   );
 }

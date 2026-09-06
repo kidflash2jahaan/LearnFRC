@@ -153,7 +153,7 @@ export function decide(args: {
   if (progress.completed === 0) {
     const ageDays = (now - createdAt) / DAY;
     if (ageDays < NEVER_STARTED_MIN_AGE_DAYS)
-      return { send: false, skip: "too new — may still activate" };
+      return { send: false, skip: "too new, may still activate" };
     if (ageDays > NEVER_STARTED_MAX_AGE_DAYS)
       return { send: false, skip: "signup too old for an onboarding nudge" };
     if (lastEmailedAt !== null)

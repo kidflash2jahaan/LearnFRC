@@ -1,148 +1,166 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
 /**
- * Mirrors src/app/settings/page.tsx exactly:
- *   hero     mx-auto grid max-w-6xl items-center gap-10 px-4 pb-10 pt-28
- *            sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:gap-12 lg:pb-14
- *   panels   mx-auto max-w-3xl px-4 pb-24 sm:px-6, three `ac-card p-6 sm:p-7`
- *            sections separated by mt-6
+ * Mirrors src/app/settings/page.tsx: the same gutter (`nb-wrap max-w-[54rem]`),
+ * the same top padding, the same order of record strip, form, motion card and
+ * session block.
  *
- * The three panels are drawn with their real `ac-card` chrome so the card
- * edges, radius and shadow do not change when content swaps in — only the
- * bars inside them are skeletons. The settings form is the one region across
- * these routes whose shape is entirely fixed (the same fields for every
- * user), so it is worth mirroring field-by-field rather than as one slab.
- *
- * The page's <Glow> blobs are `absolute inset-0 -z-10` and contribute no
- * layout, so — as in the dashboard reference — the outer
- * `relative overflow-x-clip` wrapper is omitted.
+ * The three hand-ruled boxes are drawn with their REAL `nb-box` chrome rather
+ * than as grey slabs, so the ink borders, the inset hairline and the panel
+ * divisions do not move when the content swaps in. Only what goes inside them
+ * pulses. The profile form is the one region on this route whose shape is
+ * completely fixed (every account sees the same seven fields), so it is worth
+ * mirroring field by field instead of as one block.
  */
 export default function SettingsLoading() {
   return (
-    <>
-      {/* ============================ HERO ============================ */}
-      <section className="mx-auto grid max-w-6xl items-center gap-10 px-4 pb-10 pt-28 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:gap-12 lg:pb-14">
-        <div>
-          {/* "Your control panel" chip */}
-          <Skeleton className="h-7 w-44 rounded-full" />
-          {/* h1: text-4xl sm:text-5xl leading-[1.04], two lines */}
-          <Skeleton className="mt-4 h-9 rounded-xl sm:h-[50px]" />
-          <Skeleton className="mt-2 h-9 w-4/5 rounded-xl sm:h-[50px]" />
-          {/* lead paragraph: max-w-xl text-lg leading-relaxed, three lines */}
-          <div className="mt-4 max-w-xl space-y-2">
-            <Skeleton className="h-6 rounded-md" />
-            <Skeleton className="h-6 rounded-md" />
-            <Skeleton className="h-6 w-2/3 rounded-md" />
+    <div className="nb-wrap max-w-[54rem] pb-[clamp(3rem,6vw,4.5rem)] pt-[clamp(2rem,4.5vw,3.2rem)]">
+      {/* ---- header ---- */}
+      <div>
+        {/* nb-marker: a 34px blue stroke plus one mono line. The stroke is
+            real, because it is two pixels of colour and never loads late. */}
+        <div className="mb-[0.85rem] flex items-baseline gap-[0.65rem]">
+          <span
+            className="inline-block h-0.5 w-[34px] shrink-0 -translate-y-[0.28em] rotate-[-1deg] bg-blue"
+            aria-hidden="true"
+          />
+          <Skeleton className="h-3.5 w-52" />
+        </div>
+        <Skeleton className="h-[clamp(1.9rem,1.3rem+2vw,2.8rem)] w-full max-w-lg" />
+        <Skeleton className="mt-2 h-[clamp(1.9rem,1.3rem+2vw,2.8rem)] w-2/3 max-w-sm" />
+        <div className="mt-4 max-w-[46ch]">
+          <Skeleton className="h-4" />
+          <Skeleton className="mt-2 h-4 w-4/5" />
+        </div>
+      </div>
+
+      {/* ---- member record strip ---- */}
+      <div className="nb-box mt-[clamp(1.6rem,3.4vw,2.4rem)] grid overflow-hidden lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
+        <div className="nb-panel">
+          <Skeleton className="h-3.5 w-40" />
+          <div className="mt-4 flex items-center gap-4">
+            <Skeleton className="h-16 w-16 shrink-0 rounded-full" />
+            <div className="min-w-0 flex-1">
+              <Skeleton className="h-6 w-48 max-w-full" />
+              <Skeleton className="mt-2 h-3.5 w-32" />
+            </div>
           </div>
-          {/* two CTAs (ac-btn / ac-btn-ghost, min-height 44) */}
-          <div className="mt-7 flex flex-wrap gap-3">
-            <Skeleton className="h-11 w-44 rounded-2xl" />
-            <Skeleton className="h-11 w-44 rounded-2xl" />
+          <Skeleton className="mt-4 h-7 w-24" />
+        </div>
+        <div className="nb-panel justify-center gap-0">
+          {[0, 1, 2].map((i) => (
+            <div
+              key={i}
+              className={`flex items-baseline justify-between gap-4 py-2.5 ${
+                i > 0 ? "border-t border-dashed border-rule" : ""
+              }`}
+            >
+              <Skeleton className="h-3.5 w-24" />
+              <Skeleton className="h-5 w-16" />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ---- the two ghost links under it ---- */}
+      <div className="mt-5 flex flex-wrap gap-3">
+        <Skeleton className="h-11 w-32" />
+        <Skeleton className="h-11 w-56" />
+      </div>
+
+      {/* ---- profile form ---- */}
+      <section className="mt-[clamp(2.4rem,5vw,3.4rem)] border-t-2 border-ink pt-[clamp(1.4rem,3vw,2.2rem)]">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
+          <Skeleton className="h-[clamp(1.4rem,1.1rem+1.1vw,1.9rem)] w-28" />
+          <Skeleton className="h-3.5 w-64 max-w-full" />
+        </div>
+
+        <div className="mt-6 flex flex-col gap-5">
+          {/* "how you appear" strip */}
+          <div className="nb-hair flex items-center gap-4 pt-4">
+            <Skeleton className="h-14 w-14 shrink-0 rounded-full" />
+            <div className="min-w-0 flex-1">
+              <Skeleton className="h-3.5 w-28" />
+              <Skeleton className="mt-2 h-5 w-40" />
+            </div>
           </div>
-          {/* jump-link chips (min-h-11) */}
-          <div className="mt-6 flex flex-wrap gap-2">
-            <Skeleton className="h-11 w-28 rounded-full" />
-            <Skeleton className="h-11 w-36 rounded-full" />
-            <Skeleton className="h-11 w-28 rounded-full" />
+
+          <Field hints={1} />
+          <Field hints={2} />
+          <div className="grid gap-5 sm:grid-cols-2">
+            <Field hints={2} />
+            <Field hints={2} />
+          </div>
+          <Field hints={0} />
+          <Field hints={1} />
+
+          {/* bio: label plus counter, a 4-row textarea, one hint */}
+          <div className="grid gap-[0.4rem]">
+            <div className="flex items-baseline justify-between gap-3">
+              <Skeleton className="h-3.5 w-10" />
+              <Skeleton className="h-3.5 w-16" />
+            </div>
+            <Skeleton className="h-[7.5rem]" />
+            <Skeleton className="h-3 w-48" />
+          </div>
+
+          <div className="pt-1">
+            <Skeleton className="h-11 w-full sm:w-40" />
           </div>
         </div>
 
-        {/* identity card: ac-glass w-full max-w-md p-6 sm:p-7 lg:justify-self-end */}
-        <Skeleton className="h-[400px] w-full max-w-md rounded-[28px] lg:justify-self-end" />
+        {/* danger zone: real 3px chrome, skeleton contents */}
+        <div className="nb-box mt-10 border-[3px] p-[clamp(1.1rem,2.4vw,1.6rem)]">
+          <Skeleton className="h-3.5 w-40" />
+          <Skeleton className="mt-2 h-6 w-56 max-w-full" />
+          <div className="mt-3 max-w-[56ch]">
+            <Skeleton className="h-4" />
+            <Skeleton className="mt-2 h-4 w-3/4" />
+          </div>
+          <Skeleton className="mt-5 h-11 w-48" />
+        </div>
       </section>
 
-      {/* ========================= CONTROL PANELS ===================== */}
-      <div className="mx-auto max-w-3xl px-4 pb-24 sm:px-6">
-        {/* ---------- Profile ---------- */}
-        <section>
-          <div className="ac-card p-6 sm:p-7">
-            <PanelHeader />
-            <div className="ac-divider my-6" />
-
-            {/* live avatar preview strip */}
-            <Skeleton className="h-24 rounded-2xl" />
-
-            <div className="mt-5 space-y-5">
-              {/* Email (read-only) */}
-              <Field helperLines={1} />
-              {/* Full name */}
-              <Field helperLines={2} />
-              {/* Username + FRC team number */}
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <Field helperLines={2} />
-                <Field helperLines={2} />
-              </div>
-              {/* Role select */}
-              <Field helperLines={0} />
-              {/* Avatar image URL */}
-              <Field helperLines={1} />
-              {/* Bio textarea (min-h-28) */}
-              <div>
-                <Skeleton className="h-4 w-12 rounded-md" />
-                <Skeleton className="mt-1.5 h-28 rounded-[14px]" />
-                <Skeleton className="mt-1.5 h-3 w-2/3 rounded-md" />
-              </div>
-              {/* Save button (size lg → 52px tall) */}
-              <div className="pt-1">
-                <Skeleton className="h-[52px] w-full rounded-2xl sm:w-44" />
-              </div>
-            </div>
-
-            {/* Danger zone */}
-            <Skeleton className="mt-8 h-[164px] rounded-2xl" />
+      {/* ---- motion card ---- */}
+      <div className="nb-box mt-[clamp(2.4rem,5vw,3.4rem)] p-[var(--pad)]">
+        <Skeleton className="h-3.5 w-32" />
+        <Skeleton className="mt-2 h-6 w-52" />
+        <div className="mt-2 max-w-[56ch]">
+          <Skeleton className="h-4" />
+          <Skeleton className="mt-2 h-4 w-2/3" />
+        </div>
+        <div className="nb-hair mt-5 flex flex-wrap items-center justify-between gap-4 pt-4">
+          <div className="min-w-0 flex-1">
+            <Skeleton className="h-5 w-40" />
+            <Skeleton className="mt-2 h-3 w-56 max-w-full" />
           </div>
-        </section>
-
-        {/* ---------- Performance ---------- */}
-        <section className="mt-6">
-          <div className="ac-card p-6 sm:p-7">
-            <PanelHeader />
-            <div className="ac-divider my-6" />
-            <Skeleton className="h-[224px] rounded-[20px]" />
-          </div>
-        </section>
-
-        {/* ---------- Account / sign out ---------- */}
-        <section className="mt-6">
-          <div className="ac-card p-6 sm:p-7">
-            <PanelHeader />
-            <div className="ac-divider my-6" />
-            <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
-              <div className="w-full space-y-2">
-                <Skeleton className="h-4 rounded-md" />
-                <Skeleton className="h-4 w-3/4 rounded-md" />
-              </div>
-              <Skeleton className="h-11 w-32 shrink-0 rounded-2xl" />
-            </div>
-          </div>
-        </section>
+          <Skeleton className="h-8 w-[3.75rem] shrink-0" />
+        </div>
       </div>
-    </>
-  );
-}
 
-/** ac-badge (h-12, 14px radius) + section title + two-line description. */
-function PanelHeader() {
-  return (
-    <div className="flex items-center gap-3">
-      <Skeleton className="h-12 w-12 shrink-0 rounded-[14px]" />
-      <div className="min-w-0 flex-1">
-        <Skeleton className="h-6 w-32 rounded-md" />
-        <Skeleton className="mt-2 h-4 w-full max-w-sm rounded-md" />
-        <Skeleton className="mt-1.5 h-4 w-2/3 max-w-xs rounded-md" />
-      </div>
+      {/* ---- session ---- */}
+      <section className="mt-[clamp(2.4rem,5vw,3.4rem)] border-t-2 border-ink pt-[clamp(1.4rem,3vw,2.2rem)]">
+        <Skeleton className="h-[clamp(1.4rem,1.1rem+1.1vw,1.9rem)] w-32" />
+        <div className="mt-4 flex flex-wrap items-end justify-between gap-x-8 gap-y-4">
+          <div className="w-full max-w-[52ch] flex-1">
+            <Skeleton className="h-4" />
+            <Skeleton className="mt-2 h-4 w-5/6" />
+          </div>
+          <Skeleton className="h-11 w-32 shrink-0" />
+        </div>
+      </section>
     </div>
   );
 }
 
-/** Label (text-sm + mb-1.5) + ac-input (44px tall, 14px radius) + helper. */
-function Field({ helperLines }: { helperLines: 0 | 1 | 2 }) {
+/** One `nb-field`: mono label, a 44px control, and 0 to 2 hint lines. */
+function Field({ hints }: { hints: 0 | 1 | 2 }) {
   return (
-    <div>
-      <Skeleton className="h-4 w-24 rounded-md" />
-      <Skeleton className="mt-1.5 h-11 rounded-[14px]" />
-      {helperLines > 0 && <Skeleton className="mt-1.5 h-3 w-3/4 rounded-md" />}
-      {helperLines > 1 && <Skeleton className="mt-1.5 h-3 w-1/2 rounded-md" />}
+    <div className="grid gap-[0.4rem]">
+      <Skeleton className="h-3.5 w-28" />
+      <Skeleton className="h-11" />
+      {hints > 0 && <Skeleton className="h-3 w-3/4" />}
+      {hints > 1 && <Skeleton className="h-3 w-1/2" />}
     </div>
   );
 }

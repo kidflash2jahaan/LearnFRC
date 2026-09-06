@@ -1,48 +1,53 @@
-import type { CSSProperties } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowLeft, ShieldCheck, MousePointerClick, LogIn, Wrench } from "lucide-react";
 import { ResendButton } from "@/components/auth/resend-button";
-import { AnimatedCounter } from "@/components/animated-counter";
-import { Rise, RiseGroup, RiseItem, Glow } from "@/components/motion/primitives";
-import { SignalBeacon } from "./_signal-beacon";
+import { Postmark } from "./_signal-beacon";
 
 export const metadata: Metadata = {
   title: "Verify your email",
   robots: { index: false },
 };
 
-const BRAND_GRADIENT: CSSProperties = {
-  background: "linear-gradient(120deg, #2560e6, #1aa9d6)",
-  WebkitBackgroundClip: "text",
-  backgroundClip: "text",
-  color: "transparent",
-};
-
-const NEXT_STEPS = [
+/**
+ * Three checks, in the order they occur to somebody staring at an empty inbox.
+ * They are written as instructions rather than as reassurance, because a person
+ * on this page is stuck and a soothing paragraph does not unstick them.
+ */
+const CHECKS = [
   {
-    icon: MousePointerClick,
-    title: "Open the email",
-    body: "Tap the verification link inside. It activates your account instantly.",
+    slug: "wait",
+    text: "Mail is queued, not instant. A minute or two is normal, and refreshing the inbox does not make it faster.",
   },
   {
-    icon: LogIn,
-    title: "You're signed in",
-    body: "The link logs you in automatically — no need to sign in again.",
+    slug: "search",
+    text: "Search your mail for LearnFRC instead of scrolling. New mail does not always sort to the top, especially on a school account.",
   },
   {
-    icon: Wrench,
-    title: "Enter the pit",
-    body: "Pick a department and start your first guide, free.",
+    slug: "spam",
+    text: "Then check spam and any Promotions tab. A first message from an address you have never written to is exactly what those filters are for.",
   },
-];
+] as const;
 
-const STATS = [
-  { value: 11, suffix: "", label: "Departments" },
-  { value: 394, suffix: "", label: "Lessons" },
-  { value: 100, suffix: "%", label: "Free" },
-];
-
+/**
+ * VERIFY YOUR EMAIL — the page whose whole content is an address.
+ *
+ * Nothing happens here. The account is made, the link is sent, and every action
+ * that matters is in another application. So the page does the one thing it is
+ * uniquely able to do, which is show you WHICH address the link went to, at a
+ * size you can check from arm's length. A mistyped address is the failure this
+ * page exists to catch and the old design buried it in a sentence, under a
+ * pulsing badge, a progress bar reading "Step 3 of 4", a three-step rail and
+ * three counters spinning up to numbers about the catalogue.
+ *
+ * So the address gets the slab: the one inverted surface in the system, used
+ * here the way /signup uses it, to carry the single fact that has to read from
+ * across the room. Everything after it is troubleshooting, because that is the
+ * only thing left to say.
+ *
+ * BEHAVIOUR IS UNCHANGED: same `email` search param, same resend action behind
+ * the same button, still only rendered when there is an address to resend to,
+ * same metadata, same links out.
+ */
 export default async function VerifyEmailPage({
   searchParams,
 }: {
@@ -51,143 +56,103 @@ export default async function VerifyEmailPage({
   const { email } = await searchParams;
 
   return (
-    <div className="relative overflow-x-clip">
-      <Glow
-        blobs={[
-          { size: "560px", pos: { left: "-180px", top: "-200px" }, color: "#8bbcff", opacity: 0.6 },
-          { size: "520px", pos: { right: "-160px", top: "-120px" }, color: "#6ff0ea", opacity: 0.5, delay: 2 },
-          { size: "480px", pos: { left: "30%", bottom: "-220px" }, color: "#c8b6ff", opacity: 0.4, delay: 4 },
-        ]}
-      />
+    <>
+      {/* ── The instruction ─────────────────────────────────────────── */}
+      <section className="nb-wrap pt-[clamp(2.4rem,5vw,4.2rem)] pb-[clamp(1.8rem,4vw,2.8rem)]">
+        <p className="nb-marker">account made, inbox not yet proven</p>
+        <h1 className="max-w-[17ch]">
+          The link is in your inbox. Go and open it.
+        </h1>
+        <p className="nb-lede mt-[clamp(0.9rem,2vw,1.3rem)]">
+          One click confirms the address is yours and signs you in on the spot.
+          There is no code to copy and no second password to type.
+        </p>
+      </section>
 
-      <section className="mx-auto flex min-h-[100svh] max-w-xl flex-col items-center justify-center px-4 pb-16 pt-28 sm:px-6 sm:pb-20">
-        <Rise className="flex justify-center">
-          <span className="ac-chip inline-flex items-center gap-2">
-            <ShieldCheck className="h-3.5 w-3.5 text-primary" aria-hidden />
-            <span className="ac-eyebrow">One quick step</span>
-          </span>
-        </Rise>
+      {/* ── The address, stamped on the one inverted surface ─────────── */}
+      <section className="nb-slab py-[clamp(1.8rem,4vw,2.8rem)]">
+        <div className="nb-wrap">
+          <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-5">
+            <div className="min-w-0">
+              <p className="nb-slug text-card/85">sent to</p>
+              {/* The address is the page. If it is wrong, nothing else here can
+                  help, so it is set larger than the heading above it. */}
+              <p className="mt-2 font-mono text-[clamp(1.25rem,0.7rem+2.1vw,2.3rem)] font-bold leading-tight [overflow-wrap:anywhere]">
+                {email ?? "the address you signed up with"}
+              </p>
+            </div>
+            <Postmark className="h-[3.6rem] w-[5.4rem] shrink-0 text-card opacity-75" />
+          </div>
 
-        <Rise delay={0.08} className="mt-6 w-full">
-          <div className="ac-glass relative w-full overflow-hidden p-6 sm:p-9">
-            <div
-              aria-hidden
-              className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-[radial-gradient(circle,rgba(26,169,214,0.25),transparent_70%)] blur-2xl"
-            />
+          <div className="nb-hair mt-[clamp(1.2rem,2.6vw,1.8rem)] flex flex-wrap gap-x-9 gap-y-1.5 pt-3.5">
+            <p className="nb-slug text-card/85">one click, no code to copy</p>
+            <p className="nb-slug text-card/85">
+              works on any device, phone included
+            </p>
+          </div>
+        </div>
+      </section>
 
-            <SignalBeacon />
-
-            <h1 className="mt-5 text-balance text-center font-display text-3xl font-extrabold leading-[1.05] sm:text-4xl">
-              Your link is <span style={BRAND_GRADIENT}>on its way.</span>
-            </h1>
-
-            <p className="mx-auto mt-3 max-w-md text-pretty text-center text-base leading-relaxed text-foreground/70">
-              We sent a verification link to{" "}
-              {email ? (
-                <span className="break-all font-semibold text-foreground">{email}</span>
-              ) : (
-                "your inbox"
-              )}
-              . Open it to activate your account — this takes about 30 seconds.
+      {/* ── What to do when it does not arrive ───────────────────────── */}
+      <section className="nb-wrap py-[clamp(2.4rem,5vw,4rem)]">
+        <div className="grid gap-[clamp(1.8rem,4vw,3.4rem)] lg:grid-cols-[minmax(0,1fr)_minmax(0,19rem)]">
+          <div>
+            <h2 className="max-w-[18ch]">Nothing there yet?</h2>
+            <p className="nb-sub mt-3">
+              Work down these in order. Most of the time it is the third one.
             </p>
 
-            {/* progress rail: where you are in sign-up */}
-            <div className="mt-6">
-              <div className="mb-2 flex items-center justify-between text-xs font-medium text-muted-foreground">
-                <span className="inline-flex items-center gap-1.5">
-                  <span aria-hidden className="inline-block h-2 w-2 rounded-full bg-primary" />
-                  Almost in the pit
-                </span>
-                <span className="tabular-nums">Step 3 of 4</span>
-              </div>
-              <div
-                className="h-2 w-full overflow-hidden rounded-full bg-white/60"
-                role="progressbar"
-                aria-valuenow={3}
-                aria-valuemin={1}
-                aria-valuemax={4}
-                aria-label="Sign-up progress: step 3 of 4"
-              >
+            <dl className="nb-list mt-[clamp(1.2rem,2.6vw,1.8rem)]">
+              {CHECKS.map((check) => (
                 <div
-                  className="h-full rounded-full"
-                  style={{ width: "75%", background: "linear-gradient(90deg,var(--primary),var(--accent))" }}
-                />
-              </div>
-            </div>
-
-            {/* what happens next: a 3-step rail */}
-            <RiseGroup className="mt-6 space-y-2.5" stagger={0.07}>
-              {NEXT_STEPS.map((step, i) => (
-                <RiseItem key={step.title}>
-                  <div className="ac-card flex items-start gap-3 p-3.5 text-left">
-                    <span className="relative flex h-10 w-10 shrink-0 items-center justify-center">
-                      <span
-                        className="ac-badge flex h-10 w-10 items-center justify-center"
-                        style={{ "--a": "#2560e6" } as CSSProperties}
-                      >
-                        <step.icon className="h-5 w-5" aria-hidden />
-                      </span>
-                      <span
-                        className="absolute -left-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-white shadow-sm"
-                        aria-hidden
-                      >
-                        {i + 1}
-                      </span>
-                    </span>
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-foreground">{step.title}</p>
-                      <p className="mt-0.5 text-sm leading-relaxed text-muted-foreground">
-                        {step.body}
-                      </p>
-                    </div>
-                  </div>
-                </RiseItem>
-              ))}
-            </RiseGroup>
-
-            {/* reassurance: what awaits */}
-            <div className="mt-6 grid grid-cols-3 gap-2.5">
-              {STATS.map((s) => (
-                <div
-                  key={s.label}
-                  className="ac-tile rounded-2xl p-3 text-center"
-                  style={{ "--a": "#2560e6" } as CSSProperties}
+                  key={check.slug}
+                  className="grid gap-1 border-b border-dashed border-rule py-4 sm:grid-cols-[minmax(0,7rem)_minmax(0,1fr)] sm:gap-6"
                 >
-                  <div className="font-display text-xl font-extrabold text-foreground">
-                    <AnimatedCounter value={s.value} suffix={s.suffix} />
-                  </div>
-                  <p className="mt-0.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                    {s.label}
-                  </p>
+                  <dt className="nb-slug">{check.slug}</dt>
+                  <dd className="max-w-[52ch] text-[0.95rem] leading-snug text-graphite">
+                    {check.text}
+                  </dd>
                 </div>
               ))}
+            </dl>
+          </div>
+
+          {/* The margin. Resending is the fallback, not the instruction, so it
+              is drawn rather than filled: the thing to do is open the inbox. */}
+          <aside className="lg:pt-2">
+            <p className="nb-marker">if all three fail</p>
+
+            <div className="flex flex-col items-start gap-3">
+              {email && <ResendButton email={email} />}
+              <Link href="/login" className="nb-btn-ghost">
+                Already confirmed, sign me in
+              </Link>
             </div>
 
-            <p className="mt-4 text-center text-sm text-muted-foreground">
-              Not seeing it? Check your spam folder, then resend below.
+            <p className="nb-hair mt-6 pt-4 text-[0.95rem] leading-snug text-graphite">
+              Typed the address wrong?{" "}
+              <Link href="/signup" className="nb-link">
+                Fill the roster line in again
+              </Link>{" "}
+              with the right one. Nothing is lost, the half-made account just
+              never gets used.
             </p>
 
-            {/* actions */}
-            <div className="mt-6 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-              {email && <ResendButton email={email} />}
-              <Link href="/login" className="ac-btn-ghost min-h-11 text-sm">
-                Already confirmed? Log in
-              </Link>
-            </div>
+            <p className="mt-4 text-[0.95rem] leading-snug text-graphite">
+              Confirming is only about the account. The guides and articles were
+              never behind a login, so{" "}
+              <Link href="/" className="nb-link">
+                the rest of the site
+              </Link>{" "}
+              is open while you wait.
+            </p>
 
-            <div className="ac-divider mt-8" />
-
-            <div className="mt-6 text-center">
-              <Link
-                href="/"
-                className="inline-flex min-h-11 items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-primary focus-visible:text-primary"
-              >
-                <ArrowLeft className="h-4 w-4" aria-hidden /> Back home
-              </Link>
-            </div>
-          </div>
-        </Rise>
+            <p className="nb-pen mt-7 max-w-[24ch] rotate-[1.1deg]">
+              school mail filters hard. a personal address gets through faster.
+            </p>
+          </aside>
+        </div>
       </section>
-    </div>
+    </>
   );
 }

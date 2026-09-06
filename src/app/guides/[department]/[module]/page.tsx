@@ -1,51 +1,25 @@
 import type { Metadata } from "next";
-import type { CSSProperties } from "react";
 import Link from "next/link";
 import { unstable_cache } from "next/cache";
 import { notFound } from "next/navigation";
-import {
-  ArrowLeft,
-  ArrowRight,
-  BookOpen,
-  ChevronRight,
-  Clock,
-  FileText,
-  Layers,
-  ListTree,
-  Sparkles,
-  SquareStack,
-  Tag,
-} from "lucide-react";
 import {
   getAllDepartmentSlugs,
   getArticles,
   getDepartmentBySlug,
 } from "@/lib/queries";
 import type { DeptWithModules, ModuleRow } from "@/lib/queries";
-import { deptMeta, inkFor } from "@/lib/departments";
 import {
   GLOSSARY,
   glossarySlug,
   hasGlossaryDepth,
   type GlossaryTerm,
 } from "@/lib/glossary-data";
-import { Icon } from "@/lib/icon-map";
 import { JsonLd } from "@/components/json-ld";
-import {
-  Rise,
-  RiseGroup,
-  RiseItem,
-  Reveal,
-  RevealGroup,
-  RevealItem,
-  Hover,
-  Glow,
-} from "@/components/motion/primitives";
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com";
 
 /**
- * The module hub — /guides/<department>/<module>.
+ * The module hub, /guides/<department>/<module>.
  *
  * Every lesson URL already contains this path segment, but the segment itself
  * had no page, so walking a lesson URL upward hit a 404 and ~100 real, linkable
@@ -58,8 +32,8 @@ const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com";
  * Measured against the rendered DOM of all 101 hubs and their 11 parents:
  * 42% of each hub's paragraph-length prose was present VERBATIM on its parent
  * department page (the accordion there renders every module's overview and
- * every lesson title), and one hub — electrical-wiring/motor-controllers-can-bus
- * — had literally zero paragraph-length prose the parent didn't already show.
+ * every lesson title), and one hub, electrical-wiring/motor-controllers-can-bus
+ *, had literally zero paragraph-length prose the parent didn't already show.
  * A hub whose entire body is a subset of its parent is the textbook
  * thin/duplicative pattern, and shipping 101 of those in a day to a two-month
  * old domain is how a site teaches Google to distrust a whole path prefix.
@@ -72,11 +46,11 @@ const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com";
  *      weight) built from facts that differ module to module,
  *   2. the FRC glossary terms this module's own text actually uses, with real
  *      definitions and links to the term pages,
- *   3. the same-named module in other departments — the single most useful
+ *   3. the same-named module in other departments, the single most useful
  *      disambiguation on a site with eight modules called "Worked Examples &
- *      Mini-Projects" — plus the blog articles that genuinely cover the topic.
+ *      Mini-Projects", plus the blog articles that genuinely cover the topic.
  *
- * Fully static/ISR like its neighbours — the content is identical for everyone
+ * Fully static/ISR like its neighbours, the content is identical for everyone
  * and for crawlers, so there is no per-user state here at all (progress rings
  * live on the department and lesson pages, which already hydrate them).
  */
@@ -98,7 +72,7 @@ export async function generateStaticParams() {
 // A bare module title ("Worked Examples & Mini-Projects", "Prerequisites") can
 // not match any real search, exactly like the bare lesson titles the lesson
 // route already qualifies. Titles and descriptions here are DERIVED from the
-// module + department rows — nothing is hardcoded per module.
+// module + department rows, nothing is hardcoded per module.
 
 /** Short topic qualifier per department, used to build query-shaped titles. */
 const DEPT_KEYWORD: Record<string, string> = {
@@ -143,7 +117,7 @@ const kwHead = (kw: string) => kw.split(/[\s&]+/)[0];
 /**
  * "FRC Safety: Safety Worked Examples & Mini-Projects" is the shape a naive
  * prefix produces when the module title already carries the department word.
- * Drop the leading repeat — but only when what's left is still a real phrase,
+ * Drop the leading repeat, but only when what's left is still a real phrase,
  * so "Scouting Fundamentals" never degrades to "Fundamentals".
  */
 function dedupeDeptWord(title: string, kw?: string): string {
@@ -164,13 +138,13 @@ function specificHalf(title: string): string {
 }
 
 /**
- * "FRC CAD: Worked Examples & Mini-Projects — 4 Lessons" — the longest variant
+ * "FRC CAD: Worked Examples & Mini-Projects, 4 Lessons", the longest variant
  * that still fits a ~60-char title tag, falling back to progressively shorter
  * shapes so long module titles degrade instead of getting truncated by Google.
  *
  * Two rules the earlier version got wrong, both measured across all 101 hubs:
  *   • six titles fell off the end of the ladder and shipped the bare module
- *     title — no "FRC", no department, two of them over 62 chars ("Advanced
+ *     title, no "FRC", no department, two of them over 62 chars ("Advanced
  *     Techniques & Case Studies: Building a Hall-of-Fame-Caliber Program", 75).
  *     A module hub that doesn't say which department it belongs to is exactly
  *     the title that can't be told apart from the other seven modules with the
@@ -214,12 +188,12 @@ function moduleTitleTag(title: string, kw: string | undefined, n: number): strin
 }
 
 /**
- * A 145–160 char snippet built from the module's real overview, topped up with
+ * A 145-160 char snippet built from the module's real overview, topped up with
  * the actual lesson titles it contains (which is what a searcher wants to see)
  * rather than boilerplate.
  *
  * The top-up used to be one of three stock sentences ("N free lessons, no
- * signup needed.") and 47 of 101 descriptions ended in one of them — the exact
+ * signup needed.") and 47 of 101 descriptions ended in one of them, the exact
  * repeated tail that makes a batch of pages look machine-stamped. It is now a
  * fact line whose numbers move per module (lesson count, real reading time,
  * department), so the padding is at least information.
@@ -240,7 +214,7 @@ function moduleDescription({
   const n = lessonTitles.length;
   const plural = n === 1 ? "lesson" : "lessons";
 
-  // 1 — the lead: as many whole overview sentences as fit.
+  // 1, the lead: as many whole overview sentences as fit.
   const sents = sentencesOf(overview);
   let lead = "";
   let i = 0;
@@ -266,7 +240,7 @@ function moduleDescription({
   }
   if (lead.length >= DESC_MIN) return lead;
 
-  // 2 — top up. Each tail reserves its own room so the "Covers …" list is sized
+  // 2, top up. Each tail reserves its own room so the "Covers …" list is sized
   // around it rather than crowding it out and forcing the shortest filler.
   const tails =
     minutes > 0
@@ -321,7 +295,7 @@ const moduleMinutes = (m: ModuleRow) =>
 // ─── Orientation prose ─────────────────────────────────────────────────────
 
 /**
- * "Where this module sits" — the one paragraph the department page cannot
+ * "Where this module sits", the one paragraph the department page cannot
  * carry, because it only makes sense from inside a single module. Every clause
  * is a fact read off the catalog (position, neighbours, this module's share of
  * the department's reading time), and which clauses appear depends on the
@@ -397,7 +371,7 @@ type ModuleRef = {
 
 /**
  * Every module in the catalog, slim. Cached as one entry so a hub render costs
- * a single small cache read rather than eleven department fetches — the
+ * a single small cache read rather than eleven department fetches, the
  * department query underneath is itself cached, but the aggregate is what all
  * 101 pages actually want.
  */
@@ -433,7 +407,7 @@ type ArticleRef = {
   readMins: number;
 };
 
-/** Articles without their markdown bodies — the hub only ever links to them. */
+/** Articles without their markdown bodies, the hub only ever links to them. */
 const articleIndex = unstable_cache(
   async (): Promise<ArticleRef[]> =>
     (await getArticles()).map((a) => ({
@@ -463,7 +437,7 @@ const twinNorm = (title: string, kw?: string) => {
 /**
  * The disambiguation block. Eight departments have a module called "Worked
  * Examples & Mini-Projects", eight have "Common Mistakes & Troubleshooting",
- * seven have "Advanced Techniques & Case Studies" — 23 of the 101 hubs share
+ * seven have "Advanced Techniques & Case Studies", 23 of the 101 hubs share
  * a name with at least one sibling elsewhere in the catalog, which is the
  * single most legible reason a crawler (or a reader landing from search) would
  * read these pages as near-duplicates of each other.
@@ -499,7 +473,7 @@ const isAbbrLike = (s: string) => /^[A-Z0-9][A-Z0-9-]{1,5}$/.test(s);
 
 /**
  * Terms that are real glossary entries but so universal in FRC writing that
- * matching them says nothing about a module — "FIRST Robotics Competition"
+ * matching them says nothing about a module, "FIRST Robotics Competition"
  * fired on 47 of 101 hubs before this list existed.
  */
 const TERM_DENY = new Set([
@@ -518,7 +492,7 @@ const TERM_MAX = 5;
  * A hit in a title/overview is "strong" and can stand alone; summary-only hits
  * have to accumulate. Returns [] for the ~a third of modules whose subject the
  * glossary simply doesn't cover (team business, brand identity), which is the
- * honest answer — a wrong definition is worse than no section.
+ * honest answer, a wrong definition is worse than no section.
  */
 function moduleTerms(text: {
   title: string;
@@ -553,7 +527,7 @@ function moduleTerms(text: {
     .map((x) => x.t);
 }
 
-/** First sentence of a definition, clamped — the term page holds the rest. */
+/** First sentence of a definition, clamped, the term page holds the rest. */
 function shortDefinition(def: string): string {
   const first = sentencesOf(def)[0] ?? squash(def);
   if (first.length <= 165) return first;
@@ -584,7 +558,7 @@ const ARTICLE_MAX = 2;
 
 /**
  * Up to two blog articles that really are about this module's subject.
- * Deliberately strict — cosine over the article's title+description+keywords
+ * Deliberately strict, cosine over the article's title+description+keywords
  * against the module's whole text, AND a floor on how much of the article's
  * own keyword set is hit, so "Common Mistakes & Troubleshooting" in the Impact
  * Award department stops matching the CAN-bus article. About a third of
@@ -637,7 +611,7 @@ export async function generateMetadata({
     description,
     alternates: { canonical: url },
     // A module with no published lessons has nothing on it that isn't already
-    // on the department page — it is a routing stub, not a page. None exist
+    // on the department page, it is a routing stub, not a page. None exist
     // today (all 101 modules have 3+ published lessons); this keeps one from
     // silently entering the index if the catalog ever ships an empty module.
     ...(lessons.length === 0 ? { robots: { index: false, follow: true } } : {}),
@@ -677,11 +651,6 @@ export default async function ModulePage({
 
   const prev = index > 0 ? modules[index - 1] : null;
   const next = index < modules.length - 1 ? modules[index + 1] : null;
-
-  const meta = deptMeta(dept.slug);
-  const accent = meta.color;
-  const ink = inkFor(accent);
-  const accentStyle = { "--a": accent } as CSSProperties;
 
   const modulePath = `/guides/${dept.slug}/${mod.slug}`;
   const lessonHref = (slug: string) => `${modulePath}/${slug}`;
@@ -735,8 +704,9 @@ export default async function ModulePage({
     articles
   );
 
+
   return (
-    <div className="relative overflow-x-clip">
+    <>
       <JsonLd
         data={{
           "@context": "https://schema.org",
@@ -794,488 +764,371 @@ export default async function ModulePage({
         }}
       />
 
-      <Glow
-        blobs={[
-          { size: "620px", pos: { left: "-160px", top: "-230px" }, color: accent, opacity: 0.38 },
-          { size: "540px", pos: { right: "-140px", top: "-90px" }, color: "#6ff0ea", opacity: 0.36, delay: 1.8 },
-          { size: "500px", pos: { left: "30%", top: "620px" }, color: "#c8b6ff", opacity: 0.28, delay: 3.6 },
-        ]}
-      />
-
-      {/* ============================ HERO ============================ */}
-      <section className="mx-auto max-w-5xl px-4 pb-6 pt-28 sm:px-6 lg:px-8 lg:pt-32">
-        <Rise>
-          {/* -my-2 + min-h-11: the crumbs are 20px of text, which is a 20px tap
-              target on a phone. The negative margin absorbs the padding so the
-              row still looks like a breadcrumb. */}
-          <nav
-            className="-my-2 flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground"
-            aria-label="Breadcrumb"
+      {/* ================= THE TAB DIVIDER =================
+          A module is the card divider between two sections of the binder, so
+          the top of this page is written on the paper itself: the trail back
+          up, the module's name, what it is, and where it sits. No card, no
+          panel. The first ruled box on the page is the lessons log, which is
+          the thing a person came here to read. */}
+      <section className="nb-wrap pb-[clamp(1.6rem,3vw,2.4rem)] pt-[clamp(1.8rem,4vw,3rem)]">
+        {/* The trail is mono because it is a file path, not a sentence. Each
+            link carries its own 44px target through the padding, and the
+            negative margin gives that padding back to the layout so the row
+            still measures like one line of type. */}
+        <nav aria-label="Breadcrumb" className="nb-slug -my-2 flex flex-wrap items-center gap-x-2">
+          <Link href="/guides" className="inline-flex min-h-11 items-center py-2 hover:text-blue">
+            guides
+          </Link>
+          <span aria-hidden="true">/</span>
+          <Link
+            href={`/guides/${dept.slug}`}
+            className="inline-flex min-h-11 items-center py-2 hover:text-blue"
           >
-            <Link
-              href="/guides"
-              className="inline-flex min-h-11 items-center py-2 transition-colors hover:text-primary"
-            >
-              Guides
-            </Link>
-            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50" aria-hidden />
-            <Link
-              href={`/guides/${dept.slug}`}
-              className="inline-flex min-h-11 items-center py-2 transition-colors hover:text-primary"
-            >
-              {dept.name}
-            </Link>
-            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50" aria-hidden />
-            <span className="font-medium text-foreground">{mod.title}</span>
-          </nav>
-        </Rise>
+            {dept.slug}
+          </Link>
+          <span aria-hidden="true">/</span>
+          <span className="inline-flex min-h-11 items-center py-2 font-bold text-ink">
+            {mod.slug}
+          </span>
+        </nav>
 
-        <RiseGroup className="mt-6">
-          <RiseItem>
-            <div className="flex flex-wrap items-center gap-2.5">
-              <Link
-                href={`/guides/${dept.slug}`}
-                className="ac-chip inline-flex min-h-11 items-center gap-2 !py-1 !pl-1.5 !pr-3.5 transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                style={accentStyle}
-              >
-                <span
-                  className="ac-badge flex h-7 w-7 items-center justify-center rounded-full"
-                  style={accentStyle}
-                >
-                  <Icon name={meta.icon} className="h-4 w-4" />
-                </span>
-                <span className="text-sm font-medium">{dept.name}</span>
-              </Link>
-              <span className="ac-chip inline-flex items-center gap-1.5 text-xs">
-                {isPre ? (
-                  <Sparkles className="h-3.5 w-3.5" style={{ color: ink }} aria-hidden />
-                ) : (
-                  <Layers className="h-3.5 w-3.5" style={{ color: ink }} aria-hidden />
-                )}
-                <span className="font-medium">
-                  {isPre
-                    ? "Start here · Prerequisite module"
-                    : `Module ${label} of ${modules.length}`}
-                </span>
-              </span>
+        <p className="nb-marker mt-[clamp(1.1rem,2.4vw,1.7rem)]">
+          {isPre ? "start here, before the numbered modules" : `module ${label} of ${modules.length}`}
+        </p>
+
+        <h1 className="max-w-[18ch]">{mod.title}</h1>
+
+        <p className="nb-lede mt-[clamp(0.9rem,1.8vw,1.3rem)]">{overview}</p>
+
+        {/* The orientation paragraph: where this module sits, who it follows,
+            what share of the guide it is. Set narrower and in graphite so it
+            reads as the note under the overview rather than a second lede. */}
+        <p className="mt-4 max-w-[58ch] text-[0.97rem] leading-relaxed text-graphite">
+          {fit}
+        </p>
+
+        {/* Figures ruled straight across the page, the way a spec block is
+            typed at the top of a drawing. Deliberately not a card: the only
+            cards on this page hold things you can open. */}
+        <dl className="nb-rule mt-[clamp(1.5rem,3vw,2.2rem)] grid grid-cols-2 gap-x-[clamp(1rem,3vw,2.5rem)] gap-y-4 pt-4 sm:grid-cols-4">
+          <div>
+            <dt className="nb-slug">lessons here</dt>
+            <dd className="nb-count mt-1.5">{lessons.length}</dd>
+          </div>
+          {totalMinutes > 0 && (
+            <div>
+              <dt className="nb-slug">reading time</dt>
+              <dd className="nb-count mt-1.5">
+                {totalMinutes}
+                <small>min</small>
+              </dd>
             </div>
-          </RiseItem>
-
-          <RiseItem>
-            <h1 className="mt-5 text-balance font-display text-3xl font-extrabold leading-[1.06] tracking-tight sm:text-4xl lg:text-[2.9rem]">
-              <span
-                style={{
-                  background: `linear-gradient(120deg, ${ink}, var(--accent))`,
-                  WebkitBackgroundClip: "text",
-                  backgroundClip: "text",
-                  color: "transparent",
-                }}
-              >
-                {mod.title}
-              </span>
-            </h1>
-          </RiseItem>
-
-          <RiseItem>
-            <p className="mt-4 max-w-2xl text-pretty text-lg leading-relaxed text-foreground/75">
-              {overview}
-            </p>
-          </RiseItem>
-
-          {/* The orientation paragraph — the part of this page that only makes
-              sense from inside the module, and the reason it isn't a subset of
-              the department page. */}
-          <RiseItem>
-            <p className="mt-3 max-w-2xl text-pretty leading-relaxed text-muted-foreground">
-              {fit}
-            </p>
-          </RiseItem>
-
-          <RiseItem>
-            <div className="mt-6 flex flex-wrap items-center gap-2.5">
-              <span className="ac-chip inline-flex items-center gap-1.5 text-sm">
-                <BookOpen className="h-4 w-4" style={{ color: ink }} aria-hidden />
-                {lessons.length} {lessons.length === 1 ? "lesson" : "lessons"}
-              </span>
-              {totalMinutes > 0 && (
-                <span className="ac-chip inline-flex items-center gap-1.5 text-sm">
-                  <Clock className="h-4 w-4" style={{ color: ink }} aria-hidden />~
-                  {totalMinutes} min
-                </span>
-              )}
-              <span className="ac-chip inline-flex items-center gap-1.5 text-sm">
-                <Layers className="h-4 w-4" style={{ color: ink }} aria-hidden />
-                {deptLessonTotal} lessons in this guide
-              </span>
-            </div>
-          </RiseItem>
-
-          {lessons.length > 0 && (
-            <RiseItem>
-              <div className="mt-7 flex flex-wrap items-center gap-3">
-                <Link href={lessonHref(lessons[0].slug)} className="ac-btn text-sm">
-                  Start with {lessons.length === 1 ? "this lesson" : "lesson 1"}
-                  <ArrowRight className="h-4 w-4" aria-hidden />
-                </Link>
-                <Link href={`/guides/${dept.slug}`} className="ac-btn-ghost text-sm">
-                  All of {dept.name}
-                </Link>
-              </div>
-            </RiseItem>
           )}
-        </RiseGroup>
+          <div>
+            <dt className="nb-slug">modules in {dept.slug}</dt>
+            <dd className="nb-count mt-1.5">{modules.length}</dd>
+          </div>
+          <div>
+            <dt className="nb-slug">lessons in the guide</dt>
+            <dd className="nb-count mt-1.5">{deptLessonTotal}</dd>
+          </div>
+        </dl>
+
+        {lessons.length > 0 && (
+          <div className="mt-[clamp(1.4rem,2.8vw,2rem)] flex flex-wrap items-center gap-3">
+            <Link href={lessonHref(lessons[0].slug)} className="nb-btn">
+              {lessons.length === 1 ? "Open the lesson" : "Start at lesson 01"}
+            </Link>
+            <Link href={`/guides/${dept.slug}`} className="nb-btn-ghost">
+              All of {dept.name}
+            </Link>
+          </div>
+        )}
       </section>
 
-      {/* ========================== THE LESSONS ========================= */}
-      <section className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
-        <Reveal className="mb-5 flex items-end justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <span
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
-              style={{
-                background: `color-mix(in srgb, ${accent} 14%, transparent)`,
-                color: ink,
-              }}
-            >
-              <ListTree className="h-5 w-5" aria-hidden />
-            </span>
-            <div>
-              <p className="ac-eyebrow">In this module</p>
-              <h2 className="mt-0.5 font-display text-2xl font-bold">
-                {lessons.length} {lessons.length === 1 ? "lesson" : "lessons"}
-              </h2>
-            </div>
+      {/* ================= THE LESSONS =================
+          A carbon-copy log, not a stack of cards. Every row is one lesson and
+          the whole row is the target: the slug and read time on the left, the
+          title and what it covers in the middle, the word you click on the
+          right. Eight of these read as a list you can run your finger down;
+          eight cards read as eight decisions. */}
+      <section className="nb-wrap pb-[clamp(2rem,4vw,3rem)]" aria-labelledby="lessons-heading">
+        <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+          <div>
+            <p className="nb-marker">what is behind this tab</p>
+            <h2 id="lessons-heading" className="max-w-[20ch]">
+              {lessons.length} {lessons.length === 1 ? "lesson" : "lessons"}, in the order they were written.
+            </h2>
           </div>
-        </Reveal>
+          {lessons.length > 1 && (
+            <p className="nb-pen max-w-[20ch] rotate-[1.4deg] text-right">
+              you can read them out of order, nothing is locked
+            </p>
+          )}
+        </div>
 
         {lessons.length > 0 ? (
-          <RevealGroup className="space-y-3">
+          <ol className="nb-list mt-[clamp(1.2rem,2.4vw,1.8rem)]">
             {lessons.map((l, i) => (
-              <RevealItem key={l.id}>
-                <Hover className="h-full" lift={-3}>
-                  <Link
-                    href={lessonHref(l.slug)}
-                    className="ac-card group flex items-start gap-4 p-5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                  >
-                    <span
-                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border font-display text-sm font-semibold tabular-nums transition-transform duration-300 group-hover:scale-105"
-                      style={{
-                        color: ink,
-                        borderColor: `color-mix(in srgb, ${accent} 40%, transparent)`,
-                        background: `color-mix(in srgb, ${accent} 12%, transparent)`,
-                      }}
-                    >
-                      {String(i + 1).padStart(2, "0")}
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block font-display text-[17px] font-bold leading-snug tracking-tight text-foreground group-hover:text-primary">
-                        {l.title}
+              <li key={l.id}>
+                <Link href={lessonHref(l.slug)} className="nb-row">
+                  <span className="nb-slug">
+                    lesson {String(i + 1).padStart(2, "0")}
+                    {l.estimated_minutes ? ` / ${l.estimated_minutes} min` : ""}
+                  </span>
+                  <span className="min-w-0">
+                    <h3>{l.title}</h3>
+                    {l.summary && (
+                      <span className="mt-1.5 block max-w-[62ch] text-[0.94rem] leading-snug text-graphite">
+                        {l.summary}
                       </span>
-                      {l.summary && (
-                        <span className="mt-1.5 block text-pretty text-sm leading-relaxed text-muted-foreground">
-                          {l.summary}
-                        </span>
-                      )}
-                      {l.estimated_minutes ? (
-                        <span className="mt-2 inline-flex items-center gap-1 text-xs text-muted-foreground">
-                          <Clock className="h-3 w-3" aria-hidden />
-                          <span className="tabular-nums">{l.estimated_minutes}</span> min
-                          read
-                        </span>
-                      ) : null}
-                    </span>
-                    <ArrowRight
-                      className="mt-1 hidden h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-primary sm:block"
-                      aria-hidden
-                    />
-                  </Link>
-                </Hover>
-              </RevealItem>
+                    )}
+                  </span>
+                  <span className="nb-slug hidden sm:block">read it</span>
+                </Link>
+              </li>
             ))}
-          </RevealGroup>
+          </ol>
         ) : (
-          <Reveal>
-            <p className="ac-card p-5 text-sm text-muted-foreground">
-              This module doesn&apos;t have published lessons yet.{" "}
-              <Link href={`/guides/${dept.slug}`} className="underline hover:text-primary">
-                Browse the rest of {dept.name}
-              </Link>
-              .
+          <div className="nb-note mt-[clamp(1.2rem,2.4vw,1.8rem)] max-w-[46rem]">
+            <p className="nb-slug">nothing filed here yet</p>
+            <p className="mt-2 text-[0.97rem] leading-relaxed">
+              This module has no published lessons.{" "}
+              <Link href={`/guides/${dept.slug}`} className="nb-link">
+                Read the rest of {dept.name}
+              </Link>{" "}
+              while it gets written.
             </p>
-          </Reveal>
+          </div>
         )}
 
-        {/* prev / next module */}
-        <RevealGroup className="mt-10 grid gap-4 sm:grid-cols-2">
-          <RevealItem>
-            <Hover className="h-full" lift={-3}>
-              <Link
-                href={prev ? `/guides/${dept.slug}/${prev.slug}` : `/guides/${dept.slug}`}
-                className="ac-card group flex h-full items-center gap-3 p-5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-              >
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground transition-colors group-hover:border-primary/50 group-hover:text-primary">
-                  <ArrowLeft
-                    className="h-4 w-4 transition-transform group-hover:-translate-x-0.5"
-                    aria-hidden
-                  />
-                </span>
-                <span className="min-w-0">
-                  <small className="ac-eyebrow block">
-                    {prev ? "Previous module" : "Department"}
-                  </small>
-                  <span className="line-clamp-1 font-display font-semibold group-hover:text-primary">
-                    {prev ? prev.title : dept.name}
-                  </span>
-                </span>
-              </Link>
-            </Hover>
-          </RevealItem>
-          <RevealItem>
-            <Hover className="h-full" lift={-3}>
-              <Link
-                href={next ? `/guides/${dept.slug}/${next.slug}` : `/guides/${dept.slug}`}
-                className="ac-card group flex h-full flex-row-reverse items-center gap-3 p-5 text-right focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-              >
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground transition-colors group-hover:border-primary/50 group-hover:text-primary">
-                  <ArrowRight
-                    className="h-4 w-4 transition-transform group-hover:translate-x-0.5"
-                    aria-hidden
-                  />
-                </span>
-                <span className="min-w-0">
-                  <small className="ac-eyebrow block">
-                    {next ? "Next module" : "Finish"}
-                  </small>
-                  <span className="line-clamp-1 font-display font-semibold group-hover:text-primary">
-                    {next ? next.title : `Back to ${dept.name}`}
-                  </span>
-                </span>
-              </Link>
-            </Hover>
-          </RevealItem>
-        </RevealGroup>
+        {/* Where this tab hands over. One box torn across the page rather than
+            two cards, because previous and next are one movement through the
+            binder, not two separate offers. */}
+        <div className="nb-box mt-[clamp(1.8rem,3.5vw,2.8rem)] grid sm:grid-cols-2">
+          <Link
+            href={prev ? `/guides/${dept.slug}/${prev.slug}` : `/guides/${dept.slug}`}
+            className="nb-panel gap-1.5 no-underline"
+          >
+            <span className="nb-slug">
+              {prev ? "← the module before" : "← up to the department"}
+            </span>
+            <h3 className="mt-1">{prev ? prev.title : dept.name}</h3>
+          </Link>
+          <Link
+            href={next ? `/guides/${dept.slug}/${next.slug}` : `/guides/${dept.slug}`}
+            className="nb-panel gap-1.5 no-underline sm:text-right"
+          >
+            <span className="nb-slug">
+              {next ? "the module after →" : "back to the department →"}
+            </span>
+            <h3 className="mt-1">{next ? next.title : dept.name}</h3>
+          </Link>
+        </div>
       </section>
 
-      {/* ======================= TERMS IN THIS MODULE ==================== */}
+      {/* ================= JARGON =================
+          A taped index card of the terms this module's own text actually uses.
+          A card, because a definition list is a thing you pull out and keep
+          beside the lesson, and because after two ruled sections the page
+          needs something that sits on top of the paper. */}
       {terms.length > 0 && (
-        <section className="mx-auto max-w-5xl px-4 pb-4 sm:px-6 lg:px-8">
-          <Reveal>
-            <div className="ac-card p-6" style={accentStyle}>
-              <div className="flex items-center gap-3">
-                <span
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
-                  style={{
-                    background: `color-mix(in srgb, ${accent} 14%, transparent)`,
-                    color: ink,
-                  }}
-                >
-                  <Tag className="h-5 w-5" aria-hidden />
-                </span>
-                <div className="min-w-0">
-                  <p className="ac-eyebrow">Jargon check</p>
-                  <h2 className="mt-0.5 text-balance font-display text-xl font-bold">
-                    FRC terms used in {mod.title}
-                  </h2>
-                </div>
-              </div>
-              <ul className="mt-4 grid gap-2 sm:grid-cols-2">
-                {terms.map((t) => (
-                  <li key={t.term}>
+        <section className="nb-wrap pb-[clamp(2rem,4vw,3rem)]" aria-labelledby="terms-heading">
+          <div className="nb-box nb-tilt-3 relative p-[clamp(1.2rem,2.6vw,2rem)]">
+            {/* Inline transform, not a utility: the reduced-motion block in
+                globals.css flattens `.nb-tape` by overriding `transform`, and
+                an inline declaration is what that override is written against. */}
+            <span
+              className="nb-tape -top-3 left-[12%]"
+              style={{ transform: "rotate(-4.2deg)" }}
+              aria-hidden="true"
+            />
+            <span
+              className="nb-tape -bottom-3 right-[16%]"
+              style={{ transform: "rotate(2.8deg)" }}
+              aria-hidden="true"
+            />
+
+            <p className="nb-slug">words this module uses without explaining</p>
+            <h2 id="terms-heading" className="mt-2 max-w-[24ch] text-[clamp(1.4rem,1.1rem+1vw,2rem)]">
+              The {terms.length === 1 ? "term" : "terms"} to look up first
+            </h2>
+
+            <dl className="mt-[clamp(1rem,2vw,1.5rem)] grid gap-0 sm:grid-cols-2 sm:gap-x-[clamp(1.2rem,3vw,2.4rem)]">
+              {terms.map((t) => (
+                <div key={t.term} className="nb-hair py-3 first:border-t-0 sm:[&:nth-child(2)]:border-t-0">
+                  <dt>
                     <Link
                       href={`/glossary/${glossarySlug(t.term)}`}
-                      className="flex h-full min-h-11 flex-col justify-center rounded-xl px-3 py-3 transition-colors hover:bg-muted/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                      className="nb-link inline-flex min-h-11 items-center font-bold"
                     >
-                      <span className="font-display text-[15px] font-semibold text-foreground">
-                        {t.term}
-                        {/* Only when the abbreviation adds something — "CAN bus"
-                            already contains "CAN" — and always with a real space
-                            in the text node, not just a CSS margin. */}
-                        {t.abbr && !looseRe(t.abbr).test(t.term) ? (
-                          <>
-                            {" "}
-                            <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                              {t.abbr}
-                            </span>
-                          </>
-                        ) : null}
-                      </span>
-                      <span className="mt-1 text-pretty text-sm leading-relaxed text-muted-foreground">
-                        {shortDefinition(t.definition)}
-                      </span>
+                      {t.term}
+                      {/* Only when the abbreviation adds something: "CAN bus"
+                          already contains "CAN". The space is a real text node,
+                          not a CSS margin, so it survives copy and paste. */}
+                      {t.abbr && !looseRe(t.abbr).test(t.term) ? (
+                        <>
+                          {" "}
+                          <span className="nb-slug ml-2 normal-case">{t.abbr}</span>
+                        </>
+                      ) : null}
                     </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </Reveal>
-        </section>
-      )}
-
-      {/* ============ SAME MODULE NAME IN OTHER DEPARTMENTS ============= */}
-      {twins.length > 0 && (
-        <section className="mx-auto max-w-5xl px-4 py-4 sm:px-6 lg:px-8">
-          <Reveal>
-            <div className="ac-card p-6">
-              <div className="flex items-center gap-3">
-                <span
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
-                  style={{
-                    background: `color-mix(in srgb, ${accent} 14%, transparent)`,
-                    color: ink,
-                  }}
-                >
-                  <SquareStack className="h-5 w-5" aria-hidden />
-                </span>
-                <div className="min-w-0">
-                  <p className="ac-eyebrow">Not the one you wanted?</p>
-                  {/* Deliberately does not quote this module's own title: a
-                      few of these clusters are near-matches ("Common Safety
-                      Mistakes & Troubleshooting" vs "Common Mistakes &
-                      Troubleshooting"), and claiming the others carry this
-                      exact name would be wrong. */}
-                  <h2 className="mt-0.5 text-balance font-display text-xl font-bold">
-                    {twins.length === 1
-                      ? "One other department uses this module name"
-                      : `${twins.length} other departments use this module name`}
-                  </h2>
+                  </dt>
+                  <dd className="max-w-[46ch] text-[0.94rem] leading-snug text-graphite">
+                    {shortDefinition(t.definition)}
+                  </dd>
                 </div>
-              </div>
-              <p className="mt-3 text-pretty text-sm leading-relaxed text-muted-foreground">
-                This is the {dept.name} one — {lessons.length}{" "}
-                {lessons.length === 1 ? "lesson" : "lessons"}
-                {totalMinutes > 0 ? `, about ${totalMinutes} minutes` : ""}. The{" "}
-                {twins.length === 1 ? "department" : "departments"} below run a module by the same
-                name over completely different material.
-              </p>
-              <ul className="mt-4 grid gap-1.5 sm:grid-cols-2">
-                {twins.map((t) => (
-                  <li key={`${t.dept}/${t.slug}`} className="min-w-0">
-                    <Link
-                      href={`/guides/${t.dept}/${t.slug}`}
-                      className="flex min-h-11 items-center gap-2 rounded-xl px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                    >
-                      <ChevronRight className="h-4 w-4 shrink-0" aria-hidden />
-                      <span className="min-w-0 flex-1 truncate">{t.deptName}</span>
-                      <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
-                        {t.lessons}
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </Reveal>
+              ))}
+            </dl>
+          </div>
         </section>
       )}
 
-      {/* ===================== RELATED LONGER READS ===================== */}
-      {related.length > 0 && (
-        <section className="mx-auto max-w-5xl px-4 py-4 sm:px-6 lg:px-8">
-          <Reveal className="mb-4 flex items-center gap-3">
-            <span
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
-              style={{
-                background: `color-mix(in srgb, ${accent} 14%, transparent)`,
-                color: ink,
-              }}
-            >
-              <FileText className="h-5 w-5" aria-hidden />
-            </span>
-            <div>
-              <p className="ac-eyebrow">Longer reads</p>
-              <h2 className="mt-0.5 font-display text-xl font-bold">
-                Articles that go deeper on this
-              </h2>
-            </div>
-          </Reveal>
-          <RevealGroup className="grid gap-4 sm:grid-cols-2">
-            {related.map((a) => (
-              <RevealItem key={a.slug}>
-                <Hover className="h-full" lift={-3}>
+      {/* ================= NOT THIS ONE? =================
+          Eight departments run a module called "Worked Examples &
+          Mini-Projects". A margin note is the right weight for that: it is a
+          correction to a wrong turn, not a section of the guide. */}
+      {twins.length > 0 && (
+        <section className="nb-wrap pb-[clamp(2rem,4vw,3rem)]" aria-labelledby="twins-heading">
+          <div className="nb-note max-w-[52rem]">
+            <p className="nb-slug">landed on the wrong one?</p>
+            {/* Deliberately does not quote this module's own title: a few of
+                these clusters are near-matches, and claiming the others carry
+                this exact name would be wrong. */}
+            <h2 id="twins-heading" className="mt-1.5 text-[clamp(1.05rem,1rem+0.4vw,1.3rem)]">
+              {twins.length === 1
+                ? "One other department uses this module name"
+                : `${twins.length} other departments use this module name`}
+            </h2>
+            <p className="mt-2 max-w-[58ch] text-[0.94rem] leading-snug text-graphite">
+              This is the {dept.name} one: {lessons.length}{" "}
+              {lessons.length === 1 ? "lesson" : "lessons"}
+              {totalMinutes > 0 ? `, about ${totalMinutes} minutes` : ""}. The{" "}
+              {twins.length === 1 ? "module" : "modules"} below share the name over
+              completely different material.
+            </p>
+            <ul className="mt-3 grid gap-0 sm:grid-cols-2 sm:gap-x-6">
+              {twins.map((t) => (
+                <li key={`${t.dept}/${t.slug}`} className="nb-hair min-w-0 first:border-t-0 sm:[&:nth-child(2)]:border-t-0">
                   <Link
-                    href={`/blog/${a.slug}`}
-                    className="ac-card group flex h-full flex-col p-5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                    href={`/guides/${t.dept}/${t.slug}`}
+                    className="flex min-h-11 items-baseline gap-3 py-1.5 no-underline hover:text-blue"
                   >
-                    <span className="font-display text-[16px] font-bold leading-snug tracking-tight text-foreground group-hover:text-primary">
-                      {a.title}
+                    <span className="min-w-0 flex-1 truncate text-[0.95rem] font-bold">
+                      {t.deptName}
                     </span>
-                    <span className="mt-1.5 text-pretty text-sm leading-relaxed text-muted-foreground">
-                      {a.description}
-                    </span>
-                    <span className="mt-3 inline-flex items-center gap-1 text-xs text-muted-foreground">
-                      <Clock className="h-3 w-3" aria-hidden />
-                      <span className="tabular-nums">{a.readMins}</span> min read
+                    <span className="nb-slug shrink-0">
+                      {t.lessons} {t.lessons === 1 ? "lesson" : "lessons"}
                     </span>
                   </Link>
-                </Hover>
-              </RevealItem>
-            ))}
-          </RevealGroup>
+                </li>
+              ))}
+            </ul>
+          </div>
         </section>
       )}
 
-      {/* ===================== SIBLING MODULE INDEX ===================== */}
-      {modules.length > 1 && (
-        <section className="mx-auto max-w-5xl px-4 pb-16 pt-4 sm:px-6 lg:px-8">
-          <Reveal>
-            <div className="ac-card p-6" style={accentStyle}>
-              <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <h2 className="font-display text-xl font-bold">
-                  All {modules.length} modules in {dept.name}
-                </h2>
-                <Link
-                  href={`/guides/${dept.slug}`}
-                  className="-my-2 inline-flex min-h-11 items-center py-2 text-sm font-medium text-muted-foreground underline-offset-4 transition-colors hover:text-primary hover:underline"
-                >
-                  Department overview
+      {/* ================= LONGER READS =================
+          Articles are the in-the-pit companion to a module's theory. Two rows,
+          same log form as the lessons above, so it is obvious these are the
+          same kind of thing pointing somewhere else. */}
+      {related.length > 0 && (
+        <section className="nb-wrap pb-[clamp(2rem,4vw,3rem)]" aria-labelledby="reads-heading">
+          <p className="nb-marker">when it breaks, not how it works</p>
+          <h2 id="reads-heading" className="max-w-[22ch] text-[clamp(1.4rem,1.1rem+1.1vw,2.1rem)]">
+            {related.length === 1
+              ? "An article that goes deeper on this"
+              : "Articles that go deeper on this"}
+          </h2>
+          <ul className="nb-list mt-[clamp(1rem,2vw,1.5rem)]">
+            {related.map((a) => (
+              <li key={a.slug}>
+                <Link href={`/blog/${a.slug}`} className="nb-row">
+                  <span className="nb-slug">article / {a.readMins} min</span>
+                  <span className="min-w-0">
+                    <h3>{a.title}</h3>
+                    <span className="mt-1.5 block max-w-[62ch] text-[0.94rem] leading-snug text-graphite">
+                      {a.description}
+                    </span>
+                  </span>
+                  <span className="nb-slug hidden sm:block">read it</span>
                 </Link>
-              </div>
-              <ul className="mt-4 grid gap-1.5 sm:grid-cols-2">
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {/* ================= THE DEPARTMENT INDEX =================
+          The index page at the front of the binder, so it is set as a real
+          table: number, module, lessons. The current row is marked three ways
+          (a "you are here" figure, bold ink, and a blue bar) because state
+          that only exists as colour disappears on a photocopy. */}
+      {modules.length > 1 && (
+        <section className="nb-wrap pb-[clamp(2.6rem,5vw,4rem)]" aria-labelledby="index-heading">
+          <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
+            <h2 id="index-heading" className="text-[clamp(1.4rem,1.1rem+1.1vw,2.1rem)]">
+              All {modules.length} modules in {dept.name}
+            </h2>
+            <Link href={`/guides/${dept.slug}`} className="nb-link nb-slug inline-flex min-h-11 items-center">
+              department overview
+            </Link>
+          </div>
+
+          <div className="nb-scroll mt-[clamp(1rem,2vw,1.5rem)]">
+            <table className="nb-table">
+              <caption className="sr-only">
+                Every module in {dept.name}, with its lesson count. The current
+                module is marked.
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col" className="w-[5.5rem]">
+                    no.
+                  </th>
+                  <th scope="col">module</th>
+                  <th scope="col" className="text-right">
+                    lessons
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
                 {modules.map((m, mi) => {
                   const current = m.slug === mod.slug;
                   const count = m.lessons?.length ?? 0;
-                  const inner = (
-                    <>
-                      <span
-                        className="w-8 shrink-0 text-xs font-semibold tabular-nums"
-                        style={{ color: ink }}
-                      >
-                        {m.is_prerequisite ? "Pre" : labels[mi].padStart(2, "0")}
-                      </span>
-                      <span className="min-w-0 flex-1 truncate">{m.title}</span>
-                      <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
-                        {count}
-                      </span>
-                    </>
-                  );
                   return (
-                    // min-w-0: a grid item defaults to min-width:min-content,
-                    // so without this the truncating title pushes the row wider
-                    // than its column instead of ellipsing.
-                    <li key={m.id} className="min-w-0">
-                      {current ? (
-                        <span
-                          aria-current="page"
-                          className="flex min-h-11 items-center gap-2 rounded-xl bg-primary/10 px-3 py-2 text-sm font-medium text-primary"
-                        >
-                          {inner}
+                    <tr key={m.id} {...(current ? { "aria-current": "page" as const } : {})}>
+                      <td className="align-baseline">
+                        <span className="nb-slug">
+                          {m.is_prerequisite ? "pre" : labels[mi].padStart(2, "0")}
                         </span>
-                      ) : (
-                        <Link
-                          href={`/guides/${dept.slug}/${m.slug}`}
-                          className="flex min-h-11 items-center gap-2 rounded-xl px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                        >
-                          {inner}
-                        </Link>
-                      )}
-                    </li>
+                      </td>
+                      <td className="align-baseline">
+                        {current ? (
+                          <span className="flex items-baseline gap-3 border-l-[3px] border-blue pl-3 font-bold">
+                            {m.title}
+                            <span className="nb-slug shrink-0 text-blue">you are here</span>
+                          </span>
+                        ) : (
+                          <Link
+                            href={`/guides/${dept.slug}/${m.slug}`}
+                            className="inline-flex min-h-11 items-center pl-3 no-underline hover:text-blue"
+                          >
+                            {m.title}
+                          </Link>
+                        )}
+                      </td>
+                      <td className="pr-0 text-right align-baseline">
+                        <span className="nb-slug">{count}</span>
+                      </td>
+                    </tr>
                   );
                 })}
-              </ul>
-            </div>
-          </Reveal>
+              </tbody>
+            </table>
+          </div>
         </section>
       )}
-    </div>
+    </>
   );
 }

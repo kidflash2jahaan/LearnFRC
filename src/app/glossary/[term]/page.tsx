@@ -3,18 +3,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
-  ArrowLeft,
-  ArrowRight,
-  BookA,
-  BookOpen,
-  ChevronRight,
-  ExternalLink,
-  GraduationCap,
-  Sparkles,
-  Tags,
-  Target,
-} from "lucide-react";
-import {
   GLOSSARY,
   glossarySlug,
   hasGlossaryDepth,
@@ -22,8 +10,6 @@ import {
 } from "@/lib/glossary-data";
 import { getAllDepartmentSlugs, getDepartmentBySlug, flattenLessons } from "@/lib/queries";
 import { JsonLd } from "@/components/json-ld";
-import { inkFor } from "@/lib/departments";
-import { RiseGroup, RiseItem, Reveal, RevealGroup, RevealItem, Hover, Glow } from "@/components/motion/primitives";
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com";
 
@@ -32,27 +18,14 @@ const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com";
 // catalog moves; content edits still push live via /api/revalidate.
 export const revalidate = 86400;
 
-const GRADIENT_TEXT: CSSProperties = {
-  background: "linear-gradient(120deg,#2560e6,#1aa9d6)",
-  WebkitBackgroundClip: "text",
-  backgroundClip: "text",
-  color: "transparent",
-};
-
-// Category → accent color, mirroring the browse grid's palette so a term's
-// detail page reads as the same family as its card.
-const CATEGORY_COLOR: Record<string, string> = {
-  General: "#22d3ee",
-  "Competition & Game": "#ff8a3d",
-  Software: "#b16bff",
-  Electrical: "#ffe53d",
-  Mechanical: "#ff6b5d",
-  "Sensors & Controls": "#2dd4bf",
-  Awards: "#ffd23d",
-  "Data & Scouting": "#5dff9b",
-  Community: "#ff5db1",
-};
-const DEFAULT_COLOR = "#2560e6";
+/**
+ * The related-terms wall. Uneven spans and four different angles, because a
+ * wall of cards that all measure the same and all hang straight is a grid, and
+ * a grid says these four are interchangeable. They are not: they are four
+ * cards somebody pinned up in whatever order they came to hand.
+ */
+const RELATED_SPANS = [7, 5, 5, 7];
+const RELATED_TILTS = ["nb-tilt-1", "nb-tilt-2", "nb-tilt-3", "nb-tilt-4"];
 
 // Slug → term, built once. Also the lookup for generateStaticParams and the
 // page/metadata resolvers, so every path here agrees on slugs.
@@ -73,11 +46,11 @@ type LessonMatch = {
 
 /**
  * Every published lesson, flattened to the fields needed for matching and for
- * rendering a link. Built from the existing cached catalog helpers — no new
+ * rendering a link. Built from the existing cached catalog helpers, so no new
  * query surface, and no lesson `content` (the list columns are enough, and
  * pulling 400 markdown bodies to fuzzy-match a glossary term would be absurd).
  *
- * Sorted by path so the index — and therefore every tie-break below it — is
+ * Sorted by path so the index, and therefore every tie-break below it, is
  * deterministic regardless of what order Postgres hands back the departments.
  */
 const lessonIndex = cache(async (): Promise<LessonMatch[]> => {
@@ -112,18 +85,18 @@ const SUMMARY_HIT = 3;
 const PHRASE_WEIGHT = 1.5;
 /**
  * Floor for showing a lesson at all: one title hit, or two summary hits. Set
- * deliberately high — on a page whose whole job is to send readers somewhere
+ * deliberately high. On a page whose whole job is to send readers somewhere
  * useful, a wrong link costs more than an empty section.
  */
 const MIN_SCORE = 6;
 const MAX_LESSONS = 3;
 
 /**
- * The 2–3 lessons that genuinely cover this term, scored against real lesson
- * titles and summaries at build time. Returns [] when nothing clears the bar —
- * several terms (KitBot, Rookie All-Star) have no lesson that actually
- * discusses them, and an honest empty section beats a plausible-looking wrong
- * link.
+ * The two or three lessons that genuinely cover this term, scored against real
+ * lesson titles and summaries at build time. Returns [] when nothing clears
+ * the bar: several terms (KitBot, Rookie All-Star) have no lesson that
+ * actually discusses them, and an honest empty section beats a
+ * plausible-looking wrong link.
  */
 function matchLessons(t: GlossaryTerm, index: LessonMatch[]): LessonMatch[] {
   const cues = t.lessonCues ?? [];
@@ -198,9 +171,9 @@ function relatedTerms(self: GlossaryTerm, n = 4): GlossaryTerm[] {
 /* ───────────────────────────── metadata ────────────────────────────── */
 
 /**
- * A clean 140–160 char meta description built only from the term + its real
- * definition (never fabricated), with a neutral site tail to reach length and
- * a word-boundary trim when the combined text runs long.
+ * A clean 140 to 160 character meta description built only from the term and
+ * its real definition (never fabricated), with a neutral site tail to reach
+ * length and a word-boundary trim when the combined text runs long.
  */
 function buildDescription(t: GlossaryTerm): string {
   const MAX = 160;
@@ -248,7 +221,7 @@ export async function generateMetadata({
     alternates: { canonical: url },
     // A term with no hand-written "in a match" section is a definition and
     // nothing more. It still renders for anyone who browses to it, but it
-    // doesn't go in the index — thin pages at this scale are a real liability.
+    // doesn't go in the index: thin pages at this scale are a real liability.
     ...(hasGlossaryDepth(t) ? {} : { robots: { index: false, follow: true } }),
     openGraph: {
       title: `${t.term} — FRC Glossary`,
@@ -260,6 +233,16 @@ export async function generateMetadata({
   };
 }
 
+/**
+ * One term.
+ *
+ * A glossary entry IS an index card, so this is the one page in the binder
+ * where the card is not a container for the content but the content itself:
+ * the term, the drawer it is filed in, and the definition, on a single taped
+ * card at the top of the sheet. Everything under it is what a person does
+ * next, in the order they would want it: what the term looks like in a real
+ * match, the lessons that use it, and the cards filed nearest to this one.
+ */
 export default async function GlossaryTermPage({
   params,
 }: {
@@ -271,13 +254,13 @@ export default async function GlossaryTermPage({
 
   const slug = glossarySlug(t.term);
   const url = `${SITE}/glossary/${slug}`;
-  const accent = CATEGORY_COLOR[t.category] ?? DEFAULT_COLOR;
   const related = relatedTerms(t);
   const lessons = matchLessons(t, await lessonIndex());
   const altNames = alternateNames(t);
+  const shortName = t.abbr && t.abbr !== t.term ? t.abbr : t.term;
 
   return (
-    <div className="relative overflow-x-clip text-foreground">
+    <>
       <JsonLd
         data={{
           "@context": "https://schema.org",
@@ -313,91 +296,68 @@ export default async function GlossaryTermPage({
         }}
       />
 
-      <Glow
-        blobs={[
-          { size: "560px", pos: { left: "-160px", top: "-240px" }, color: "#8bbcff", opacity: 0.55 },
-          { size: "480px", pos: { right: "-150px", top: "-100px" }, color: "#6ff0ea", opacity: 0.45, delay: 3 },
-        ]}
-      />
+      {/* ===================== THE CARD =====================
+          The whole point of the page, and the only thing above the fold.
+          Everything about it is the filing metaphor taken literally: the
+          drawer slug at the top left, the short form stamped at the right,
+          the term, the definition, and the two places to go for more. */}
+      <section className="nb-wrap pb-[clamp(1.8rem,3.5vw,2.6rem)] pt-[clamp(1.8rem,4vw,3rem)]">
+        {/* Matches the BreadcrumbList schema above. */}
+        <nav aria-label="Breadcrumb" className="nb-slug">
+          <ol className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <li>
+              <Link href="/" className="hover:text-blue hover:underline">
+                home
+              </Link>
+            </li>
+            <li aria-hidden="true">/</li>
+            <li>
+              <Link href="/glossary" className="hover:text-blue hover:underline">
+                glossary
+              </Link>
+            </li>
+            <li aria-hidden="true">/</li>
+            <li aria-current="page" className="font-bold text-ink">
+              {slug}
+            </li>
+          </ol>
+        </nav>
 
-      {/* ============================ HERO ============================ */}
-      <header className="mx-auto max-w-3xl px-4 pb-8 pt-28 sm:px-6 lg:px-8">
-        <RiseGroup>
-          <RiseItem>
-            {/* Breadcrumb (matches the BreadcrumbList schema above) */}
-            <nav aria-label="Breadcrumb" className="text-sm text-muted-foreground">
-              <ol className="flex flex-wrap items-center gap-1.5">
-                <li>
-                  <Link href="/" className="transition-colors hover:text-primary">
-                    Home
-                  </Link>
-                </li>
-                <ChevronRight aria-hidden className="h-3.5 w-3.5 opacity-60" />
-                <li>
-                  <Link href="/glossary" className="transition-colors hover:text-primary">
-                    Glossary
-                  </Link>
-                </li>
-                <ChevronRight aria-hidden className="h-3.5 w-3.5 opacity-60" />
-                <li aria-current="page" className="font-medium text-foreground">
-                  {t.term}
-                </li>
-              </ol>
-            </nav>
-          </RiseItem>
+        <div className="nb-box nb-tilt-3 mt-[clamp(1.2rem,2.4vw,1.8rem)] max-w-[46rem] p-[clamp(1.3rem,3vw,2.2rem)]">
+          <span className="nb-tape -top-3 left-[13%] rotate-[-3.6deg]" aria-hidden="true" />
+          <span className="nb-tape -bottom-3 right-[18%] rotate-[2.4deg]" aria-hidden="true" />
 
-          <RiseItem>
-            <div className="mt-6 flex flex-wrap items-center gap-2.5">
-              <span
-                className="ac-badge flex h-10 w-10 shrink-0 items-center justify-center"
-                style={{ "--a": accent } as CSSProperties}
-              >
-                <BookA aria-hidden className="h-[18px] w-[18px]" />
-              </span>
-              <span
-                className="text-[11px] font-bold uppercase tracking-wider"
-                style={{ color: inkFor(accent) }}
-              >
-                {t.category}
-              </span>
-              {t.abbr && t.abbr !== t.term && (
-                <span className="rounded-lg border border-border bg-background/60 px-2 py-0.5 font-mono text-[11px] font-medium text-accent">
-                  {t.abbr}
-                </span>
-              )}
-            </div>
-          </RiseItem>
+          <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
+            <p className="nb-slug min-w-0">drawer / {t.category}</p>
+            {t.abbr && t.abbr !== t.term && (
+              <span className="nb-tag shrink-0">{t.abbr}</span>
+            )}
+          </div>
 
-          <RiseItem>
-            <h1 className="mt-4 text-balance font-display text-4xl font-extrabold leading-[1.05] tracking-tight sm:text-5xl">
-              <span style={GRADIENT_TEXT}>{t.term}</span>
-            </h1>
-          </RiseItem>
+          <h1 className="mt-3 text-[clamp(2.1rem,1.3rem+2.6vw,3.4rem)]">
+            {t.term}
+          </h1>
 
-          <RiseItem>
-            <p className="mt-5 max-w-2xl text-lg leading-relaxed text-foreground/80">
-              {t.definition}
-            </p>
-          </RiseItem>
+          <p className="mt-4 max-w-[54ch] text-[1.05rem] leading-relaxed">
+            {t.definition}
+          </p>
 
           {t.alsoCalled && t.alsoCalled.length > 0 && (
-            <RiseItem>
-              <p className="mt-4 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                <span className="font-medium text-foreground/70">Also called</span>
-                {t.alsoCalled.map((n) => (
-                  <span key={n} className="ac-chip inline-flex items-center text-xs">
-                    {n}
-                  </span>
-                ))}
-              </p>
-            </RiseItem>
+            <p className="mt-4 flex flex-wrap items-center gap-2">
+              <span className="nb-slug">also called</span>
+              {t.alsoCalled.map((n) => (
+                <span key={n} className="nb-tag">
+                  {n}
+                </span>
+              ))}
+            </p>
           )}
 
-          <RiseItem>
-            <div className="mt-7 flex flex-wrap items-center gap-3">
+          {(t.internalLink || t.link) && (
+            <div className="nb-hair mt-[clamp(1.2rem,2.4vw,1.7rem)] flex flex-wrap gap-3 pt-[clamp(1rem,2vw,1.4rem)]">
               {t.internalLink && (
-                <Link href={t.internalLink} className="ac-btn text-sm">
-                  Read the full guide <ArrowRight aria-hidden className="h-4 w-4" />
+                <Link href={t.internalLink} className="nb-btn">
+                  Read the full guide
                 </Link>
               )}
               {t.link && (
@@ -405,201 +365,147 @@ export default async function GlossaryTermPage({
                   href={t.link}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="ac-btn-ghost inline-flex items-center gap-1.5 text-sm"
+                  className="nb-btn-ghost"
                 >
-                  Official source <ExternalLink aria-hidden className="h-3.5 w-3.5" />
+                  Official source
                 </a>
               )}
             </div>
-          </RiseItem>
-        </RiseGroup>
-      </header>
-
-      {/* ======================= IN A MATCH ========================== */}
-      {/* The reason this page exists: what the term actually looks like from
-          the driver station, the pit, or the CAD review. Hand-written per
-          term; omitted entirely rather than filled with anything generic. */}
-      {t.inMatch && (
-        <section className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
-          <Reveal>
-            <div
-              className="ac-card relative overflow-hidden p-6 sm:p-8"
-              style={{ "--a": accent } as CSSProperties}
-            >
-              <span
-                aria-hidden
-                className="pointer-events-none absolute inset-y-0 left-0 w-1"
-                style={{ background: accent }}
-              />
-              <p className="ac-eyebrow flex items-center gap-1.5">
-                <Target aria-hidden className="h-3.5 w-3.5" /> Why it matters in a match
-              </p>
-              <h2 className="mt-2 font-display text-2xl font-bold tracking-tight">
-                Where you&apos;ll actually meet {t.abbr && t.abbr !== t.term ? t.abbr : t.term}
-              </h2>
-              <p className="mt-3 text-pretty text-base leading-relaxed text-foreground/80">
-                {t.inMatch}
-              </p>
-            </div>
-          </Reveal>
-        </section>
-      )}
-
-      <div className="mx-auto max-w-3xl px-4 pt-10 sm:px-6 lg:px-8">
-        <hr aria-hidden className="ac-divider" />
-      </div>
-
-      {/* ==================== WHERE YOU'LL SEE THIS =================== */}
-      {/* Real lessons from the catalog, matched at build time on titles and
-          summaries. Empty when nothing scores high enough — see matchLessons. */}
-      {lessons.length > 0 && (
-        <section className="mx-auto max-w-3xl px-4 pt-10 sm:px-6 lg:px-8">
-          <Reveal>
-            <p className="ac-eyebrow flex items-center gap-1.5">
-              <GraduationCap aria-hidden className="h-3.5 w-3.5" /> Where you&apos;ll see this
-            </p>
-            <h2 className="mt-2 font-display text-2xl font-bold tracking-tight">
-              Lessons that cover {t.term}
-            </h2>
-            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-              Free, structured LearnFRC lessons where this comes up in practice.
-            </p>
-          </Reveal>
-          <RevealGroup className="mt-6 space-y-3">
-            {lessons.map((l) => (
-              <RevealItem key={l.path}>
-                <Hover lift={-3}>
-                  <Link
-                    href={l.path}
-                    className="ac-card group flex items-start gap-4 p-5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                  >
-                    <span
-                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border transition-transform duration-300 group-hover:scale-105"
-                      style={{
-                        color: inkFor(accent),
-                        borderColor: `color-mix(in srgb, ${accent} 40%, transparent)`,
-                        background: `color-mix(in srgb, ${accent} 12%, transparent)`,
-                      }}
-                    >
-                      <BookOpen aria-hidden className="h-[18px] w-[18px]" />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <small className="ac-eyebrow block">
-                        {l.departmentName} · {l.moduleTitle}
-                      </small>
-                      <span className="mt-1 block font-display text-[17px] font-bold leading-snug tracking-tight text-foreground group-hover:text-primary">
-                        {l.title}
-                      </span>
-                      {l.summary && (
-                        <span className="mt-1.5 block text-pretty text-sm leading-relaxed text-muted-foreground">
-                          {l.summary}
-                        </span>
-                      )}
-                    </span>
-                    <ArrowRight
-                      aria-hidden
-                      className="mt-1 hidden h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-primary sm:block"
-                    />
-                  </Link>
-                </Hover>
-              </RevealItem>
-            ))}
-          </RevealGroup>
-        </section>
-      )}
-
-      {/* ======================= RELATED TERMS ======================= */}
-      {related.length > 0 && (
-        <section className="mx-auto max-w-6xl px-4 pt-14 sm:px-6 lg:px-8">
-          <Reveal>
-            <p className="ac-eyebrow flex items-center gap-1.5">
-              <Tags aria-hidden className="h-3.5 w-3.5" /> Related terms
-            </p>
-            <h2 className="mt-2 font-display text-2xl font-bold tracking-tight">
-              Keep decoding the jargon
-            </h2>
-          </Reveal>
-          <RevealGroup className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {related.map((r) => (
-              <RevealItem key={r.term}>
-                <Hover className="h-full" lift={-4} scale={1.01}>
-                  <Link
-                    href={`/glossary/${glossarySlug(r.term)}`}
-                    className="ac-card group flex h-full flex-col p-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-                  >
-                    <span
-                      className="text-[11px] font-bold uppercase tracking-wider"
-                      style={{ color: inkFor(CATEGORY_COLOR[r.category] ?? DEFAULT_COLOR) }}
-                    >
-                      {r.category}
-                    </span>
-                    <h3 className="mt-1.5 font-display text-lg font-bold leading-tight tracking-tight transition-colors group-hover:text-primary">
-                      {r.term}
-                    </h3>
-                    <p className="mt-2 line-clamp-3 flex-1 text-sm leading-relaxed text-muted-foreground">
-                      {r.definition}
-                    </p>
-                    <span className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-primary">
-                      View term
-                      <ArrowRight
-                        aria-hidden
-                        className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5"
-                      />
-                    </span>
-                  </Link>
-                </Hover>
-              </RevealItem>
-            ))}
-          </RevealGroup>
-        </section>
-      )}
-
-      {/* ========================= LEARN MORE ======================== */}
-      <section className="mx-auto max-w-6xl px-4 pb-20 pt-14 sm:px-6 lg:px-8">
-        <Reveal>
-          <div
-            className="ac-glass relative overflow-hidden p-8 text-center sm:px-16 sm:py-12"
-            style={{ "--a": "#2560e6" } as CSSProperties}
-          >
-            <div
-              aria-hidden
-              className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-[radial-gradient(circle,rgba(26,169,214,0.25),transparent_70%)] blur-2xl"
-            />
-            <span className="ac-badge mx-auto mb-4 flex h-12 w-12 items-center justify-center">
-              <BookOpen aria-hidden className="h-6 w-6" />
-            </span>
-            <h2 className="text-balance font-display text-2xl font-bold tracking-tight sm:text-3xl">
-              Learn the language of <span style={GRADIENT_TEXT}>build season</span>
-            </h2>
-            <p className="mx-auto mt-3 max-w-md text-base leading-relaxed text-foreground/70">
-              {t.internalLink
-                ? "Go deeper with a full LearnFRC guide, or keep browsing every acronym in the glossary."
-                : "Browse every FRC acronym and bit of jargon, or start free structured lessons across every department."}
-            </p>
-            <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
-              {t.internalLink ? (
-                <Link href={t.internalLink} className="ac-btn text-sm">
-                  Read the full guide <ArrowRight aria-hidden className="h-4 w-4" />
-                </Link>
-              ) : (
-                <Link href="/guides" className="ac-btn text-sm">
-                  Browse the guides <ArrowRight aria-hidden className="h-4 w-4" />
-                </Link>
-              )}
-              <Link
-                href="/glossary"
-                className="ac-btn-ghost inline-flex items-center gap-1.5 text-sm"
-              >
-                <ArrowLeft aria-hidden className="h-4 w-4" /> Back to the glossary
-              </Link>
-            </div>
-            <p className="mt-6 flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
-              <Sparkles aria-hidden className="h-3.5 w-3.5" /> {GLOSSARY.length} terms and
-              counting
-            </p>
-          </div>
-        </Reveal>
+          )}
+        </div>
       </section>
-    </div>
+
+      {/* ===================== IN A MATCH =====================
+          The reason this page exists: what the term actually looks like from
+          the driver station, the pit, or the CAD review. Hand-written per
+          term, and omitted entirely rather than filled with anything generic,
+          which is why it is a margin note and not a section of its own. */}
+      {t.inMatch && (
+        <section className="nb-wrap pb-[clamp(1.8rem,3.5vw,2.6rem)]">
+          <div className="nb-note max-w-[52rem]">
+            <p className="nb-slug">where you actually meet {shortName}</p>
+            <p className="mt-2.5 text-[1rem] leading-relaxed">{t.inMatch}</p>
+          </div>
+        </section>
+      )}
+
+      {/* ===================== THE LESSONS =====================
+          Real lessons from the catalogue, matched at build time on titles and
+          summaries. Empty when nothing scores high enough, see matchLessons. */}
+      {lessons.length > 0 && (
+        <section className="nb-wrap pb-[clamp(2.2rem,4.5vw,3.4rem)]">
+          <div className="nb-rule pt-[clamp(1.6rem,3.2vw,2.4rem)]">
+            <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-2">
+              <div>
+                <h2 className="max-w-[24ch] text-[clamp(1.5rem,1.1rem+1.4vw,2.3rem)]">
+                  Lessons that use {shortName}
+                </h2>
+                <p className="nb-sub mt-2 text-[0.98rem]">
+                  Free and structured, and none of them need an account to read.
+                </p>
+              </div>
+              <p className="nb-count shrink-0">
+                {lessons.length}
+                <small>{lessons.length === 1 ? "lesson" : "lessons"}</small>
+              </p>
+            </div>
+
+            <div className="nb-list mt-[clamp(1rem,2vw,1.4rem)]">
+              {lessons.map((l) => (
+                <Link key={l.path} href={l.path} className="nb-row">
+                  <span className="nb-slug">
+                    {l.departmentName}
+                    <br />
+                    {l.moduleTitle}
+                  </span>
+                  <span className="min-w-0">
+                    <h3>{l.title}</h3>
+                    {l.summary && (
+                      <span className="mt-1.5 block text-[0.94rem] leading-snug text-graphite">
+                        {l.summary}
+                      </span>
+                    )}
+                  </span>
+                  <span className="nb-slug hidden whitespace-nowrap min-[769px]:block">
+                    open
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ===================== THE CARDS NEXT TO IT ===================== */}
+      {related.length > 0 && (
+        <section className="nb-wrap pb-[clamp(2.2rem,4.5vw,3.4rem)]">
+          <div className="nb-rule pt-[clamp(1.6rem,3.2vw,2.4rem)]">
+            <div className="mb-[clamp(1.2rem,2.6vw,1.9rem)] flex flex-wrap items-end justify-between gap-x-8 gap-y-3">
+              <h2 className="text-[clamp(1.5rem,1.1rem+1.4vw,2.3rem)]">
+                Filed next to it
+              </h2>
+              <p className="nb-pen max-w-[20ch] rotate-[1.2deg] min-[900px]:text-right">
+                the jargon travels in packs
+              </p>
+            </div>
+
+            {/* Both breakpoints are written as arbitrary `min-[…]` queries on
+                purpose. A named variant like `sm:` lands LATER in the compiled
+                sheet than an arbitrary one, so `sm:grid-cols-2` would beat
+                `min-[1080px]:grid-cols-12` at every width above 1080 and the
+                wall would silently collapse to two columns. */}
+            <div className="grid grid-cols-1 gap-[clamp(0.85rem,1.7vw,1.35rem)] min-[640px]:grid-cols-2 min-[1080px]:grid-cols-12">
+              {related.map((r, i) => (
+                <Link
+                  key={r.term}
+                  href={`/glossary/${glossarySlug(r.term)}`}
+                  className={`nb-box nb-lift flex flex-col p-[clamp(1rem,1.9vw,1.4rem)] ${
+                    RELATED_TILTS[i % RELATED_TILTS.length]
+                  } min-[1080px]:[grid-column:var(--span)]`}
+                  style={
+                    {
+                      "--span": `span ${RELATED_SPANS[i % RELATED_SPANS.length]}`,
+                    } as CSSProperties
+                  }
+                >
+                  <span className="nb-tape -top-3 left-4 h-[21px] w-[74px] rotate-[-4deg]" aria-hidden="true" />
+
+                  <p className="nb-slug">{r.category}</p>
+                  <h3 className="mt-2">{r.term}</h3>
+                  <p className="mt-2 flex-1 text-[0.92rem] leading-snug text-graphite">
+                    {r.definition}
+                  </p>
+                  <span className="nb-hair nb-slug mt-4 pt-3 text-ink">
+                    read the entry
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ===================== BACK TO THE DRAWER =====================
+          Two doors and one sentence. The card at the top already carries the
+          "read the full guide" ask for the terms that have one, so repeating
+          it here would be the same button twice on one page. */}
+      <section className="nb-wrap pb-[clamp(3rem,6vw,5rem)]">
+        <div className="nb-rule flex flex-wrap items-center justify-between gap-x-8 gap-y-4 pt-[clamp(1.4rem,2.8vw,2rem)]">
+          <p className="max-w-[46ch] text-graphite">
+            {t.term} is one of {GLOSSARY.length.toLocaleString()} entries in the
+            catalogue. The guides are where these words get used in order,
+            instead of one at a time.
+          </p>
+          <div className="flex flex-wrap gap-3">
+            <Link href="/glossary" className="nb-btn-ghost">
+              Back to the catalogue
+            </Link>
+            <Link href="/guides" className="nb-btn-ghost">
+              Browse the guides
+            </Link>
+          </div>
+        </div>
+      </section>
+    </>
   );
 }

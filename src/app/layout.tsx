@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Space_Grotesk, Inter, JetBrains_Mono, Baloo_2 } from "next/font/google";
+import { Bricolage_Grotesque, Space_Mono, Caveat } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 import { Navbar } from "@/components/navbar";
@@ -12,27 +12,34 @@ import { SourceCapture } from "@/components/source-capture";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 
-const grotesk = Space_Grotesk({
+/* Three faces with fixed jobs, per docs/NOTEBOOK-SYSTEM.md. Nothing else is
+   loaded, and nothing else may be. */
+
+// Everything structural: headings at 800, body at 400. `axes` is the load-
+// bearing part here: next/font ships only the `wght` axis of a variable font
+// by default, so without opsz and wdth the `font-variation-settings` the
+// stylesheet asks for would silently do nothing.
+const bricolage = Bricolage_Grotesque({
   subsets: ["latin"],
-  variable: "--font-grotesk",
-  weight: ["500", "600", "700"],
+  variable: "--font-bricolage",
+  axes: ["opsz", "wdth"],
   display: "swap",
 });
-const inter = Inter({
+
+// All data furniture: counts, department slugs, timestamps, figures, hints,
+// buttons, code. Not a variable family, so both weights are named.
+const spaceMono = Space_Mono({
   subsets: ["latin"],
-  variable: "--font-inter",
+  variable: "--font-space-mono",
+  weight: ["400", "700"],
   display: "swap",
 });
-const jbmono = JetBrains_Mono({
+
+// Ballpoint margin annotations only. The variable cut covers 400 to 700, which
+// is the 500 and 600 the system uses, in one file.
+const caveat = Caveat({
   subsets: ["latin"],
-  variable: "--font-jbmono",
-  display: "swap",
-});
-// Rounded display face for the Arena Clay homepage (light glass + clay).
-const baloo = Baloo_2({
-  subsets: ["latin"],
-  variable: "--font-baloo",
-  weight: ["500", "600", "700", "800"],
+  variable: "--font-caveat",
   display: "swap",
 });
 
@@ -42,11 +49,11 @@ const SITE_URL =
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "LearnFRC — Master FIRST Robotics Competition",
+    default: "LearnFRC, master FIRST Robotics Competition",
     template: "%s · LearnFRC",
   },
   description:
-    "The complete, structured guide to mastering every department of the FIRST Robotics Competition — mechanical, CAD, programming, electrical, controls, strategy, business, outreach and more. Free, web-grounded, and built for new teams.",
+    "The complete, structured guide to mastering every department of the FIRST Robotics Competition: mechanical, CAD, programming, electrical, controls, strategy, business, outreach and more. Free, web-grounded, and built for new teams.",
   keywords: [
     "FRC",
     "FIRST Robotics Competition",
@@ -74,7 +81,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     url: SITE_URL,
-    title: "LearnFRC — Master FIRST Robotics Competition",
+    title: "LearnFRC, master FIRST Robotics Competition",
     description:
       "Structured, web-grounded guides for every FRC department. Build robots, write code, win awards.",
     siteName: "LearnFRC",
@@ -103,7 +110,8 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#e6eefb",
+  // The paper ground, so the mobile browser chrome matches the page edge.
+  themeColor: "#E6E8E3",
 };
 
 export default function RootLayout({
@@ -114,8 +122,7 @@ export default function RootLayout({
       lang="en"
       suppressHydrationWarning
       data-scroll-behavior="smooth"
-      data-theme="arena"
-      className={`${grotesk.variable} ${inter.variable} ${jbmono.variable} ${baloo.variable} h-full`}
+      className={`${bricolage.variable} ${spaceMono.variable} ${caveat.variable} h-full`}
     >
       <body className="flex min-h-full flex-col antialiased">
         {/* Feed autodiscovery. React hoists this into <head> on every route,
@@ -171,10 +178,10 @@ export default function RootLayout({
             ],
           }}
         />
-        <a
-          href="#main-content"
-          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-primary focus:px-4 focus:py-2 focus:text-primary-foreground focus:shadow-[var(--shadow-lg)]"
-        >
+        {/* `nb-skip` parks itself off-screen and jumps to the top-left corner
+            on focus. Kept as a plain class rather than sr-only utilities so
+            the skip link is styled by the same kit as everything else. */}
+        <a href="#main-content" className="nb-skip">
           Skip to content
         </a>
         <Providers>

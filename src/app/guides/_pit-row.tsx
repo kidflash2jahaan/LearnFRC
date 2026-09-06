@@ -1,112 +1,99 @@
-"use client";
-
-import Link from "next/link";
 import type { CSSProperties } from "react";
-import { motion, useReducedMotion } from "framer-motion";
-import { ArrowUpRight } from "lucide-react";
-import { Icon } from "@/lib/icon-map";
+import { DepartmentCard } from "@/components/department-card";
 
-export type PitStop = {
+export type WallDept = {
+  id: string;
   slug: string;
   name: string;
-  icon: string;
-  color: string;
+  tagline: string | null;
+  moduleCount: number;
   lessonCount: number;
 };
 
-const EASE = [0.21, 0.47, 0.32, 0.98] as const;
+/**
+ * Column spans for the wall, in the order the cards go up.
+ *
+ * Four rows of twelve, so the pattern tiles cleanly and no two neighbours are
+ * the same width. Reading a wall of eleven identical rectangles is work; a wall
+ * where the widths vary has an obvious scanning order, which is the whole point
+ * of a contents page.
+ */
+const CYCLE = [5, 4, 3, 3, 4, 5, 4, 5, 3, 5, 3, 4];
 
 /**
- * Signature hero device: "Pit Row" — a floating glass panel that reads like a
- * numbered pit-stall roster. A connecting walkway line grows down the left
- * edge on load, then each stall entry steps in behind it — the visual
- * metaphor for "walk the pit, department by department."
+ * Assign a span to every card, then let the last card in the bottom row absorb
+ * whatever is left of the twelve.
+ *
+ * Grid auto-placement pushes a card to the next row when it does not fit in the
+ * space remaining, so this walk has to model the same wrap, or the widened card
+ * would land on a row it was not measured for. Without the widening the bottom
+ * row ends in a gap that reads as a missing card rather than as a ragged edge.
  */
-export function PitRow({
-  stops,
-  totalCount,
+export function spansFor(count: number): number[] {
+  const spans = Array.from({ length: count }, (_, i) => CYCLE[i % CYCLE.length]);
+  let used = 0;
+  for (const span of spans) {
+    if (used + span > 12) used = 0;
+    used += span;
+  }
+  if (spans.length > 0 && used < 12) spans[spans.length - 1] += 12 - used;
+  return spans;
+}
+
+/**
+ * The wall: every department as an index card taped up, widths varying, none of
+ * them straightened.
+ *
+ * An ordered list, because the order is real. It is the order the catalogue is
+ * stored in, the order the ItemList structured data on the page declares, and
+ * the order a rookie is meant to read it in: the foundations first.
+ *
+ * Server Component. The card carries its own hover in CSS, so nothing here
+ * needs to run on the client.
+ */
+export function CatalogueWall({
+  departments,
+  progress,
+  className,
 }: {
-  stops: PitStop[];
-  totalCount: number;
+  departments: WallDept[];
+  /** Per-department completion, keyed by id. Absent for a signed-out reader. */
+  progress?: Record<string, number>;
+  className?: string;
 }) {
-  const reduce = useReducedMotion();
+  const spans = spansFor(departments.length);
 
   return (
-    <motion.div
-      className="ac-glass relative w-full min-w-0 max-w-md p-6 sm:p-7 lg:justify-self-end"
-      initial={{ opacity: 0, y: 26, rotate: 1.2 }}
-      animate={{ opacity: 1, y: 0, rotate: 0 }}
-      transition={reduce ? { duration: 0 } : { type: "spring", stiffness: 140, damping: 18, delay: 0.25 }}
-      whileHover={reduce ? undefined : { y: -6 }}
+    // Both breakpoints are written as `min-[...]` on purpose. Tailwind emits
+    // every arbitrary min-width variant BEFORE the named ones (sm/md/lg), so
+    // `md:grid-cols-2` would land later in the sheet than
+    // `min-[1080px]:grid-cols-12` and win at every width above 1080px. The wall
+    // then had two explicit columns with `span 5` items generating implicit
+    // ones, which is how eleven cards ended up ragged. Same family, same order.
+    <ol
+      className={[
+        "grid list-none grid-cols-1 gap-[clamp(0.85rem,1.7vw,1.35rem)] p-0",
+        "min-[768px]:grid-cols-2 min-[1080px]:grid-cols-12",
+        className ?? "",
+      ].join(" ")}
     >
-      <div className="flex items-center justify-between gap-3">
-        <span className="font-display text-[17px] font-bold text-foreground">
-          Today&rsquo;s walk
-        </span>
-        <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.08em] text-success">
-          <motion.span
-            className="h-2 w-2 rounded-full bg-[#12b565]"
-            animate={reduce ? undefined : { scale: [1, 1.35, 1], opacity: [1, 0.6, 1] }}
-            transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
-            aria-hidden
+      {departments.map((d, i) => (
+        <li
+          key={d.slug}
+          className="min-[1080px]:[grid-column:var(--span)]"
+          style={{ "--span": `span ${spans[i]}` } as CSSProperties}
+        >
+          <DepartmentCard
+            slug={d.slug}
+            name={d.name}
+            tagline={d.tagline}
+            moduleCount={d.moduleCount}
+            lessonCount={d.lessonCount}
+            progressPct={progress?.[d.id]}
+            index={i + 1}
           />
-          Open pit
-        </span>
-      </div>
-
-      <div className="relative mt-5">
-        <motion.span
-          aria-hidden
-          className="pointer-events-none absolute bottom-3 left-[23px] top-3 hidden w-px origin-top sm:block"
-          style={{ background: "linear-gradient(180deg, var(--border), transparent)" }}
-          initial={{ scaleY: 0 }}
-          animate={{ scaleY: 1 }}
-          transition={reduce ? { duration: 0 } : { duration: 0.9, delay: 0.4, ease: EASE }}
-        />
-        <ul className="space-y-1.5">
-          {stops.map((s, i) => (
-            <motion.li
-              key={s.slug}
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={reduce ? { duration: 0 } : { duration: 0.4, delay: 0.35 + i * 0.07, ease: EASE }}
-            >
-              <Link
-                href={`/guides/${s.slug}`}
-                className="group relative flex min-h-11 items-center gap-3 rounded-2xl px-2 py-1.5 transition-colors hover:bg-white/55 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-              >
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/70 font-display text-[11px] font-bold tabular-nums text-foreground/45">
-                  {String(i + 1).padStart(2, "0")}
-                </span>
-                <span
-                  className="ac-badge flex h-9 w-9 shrink-0 items-center justify-center"
-                  style={{ "--a": s.color } as CSSProperties}
-                >
-                  <Icon name={s.icon} className="h-4 w-4" aria-hidden />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-semibold text-foreground">
-                    {s.name}
-                  </span>
-                  <span className="block text-xs text-muted-foreground">
-                    {s.lessonCount} lessons
-                  </span>
-                </span>
-                <ArrowUpRight
-                  className="h-4 w-4 shrink-0 text-foreground/35 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-primary"
-                  aria-hidden
-                />
-              </Link>
-            </motion.li>
-          ))}
-        </ul>
-      </div>
-
-      <p className="mt-5 text-[13px] leading-relaxed text-muted-foreground">
-        <span className="font-semibold text-foreground">{totalCount} stops</span>{" "}
-        on the map — every one free to walk in, in the spirit of gracious
-        professionalism.
-      </p>
-    </motion.div>
+        </li>
+      ))}
+    </ol>
   );
 }

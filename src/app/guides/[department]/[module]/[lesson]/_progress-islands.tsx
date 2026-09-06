@@ -1,8 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { CheckCircle2, Circle } from "lucide-react";
-import { Reveal } from "@/components/motion/primitives";
 import { LessonActions } from "@/components/lesson/lesson-actions";
 import { LessonComplete } from "@/components/lesson/lesson-complete";
 import { SuggestEdit } from "@/components/lesson/suggest-edit";
@@ -13,20 +11,26 @@ import type { QuizQuestion } from "@/lib/types";
 import { ReadingRail } from "./_reading-rail";
 
 /**
- * Client islands for the (now static/ISR) lesson page. The article body and
- * chrome are server-rendered for crawlers; these read the signed-in user's
- * progress from the shared store (hydrated after mount via /api/me/progress)
- * and render the exact per-user UI the server used to render from the session.
- * Before hydration / logged-out, the store is empty so the output matches
- * today's logged-out server render. Completion toggles push back into the store
- * so the chip, reading rail, contents list, and mobile card stay in lockstep —
- * the same end state a router.refresh() produced before.
+ * Client islands for the (static/ISR) lesson page.
+ *
+ * The article body and all the page chrome are server-rendered for crawlers;
+ * everything in here reads the signed-in reader's progress from the shared
+ * store (hydrated after mount via /api/me/progress) and renders the per-user UI
+ * the server used to render from the session. Before hydration, and for a
+ * logged-out reader, the store is empty, so the output matches the logged-out
+ * server render exactly and there is no mismatch to reconcile. Completion
+ * toggles push back into the store, so the state chip, the margin rail, the
+ * contents list and the mobile strip stay in lockstep, which is the end state a
+ * router.refresh() used to produce.
+ *
+ * These wrappers hold no markup they do not have to. Anything with a shape
+ * belongs to the component being wrapped.
  */
 function useDeptCounts(lessonIds: string[]) {
   // `completed` already merges guest completions for a reader without an
   // account, so every surface below counts real work whether or not it has been
-  // claimed yet. `guest` only exists to keep the copy honest about WHERE that
-  // progress is stored — this browser, not an account.
+  // claimed yet. `guest` exists only to keep the copy honest about WHERE that
+  // progress currently lives: this browser, not an account.
   const { authed, guest, completed } = useMyProgress();
   const total = lessonIds.length;
   let done = 0;
@@ -40,17 +44,17 @@ function useDeptCounts(lessonIds: string[]) {
  *
  * This is the step nothing in the database has ever been able to answer:
  * page_views carries no user id, so "did this account ever open a lesson?" was
- * unanswerable and the funnel had to assume that everyone who OPENED one also
+ * unanswerable and the funnel had to assume everyone who OPENED one also
  * finished it. That assumption is what hid the 45% who never complete anything.
  *
- * Fires immediately on mount, with no dwell threshold on purpose. Non-activators
- * leave a lesson page in a median of 11 seconds; gating the event on, say, 15s
- * of reading would quietly reclassify precisely those readers as never having
- * opened a lesson, and the drop we are hunting would move into a step where it
- * cannot be seen. "Opened" means opened.
+ * Fires immediately on mount, with no dwell threshold on purpose.
+ * Non-activators leave a lesson page in a median of 11 seconds; gating the
+ * event on, say, 15s of reading would quietly reclassify precisely those
+ * readers as never having opened a lesson, and the drop we are hunting would
+ * move into a step where it cannot be seen. "Opened" means opened.
  *
- * Renders nothing, so it is layout-neutral and safe anywhere in the tree, and it
- * branches no rendered output on anything client-only — no hydration surface.
+ * Renders nothing, so it is layout-neutral and safe anywhere in the tree, and
+ * it branches no rendered output on anything client-only.
  */
 export function LessonOpenBeacon() {
   React.useEffect(() => {
@@ -59,38 +63,25 @@ export function LessonOpenBeacon() {
   return null;
 }
 
-/** "Completed" / "In progress" status chip in the lesson hero. */
-export function LessonStatusChip({
-  lessonId,
-  ink,
-  accentColor,
-}: {
-  lessonId: string;
-  ink: string;
-  accentColor: string;
-}) {
+/**
+ * The "state" value in the lesson's fact row: has this reader read it.
+ *
+ * A chip rather than another figure, because it is the one entry in that row
+ * that is about the reader instead of about the lesson. It fills in ballpoint
+ * when the lesson is done, and the WORD changes with it, so the state is never
+ * carried by colour alone.
+ */
+export function LessonStatusChip({ lessonId }: { lessonId: string }) {
   const { completed } = useMyProgress();
-  const isCompleted = completed.has(lessonId);
+  const done = completed.has(lessonId);
   return (
-    <span
-      className="ac-chip inline-flex items-center gap-1.5 text-xs font-semibold"
-      style={{ color: isCompleted ? "var(--success)" : ink }}
-    >
-      {isCompleted ? (
-        <CheckCircle2 className="h-3.5 w-3.5" aria-hidden />
-      ) : (
-        <span
-          className="inline-block h-2 w-2 animate-pulse rounded-full"
-          style={{ background: accentColor }}
-          aria-hidden
-        />
-      )}
-      {isCompleted ? "Completed" : "In progress"}
+    <span className="nb-tag" {...(done ? { "data-on": "" } : {})}>
+      {done ? "read" : "not yet"}
     </span>
   );
 }
 
-/** Mark-complete + bookmark buttons, wired to the client progress store. */
+/** Finish-the-lesson + keep-it controls, wired to the client progress store. */
 export function LessonActionsIsland({
   lessonId,
   deptSlug,
@@ -102,7 +93,8 @@ export function LessonActionsIsland({
   lessonPath: string;
   quizRequired: boolean;
 }) {
-  const { loaded, authed, completed, bookmarked, setCompleted, setBookmarked } = useMyProgress();
+  const { loaded, authed, completed, bookmarked, setCompleted, setBookmarked } =
+    useMyProgress();
   return (
     <LessonActions
       lessonId={lessonId}
@@ -119,31 +111,28 @@ export function LessonActionsIsland({
   );
 }
 
-/** Sticky live contents + department mastery rail (desktop). */
+/** The writing down the sheet's left margin: contents, department, the week. */
 export function ReadingRailIsland({
   deptName,
-  deptIcon,
-  accent,
+  deptSlug,
   headings,
   lessonIds,
   lessonPath,
 }: {
   deptName: string;
-  deptIcon: string;
-  accent: string;
+  deptSlug: string;
   headings: TocHeading[];
   lessonIds: string[];
   lessonPath: string;
 }) {
   const { authed, guest, done, total, pct } = useDeptCounts(lessonIds);
-  // Server-computed (see /api/me/progress) — the rail never derives a day
+  // Server-computed (see /api/me/progress), the rail never derives a day
   // boundary itself, it just draws the object it was handed.
   const { rhythm } = useMyProgress();
   return (
     <ReadingRail
       deptName={deptName}
-      deptIcon={deptIcon}
-      accent={accent}
+      deptSlug={deptSlug}
       headings={headings}
       authed={authed}
       guest={guest}
@@ -156,7 +145,7 @@ export function ReadingRailIsland({
   );
 }
 
-/** Completion card + mandatory quiz gate, wired to the client progress store. */
+/** The answer sheet: quiz gate, and the sign-off once it is cleared. */
 export function LessonCompleteIsland({
   lessonId,
   deptSlug,
@@ -170,7 +159,8 @@ export function LessonCompleteIsland({
   quiz: QuizQuestion[];
   nextHref?: string | null;
 }) {
-  const { loaded, authed, completed, username, subscribed, setCompleted } = useMyProgress();
+  const { loaded, authed, completed, username, subscribed, setCompleted } =
+    useMyProgress();
   return (
     <LessonComplete
       lessonId={lessonId}
@@ -182,10 +172,10 @@ export function LessonCompleteIsland({
       nextHref={nextHref}
       referrerUsername={username}
       alreadySubscribed={subscribed}
-      // Lifetime completions, so the completion card can count toward the
-      // five-lesson threshold that actually predicts retention. Already includes
-      // this lesson by the time the completed panel renders: persist() pushes
-      // the completion into this store in the same batch that flips `completed`.
+      // Lifetime completions, so the sign-off can count toward the five-lesson
+      // threshold that actually predicts retention. It already includes this
+      // lesson by the time the completed panel renders: persist() pushes the
+      // completion into this store in the same batch that flips `completed`.
       completedCount={completed.size}
       ready={loaded}
       onCompletedChange={(done) => setCompleted(lessonId, done)}
@@ -193,64 +183,80 @@ export function LessonCompleteIsland({
   );
 }
 
-/** Mobile-only department progress card. Shown to signed-in readers, and to
- *  guests who have finished something — a reader who has completed four lessons
- *  without an account should be able to SEE the four, otherwise the ask to come
- *  is asking them to protect a number they have never been shown. */
+/**
+ * What the margin carries, for a screen with no margin.
+ *
+ * Under 1024px the rail is gone, so its two figures are re-set as a ruled strip
+ * at the foot of the article: an opening ink rule, the mono caption, the
+ * percentage as a stamped figure, the meter, and the count printed beside it.
+ * Deliberately NOT a card. The completion panel above it is the only card in
+ * this part of the page, and a second one here would compete with the one
+ * control that records that the lesson was read.
+ *
+ * Shown to signed-in readers, and to guests who have finished something: a
+ * reader who has done four lessons without an account should be able to SEE the
+ * four, otherwise the ask to sign up is asking them to protect a number they
+ * have never been shown.
+ */
 export function MobileProgressCard({
   deptName,
-  deptGradient,
   lessonIds,
 }: {
   deptName: string;
-  deptGradient: string;
   lessonIds: string[];
 }) {
   const { authed, guest, done, total, pct } = useDeptCounts(lessonIds);
   if (!authed && !(guest && done > 0)) return null;
   return (
-    <Reveal>
-      <div className="mt-10 lg:hidden">
-        <div className="ac-card p-5">
-          <div className="ac-eyebrow">
-            {authed ? "Your progress" : "Your progress · this browser"}
-          </div>
-          <div className="mt-3 flex items-baseline gap-2">
-            <span className="font-display text-3xl font-bold tabular-nums text-foreground">{pct}%</span>
-            <span className="text-sm text-muted-foreground">through {deptName}</span>
-          </div>
-          <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
-            <div
-              className="h-full rounded-full"
-              style={{ width: `${pct}%`, backgroundImage: deptGradient }}
-            />
-          </div>
-          <div className="mt-2 text-xs tabular-nums text-muted-foreground">
-            {done} / {total} lessons complete
-          </div>
-        </div>
+    <section
+      aria-label={`Your progress through ${deptName}`}
+      className="nb-rule mt-[clamp(2rem,4vw,3rem)] pt-4 lg:hidden"
+    >
+      <p className="nb-slug">
+        {authed ? "your progress" : "your progress / this browser"}
+      </p>
+      <div className="mt-2 flex items-baseline gap-2.5">
+        <span className="nb-count text-[2rem]">{pct}%</span>
+        <span className="min-w-0 text-[0.95rem] font-bold leading-tight">
+          through {deptName}
+        </span>
       </div>
-    </Reveal>
+      <div className="nb-meter mt-3">
+        <span className="nb-meter-bar" style={{ width: `${pct}%` }} />
+      </div>
+      <p className="nb-slug mt-2">
+        {done} of {total} lessons read
+      </p>
+    </section>
   );
 }
 
-/** Completion dot (check / circle) for a lesson row in the "all lessons" list. */
+/**
+ * The mark beside a lesson in the folded-away contents list.
+ *
+ * A filled ballpoint square when it is read, a drawn empty one when it is not.
+ * The difference is shape and fill, not hue, so it survives a greyscale
+ * photocopy; the sr-only label carries it for a screen reader.
+ */
 export function LessonStatusDot({ lessonId }: { lessonId: string }) {
   const { completed } = useMyProgress();
   const done = completed.has(lessonId);
   return (
     <>
-      {done ? (
-        <CheckCircle2 className="h-4 w-4 shrink-0 text-primary" aria-hidden />
-      ) : (
-        <Circle className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
-      )}
-      <span className="sr-only">{done ? "Completed:" : "Not started:"}</span>
+      <span
+        aria-hidden="true"
+        className={
+          done
+            ? "size-2.5 shrink-0 border-2 border-blue bg-blue"
+            : "size-2.5 shrink-0 border border-dashed border-graphite"
+        }
+      />
+      <span className="sr-only">{done ? "Read:" : "Not read yet:"}</span>
     </>
   );
 }
 
-/** "Suggest an edit" affordance — gates on the client-fetched auth state. */
+/** "Suggest an edit", gates on the client-fetched auth state. */
 export function SuggestEditIsland(
   props: Omit<React.ComponentProps<typeof SuggestEdit>, "isLoggedIn">
 ) {

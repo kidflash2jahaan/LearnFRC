@@ -3,25 +3,13 @@
 import * as React from "react";
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import {
-  Calculator,
-  Printer,
-  Info,
-  ExternalLink,
-  Sparkles,
-  Wallet,
-  Users,
-  AlertTriangle,
-  CheckCircle2,
-  Save,
-} from "lucide-react";
 
 /* ------------------------------------------------------------------ *
  * VERIFIED CONSTANTS — every value below is primary-sourced.
  * Season/as-listed dates and source URLs are carried next to each
- * figure and surfaced to the user via tooltips + the Notes & sources
- * section. Values that vary by team/region/season are NOT hardcoded
- * as facts — they are editable inputs (see state below).
+ * figure and surfaced to the user via the line-item source links and
+ * the notes section. Values that vary by team/region/season are NOT
+ * hardcoded as facts — they are editable inputs (see state below).
  * ------------------------------------------------------------------ */
 
 const SEASON = "2025-2026";
@@ -29,7 +17,7 @@ const AS_LISTED = "as listed 2026-07";
 
 type SourcedNumber = {
   value: number;
-  cite: string; // short "$X — source, season" line for tooltip/footnote
+  cite: string; // short "$X — source, season" line for the footnote list
   url: string;
 };
 
@@ -146,40 +134,42 @@ const fmt2 = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 2,
 });
 
-const inputCls =
-  "w-full rounded-xl border border-border bg-white/60 px-3 py-2 text-sm text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
-
 /* ------------------------------------------------------------------ */
 /* Small reusable bits                                                 */
 /* ------------------------------------------------------------------ */
 
+/** Label above, hint below, control between. A placeholder never stands in. */
 function Field({
   label,
   helper,
+  htmlFor,
   children,
 }: {
   label: string;
   helper?: string;
+  htmlFor: string;
   children: React.ReactNode;
 }) {
   return (
-    <label className="block">
-      <span className="text-sm font-medium text-foreground">{label}</span>
-      {helper ? (
-        <span className="mt-0.5 block text-xs text-muted-foreground">{helper}</span>
-      ) : null}
-      <span className="mt-1.5 block">{children}</span>
-    </label>
+    <div className="nb-field">
+      <label className="nb-label" htmlFor={htmlFor}>
+        {label}
+      </label>
+      {children}
+      {helper ? <p className="nb-hint">{helper}</p> : null}
+    </div>
   );
 }
 
 function NumberInput({
+  id,
   value,
   onChange,
   min = 0,
   step = 1,
   prefix,
 }: {
+  id: string;
   value: number;
   onChange: (n: number) => void;
   min?: number;
@@ -189,14 +179,18 @@ function NumberInput({
   return (
     <span className="relative block">
       {prefix ? (
-        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+        <span
+          aria-hidden="true"
+          className="nb-slug pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 !text-ink"
+        >
           {prefix}
         </span>
       ) : null}
       <input
+        id={id}
         type="number"
         inputMode="decimal"
-        className={prefix ? `${inputCls} pl-7` : inputCls}
+        className={prefix ? "nb-input pl-7" : "nb-input"}
         value={Number.isFinite(value) ? value : 0}
         min={min}
         step={step}
@@ -209,52 +203,39 @@ function NumberInput({
   );
 }
 
-function SegBtn<T extends string>({
+/**
+ * A picked-one-of-these control.
+ *
+ * Built from nb-tag rather than a select, because the options are short and
+ * the choice changes what the rest of the panel asks for, so it has to be
+ * visible rather than folded away. aria-pressed carries the state, and the
+ * selected chip fills blue, so it survives greyscale.
+ */
+function Choice<T extends string>({
+  legend,
   options,
   value,
   onChange,
 }: {
+  legend: string;
   options: { value: T; label: string }[];
   value: T;
   onChange: (v: T) => void;
 }) {
   return (
-    <div className="ac-badge flex flex-wrap gap-1.5 rounded-xl p-1">
-      {options.map((o) => {
-        const active = o.value === value;
-        return (
-          <button
-            key={o.value}
-            type="button"
-            onClick={() => onChange(o.value)}
-            className={
-              "rounded-lg px-3 py-1.5 text-sm font-medium transition-colors " +
-              (active
-                ? "bg-primary text-white shadow-sm"
-                : "text-foreground/70 hover:text-foreground")
-            }
-            aria-pressed={active}
-          >
-            {o.label}
-          </button>
-        );
-      })}
+    <div className="flex flex-wrap gap-2" role="group" aria-label={legend}>
+      {options.map((o) => (
+        <button
+          key={o.value}
+          type="button"
+          onClick={() => onChange(o.value)}
+          aria-pressed={o.value === value}
+          className="nb-tag min-h-[2.75rem] px-3.5"
+        >
+          {o.label}
+        </button>
+      ))}
     </div>
-  );
-}
-
-function SourceInfo({ cite, url }: { cite: string; url: string }) {
-  return (
-    <a
-      href={url}
-      target="_blank"
-      rel="noopener noreferrer"
-      title={cite}
-      className="inline-flex items-center text-muted-foreground hover:text-primary"
-      aria-label={`Source: ${cite}`}
-    >
-      <Info className="h-3.5 w-3.5" aria-hidden />
-    </a>
   );
 }
 
@@ -266,31 +247,46 @@ type LineItem = {
   estimate?: boolean;
 };
 
+/**
+ * One ruled line of the ledger.
+ *
+ * Description on the left, figure hard right in tabular mono, exactly like a
+ * printed invoice, because this sheet gets handed to a sponsor or a booster
+ * treasurer who is going to add the right-hand column up by eye.
+ */
 function ItemRow({ item }: { item: LineItem }) {
   return (
-    <div className="flex items-start justify-between gap-3 py-1.5">
+    <div className="nb-hair grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-4 gap-y-1 py-2.5 first:border-t-0">
       <div className="min-w-0">
-        <div className="flex items-center gap-1.5 text-sm text-foreground">
-          <span className="truncate">{item.label}</span>
-          {item.source ? <SourceInfo cite={item.source.cite} url={item.source.url} /> : null}
+        <p className="text-[0.95rem] leading-snug">
+          {item.label}
           {item.estimate ? (
-            <span className="rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
-              estimate
-            </span>
+            <span className="nb-slug ml-2 whitespace-nowrap">estimate</span>
           ) : null}
-        </div>
-        {item.note ? (
-          <div className="text-xs text-muted-foreground">{item.note}</div>
-        ) : null}
+          {item.source ? (
+            <>
+              {" "}
+              <a
+                href={item.source.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="nb-link nb-slug whitespace-nowrap"
+                aria-label={`Source: ${item.source.cite}`}
+              >
+                source
+              </a>
+            </>
+          ) : null}
+        </p>
+        {item.note ? <p className="nb-hint mt-1 max-w-[62ch]">{item.note}</p> : null}
       </div>
-      <div className="shrink-0 tabular-nums text-sm text-foreground">
-        {fmt2.format(item.amount)}
-      </div>
+      <p className="nb-slug shrink-0 !text-[0.9rem] !text-ink">{fmt2.format(item.amount)}</p>
     </div>
   );
 }
 
-function CategoryBlock({
+/** A ruled section of the ledger: heading on a 2px ink rule, subtotal beside it. */
+function LedgerSection({
   title,
   items,
   subtotal,
@@ -301,20 +297,15 @@ function CategoryBlock({
 }) {
   if (items.length === 0) return null;
   return (
-    <div className="rounded-xl border border-border bg-white/60 p-3">
-      <div className="flex items-center justify-between">
-        <h4 className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-          {title}
-        </h4>
-        <span className="tabular-nums text-sm font-semibold text-foreground">
-          {fmt0.format(subtotal)}
-        </span>
+    <section className="mt-[clamp(1.4rem,2.8vw,2.1rem)]">
+      <div className="flex items-baseline justify-between gap-4 border-b-2 border-ink pb-2">
+        <h3 className="text-[1.05rem]">{title}</h3>
+        <p className="nb-count !text-[1.1rem]">{fmt0.format(subtotal)}</p>
       </div>
-      <div className="ac-divider my-2" />
       {items.map((it, i) => (
         <ItemRow key={i} item={it} />
       ))}
-    </div>
+    </section>
   );
 }
 
@@ -322,6 +313,16 @@ function CategoryBlock({
 /* Main component                                                      */
 /* ------------------------------------------------------------------ */
 
+/**
+ * The sponsor sheet.
+ *
+ * A budget is a document before it is a calculator: somebody prints this and
+ * puts it in front of a booster club. So it is laid out as a ledger, one
+ * column of description against one column of money, on ruled paper. The
+ * assumptions that drive it sit above in a three-panel strip, the way a form
+ * header sits above the lines it fills in, and the total is taped up top
+ * because that is the number everybody scrolls looking for.
+ */
 export default function BudgetCalculator({ authed }: { authed: boolean }) {
   // Team & program
   const [teamType, setTeamType] = useState<TeamType>("rookie");
@@ -367,7 +368,7 @@ export default function BudgetCalculator({ authed }: { authed: boolean }) {
         label: "FIRST base team registration",
         amount: FEES.baseReg.value,
         source: FEES.baseReg,
-        note: "Includes FIRST registration + participation at your first Regional (Regional model).",
+        note: "Includes FIRST registration and your first Regional, on the Regional model.",
       },
     ];
     if (programModel === "regional" && addlRegionals > 0) {
@@ -382,14 +383,14 @@ export default function BudgetCalculator({ authed }: { authed: boolean }) {
         label: "District program fee",
         amount: districtFee,
         estimate: true,
-        note: `Region-specific — typically $${RANGES.districtFee.low.toLocaleString()}–$${RANGES.districtFee.high.toLocaleString()} on top of the FIRST fee. Verify with your district each season.`,
+        note: `Region-specific, typically $${RANGES.districtFee.low.toLocaleString()} to $${RANGES.districtFee.high.toLocaleString()} on top of the FIRST fee. Verify with your district each season.`,
       });
       if (attendDistrictChamps && districtChampsFee > 0) {
         regItems.push({
           label: "District Championship fee",
           amount: districtChampsFee,
           estimate: true,
-          note: "Varies by district — enter your district's figure.",
+          note: "Varies by district, so enter your district's figure.",
         });
       }
     }
@@ -398,14 +399,14 @@ export default function BudgetCalculator({ authed }: { authed: boolean }) {
         label: "FIRST Championship fee",
         amount: champsFee,
         estimate: true,
-        note: "2026 fee not yet published by FIRST. Seeded with the last publicly-cited figure (~$5,750, 2024) — re-verify when FIRST posts 2026 pricing.",
+        note: "The 2026 fee is not published yet. Seeded with the last publicly cited figure, about $5,750 in 2024, so re-verify when FIRST posts 2026 pricing.",
       });
     }
     if (grants > 0) {
       regItems.push({
-        label: "Grants & sponsor vouchers (subtracted)",
+        label: "Grants and sponsor vouchers, subtracted",
         amount: -grants,
-        note: isRookie ? "Rookie teams may qualify for FIRST/sponsor startup grants." : undefined,
+        note: isRookie ? "Rookie teams may qualify for FIRST and sponsor startup grants." : undefined,
       });
     }
     const registration = regItems.reduce((s, it) => s + it.amount, 0);
@@ -416,7 +417,7 @@ export default function BudgetCalculator({ authed }: { authed: boolean }) {
     if (drivetrainChoice === "kop") {
       if (isRookie) {
         driveItems.push({
-          label: "AM14U6 KOP drive base — included free for rookies",
+          label: "AM14U6 KOP drive base, free for rookies",
           amount: 0,
           source: FEES.am14u6,
           note: "$940 retail value provided with rookie registration.",
@@ -432,13 +433,13 @@ export default function BudgetCalculator({ authed }: { authed: boolean }) {
     } else if (drivetrainChoice === "swerve") {
       drivetrain = swerveCost;
       driveItems.push({
-        label: "COTS swerve modules (your quote)",
+        label: "COTS swerve modules, your quote",
         amount: swerveCost,
         estimate: true,
-        note: "COTS swerve pricing varies widely by vendor and module count — enter your quote.",
+        note: "COTS swerve pricing varies widely by vendor and module count, so enter your quote.",
       });
     } else {
-      driveItems.push({ label: "Reuse existing drivetrain", amount: 0 });
+      driveItems.push({ label: "Reuse the existing drivetrain", amount: 0 });
     }
 
     // ---- Electronics ----
@@ -448,7 +449,7 @@ export default function BudgetCalculator({ authed }: { authed: boolean }) {
       elecItems.push(
         { label: "NI roboRIO 2.0", amount: FEES.roboRIO.value, source: FEES.roboRIO },
         { label: "REV Power Distribution Hub", amount: FEES.pdh.value, source: FEES.pdh },
-        { label: "VH-109 FRC Radio (education price)", amount: FEES.radio.value, source: FEES.radio },
+        { label: "VH-109 FRC Radio, education price", amount: FEES.radio.value, source: FEES.radio },
         { label: "REV Radio Power Module", amount: FEES.radioPowerModule.value, source: FEES.radioPowerModule },
         {
           label: `Robot batteries (${batteryQty} × $58)`,
@@ -456,31 +457,31 @@ export default function BudgetCalculator({ authed }: { authed: boolean }) {
           source: FEES.battery,
         },
         {
-          label: "RSL + 120A main breaker + wiring consumables",
+          label: "RSL, 120 A main breaker and wiring consumables",
           amount: consumables,
           estimate: true,
-          note: `Bundled small legal parts — roughly $${RANGES.consumables.low}–$${RANGES.consumables.high}.`,
+          note: `Bundled small legal parts, roughly $${RANGES.consumables.low} to $${RANGES.consumables.high}.`,
         },
       );
       electronics = elecItems.reduce((s, it) => s + it.amount, 0);
     } else if (electronicsPath === "bundle3230") {
       electronics = FEES.bundle3230.value;
       elecItems.push({
-        label: "AndyMark FRC Basic Starter Bundle (with roboRIO)",
+        label: "AndyMark FRC Basic Starter Bundle, with roboRIO",
         amount: FEES.bundle3230.value,
         source: FEES.bundle3230,
-        note: "Includes AM14U6 drive base, 4× NEO, 4× SPARK MAX, PDB & radio bundles, 2 batteries, charger, tool set, roboRIO. Set Drivetrain/Motors/Tools to reuse to avoid double-counting.",
+        note: "Includes the AM14U6 drive base, 4 NEO, 4 SPARK MAX, PDB and radio bundles, 2 batteries, a charger, a tool set and the roboRIO. Set drivetrain, motors and tools to reuse so nothing gets counted twice.",
       });
     } else if (electronicsPath === "bundle2750") {
       electronics = FEES.bundle2750.value;
       elecItems.push({
-        label: "AndyMark FRC Basic Starter Bundle (without roboRIO)",
+        label: "AndyMark FRC Basic Starter Bundle, without roboRIO",
         amount: FEES.bundle2750.value,
         source: FEES.bundle2750,
-        note: "Same contents minus the roboRIO. Set Drivetrain/Motors/Tools to reuse to avoid double-counting.",
+        note: "Same contents minus the roboRIO. Set drivetrain, motors and tools to reuse so nothing gets counted twice.",
       });
     } else {
-      elecItems.push({ label: "Already own control system", amount: 0 });
+      elecItems.push({ label: "Already own the control system", amount: 0 });
     }
 
     // ---- Motors & controllers ----
@@ -504,7 +505,7 @@ export default function BudgetCalculator({ authed }: { authed: boolean }) {
         label: `Kraken X60 motors (${krakenQty} × $217.99)`,
         amount: krakenQty * FEES.kraken.value,
         source: FEES.kraken,
-        note: "Integrated Talon FX — no separate controller.",
+        note: "Integrated Talon FX, so there is no separate controller.",
       });
     }
     if (otherMotorQty > 0 && otherMotorUnit > 0) {
@@ -521,10 +522,10 @@ export default function BudgetCalculator({ authed }: { authed: boolean }) {
       toolsCost > 0
         ? [
             {
-              label: "Starter tools & shop equipment (your budget)",
+              label: "Starter tools and shop equipment, your budget",
               amount: toolsCost,
               estimate: true,
-              note: "Not separately priced in our sources; a tool set is included in the Starter Bundle.",
+              note: "Not separately priced in our sources, and a tool set is included in the Starter Bundle.",
             },
           ]
         : [];
@@ -539,10 +540,10 @@ export default function BudgetCalculator({ authed }: { authed: boolean }) {
       travelPerEvent > 0
         ? [
             {
-              label: `Travel, lodging & food (${events} event${events === 1 ? "" : "s"} × ${fmt0.format(travelPerEvent)})`,
+              label: `Travel, lodging and food (${events} event${events === 1 ? "" : "s"} × ${fmt0.format(travelPerEvent)})`,
               amount: travelPerEvent * events,
               estimate: true,
-              note: "Team/region specific — FIRST publishes no travel model.",
+              note: "Team and region specific. FIRST publishes no travel model.",
             },
           ]
         : [];
@@ -551,7 +552,7 @@ export default function BudgetCalculator({ authed }: { authed: boolean }) {
     // ---- Spares / other ----
     const spareItems: LineItem[] =
       sparesOther > 0
-        ? [{ label: "Spares, sensors, pneumatics & other", amount: sparesOther, estimate: true }]
+        ? [{ label: "Spares, sensors, pneumatics and other", amount: sparesOther, estimate: true }]
         : [];
     const spares = spareItems.reduce((s, it) => s + it.amount, 0);
 
@@ -583,6 +584,7 @@ export default function BudgetCalculator({ authed }: { authed: boolean }) {
       high,
       perStudent,
       rookieBenefit,
+      events,
       regItems,
       driveItems,
       elecItems,
@@ -621,412 +623,513 @@ export default function BudgetCalculator({ authed }: { authed: boolean }) {
   const hasBand = calc.high - calc.low > 1;
 
   return (
-    <div className="mx-auto w-full max-w-6xl">
-      {/* Header */}
-      <div className="mb-6">
-        <span className="ac-chip inline-flex items-center gap-2">
-          <span className="ac-eyebrow">FRC PLANNING</span>
-        </span>
-        <h1 className="mt-3 font-display text-2xl font-bold tracking-tight sm:text-3xl">
-          Team Budget &amp; Startup Cost{" "}
-          <span
-            style={{
-              background: "linear-gradient(120deg,#2560e6,#1aa9d6)",
-              WebkitBackgroundClip: "text",
-              backgroundClip: "text",
-              color: "transparent",
-            }}
-          >
-            Calculator
-          </span>
-        </h1>
-        <p className="mt-2 max-w-2xl text-sm text-foreground/70">
-          Build a transparent, itemized season budget for your FRC team — registration,
-          drivetrain, control system, motors, travel and more. Every default is
-          primary-sourced; values that vary by team or region stay editable.
-        </p>
-        <p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
-          <AlertTriangle className="h-3.5 w-3.5 shrink-0" aria-hidden />
-          Figures: {SEASON} season, hardware {AS_LISTED}. Verify against the current FIRST
-          Game Manual &amp; vendor pricing before committing.
-        </p>
-      </div>
-
-      {/* Body grid */}
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
-        {/* ---------------- LEFT: inputs ---------------- */}
-        <div className="ac-card rounded-2xl p-5">
-          <div className="flex items-center gap-2">
-            <Calculator className="h-4 w-4 text-primary" aria-hidden />
-            <h3 className="font-display text-base font-semibold">Your team</h3>
+    <>
+      {/* ---------------------------------------------------------------- *
+       * 1. The question, with the answer taped up beside it
+       * ---------------------------------------------------------------- */}
+      <div className="nb-wrap py-[clamp(2.2rem,5vw,3.6rem)]">
+        <div className="grid items-start gap-[clamp(1.6rem,4vw,3.4rem)] lg:grid-cols-[minmax(0,1.5fr)_minmax(0,0.82fr)]">
+          <div>
+            <p className="nb-marker">tools / frc-budget-calculator</p>
+            <h1 className="max-w-[18ch]">
+              What will the season <span className="nb-mark">actually</span> cost?
+            </h1>
+            <p className="nb-lede mt-5">
+              Registration, the drive base, the control system, motors, tools and
+              travel, itemised into a sheet you can hand to a booster club without
+              apologising for it.
+            </p>
+            <p className="nb-slug mt-4 max-w-[62ch]">
+              {SEASON} season fees, hardware {AS_LISTED}. Every default is
+              primary-sourced and every line that varies by team stays editable.
+              Check current FIRST and vendor pricing before you commit money.
+            </p>
           </div>
 
-          <div className="mt-4 space-y-4">
-            <Field label="Team type" helper="Rookies receive the AM14U6 drive base free and may qualify for startup grants.">
-              <SegBtn<TeamType>
-                value={teamType}
-                onChange={setTeamType}
-                options={[
-                  { value: "rookie", label: "Rookie" },
-                  { value: "veteran", label: "Veteran" },
-                ]}
-              />
-            </Field>
-
-            <Field label="Program / event model" helper="Regional model uses per-event fees; District model adds a region-specific program fee on top of the FIRST fee.">
-              <SegBtn<ProgramModel>
-                value={programModel}
-                onChange={setProgramModel}
-                options={[
-                  { value: "regional", label: "Regional" },
-                  { value: "district", label: "District" },
-                ]}
-              />
-            </Field>
-
-            {programModel === "regional" ? (
-              <Field label="Additional Regional events" helper="Beyond your first Regional (which is included in the base fee). Each is $3,000.">
-                <NumberInput value={addlRegionals} onChange={setAddlRegionals} />
-              </Field>
-            ) : (
-              <>
-                <Field
-                  label="District program fee"
-                  helper={`Region-specific ($${RANGES.districtFee.low.toLocaleString()}–$${RANGES.districtFee.high.toLocaleString()} typical). Estimate — verify with your district each season.`}
-                >
-                  <NumberInput value={districtFee} onChange={setDistrictFee} prefix="$" step={50} />
-                </Field>
-                <Field label="District events (for travel count)" helper="How many district qualifiers you'll attend.">
-                  <NumberInput value={districtEvents} onChange={setDistrictEvents} />
-                </Field>
-                <label className="flex items-center gap-2 text-sm font-medium text-foreground">
-                  <input
-                    type="checkbox"
-                    checked={attendDistrictChamps}
-                    onChange={(e) => setAttendDistrictChamps(e.target.checked)}
-                    className="h-4 w-4 rounded border-border"
-                  />
-                  Attending District Championship?
-                </label>
-                {attendDistrictChamps ? (
-                  <Field label="District Championship fee" helper="Varies by district — enter yours. Estimate.">
-                    <NumberInput value={districtChampsFee} onChange={setDistrictChampsFee} prefix="$" step={50} />
-                  </Field>
-                ) : null}
-              </>
-            )}
-
-            <label className="flex items-center gap-2 text-sm font-medium text-foreground">
-              <input
-                type="checkbox"
-                checked={attendFirstChamps}
-                onChange={(e) => setAttendFirstChamps(e.target.checked)}
-                className="h-4 w-4 rounded border-border"
-              />
-              Attending FIRST Championship?
-            </label>
-            {attendFirstChamps ? (
-              <Field
-                label="FIRST Championship fee"
-                helper="2026 not yet published by FIRST. Seeded with the last cited figure (~$5,750, 2024) — estimate, re-verify."
-              >
-                <NumberInput value={champsFee} onChange={setChampsFee} prefix="$" step={50} />
-              </Field>
+          {/* The total, taped to the top of the sheet, because it is the one
+              number every visitor came here for. */}
+          <div
+            className="nb-box nb-tilt-1 relative mt-2 p-[clamp(1.2rem,2.4vw,1.7rem)]"
+            aria-live="polite"
+          >
+            <span className="nb-tape -top-3 left-[22%] rotate-[-3.6deg]" aria-hidden="true" />
+            <span
+              className="nb-tape -bottom-3 right-[16%] rotate-[2.4deg]"
+              aria-hidden="true"
+            />
+            <p className="nb-slug border-b border-dashed border-rule pb-2.5">
+              estimated season total
+            </p>
+            <p className="mt-3 font-mono text-[clamp(2rem,1.3rem+2.4vw,3rem)] font-bold leading-none tracking-[-0.03em] text-blue tabular-nums">
+              {fmt0.format(calc.grand)}
+            </p>
+            {hasBand ? (
+              <p className="nb-slug mt-3">
+                likely {fmt0.format(calc.low)} to {fmt0.format(calc.high)}, the district
+                fee and consumables move it
+              </p>
             ) : null}
 
-            <Field label="Grants & sponsor vouchers to subtract" helper="Rookie grants, sponsor vouchers, etc.">
-              <NumberInput value={grants} onChange={setGrants} prefix="$" step={50} />
-            </Field>
-
-            <div className="ac-divider" />
-
-            {/* Drivetrain */}
-            <Field label="Drivetrain" helper="Rookies: KOP drive base is free. COTS swerve pricing varies — enter your quote.">
-              <SegBtn<DrivetrainChoice>
-                value={drivetrainChoice}
-                onChange={setDrivetrainChoice}
-                options={[
-                  { value: "kop", label: isRookie ? "KOP (free)" : "KOP tank ($940)" },
-                  { value: "swerve", label: "COTS swerve" },
-                  { value: "reuse", label: "Reuse ($0)" },
-                ]}
-              />
-            </Field>
-            {drivetrainChoice === "swerve" ? (
-              <Field label="Swerve modules cost (your quote)" helper="COTS swerve varies widely by vendor/module count.">
-                <NumberInput value={swerveCost} onChange={setSwerveCost} prefix="$" step={50} />
-              </Field>
-            ) : null}
-
-            <div className="ac-divider" />
-
-            {/* Electronics */}
-            <Field label="Control system" helper="Itemize a new legal control system, use an all-in-one AndyMark bundle, or reuse what you own.">
-              <SegBtn<ElectronicsPath>
-                value={electronicsPath}
-                onChange={setElectronicsPath}
-                options={[
-                  { value: "fullNew", label: "New (itemized)" },
-                  { value: "bundle3230", label: "Bundle $3,230" },
-                  { value: "bundle2750", label: "Bundle $2,750" },
-                  { value: "own", label: "Own ($0)" },
-                ]}
-              />
-            </Field>
-            {electronicsPath === "fullNew" ? (
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="Batteries" helper="$58 each">
-                  <NumberInput value={batteryQty} onChange={setBatteryQty} />
-                </Field>
-                <Field label="Consumables" helper={`RSL/breaker/wiring ($${RANGES.consumables.low}–$${RANGES.consumables.high})`}>
-                  <NumberInput value={consumables} onChange={setConsumables} prefix="$" step={5} />
-                </Field>
-              </div>
-            ) : null}
-
-            <div className="ac-divider" />
-
-            {/* Motors */}
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-foreground">Motors &amp; controllers</span>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="NEO motors" helper="$42.50 + $100 SPARK MAX each">
-                <NumberInput value={neoQty} onChange={setNeoQty} />
-              </Field>
-              <Field label="Kraken X60" helper="$217.99, no controller">
-                <NumberInput value={krakenQty} onChange={setKrakenQty} />
-              </Field>
-              <Field label="Other motors" helper="Optional — qty">
-                <NumberInput value={otherMotorQty} onChange={setOtherMotorQty} />
-              </Field>
-              <Field label="Other unit price" helper="Optional — $ each">
-                <NumberInput value={otherMotorUnit} onChange={setOtherMotorUnit} prefix="$" step={0.5} />
-              </Field>
-            </div>
-
-            <div className="ac-divider" />
-
-            {/* Tools / travel / spares / size */}
-            <Field label="Tools & starter equipment" helper="Your shop/tool budget (a tool set is included in the Starter Bundle).">
-              <NumberInput value={toolsCost} onChange={setToolsCost} prefix="$" step={25} />
-            </Field>
-            <Field label="Travel, lodging & food per event" helper={`Team/region specific ($${RANGES.travelPerEvent.low.toLocaleString()}–$${RANGES.travelPerEvent.high.toLocaleString()} typical). Never a quote — enter your own.`}>
-              <NumberInput value={travelPerEvent} onChange={setTravelPerEvent} prefix="$" step={50} />
-            </Field>
-            <Field label="Spares, sensors, pneumatics & other" helper="Anything else your season needs.">
-              <NumberInput value={sparesOther} onChange={setSparesOther} prefix="$" step={25} />
-            </Field>
-            <Field label="Team size (optional)" helper="For a per-student cost — useful for grant asks.">
-              <NumberInput value={teamSize} onChange={setTeamSize} />
-            </Field>
+            <dl className="nb-hair mt-4 grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2 pt-3.5">
+              <dt className="nb-slug">per student</dt>
+              <dd className="nb-slug !text-ink">
+                {calc.perStudent !== null
+                  ? fmt0.format(calc.perStudent)
+                  : "enter a team size below"}
+              </dd>
+              <dt className="nb-slug">events</dt>
+              <dd className="nb-slug !text-ink">
+                {calc.events} paid for in this plan
+              </dd>
+              <dt className="nb-slug">travel</dt>
+              <dd className="nb-slug !text-ink">
+                {calc.travel > 0
+                  ? `${fmt0.format(calc.travel)}, in the total`
+                  : "not costed yet"}
+              </dd>
+            </dl>
           </div>
         </div>
+      </div>
 
-        {/* ---------------- RIGHT: live results ---------------- */}
-        <div className="ac-card rounded-2xl p-5">
-          <div className="flex items-center gap-2">
-            <Wallet className="h-4 w-4 text-primary" aria-hidden />
-            <h3 className="font-display text-base font-semibold">Season budget</h3>
-          </div>
+      {/* ---------------------------------------------------------------- *
+       * 2. The assumptions, three panels in one drawn frame
+       *
+       * A budget is only as honest as what you told it, so the assumptions
+       * are one visible frame above the ledger rather than a scrolling form
+       * column beside it. Panels divide on a 2px ink rule and stack under
+       * 860px.
+       * ---------------------------------------------------------------- */}
+      <section className="nb-rule py-[clamp(2.2rem,5vw,3.6rem)]">
+        <div className="nb-wrap">
+          <p className="nb-marker">what you told it</p>
+          <h2 className="max-w-[22ch] text-[clamp(1.5rem,1.1rem+1.6vw,2.4rem)]">
+            Set the three things that move the number.
+          </h2>
 
-          {/* Primary result */}
-          <div className="mt-4 rounded-2xl border border-border bg-white/60 p-5">
-            <div className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-              Estimated grand total
-            </div>
-            <div
-              className="mt-1 font-display text-4xl font-extrabold tabular-nums sm:text-5xl"
-              style={{
-                background: "linear-gradient(120deg,#2560e6,#1aa9d6)",
-                WebkitBackgroundClip: "text",
-                backgroundClip: "text",
-                color: "transparent",
-              }}
-            >
-              {fmt0.format(calc.grand)}
-            </div>
-            {hasBand ? (
-              <div className="mt-1 text-sm text-foreground/70 tabular-nums">
-                Likely range {fmt0.format(calc.low)} – {fmt0.format(calc.high)}
-                <span className="ml-1 text-xs text-muted-foreground">
-                  (district fee &amp; consumables vary)
-                </span>
+          <div className="nb-box mt-[clamp(1.4rem,3vw,2.2rem)] grid overflow-hidden lg:grid-cols-[1.05fr_1fr_0.92fr]">
+            {/* ---- Panel 1: the team and its events ---- */}
+            <div className="nb-panel gap-4">
+              <p className="nb-slug border-b-2 border-ink pb-2">01 / the team</p>
+
+              <div className="nb-field">
+                <span className="nb-label">Team type</span>
+                <Choice<TeamType>
+                  legend="Team type"
+                  value={teamType}
+                  onChange={setTeamType}
+                  options={[
+                    { value: "rookie", label: "rookie" },
+                    { value: "veteran", label: "veteran" },
+                  ]}
+                />
+                <p className="nb-hint">
+                  Rookies get the AM14U6 drive base free and may qualify for startup
+                  grants.
+                </p>
               </div>
-            ) : null}
-            {calc.perStudent !== null ? (
-              <div className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-primary/5 px-2.5 py-1 text-sm text-primary">
-                <Users className="h-3.5 w-3.5" aria-hidden />
-                <span className="tabular-nums font-semibold">{fmt0.format(calc.perStudent)}</span>
-                <span className="text-foreground/70">per student</span>
+
+              <div className="nb-field">
+                <span className="nb-label">Program model</span>
+                <Choice<ProgramModel>
+                  legend="Program model"
+                  value={programModel}
+                  onChange={setProgramModel}
+                  options={[
+                    { value: "regional", label: "regional" },
+                    { value: "district", label: "district" },
+                  ]}
+                />
+                <p className="nb-hint">
+                  Regional charges per event. District adds a region-specific program
+                  fee on top of the FIRST fee.
+                </p>
               </div>
-            ) : null}
-          </div>
 
-          {/* Rookie benefit callout */}
-          {calc.rookieBenefit > 0 ? (
-            <div className="mt-3 flex items-start gap-2 rounded-xl bg-emerald-500/10 p-3 text-sm text-emerald-700">
-              <Sparkles className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-              <span>
-                Rookie benefit: the AM14U6 KOP drive base (
-                <span className="font-semibold tabular-nums">{fmt0.format(calc.rookieBenefit)}</span>{" "}
-                retail value) is included free with your registration.
-              </span>
+              {programModel === "regional" ? (
+                <Field
+                  htmlFor="bg-addl"
+                  label="Additional Regionals"
+                  helper="Beyond the first, which the base fee covers. $3,000 each."
+                >
+                  <NumberInput id="bg-addl" value={addlRegionals} onChange={setAddlRegionals} />
+                </Field>
+              ) : (
+                <>
+                  <Field
+                    htmlFor="bg-dfee"
+                    label="District program fee"
+                    helper={`Region-specific, $${RANGES.districtFee.low.toLocaleString()} to $${RANGES.districtFee.high.toLocaleString()} is typical. Verify with your district.`}
+                  >
+                    <NumberInput id="bg-dfee" value={districtFee} onChange={setDistrictFee} prefix="$" step={50} />
+                  </Field>
+                  <Field
+                    htmlFor="bg-devents"
+                    label="District events"
+                    helper="How many qualifiers you will attend. Drives the travel count."
+                  >
+                    <NumberInput id="bg-devents" value={districtEvents} onChange={setDistrictEvents} />
+                  </Field>
+                  <label className="flex min-h-[2.75rem] cursor-pointer items-center gap-3 text-[0.95rem] font-medium">
+                    <input
+                      type="checkbox"
+                      className="size-4 shrink-0"
+                      checked={attendDistrictChamps}
+                      onChange={(e) => setAttendDistrictChamps(e.target.checked)}
+                    />
+                    Going to District Championship
+                  </label>
+                  {attendDistrictChamps ? (
+                    <Field
+                      htmlFor="bg-dchamps"
+                      label="District Championship fee"
+                      helper="Varies by district, so enter yours. Estimate."
+                    >
+                      <NumberInput id="bg-dchamps" value={districtChampsFee} onChange={setDistrictChampsFee} prefix="$" step={50} />
+                    </Field>
+                  ) : null}
+                </>
+              )}
+
+              <label className="flex min-h-[2.75rem] cursor-pointer items-center gap-3 text-[0.95rem] font-medium">
+                <input
+                  type="checkbox"
+                  className="size-4 shrink-0"
+                  checked={attendFirstChamps}
+                  onChange={(e) => setAttendFirstChamps(e.target.checked)}
+                />
+                Going to FIRST Championship
+              </label>
+              {attendFirstChamps ? (
+                <Field
+                  htmlFor="bg-champs"
+                  label="FIRST Championship fee"
+                  helper="Not published for 2026. Seeded with the last cited figure, about $5,750 in 2024. Re-verify."
+                >
+                  <NumberInput id="bg-champs" value={champsFee} onChange={setChampsFee} prefix="$" step={50} />
+                </Field>
+              ) : null}
+
+              <Field
+                htmlFor="bg-grants"
+                label="Grants and vouchers to subtract"
+                helper="Rookie grants, sponsor vouchers, anything already promised."
+              >
+                <NumberInput id="bg-grants" value={grants} onChange={setGrants} prefix="$" step={50} />
+              </Field>
             </div>
-          ) : null}
 
-          {/* Itemized categories */}
-          <div className="mt-4 space-y-3">
-            <CategoryBlock title="Registration" items={calc.regItems} subtotal={calc.registration} />
-            <CategoryBlock title="Drivetrain" items={calc.driveItems} subtotal={calc.drivetrain} />
-            <CategoryBlock title="Control system" items={calc.elecItems} subtotal={calc.electronics} />
-            <CategoryBlock title="Motors & controllers" items={calc.motorItems} subtotal={calc.motors} />
-            <CategoryBlock title="Tools" items={calc.toolItems} subtotal={calc.tools} />
-            <CategoryBlock title="Travel" items={calc.travelItems} subtotal={calc.travel} />
-            <CategoryBlock title="Spares / other" items={calc.spareItems} subtotal={calc.spares} />
-          </div>
+            {/* ---- Panel 2: the robot ---- */}
+            <div className="nb-panel gap-4">
+              <p className="nb-slug border-b-2 border-ink pb-2">02 / the robot</p>
 
-          {/* Verdict badges */}
-          <div className="mt-4 flex flex-wrap gap-2">
-            {calc.travel > 0 ? (
-              <span className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-700">
-                <CheckCircle2 className="h-3.5 w-3.5" aria-hidden /> Travel included in total
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500/10 px-2.5 py-1 text-xs font-medium text-amber-700">
-                <AlertTriangle className="h-3.5 w-3.5" aria-hidden /> Add a travel estimate for a full picture
-              </span>
-            )}
-            {attendFirstChamps ? (
-              <span className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500/10 px-2.5 py-1 text-xs font-medium text-amber-700">
-                <AlertTriangle className="h-3.5 w-3.5" aria-hidden /> Championship fee is a 2024-based estimate
-              </span>
-            ) : null}
-          </div>
+              <div className="nb-field">
+                <span className="nb-label">Drivetrain</span>
+                <Choice<DrivetrainChoice>
+                  legend="Drivetrain"
+                  value={drivetrainChoice}
+                  onChange={setDrivetrainChoice}
+                  options={[
+                    { value: "kop", label: isRookie ? "KOP, free" : "KOP tank, $940" },
+                    { value: "swerve", label: "COTS swerve" },
+                    { value: "reuse", label: "reuse, $0" },
+                  ]}
+                />
+              </div>
+              {drivetrainChoice === "swerve" ? (
+                <Field
+                  htmlFor="bg-swerve"
+                  label="Swerve modules, your quote"
+                  helper="COTS swerve varies widely by vendor and module count."
+                >
+                  <NumberInput id="bg-swerve" value={swerveCost} onChange={setSwerveCost} prefix="$" step={50} />
+                </Field>
+              ) : null}
 
-          {/* Actions */}
-          <div className="mt-5 flex flex-wrap items-center gap-3">
-            <button type="button" className="ac-btn inline-flex items-center gap-2" onClick={() => window.print()}>
-              <Printer className="h-4 w-4" aria-hidden /> Print / Save PDF
-            </button>
-            {authed ? (
-              <button
-                type="button"
-                className="ac-btn-ghost inline-flex items-center gap-2"
-                onClick={() => window.alert("Scenario saved. (Persistence is wired to your account soon.)")}
+              <div className="nb-field">
+                <span className="nb-label">Control system</span>
+                <Choice<ElectronicsPath>
+                  legend="Control system"
+                  value={electronicsPath}
+                  onChange={setElectronicsPath}
+                  options={[
+                    { value: "fullNew", label: "new, itemised" },
+                    { value: "bundle3230", label: "bundle $3,230" },
+                    { value: "bundle2750", label: "bundle $2,750" },
+                    { value: "own", label: "own it, $0" },
+                  ]}
+                />
+                <p className="nb-hint">
+                  Itemise a new legal control system, take an all-in-one AndyMark
+                  bundle, or reuse what is already in the crate.
+                </p>
+              </div>
+              {electronicsPath === "fullNew" ? (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Field htmlFor="bg-batt" label="Batteries" helper="$58 each.">
+                    <NumberInput id="bg-batt" value={batteryQty} onChange={setBatteryQty} />
+                  </Field>
+                  <Field
+                    htmlFor="bg-consum"
+                    label="Consumables"
+                    helper={`RSL, breaker, wiring. $${RANGES.consumables.low} to $${RANGES.consumables.high}.`}
+                  >
+                    <NumberInput id="bg-consum" value={consumables} onChange={setConsumables} prefix="$" step={5} />
+                  </Field>
+                </div>
+              ) : null}
+
+              <div className="nb-hair grid gap-4 pt-4 sm:grid-cols-2">
+                <Field htmlFor="bg-neo" label="NEO motors" helper="$42.50 plus a $100 SPARK MAX each.">
+                  <NumberInput id="bg-neo" value={neoQty} onChange={setNeoQty} />
+                </Field>
+                <Field htmlFor="bg-kraken" label="Kraken X60" helper="$217.99, no controller needed.">
+                  <NumberInput id="bg-kraken" value={krakenQty} onChange={setKrakenQty} />
+                </Field>
+                <Field htmlFor="bg-other-qty" label="Other motors" helper="Quantity.">
+                  <NumberInput id="bg-other-qty" value={otherMotorQty} onChange={setOtherMotorQty} />
+                </Field>
+                <Field htmlFor="bg-other-unit" label="Other unit price" helper="Each.">
+                  <NumberInput id="bg-other-unit" value={otherMotorUnit} onChange={setOtherMotorUnit} prefix="$" step={0.5} />
+                </Field>
+              </div>
+            </div>
+
+            {/* ---- Panel 3: everything nobody budgets for ---- */}
+            <div className="nb-panel gap-4">
+              <p className="nb-slug border-b-2 border-ink pb-2">03 / the rest of it</p>
+
+              <Field
+                htmlFor="bg-tools"
+                label="Tools and shop equipment"
+                helper="Your own figure. A tool set comes inside the Starter Bundle."
               >
-                <Save className="h-4 w-4" aria-hidden /> Save scenario
-              </button>
-            ) : null}
-          </div>
+                <NumberInput id="bg-tools" value={toolsCost} onChange={setToolsCost} prefix="$" step={25} />
+              </Field>
 
-          {!authed ? (
-            <div className="mt-3 rounded-xl border border-dashed border-border bg-primary/5 p-3 text-sm">
-              <Link
-                href="/signup?next=/tools/frc-budget-calculator"
-                className="inline-flex items-center gap-1.5 font-medium text-primary hover:underline"
+              <Field
+                htmlFor="bg-travel"
+                label="Travel, lodging and food per event"
+                helper={`Team and region specific, $${RANGES.travelPerEvent.low.toLocaleString()} to $${RANGES.travelPerEvent.high.toLocaleString()} is typical. This is never a quote.`}
               >
-                <Sparkles className="h-4 w-4" aria-hidden />
-                Create a free account to save scenarios &amp; export
-              </Link>
-              <p className="mt-1 text-xs text-muted-foreground">
-                The full calculator, math and citations stay free — no account required.
+                <NumberInput id="bg-travel" value={travelPerEvent} onChange={setTravelPerEvent} prefix="$" step={50} />
+              </Field>
+
+              <Field
+                htmlFor="bg-spares"
+                label="Spares, sensors, pneumatics"
+                helper="Everything the season eats that nobody writes down."
+              >
+                <NumberInput id="bg-spares" value={sparesOther} onChange={setSparesOther} prefix="$" step={25} />
+              </Field>
+
+              <Field
+                htmlFor="bg-size"
+                label="Team size"
+                helper="Optional. Gives the per-student figure a grant application asks for."
+              >
+                <NumberInput id="bg-size" value={teamSize} onChange={setTeamSize} />
+              </Field>
+
+              <p className="nb-pen mt-auto rotate-[-1.4deg] pt-4">
+                travel is the line teams forget
               </p>
             </div>
-          ) : null}
-        </div>
-      </div>
-
-      {/* Notes & sources */}
-      <details className="ac-glass mt-6 rounded-2xl p-5">
-        <summary className="cursor-pointer text-sm font-semibold text-foreground">
-          Notes &amp; sources
-        </summary>
-        <div className="mt-3 space-y-3 text-sm text-foreground/70">
-          <ul className="list-disc space-y-2 pl-5">
-            <li>
-              Registration figures are FIRST&apos;s {SEASON} published fees (worldwide $6,300 all
-              teams; additional regionals $3,000). Re-verify each season at
-              community.firstinspires.org / help.firstinspires.org before Kickoff — FIRST adjusts
-              these annually.
-            </li>
-            <li>
-              District teams: the $6,300 FIRST fee is only the base. Your district (e.g. FIRST
-              Washington, FIN, PNW, NE, ONT) adds its own program/event fees that vary by region and
-              are billed separately — select your district or enter the amount from your district
-              organization.
-            </li>
-            <li>
-              FIRST Championship fee is shown from recent historical pricing (~$5,750, 2024) and is
-              NOT yet published for 2026 — treat as an estimate and confirm when FIRST posts it.
-            </li>
-            <li>
-              Vendor hardware prices are the currently-listed FRC/education prices (checked 2026-07)
-              and can change; MSRP is higher than the education price on several items (e.g. Kraken
-              X60 $399.99 MSRP, VH-109 radio). Prices exclude shipping and tax.
-            </li>
-            <li>
-              Travel, lodging, and food are inherently team-specific and are user-entered — never
-              treat the range as a quote.
-            </li>
-            <li>
-              This tool estimates cost only; it is not affiliated with or endorsed by FIRST,
-              AndyMark, REV Robotics, CTR Electronics, or WestCoast Products.
-            </li>
-          </ul>
-
-          <div className="ac-divider" />
-
-          <div>
-            <div className="mb-2 text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-              Sourced default values
-            </div>
-            <ul className="space-y-1.5">
-              {Object.values(FEES).map((f) => (
-                <li key={f.url + f.cite} className="flex items-start gap-2 text-xs">
-                  <span className="text-foreground/70">{f.cite}</span>
-                  <a
-                    href={f.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex shrink-0 items-center gap-0.5 text-primary hover:underline"
-                  >
-                    source <ExternalLink className="h-3 w-3" aria-hidden />
-                  </a>
-                </li>
-              ))}
-              <li className="flex items-start gap-2 text-xs">
-                <span className="text-foreground/70">
-                  District program fee — region-specific ${RANGES.districtFee.low.toLocaleString()}–$
-                  {RANGES.districtFee.high.toLocaleString()} (editable; verify with your district)
-                </span>
-                <a
-                  href={RANGES.districtFee.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex shrink-0 items-center gap-0.5 text-primary hover:underline"
-                >
-                  source <ExternalLink className="h-3 w-3" aria-hidden />
-                </a>
-              </li>
-              <li className="text-xs text-foreground/70">
-                RSL + 120A main breaker + wiring consumables — bundled small parts, roughly $
-                {RANGES.consumables.low}–${RANGES.consumables.high} (editable).
-              </li>
-              <li className="text-xs text-foreground/70">
-                Travel/lodging/food — user-entered ($
-                {RANGES.travelPerEvent.low.toLocaleString()}–$
-                {RANGES.travelPerEvent.high.toLocaleString()} typical); FIRST publishes no travel
-                model.
-              </li>
-              <li className="text-xs text-foreground/70">
-                FIRST Championship fee — ~$5,750 (last publicly cited, 2024); 2026 not yet published
-                by FIRST. Editable estimate.
-              </li>
-            </ul>
           </div>
         </div>
-      </details>
-    </div>
+      </section>
+
+      {/* ---------------------------------------------------------------- *
+       * 3. The ledger
+       *
+       * One column of description against one column of money, ruled by
+       * category, exactly like the sheet a treasurer expects. It prints.
+       * ---------------------------------------------------------------- */}
+      <section className="nb-rule py-[clamp(2.2rem,5vw,3.6rem)]">
+        <div className="nb-wrap">
+          <div className="grid gap-x-[clamp(1.5rem,4vw,3rem)] gap-y-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+            <div>
+              <p className="nb-marker">the sheet / itemised</p>
+              <h2 className="max-w-[20ch] text-[clamp(1.5rem,1.1rem+1.6vw,2.4rem)]">
+                Every line, with where the price came from.
+              </h2>
+            </div>
+            <div className="flex flex-wrap gap-3 lg:pb-1">
+              <button type="button" className="nb-btn" onClick={() => window.print()}>
+                Print this sheet
+              </button>
+              {authed ? (
+                <button
+                  type="button"
+                  className="nb-btn-ghost"
+                  onClick={() =>
+                    window.alert("Scenario saved. (Persistence is wired to your account soon.)")
+                  }
+                >
+                  Save scenario
+                </button>
+              ) : (
+                <Link href="/signup?next=/tools/frc-budget-calculator" className="nb-btn-ghost">
+                  Save this to an account
+                </Link>
+              )}
+            </div>
+          </div>
+
+          {calc.rookieBenefit > 0 ? (
+            <p className="nb-note mt-[clamp(1.4rem,3vw,2.2rem)] max-w-[64ch] text-[0.95rem] leading-relaxed">
+              <span className="nb-slug mb-1 block">rookie benefit, already applied</span>
+              The AM14U6 KOP drive base comes with your registration, so the{" "}
+              {fmt0.format(calc.rookieBenefit)} retail value is a zero on this sheet
+              rather than a cost. It is real money you are not spending, and it is
+              worth saying out loud in a sponsor letter.
+            </p>
+          ) : null}
+
+          <div className="mt-[clamp(1rem,2.4vw,1.6rem)] max-w-[74ch]">
+            <LedgerSection title="Registration" items={calc.regItems} subtotal={calc.registration} />
+            <LedgerSection title="Drivetrain" items={calc.driveItems} subtotal={calc.drivetrain} />
+            <LedgerSection title="Control system" items={calc.elecItems} subtotal={calc.electronics} />
+            <LedgerSection title="Motors and controllers" items={calc.motorItems} subtotal={calc.motors} />
+            <LedgerSection title="Tools" items={calc.toolItems} subtotal={calc.tools} />
+            <LedgerSection title="Travel" items={calc.travelItems} subtotal={calc.travel} />
+            <LedgerSection title="Spares and other" items={calc.spareItems} subtotal={calc.spares} />
+
+            {/* The bottom line, on the heaviest rule on the page. */}
+            <div className="mt-[clamp(1.6rem,3.2vw,2.4rem)] border-t-2 border-ink pt-4">
+              <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
+                <h3 className="text-[clamp(1.2rem,1rem+0.8vw,1.6rem)]">Grand total</h3>
+                <p className="font-mono text-[clamp(1.6rem,1.2rem+1.6vw,2.4rem)] font-bold leading-none tracking-[-0.03em] text-blue tabular-nums">
+                  {fmt0.format(calc.grand)}
+                </p>
+              </div>
+              <p className="nb-slug mt-3 max-w-[60ch]">
+                {hasBand
+                  ? `Likely ${fmt0.format(calc.low)} to ${fmt0.format(calc.high)} once the district fee and consumables land where they land.`
+                  : "No documented range applies to this plan, so the total is the total."}
+                {calc.travel === 0
+                  ? " Travel is still zero here, and travel is almost never zero."
+                  : ""}
+                {attendFirstChamps
+                  ? " The Championship fee on this sheet is a 2024-based estimate."
+                  : ""}
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ---------------------------------------------------------------- *
+       * 4. The back of the sheet
+       * ---------------------------------------------------------------- */}
+      <section className="nb-rule py-[clamp(2.2rem,5vw,3.6rem)]">
+        <div className="nb-wrap">
+          <details className="group">
+            <summary className="flex cursor-pointer list-none items-baseline justify-between gap-4 [&::-webkit-details-marker]:hidden">
+              <span>
+                <span className="nb-marker">the back of the sheet</span>
+                <span className="block text-[clamp(1.35rem,1.05rem+1.2vw,2rem)] font-extrabold tracking-[-0.025em]">
+                  Where every default number came from.
+                </span>
+              </span>
+              <span className="nb-slug shrink-0 !text-ink" aria-hidden="true">
+                <span className="group-open:hidden">show</span>
+                <span className="hidden group-open:inline">hide</span>
+              </span>
+            </summary>
+
+            <div className="mt-[clamp(1.4rem,3vw,2.2rem)] grid gap-[clamp(1.4rem,3vw,2.6rem)] lg:grid-cols-2">
+              <div>
+                <p className="nb-slug border-b-2 border-ink pb-2">what to re-check every year</p>
+                <ul className="nb-prose mt-4 !max-w-none text-[0.95rem]">
+                  <li>
+                    Registration is FIRST&rsquo;s published {SEASON} pricing: $6,300 for
+                    every team worldwide, $3,000 per additional Regional. FIRST adjusts
+                    this annually, so re-verify before Kickoff.
+                  </li>
+                  <li>
+                    On the district model the $6,300 is only the base. Your district,
+                    whether that is FIRST Washington, FIN, PNW, NE or ONT, bills its own
+                    program and event fees separately.
+                  </li>
+                  <li>
+                    The FIRST Championship fee here is historical, about $5,750 from
+                    2024, and is not published for 2026. Treat it as an estimate.
+                  </li>
+                  <li>
+                    Vendor prices are the currently listed FRC and education prices,
+                    checked 2026-07. MSRP is higher on several items, like the Kraken X60
+                    at $399.99. Shipping and tax are not included.
+                  </li>
+                  <li>
+                    Travel, lodging and food are yours to enter. The typical range on
+                    this page is context, never a quote.
+                  </li>
+                  <li>
+                    This estimates cost only. It is not affiliated with or endorsed by
+                    FIRST, AndyMark, REV Robotics, CTR Electronics or WestCoast Products.
+                  </li>
+                </ul>
+              </div>
+
+              <div>
+                <p className="nb-slug border-b-2 border-ink pb-2">sourced default values</p>
+                <ul className="m-0 mt-1 list-none p-0">
+                  {Object.values(FEES).map((f) => (
+                    <li
+                      key={f.url + f.cite}
+                      className="nb-hair flex flex-wrap items-baseline gap-x-2 gap-y-1 py-2.5 first:border-t-0"
+                    >
+                      <span className="min-w-0 flex-1 text-[0.9rem] leading-snug text-graphite">
+                        {f.cite}
+                      </span>
+                      <a
+                        href={f.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="nb-link nb-slug shrink-0"
+                      >
+                        source
+                      </a>
+                    </li>
+                  ))}
+                  <li className="nb-hair flex flex-wrap items-baseline gap-x-2 gap-y-1 py-2.5">
+                    <span className="min-w-0 flex-1 text-[0.9rem] leading-snug text-graphite">
+                      District program fee, region-specific $
+                      {RANGES.districtFee.low.toLocaleString()} to $
+                      {RANGES.districtFee.high.toLocaleString()}, editable, verify with
+                      your district
+                    </span>
+                    <a
+                      href={RANGES.districtFee.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="nb-link nb-slug shrink-0"
+                    >
+                      source
+                    </a>
+                  </li>
+                  <li className="nb-hair py-2.5 text-[0.9rem] leading-snug text-graphite">
+                    RSL, 120 A main breaker and wiring consumables, bundled small parts,
+                    roughly ${RANGES.consumables.low} to ${RANGES.consumables.high},
+                    editable.
+                  </li>
+                  <li className="nb-hair py-2.5 text-[0.9rem] leading-snug text-graphite">
+                    Travel, lodging and food, user-entered. $
+                    {RANGES.travelPerEvent.low.toLocaleString()} to $
+                    {RANGES.travelPerEvent.high.toLocaleString()} is typical, and FIRST
+                    publishes no travel model.
+                  </li>
+                  <li className="nb-hair py-2.5 text-[0.9rem] leading-snug text-graphite">
+                    FIRST Championship fee, about $5,750 last publicly cited in 2024, not
+                    published for 2026. Editable estimate.
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </details>
+        </div>
+      </section>
+    </>
   );
 }

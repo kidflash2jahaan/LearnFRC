@@ -1,12 +1,5 @@
-"use client";
-
 import Link from "next/link";
-import { motion, useReducedMotion } from "framer-motion";
-import { Crown } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
-import { AnimatedCounter } from "@/components/animated-counter";
-import { inkFor } from "@/lib/departments";
-import { cn } from "@/lib/utils";
 
 export type PodiumEntry = {
   id: string;
@@ -22,337 +15,214 @@ export type PodiumEntry = {
   isYou: boolean;
 };
 
-const ROW_EASE = [0.21, 0.47, 0.32, 0.98] as const;
+/**
+ * THE TOP THREE, AND EVERYONE ELSE.
+ *
+ * Two shapes, deliberately unalike, because they answer different questions.
+ * The top three are three index cards taped to the wall, so the shape of the
+ * standing reads before a single number does. Ranks four and down are a table,
+ * because past third place nobody is looking at a picture, they are looking
+ * for a name in a column and their own row.
+ *
+ * NOBODY IS GOLD, SILVER OR BRONZE. Three medal hues is three colours this
+ * palette does not have, and rank read as colour alone dies in a photocopy.
+ * Rank one is centred, raised, larger and labelled "leader"; that survives
+ * greyscale, and it survives a screen reader.
+ *
+ * Server Components. There is no state here and nothing animates: the cards
+ * straighten on hover through `.nb-lift`, which is CSS, so this ships no
+ * JavaScript of its own.
+ */
 
-/** Per-rank treatment. Rank 1 (gold) is centered & elevated. */
-const RANK_STYLE: Record<
-  number,
-  {
-    /** bright accent hex — used only for fills/badges/rings */
-    accent: string;
-    /** darkened, legible-on-light tone — used for accent-colored TEXT/numbers */
-    ink: string;
-    label: string;
-    order: string;
-    delay: number;
-    /** lift the champion above the 2/3 plinths on desktop */
-    lift: string;
-  }
-> = {
-  1: {
-    accent: "#ffd23d",
-    ink: inkFor("#ffd23d"),
-    label: "Rank 01",
-    order: "order-first sm:order-2",
-    delay: 0,
-    lift: "sm:-translate-y-4",
-  },
-  2: {
-    accent: "#22d3ee",
-    ink: inkFor("#22d3ee"),
-    label: "Rank 02",
-    order: "order-2 sm:order-1",
-    delay: 0.08,
-    lift: "",
-  },
-  3: {
-    accent: "#ff3dcb",
-    ink: inkFor("#ff3dcb"),
-    label: "Rank 03",
-    order: "order-3 sm:order-3",
-    delay: 0.16,
-    lift: "",
-  },
+/** Placement of each plinth. Rank one goes to the middle and sits higher. */
+const PLINTH: Record<number, { order: string; lift: string; tilt: string }> = {
+  1: { order: "order-first sm:order-2", lift: "sm:-mt-7", tilt: "nb-tilt-3" },
+  2: { order: "order-2 sm:order-1", lift: "", tilt: "nb-tilt-1" },
+  3: { order: "order-3", lift: "", tilt: "nb-tilt-4" },
 };
 
-function PodiumColumn({ entry }: { entry: PodiumEntry }) {
-  const reduce = useReducedMotion();
-  const s = RANK_STYLE[entry.rank] ?? RANK_STYLE[3];
-  const isFirst = entry.rank === 1;
-  const accent = s.accent;
-  const ink = s.ink;
+function Plinth({ entry }: { entry: PodiumEntry }) {
+  const p = PLINTH[entry.rank] ?? PLINTH[3];
+  const first = entry.rank === 1;
 
-  const NameTag = (
-    <span className="block max-w-[12rem] truncate font-display text-base font-semibold tracking-tight sm:text-lg">
+  const nameTag = (
+    <span className="block truncate text-[clamp(1.02rem,0.95rem+0.4vw,1.28rem)] font-extrabold tracking-[-0.02em]">
       {entry.name}
     </span>
   );
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 28, scale: 0.96 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={reduce ? { duration: 0 } : { duration: 0.55, delay: s.delay, ease: ROW_EASE }}
-      whileHover={reduce ? undefined : { y: -6 }}
-      className={cn("flex w-full flex-col", s.order, s.lift)}
+    <div
+      className={`nb-box nb-lift flex flex-col items-center px-[clamp(0.9rem,2vw,1.4rem)] pb-[clamp(1rem,2vw,1.4rem)] pt-[clamp(1.4rem,2.6vw,2rem)] text-center ${p.order} ${p.lift} ${p.tilt}`}
     >
-      <div
-        className={cn(
-          "ac-card group relative overflow-hidden px-5 pb-6 pt-7 text-center",
-          isFirst ? "sm:px-6 sm:pb-8 sm:pt-9" : ""
+      <span
+        className={`nb-tape -top-3 ${first ? "left-[22%]" : "left-[16%]"} rotate-[-3.8deg]`}
+        aria-hidden="true"
+      />
+
+      <p className="nb-slug">
+        rank {String(entry.rank).padStart(2, "0")}
+        {first ? " / leader" : ""}
+      </p>
+
+      <Avatar
+        name={entry.name}
+        src={entry.avatarUrl}
+        seed={entry.username ?? entry.id}
+        className={`mt-3 ${first ? "h-[4.5rem] w-[4.5rem] text-[1.1rem]" : "h-16 w-16 text-[1rem]"}`}
+      />
+
+      <div className="mt-3 w-full min-w-0">
+        {entry.username ? (
+          <Link
+            href={`/u/${entry.username}`}
+            className="inline-flex min-h-[var(--tap)] w-full min-w-0 items-center justify-center hover:text-blue"
+          >
+            {nameTag}
+          </Link>
+        ) : (
+          nameTag
         )}
-        style={{
-          borderColor: `color-mix(in srgb, ${accent} 38%, var(--border))`,
-        }}
-      >
-        {/* rank tag */}
-        <span
-          className="absolute right-4 top-4 text-[0.68rem] font-bold uppercase tracking-[0.16em]"
-          style={{ color: ink }}
-          aria-hidden
-        >
-          {s.label}
-        </span>
-
-        {/* crown on the champion */}
-        {isFirst && (
-          <motion.div
-            initial={{ opacity: 0, y: 8, rotate: -12 }}
-            animate={{ opacity: 1, y: 0, rotate: 0 }}
-            transition={reduce ? { duration: 0 } : { delay: s.delay + 0.3, type: "spring", stiffness: 260, damping: 16 }}
-            className="mb-2 flex justify-center"
-            aria-hidden
-          >
-            <Crown className="h-6 w-6" style={{ color: ink }} />
-          </motion.div>
+        <p className="nb-slug mt-0.5 truncate">
+          {entry.teamNumber != null ? `team ${entry.teamNumber} / ` : ""}
+          {entry.role.toLowerCase()}
+        </p>
+        {entry.isYou && (
+          <p className="mt-2">
+            <span className="nb-tag" data-on>
+              you
+            </span>
+          </p>
         )}
-
-        {/* avatar + medal chip */}
-        <div className="relative mx-auto w-fit">
-          <div
-            className="relative rounded-2xl p-[2px]"
-            style={{ backgroundImage: `linear-gradient(135deg, ${accent}, color-mix(in srgb, ${accent} 30%, transparent))` }}
-          >
-            <Avatar
-              name={entry.name}
-              src={entry.avatarUrl}
-              seed={entry.username ?? entry.id}
-              className={cn(
-                "rounded-[0.9rem] border-2 border-background",
-                isFirst ? "h-20 w-20 sm:h-24 sm:w-24" : "h-16 w-16 sm:h-20 sm:w-20"
-              )}
-            />
-          </div>
-          <span
-            aria-hidden
-            className="absolute -bottom-2.5 left-1/2 flex h-7 w-7 -translate-x-1/2 items-center justify-center rounded-full border-2 border-background font-display text-xs font-bold"
-            style={{ background: accent, color: ink }}
-          >
-            {entry.rank}
-          </span>
-        </div>
-
-        {/* name + team */}
-        <div className="mt-6">
-          {entry.username ? (
-            <Link
-              href={`/u/${entry.username}`}
-              className="-my-2 inline-flex min-h-[44px] items-center justify-center rounded-md px-2 py-2 outline-none transition-colors hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-            >
-              {NameTag}
-            </Link>
-          ) : (
-            NameTag
-          )}
-          <div className="mt-1.5 flex flex-wrap items-center justify-center gap-1.5 text-sm text-muted-foreground">
-            {entry.isYou && (
-              <span className="ac-chip px-1.5 py-0.5 text-xs font-semibold text-primary">
-                You
-              </span>
-            )}
-            {entry.teamNumber != null && <span>Team {entry.teamNumber} ·</span>}
-            <span className="capitalize">{entry.role}</span>
-          </div>
-        </div>
-
-        {/* XP */}
-        <div className="mt-5">
-          <span
-            className="font-display text-2xl font-bold tabular-nums tracking-tight sm:text-3xl"
-            style={{ color: ink }}
-          >
-            <AnimatedCounter value={entry.xp} />
-          </span>
-          <span className="ml-1 text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-            XP
-          </span>
-        </div>
-
-        {/* plinth */}
-        <div className="mt-5 border-t border-border pt-3 text-xs font-medium tracking-wide text-muted-foreground">
-          Lvl {entry.level} · {entry.lessons} lessons
-        </div>
       </div>
-    </motion.div>
+
+      <p
+        className={`nb-count mt-4 ${first ? "text-[clamp(1.9rem,1.2rem+2vw,2.6rem)]" : "text-[clamp(1.6rem,1.1rem+1.5vw,2.1rem)]"}`}
+      >
+        {entry.xp.toLocaleString()}
+        <small>xp</small>
+      </p>
+
+      <p className="nb-hair nb-slug mt-4 w-full pt-3">
+        level {entry.level} / {entry.lessons}{" "}
+        {entry.lessons === 1 ? "lesson" : "lessons"}
+      </p>
+    </div>
   );
 }
 
 export function Podium({ entries }: { entries: PodiumEntry[] }) {
-  // Render in rank order; CSS `order` re-positions rank 1 to the center.
+  // Render in rank order so the DOM matches the standing; CSS `order` moves
+  // rank one to the middle on wide screens without reordering it for a reader.
   const ordered = [...entries].sort((a, b) => a.rank - b.rank);
   return (
-    <div className="mx-auto grid max-w-3xl grid-cols-1 items-end gap-4 sm:grid-cols-3 sm:gap-5">
+    <div className="mx-auto grid max-w-[54rem] grid-cols-1 items-end gap-[clamp(0.9rem,2vw,1.4rem)] sm:grid-cols-3">
       {ordered.map((e) => (
-        <PodiumColumn key={e.id} entry={e} />
+        <Plinth key={e.id} entry={e} />
       ))}
     </div>
   );
 }
 
-/* ------------------------------------------------------------------ */
-/*  Ranked rows (rank 4+)                                              */
-/*  CRITICAL: animate on MOUNT (initial -> animate), never            */
-/*  whileInView+once, so rows are always visible after a tab switch.  */
-/*                                                                      */
-/*  Column geometry lives in ROW_COLS so the header (leaderboard-tabs) */
-/*  and these rows can never drift apart — both files import it.      */
-/* ------------------------------------------------------------------ */
-
-export const ROW_COLS = {
-  rank: "w-7 shrink-0 text-center sm:w-9",
-  avatar: "w-10 shrink-0",
-  name: "min-w-0 flex-1",
-  level: "hidden w-[4.5rem] shrink-0 sm:flex sm:items-center sm:justify-center",
-  lessons: "hidden w-20 shrink-0 text-right md:block",
-  xp: "w-16 shrink-0 text-right sm:w-24",
-} as const;
-
-const rowContainer = {
-  hidden: {},
-  show: { transition: { staggerChildren: 0.045 } },
-};
-
-const rowItem = {
-  hidden: { opacity: 0, y: 14 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: ROW_EASE } },
-};
-
-export function LeaderList({ entries }: { entries: PodiumEntry[] }) {
+/**
+ * Ranks four and down, as figures in the binder.
+ *
+ * A real <table>, so the header and the rows cannot drift out of alignment,
+ * which is the one thing the old flexbox rows needed a shared column map to
+ * prevent. Level and lesson count drop out on narrow screens rather than
+ * forcing a sideways scroll, and the two columns that identify a person and
+ * rank them, name and XP, are never the ones that go.
+ */
+export function LeaderTable({
+  entries,
+  caption,
+}: {
+  entries: PodiumEntry[];
+  /** Announced to screen readers, and printed above the table as its title. */
+  caption: string;
+}) {
   return (
-    <motion.ul
-      initial="hidden"
-      animate="show"
-      variants={rowContainer}
-      className="divide-y divide-border"
-    >
-      {entries.map((e) => (
-        <motion.li key={e.id} variants={rowItem}>
-          <LeaderRow entry={e} />
-        </motion.li>
-      ))}
-    </motion.ul>
-  );
-}
-
-function LeaderRow({ entry }: { entry: PodiumEntry }) {
-  const reduce = useReducedMotion();
-  const NameTag = (
-    <span className="truncate font-display font-semibold tracking-tight">
-      {entry.name}
-    </span>
-  );
-
-  return (
-    <motion.div
-      whileHover={reduce ? undefined : { x: 4 }}
-      transition={{ type: "spring", stiffness: 320, damping: 24 }}
-      className={cn(
-        "group relative flex items-center gap-3 px-4 py-3.5 transition-colors sm:gap-4 sm:px-5",
-        entry.isYou
-          ? "bg-primary/[0.07] ring-1 ring-inset ring-primary/40"
-          : "hover:bg-primary/[0.04]"
-      )}
-    >
-      {/* current-user accent bar */}
-      {entry.isYou && (
-        <span
-          aria-hidden
-          className="absolute inset-y-0 left-0 w-1 rounded-r bg-primary"
-        />
-      )}
-
-      {/* rank */}
-      <span
-        className={cn(
-          ROW_COLS.rank,
-          "font-display text-sm font-bold tabular-nums sm:text-base",
-          entry.isYou ? "text-primary" : "text-muted-foreground"
-        )}
-      >
-        {entry.rank}
-      </span>
-
-      {/* avatar */}
-      <span className={ROW_COLS.avatar}>
-        <Avatar
-          name={entry.name}
-          src={entry.avatarUrl}
-          seed={entry.username ?? entry.id}
-          className={cn(
-            "h-10 w-10 rounded-xl ring-1",
-            entry.isYou ? "ring-primary/50" : "ring-border"
-          )}
-        />
-      </span>
-
-      {/* identity */}
-      <div className={cn(ROW_COLS.name, "min-w-0")}>
-        <div className="flex items-center gap-2">
-          {entry.username ? (
-            <Link
-              href={`/u/${entry.username}`}
-              className="-my-2 inline-flex min-h-[44px] min-w-0 items-center rounded-md py-2 outline-none transition-colors hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+    <div className="nb-scroll">
+      <table className="nb-table">
+        <caption className="nb-slug pb-3 text-left">{caption}</caption>
+        <thead>
+          <tr>
+            <th scope="col" className="w-[3.5rem]">
+              rank
+            </th>
+            <th scope="col">learner</th>
+            <th scope="col" className="hidden text-right sm:table-cell">
+              level
+            </th>
+            <th scope="col" className="hidden text-right md:table-cell">
+              lessons
+            </th>
+            <th scope="col" className="text-right">
+              xp
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {entries.map((e) => (
+            <tr
+              key={e.id}
+              // Your own row is washed blue AND barred in blue on the left, so
+              // it is still findable when the page is printed in greyscale.
+              className={e.isYou ? "bg-blue/[0.07]" : undefined}
             >
-              {NameTag}
-            </Link>
-          ) : (
-            <span className="min-w-0">{NameTag}</span>
-          )}
-          {entry.isYou && (
-            <span
-              className="ac-badge shrink-0 px-1.5 py-0.5 text-[0.58rem] font-bold uppercase tracking-[0.1em]"
-              style={{ ["--a" as string]: "var(--primary)" }}
-            >
-              You
-            </span>
-          )}
-        </div>
-        <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
-          {entry.teamNumber != null && (
-            <span className="text-foreground/70">Team {entry.teamNumber} ·</span>
-          )}
-          <span className="capitalize">{entry.role}</span>
-        </div>
-      </div>
-
-      {/* level badge */}
-      <span
-        className={cn(ROW_COLS.level, "justify-center")}
-        aria-label={`Level ${entry.level}`}
-      >
-        <span className="inline-flex items-center gap-1 rounded-full border border-primary/25 bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
-          Lvl {entry.level}
-        </span>
-      </span>
-
-      {/* lessons */}
-      <span className={cn(ROW_COLS.lessons, "text-xs text-muted-foreground")}>
-        <span className="font-semibold text-foreground/80">{entry.lessons}</span> done
-      </span>
-
-      {/* XP */}
-      <span
-        className={cn(
-          ROW_COLS.xp,
-          "font-display text-sm font-bold tabular-nums sm:text-base",
-          entry.isYou ? "text-primary" : "text-foreground"
-        )}
-      >
-        <AnimatedCounter value={entry.xp} />
-        <span className="ml-1 text-[0.6rem] font-medium uppercase text-muted-foreground">
-          xp
-        </span>
-      </span>
-    </motion.div>
+              <td
+                className={`nb-slug text-ink ${e.isYou ? "border-l-[3px] border-l-blue pl-2" : ""}`}
+              >
+                {e.rank}
+              </td>
+              <td>
+                <span className="flex min-w-0 items-center gap-3">
+                  <Avatar
+                    name={e.name}
+                    src={e.avatarUrl}
+                    seed={e.username ?? e.id}
+                    className="h-9 w-9 text-[0.7rem]"
+                  />
+                  <span className="min-w-0">
+                    <span className="flex flex-wrap items-center gap-2">
+                      {e.username ? (
+                        <Link
+                          href={`/u/${e.username}`}
+                          className="min-w-0 truncate font-bold hover:text-blue"
+                        >
+                          {e.name}
+                        </Link>
+                      ) : (
+                        <span className="min-w-0 truncate font-bold">
+                          {e.name}
+                        </span>
+                      )}
+                      {e.isYou && (
+                        <span className="nb-tag" data-on>
+                          you
+                        </span>
+                      )}
+                    </span>
+                    <span className="nb-slug block truncate">
+                      {e.teamNumber != null ? `team ${e.teamNumber} / ` : ""}
+                      {e.role.toLowerCase()}
+                    </span>
+                  </span>
+                </span>
+              </td>
+              <td className="nb-slug hidden text-right text-ink sm:table-cell">
+                {e.level}
+              </td>
+              <td className="nb-slug hidden text-right text-ink md:table-cell">
+                {e.lessons}
+              </td>
+              <td className="nb-slug text-right font-bold text-ink">
+                {e.xp.toLocaleString()}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }

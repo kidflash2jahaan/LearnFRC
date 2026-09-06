@@ -3,24 +3,9 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import {
-  Search,
-  Menu,
-  X,
-  LayoutDashboard,
-  User,
-  Bookmark,
-  Settings,
-  Shield,
-  LogOut,
-  ChevronDown,
-  Users,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/logo";
 import { Avatar } from "@/components/ui/avatar";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -46,11 +31,11 @@ const NAV = [
 
 /**
  * The last slot is audience-dependent. Signed OUT, "For teams" is the pitch
- * page — the right thing for a mentor deciding whether this is worth their
+ * page, the right thing for a mentor deciding whether this is worth their
  * team's time. Signed IN, that page has already done its job and the useful
  * destination is the member's own team, which otherwise lives only inside the
  * avatar dropdown where nobody thinks to look. 109 of 144 teams have exactly
- * one member, and the invite link that would fix that is on /teams — so the
+ * one member, and the invite link that would fix that is on /teams, so the
  * route to it has to be visible, not discoverable-if-you-hunt.
  *
  * Swapping after load is safe and matches what this component already does:
@@ -72,11 +57,36 @@ type Me = {
   isAdmin: boolean;
 };
 
+/** The caret under the account name, drawn at the same weight as the one the
+ *  kit puts inside a select, so the two read as the same pen. */
+function Caret() {
+  return (
+    <svg width="11" height="7" viewBox="0 0 14 9" aria-hidden="true" className="shrink-0">
+      <path
+        d="M1 1.4 7 7.6 13 1.4"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+/**
+ * The header is an index card taped across the top of the binder: card stock,
+ * a 2px ink rule under it, and a strip of section tabs. It is deliberately not
+ * a floating glass bar, and it does not change on scroll, because a header
+ * that restyles itself as you read is a second visual language.
+ *
+ * There is no hamburger. Eight destinations exist at every width; below xl the
+ * tab strip drops to its own row and flicks sideways like the divider tabs in
+ * a real binder, with a fade on the right edge saying there is more. That is
+ * strictly more navigable than hiding all eight behind a button, and it costs
+ * no state, no portal and no animation library.
+ */
 export function Navbar() {
   const pathname = usePathname();
-  const reduce = useReducedMotion();
-  const [scrolled, setScrolled] = React.useState(false);
-  const [mobileOpen, setMobileOpen] = React.useState(false);
   const [me, setMe] = React.useState<Me>({ authed: false, profile: null, isAdmin: false });
   const [loaded, setLoaded] = React.useState(false);
 
@@ -103,35 +113,30 @@ export function Navbar() {
   }, []);
 
   const { authed, profile, email, isAdmin } = me;
-
-  React.useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 8);
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
-  React.useEffect(() => setMobileOpen(false), [pathname]);
-
   const openSearch = () => window.dispatchEvent(new Event("open-search"));
+  const who = profile?.full_name || profile?.username || "Learner";
 
   return (
-    <header
-      className={cn(
-        "fixed inset-x-0 top-0 z-40 transition-[background,box-shadow,border-color] duration-300",
-        scrolled || mobileOpen
-          ? "border-b border-white/70 bg-white/75 shadow-[0_8px_28px_-12px_rgba(38,78,150,0.18)] backdrop-blur-xl"
-          : "border-b border-transparent bg-transparent"
-      )}
-    >
+    <header className="sticky top-0 z-40 border-b-2 border-[var(--ink)] bg-[var(--card)]">
       <nav
         aria-label="Main"
-        className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-3 px-4 sm:px-6 lg:px-8"
+        className="nb-wrap flex flex-wrap items-center gap-x-[clamp(0.7rem,1.8vw,1.4rem)] py-1.5 xl:h-16 xl:flex-nowrap xl:py-0"
       >
-        <Logo />
+        <Logo className="mr-auto xl:mr-0" />
 
-        {/* Desktop links */}
-        <div className="hidden items-center gap-0.5 md:flex">
+        {/* The tab strip. `nb-scroll` only actually scrolls once the tabs stop
+            fitting, so the same markup is a single quiet line at xl and a
+            flickable strip below it. The vertical padding is not decoration:
+            it holds the 2px focus ring clear of the scroll container's edge. */}
+        <div
+          className={[
+            "nb-scroll order-3 flex w-full items-center gap-x-[clamp(0.55rem,1.5vw,1.3rem)] py-1.5",
+            "[scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+            "max-xl:border-t max-xl:border-dashed max-xl:border-[var(--rule)] max-xl:pr-8",
+            "max-xl:[mask-image:linear-gradient(to_right,#000_calc(100%-2.2rem),transparent)]",
+            "xl:order-none xl:mr-auto xl:w-auto xl:overflow-visible",
+          ].join(" ")}
+        >
           {navFor(authed).map((item) => {
             const active = pathname === item.href || pathname.startsWith(item.href + "/");
             return (
@@ -139,106 +144,88 @@ export function Navbar() {
                 key={item.href}
                 href={item.href}
                 aria-current={active ? "page" : undefined}
-                className={cn(
-                  "relative rounded-full px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
-                  active ? "text-primary" : "text-muted-foreground hover:text-foreground"
-                )}
+                className="nb-navlink"
               >
                 {item.label}
-                {active && (
-                  <motion.span
-                    layoutId="nav-underline"
-                    className="absolute inset-x-3 -bottom-0.5 h-[2.5px] rounded-full"
-                    style={{ background: "linear-gradient(90deg, #2560e6, #1aa9d6)" }}
-                    transition={reduce ? { duration: 0 } : { type: "spring", stiffness: 380, damping: 30 }}
-                  />
-                )}
               </Link>
             );
           })}
+
+          {/* Signed out, "Log in" rides at the end of the strip behind a rule,
+              which keeps it reachable at 390px without a second row of chrome
+              competing with the one CTA. */}
+          {loaded && !authed && (
+            <>
+              <span aria-hidden="true" className="h-5 w-px shrink-0 bg-[var(--rule)]" />
+              <Link href="/login" className="nb-navlink">
+                Log in
+              </Link>
+            </>
+          )}
         </div>
 
-        {/* Right actions */}
-        <div className="flex items-center gap-2">
-          {/* Search — pill on ≥sm, icon button below */}
+        {/* The bottom padding below xl is clearance, not spacing: these buttons
+            carry a 3px offset ink drop, and without it the drop lands on the
+            dashed rule that opens the tab row. */}
+        <div className="flex shrink-0 items-center gap-2 max-xl:pb-1.5">
           <button
+            type="button"
             onClick={openSearch}
-            className="ac-chip hidden min-h-[40px] cursor-pointer items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:inline-flex"
-            aria-label="Search"
+            className="nb-btn-ghost nb-btn-sm"
+            aria-label="Search lessons and articles"
           >
-            <Search className="h-4 w-4" aria-hidden />
-            <span className="hidden lg:inline">Search</span>
+            search
             <kbd
-              aria-hidden
-              className="hidden items-center rounded-full border border-border bg-white/70 px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground lg:inline-flex"
+              aria-hidden="true"
+              className="hidden rounded-[var(--hand-s)] border border-[var(--rule)] px-1.5 py-px font-[inherit] text-[0.68rem] font-normal lg:inline-block"
             >
-              ⌘K
+              &#8984;K
             </kbd>
-          </button>
-          <button
-            onClick={openSearch}
-            className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border border-border bg-white/60 text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:hidden"
-            aria-label="Search"
-          >
-            <Search className="h-4 w-4" aria-hidden />
           </button>
 
           {!loaded ? (
-            <div className="h-9 w-9 animate-pulse rounded-full bg-white/70" aria-hidden />
+            <Skeleton className="size-10 rounded-full" />
           ) : authed ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
-                  className="flex min-h-11 cursor-pointer items-center gap-1.5 rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                  type="button"
+                  className="flex min-h-11 cursor-pointer items-center gap-1.5 text-[var(--graphite)]"
                   aria-label="Account menu"
                 >
                   <Avatar
                     name={profile?.full_name || profile?.username || email}
                     src={profile?.avatar_url}
                     seed={profile?.id}
-                    className="h-9 w-9 ring-2 ring-white/80"
                   />
-                  <ChevronDown className="hidden h-4 w-4 text-muted-foreground sm:block" aria-hidden />
+                  <Caret />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-60">
+
+              <DropdownMenuContent className="w-64">
                 <DropdownMenuLabel>
-                  <div className="truncate text-sm font-semibold text-foreground">
-                    {profile?.full_name || profile?.username || "Learner"}
-                  </div>
-                  <div className="truncate text-xs font-normal text-muted-foreground">{email}</div>
+                  <div className="truncate text-[0.95rem] font-bold">{who}</div>
+                  <div className="nb-slug truncate">{email}</div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
-                  <Link href="/dashboard">
-                    <LayoutDashboard className="h-4 w-4" /> Dashboard
-                  </Link>
+                  <Link href="/dashboard">Dashboard</Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link href="/profile">
-                    <User className="h-4 w-4" /> Profile
-                  </Link>
+                  <Link href="/profile">Profile</Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link href="/teams">
-                    <Users className="h-4 w-4" /> My team
-                  </Link>
+                  <Link href="/teams">My team</Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link href="/bookmarks">
-                    <Bookmark className="h-4 w-4" /> Bookmarks
-                  </Link>
+                  <Link href="/bookmarks">Bookmarks</Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link href="/settings">
-                    <Settings className="h-4 w-4" /> Settings
-                  </Link>
+                  <Link href="/settings">Settings</Link>
                 </DropdownMenuItem>
                 {isAdmin && (
                   <DropdownMenuItem asChild>
-                    <Link href="/admin">
-                      <Shield className="h-4 w-4" /> Admin
-                    </Link>
+                    <Link href="/admin">Admin</Link>
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuSeparator />
@@ -252,81 +239,18 @@ export function Navbar() {
                       window.location.assign("/");
                     }
                   }}
-                  className="text-destructive focus:text-destructive"
                 >
-                  <LogOut className="h-4 w-4" /> Sign out
+                  Sign out
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <div className="hidden items-center gap-2 md:flex">
-              <Link
-                href="/login"
-                className="rounded-full px-3 py-2 text-sm font-semibold text-foreground transition-colors hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-              >
-                Log in
-              </Link>
-              <Button asChild variant="brand" size="sm">
-                <Link href="/signup">Get started</Link>
-              </Button>
-            </div>
+            <Link href="/signup" className="nb-btn nb-btn-sm">
+              Get started
+            </Link>
           )}
-
-          {/* Mobile menu toggle */}
-          <button
-            onClick={() => setMobileOpen((o) => !o)}
-            className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border border-border bg-white/60 text-foreground transition-colors hover:border-primary/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring md:hidden"
-            aria-label={mobileOpen ? "Close menu" : "Open menu"}
-            aria-expanded={mobileOpen}
-            aria-controls="mobile-nav"
-          >
-            {mobileOpen ? <X className="h-5 w-5" aria-hidden /> : <Menu className="h-5 w-5" aria-hidden />}
-          </button>
         </div>
       </nav>
-
-      {/* Mobile menu */}
-      <AnimatePresence>
-        {mobileOpen && (
-          <motion.div
-            id="mobile-nav"
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: reduce ? 0 : 0.25, ease: [0.21, 0.47, 0.32, 0.98] }}
-            className="overflow-hidden border-b border-white/70 bg-white/85 backdrop-blur-xl md:hidden"
-          >
-            <nav aria-label="Mobile" className="space-y-0.5 px-4 py-4">
-              {navFor(authed).map((item) => {
-                const active = pathname === item.href || pathname.startsWith(item.href + "/");
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    aria-current={active ? "page" : undefined}
-                    className={cn(
-                      "block min-h-11 rounded-xl px-3 py-2.5 text-[15px] font-medium transition-colors",
-                      active ? "bg-primary/10 text-primary" : "text-foreground hover:bg-secondary"
-                    )}
-                  >
-                    {item.label}
-                  </Link>
-                );
-              })}
-              {loaded && !authed && (
-                <div className="flex items-center gap-2 pt-3">
-                  <Button asChild variant="ghost" size="sm" className="flex-1">
-                    <Link href="/login">Log in</Link>
-                  </Button>
-                  <Button asChild variant="brand" size="sm" className="flex-1">
-                    <Link href="/signup">Get started</Link>
-                  </Button>
-                </div>
-              )}
-            </nav>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </header>
   );
 }

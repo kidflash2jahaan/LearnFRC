@@ -1,28 +1,29 @@
-import type { CSSProperties } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { needsUsernameSetup } from "@/lib/onboarding-server";
-import { BookmarkX, Compass, Library, Sparkles } from "lucide-react";
-import {
-  RiseGroup,
-  RiseItem,
-  Reveal,
-  RevealGroup,
-  RevealItem,
-  Hover,
-  Glow,
-} from "@/components/motion/primitives";
-import { AnimatedCounter } from "@/components/animated-counter";
 import {
   BookmarkCard,
   type BookmarkCardData,
 } from "@/components/bookmarks/bookmark-card";
-import { ShelfPanel, type ShelfRow } from "./_shelf-panel";
+import { ShelfIndex, type ShelfRow } from "./_shelf-panel";
 import { getSession } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { deptMeta } from "@/lib/departments";
 import { pluralize } from "@/lib/utils";
+
+/**
+ * Bookmarks, rebuilt as the folder at the back of the binder.
+ *
+ * The page has exactly one job: pick one of the lessons you set aside and open
+ * it now. So it is a masthead, an index slip saying what is in the folder, and
+ * then the folder itself: one drawn container holding ruled entries. No card
+ * grid, no rail, no per-entry frame. The old page put every saved lesson in its
+ * own bordered, glowing, department-coloured card, which meant a reader scanned
+ * eleven frames to find one title.
+ *
+ * Behaviour is unchanged: same auth gate, same handle gate, same single
+ * bookmarks query, same newest-first order, same optimistic removal.
+ */
 
 export const metadata: Metadata = {
   title: "Bookmarks · LearnFRC",
@@ -45,14 +46,6 @@ type LessonJoin = {
 type BookmarkRow = {
   created_at: string;
   lessons: LessonJoin | null;
-};
-
-const HEADING_GRADIENT: CSSProperties = {
-  background: "linear-gradient(120deg,#2560e6,#1aa9d6,#7c5cff,#2560e6)",
-  backgroundSize: "200% auto",
-  WebkitBackgroundClip: "text",
-  backgroundClip: "text",
-  color: "transparent",
 };
 
 export default async function BookmarksPage() {
@@ -93,8 +86,7 @@ export default async function BookmarksPage() {
 
   const total = bookmarks.length;
 
-  // The reading list, understood as a shelf: how many spines per department,
-  // and roughly how long a full read-through would take.
+  // What is in the folder, by department, most-saved first.
   const shelves: ShelfRow[] = (() => {
     const map = new Map<string, ShelfRow>();
     for (const b of bookmarks) {
@@ -112,189 +104,97 @@ export default async function BookmarksPage() {
   );
 
   return (
-    <div className="relative overflow-x-clip">
-      <Glow
-        blobs={[
-          { size: "620px", pos: { left: "-180px", top: "-200px" }, color: "#8bbcff", opacity: 0.65 },
-          { size: "560px", pos: { right: "-160px", top: "-120px" }, color: "#6ff0ea", opacity: 0.55, delay: 2 },
-          { size: "520px", pos: { left: "28%", top: "520px" }, color: "#c8b6ff", opacity: 0.4, delay: 4 },
-        ]}
-      />
+    <>
+      {/* ===================== MASTHEAD ===================== */}
+      <section className="nb-wrap pb-[clamp(2rem,4vw,3rem)] pt-[clamp(2.2rem,5vw,4rem)]">
+        <div className="grid items-start gap-[clamp(1.6rem,4vw,3.2rem)] min-[900px]:grid-cols-[minmax(0,1.35fr)_minmax(0,0.85fr)]">
+          <div className="min-w-0">
+            <p className="nb-marker">your reading list</p>
 
-      {/* ============================ HERO ============================ */}
-      <section className="mx-auto grid max-w-6xl items-center gap-10 px-4 pb-14 pt-28 sm:px-6 lg:grid-cols-[1.05fr_.95fr] lg:gap-12 lg:pb-16 lg:pt-32">
-        <RiseGroup>
-          <RiseItem>
-            <span className="ac-chip inline-flex items-center gap-2">
-              <Library className="h-3.5 w-3.5 text-primary" aria-hidden />
-              <span className="ac-eyebrow">Your personal reading list</span>
-            </span>
-          </RiseItem>
-          <RiseItem>
-            <h1 className="mt-4 text-balance font-display text-4xl font-extrabold leading-[1.03] sm:text-5xl lg:text-[3.35rem]">
-              The shelf you built,{" "}
-              <span style={HEADING_GRADIENT}>ready for the pit</span>
-            </h1>
-          </RiseItem>
-          <RiseItem>
-            <p className="mt-4 max-w-xl text-pretty text-lg leading-relaxed text-foreground/70">
+            <h1 className="max-w-[16ch]">
               {total > 0
-                ? `${pluralize(total, "lesson")} saved${
-                    deptCount > 1 ? ` across ${pluralize(deptCount, "department")}` : ""
-                  }. Every spine is a lesson you set aside — pull one down whenever build season leaves you a spare minute.`
-                : "Save any lesson while you browse and it lands here like a book on a shelf — your own reading list across all 11 departments."}
+                ? `${pluralize(total, "lesson")} you set aside.`
+                : "A folder for the lessons you'll want twice."}
+            </h1>
+
+            <p className="nb-lede mt-[clamp(1rem,2vw,1.5rem)]">
+              {total > 0
+                ? `Filed from ${pluralize(
+                    deptCount,
+                    "department"
+                  )}, newest first. Pull one down when build season leaves you ten minutes.`
+                : "Hit the bookmark on any lesson while you are reading and it lands here, so the thing you needed in week one is still findable in week five."}
             </p>
-          </RiseItem>
 
-          {total > 0 && (
-            <RiseItem>
-              <div className="mt-7 flex flex-wrap items-center gap-3">
-                <Link href="/guides" className="ac-btn text-sm">
-                  <Compass className="h-4 w-4" aria-hidden />
-                  Add more to the shelf
-                </Link>
-                <Link href="/guides/getting-started" className="ac-btn-ghost text-sm">
-                  <Sparkles className="h-4 w-4" aria-hidden />
-                  Start with the basics
-                </Link>
-              </div>
-            </RiseItem>
-          )}
+            <div className="mt-[clamp(1.4rem,2.6vw,2rem)] flex flex-wrap gap-3">
+              <Link href="/guides" className="nb-btn">
+                {total > 0 ? "Add to the folder" : "Browse the guides"}
+              </Link>
+              <Link href="/guides/getting-started" className="nb-btn-ghost">
+                Start with the basics
+              </Link>
+            </div>
+          </div>
 
-          {total > 0 && (
-            <RiseItem>
-              <div className="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground">
-                <span>
-                  <b className="font-semibold text-foreground">
-                    <AnimatedCounter value={total} />
-                  </b>{" "}
-                  saved
-                </span>
-                <span>
-                  <b className="font-semibold text-foreground">
-                    <AnimatedCounter value={deptCount} />
-                  </b>{" "}
-                  {deptCount === 1 ? "department" : "departments"}
-                </span>
-                {readMinutes > 0 && (
-                  <span>
-                    <b className="font-semibold text-foreground">
-                      <AnimatedCounter value={readMinutes} />
-                    </b>{" "}
-                    min to read it all
-                  </span>
-                )}
-              </div>
-            </RiseItem>
-          )}
-        </RiseGroup>
-
-        {/* ===== SIGNATURE: the glass "shelf" — spines stacked by department ===== */}
-        <ShelfPanel
-          shelves={shelves}
-          deptCount={deptCount}
-          readMinutes={readMinutes}
-          total={total}
-        />
+          <div className="min-[900px]:justify-self-end">
+            <ShelfIndex shelves={shelves} readMinutes={readMinutes} total={total} />
+          </div>
+        </div>
       </section>
 
-      {/* ============================ SHELF ============================ */}
-      <section className="mx-auto max-w-4xl px-4 pb-12 sm:px-6 lg:px-8">
+      {/* ===================== THE FOLDER =====================
+          One drawn container. The entries live inside its edge rather than
+          carrying edges of their own, so what a reader scans is a column of
+          titles and not a column of frames. */}
+      <section className="nb-wrap border-t-2 border-ink py-[clamp(2.2rem,4.5vw,3.6rem)]">
         {total === 0 ? (
-          <Reveal>
-            <div className="ac-glass mx-auto max-w-xl px-6 py-16 text-center">
-              <span
-                className="ac-badge mx-auto grid h-16 w-16 place-items-center"
-                style={{ "--a": "#2560e6" } as CSSProperties}
-              >
-                <BookmarkX className="h-8 w-8" aria-hidden />
+          <div className="nb-box max-w-[46rem] p-[clamp(1.3rem,3vw,2.1rem)]">
+            <p className="nb-slug">the folder</p>
+            <h2 className="mt-2 text-[clamp(1.4rem,1.1rem+1.2vw,2rem)]">
+              Empty, for now.
+            </h2>
+            <p className="nb-sub mt-3">
+              Every lesson page has a bookmark on it. Nothing about saving one is
+              a commitment: it is a note that says come back to this, and this is
+              where the notes pile up.
+            </p>
+            <p className="nb-hair mt-5 pt-4">
+              <span className="nb-count">
+                11<small>departments to file from</small>
               </span>
-              <h2 className="mt-6 font-display text-2xl font-bold tracking-tight">
-                Nothing saved yet
-              </h2>
-              <p className="mx-auto mt-3 max-w-md text-pretty text-base leading-relaxed text-foreground/70">
-                Tap the bookmark icon on any lesson to shelve it here. Build your
-                own reading list across all 11 departments — from mechanical
-                build to the Impact award.
-              </p>
-              <div className="mt-8 flex items-center justify-center gap-2">
-                <div className="font-display text-4xl font-extrabold text-foreground">
-                  <AnimatedCounter value={11} />
-                </div>
-                <div className="text-left text-xs uppercase tracking-wider text-muted-foreground">
-                  departments
-                  <br />
-                  to explore
-                </div>
-              </div>
-              <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-                <Link href="/guides" className="ac-btn text-sm">
-                  <Compass className="h-4 w-4" aria-hidden />
-                  Explore the guides
-                </Link>
-                <Link href="/guides/getting-started" className="ac-btn-ghost text-sm">
-                  Start with the basics
-                </Link>
-              </div>
-            </div>
-          </Reveal>
+            </p>
+          </div>
         ) : (
           <>
-            <Reveal className="flex items-end justify-between gap-4">
-              <div>
-                <span className="ac-eyebrow">On the shelf</span>
-                <h2 className="mt-1 font-display text-2xl font-bold tracking-tight text-foreground">
-                  {pluralize(total, "saved lesson")}
-                </h2>
-              </div>
-              <span className="inline-flex shrink-0 items-center gap-1.5 pb-1 text-xs text-muted-foreground">
-                <span aria-hidden className="inline-block h-2 w-2 rounded-full bg-primary" />
-                Newest first
-              </span>
-            </Reveal>
-
-            {/* the reading rail: a hairline spine ties the saved lessons together */}
-            <div className="relative mt-5 pl-5 sm:pl-6">
-              <span
-                aria-hidden
-                className="pointer-events-none absolute inset-y-2 left-[6px] w-px bg-gradient-to-b from-primary/40 via-border to-transparent sm:left-[8px]"
-              />
-              <RevealGroup className="flex flex-col gap-3">
-                {bookmarks.map((b) => (
-                  <RevealItem key={b.lessonId} className="relative">
-                    {/* rail node keyed to the department color */}
-                    <span
-                      aria-hidden
-                      className="absolute -left-[18px] top-7 z-[1] h-2.5 w-2.5 rounded-full ring-4 ring-background sm:-left-[22px]"
-                      style={{ background: deptMeta(b.deptSlug).color }}
-                    />
-                    <BookmarkCard data={b} />
-                  </RevealItem>
-                ))}
-              </RevealGroup>
+            <div className="mb-[clamp(1.1rem,2.4vw,1.6rem)] flex flex-wrap items-end justify-between gap-x-8 gap-y-3">
+              <h2 className="text-[clamp(1.5rem,1.1rem+1.4vw,2.3rem)]">
+                The folder
+              </h2>
+              <p className="nb-slug">newest first</p>
             </div>
 
-            <Reveal className="mt-10">
-              <Hover lift={-4}>
-                <div className="ac-card flex flex-col items-center gap-3 px-6 py-8 text-center sm:flex-row sm:justify-between sm:text-left">
-                  <div>
-                    <h3 className="font-display text-lg font-bold text-foreground">
-                      Room for more on the shelf
-                    </h3>
-                    <p className="mt-1 text-sm text-foreground/70">
-                      Keep browsing — every lesson you bookmark lands right here.
-                    </p>
-                  </div>
-                  <Link href="/guides" className="ac-btn shrink-0 text-sm">
-                    <Compass className="h-4 w-4" aria-hidden />
-                    Browse guides
-                  </Link>
-                </div>
-              </Hover>
-            </Reveal>
+            <div className="nb-box">
+              <ul>
+                {bookmarks.map((b) => (
+                  <BookmarkCard key={b.lessonId} data={b} />
+                ))}
+              </ul>
+            </div>
+
+            {/* Not a second call to action. By this point the reader has
+                scrolled the whole folder, so the only thing left worth saying
+                is where the next one comes from. */}
+            <p className="nb-sub mt-[clamp(1.4rem,3vw,2.2rem)]">
+              Run out of things to read?{" "}
+              <Link href="/guides" className="nb-link">
+                The catalogue
+              </Link>{" "}
+              has {deptCount === 11 ? "all eleven" : "eleven"} departments, and
+              the bookmark is on every lesson in it.
+            </p>
           </>
         )}
       </section>
-    </div>
+    </>
   );
 }

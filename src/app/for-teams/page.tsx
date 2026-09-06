@@ -1,30 +1,8 @@
-import type { CSSProperties } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import {
-  Users,
-  GraduationCap,
-  Award,
-  ArrowRight,
-  ArrowUpRight,
-  CheckCircle2,
-  Sparkles,
-} from "lucide-react";
 import { getDepartments } from "@/lib/queries";
-import { deptMeta, inkFor } from "@/lib/departments";
-import { Icon } from "@/lib/icon-map";
-import { AnimatedCounter } from "@/components/animated-counter";
-import {
-  RiseGroup,
-  RiseItem,
-  Reveal,
-  RevealGroup,
-  RevealItem,
-  Hover,
-  Glow,
-} from "@/components/motion/primitives";
-import { OnboardingRail, type OnboardingStep } from "./_onboarding-rail";
-import { TeamPanel, type RosterMember } from "./_team-panel";
+import { OnboardingStrip, type OnboardingStep } from "./_onboarding-rail";
+import { RosterSheet, type RosterMember } from "./_team-panel";
 
 export const metadata: Metadata = {
   title: "LearnFRC for Teams — free onboarding curriculum for FRC teams",
@@ -33,55 +11,44 @@ export const metadata: Metadata = {
   alternates: { canonical: "/for-teams" },
 };
 
-// Icons are referenced by NAME and resolved inside the client rail —
-// component functions can't cross the server -> client boundary.
 const STEPS: OnboardingStep[] = [
   {
     n: "01",
-    icon: "hash",
-    title: "Everyone adds your team number",
-    body: "When your members sign up, they enter the same FRC team number. That's the only step — no codes, no invites, nothing to set up.",
+    title: "Everyone types the same team number",
+    body: "When your members sign up, they enter your FRC team number. That is the whole step. There is no code to hand out and nothing to configure first.",
+    out: "setup required: none",
   },
   {
     n: "02",
-    icon: "users",
-    title: "Your team groups automatically",
-    body: "Anyone with your team number is instantly grouped together, and new members show up the moment they join.",
+    title: "The roster builds itself",
+    body: "Anyone on that number is grouped with the rest of you straight away, and a member who joins in week four shows up the moment they finish signing up.",
+    out: "invites to send: zero",
   },
   {
     n: "03",
-    icon: "eye",
-    title: "See each other's progress",
-    body: "You and your teammates can all see who's completed which lessons, their XP, and recent activity — so you can push each other and spot who needs help.",
+    title: "You can all see who has done what",
+    body: "Lessons completed, XP and recent activity, for every member. Mentors use it to find who is trained on the mechanism, and who has not started.",
+    out: "visible to: your team",
   },
 ];
 
-const FEATURES = [
+/** What a team gets out of this, in the order a mentor cares about it. */
+const OFFER: { title: string; body: string }[] = [
   {
-    icon: GraduationCap,
-    title: "A ready-made curriculum",
-    body: "394 lessons across all 11 departments — stop rebuilding rookie training from scratch every season.",
+    title: "A curriculum that already exists",
+    body: "394 lessons across all 11 departments, written and reviewed. Nobody on your team has to rebuild rookie training from scratch in January again.",
   },
   {
-    icon: Award,
-    title: "Quizzes & certificates",
-    body: "Every lesson ends in a quiz, and members earn certificates — real proof they learned the material.",
+    title: "A quiz at the end of every lesson",
+    body: "Clear every quiz in a department and it issues a certificate for that department, which is the part mentors actually use: real proof of who is trained on what.",
   },
   {
-    icon: CheckCircle2,
-    title: "Free, forever",
-    body: "No ads, no paywall, no per-seat pricing. Built by a student, for the community.",
+    title: "Free, with no seat count",
+    body: "No ads, no paywall, no per-member pricing, and no upgrade waiting at the fifteenth member. Built by a high-school student, for the teams around him.",
   },
 ];
 
-const STATS: { value: number; suffix?: string; label: string }[] = [
-  { value: 11, label: "departments" },
-  { value: 101, label: "modules" },
-  { value: 394, suffix: "", label: "lessons" },
-  { value: 100, suffix: "%", label: "free" },
-];
-
-// Illustrative roster shown in the hero "team assembles itself" panel.
+/** Illustrative roster for the sign-in sheet. Labelled as an example there. */
 const SAMPLE_ROSTER: RosterMember[] = [
   { initials: "AK", name: "Ava K.", role: "Mechanical", xp: 1240 },
   { initials: "RJ", name: "Ravi J.", role: "Programming", xp: 980 },
@@ -89,247 +56,210 @@ const SAMPLE_ROSTER: RosterMember[] = [
   { initials: "DP", name: "Dev P.", role: "Rookie", xp: 120 },
 ];
 
-const BRAND_GRADIENT: CSSProperties = {
-  background: "linear-gradient(120deg, #2560e6, #1aa9d6)",
-  WebkitBackgroundClip: "text",
-  backgroundClip: "text",
-  color: "transparent",
-};
+/** The extent of the catalogue, as printed on the team handout. */
+const TALLY: { n: string; unit: string }[] = [
+  { n: "11", unit: "departments" },
+  { n: "101", unit: "modules" },
+  { n: "394", unit: "lessons" },
+  { n: "$0", unit: "per member, ever" },
+];
 
+/**
+ * /for-teams is the handout you give a mentor.
+ *
+ * The reader is not a learner, they are the person deciding whether to put
+ * thirty rookies on this in January. So the page argues in the order they
+ * decide in: what it costs to set up (nothing), what it looks like once it is
+ * running (the roster), what their team actually gets, and where to point the
+ * new members on day one. The three-step strip is the centrepiece because the
+ * whole pitch is that there is no admin surface to learn.
+ *
+ * Server Component. Same single catalogue fetch as before.
+ */
 export default async function ForTeamsPage() {
   const departments = await getDepartments().catch(() => []);
   const track = departments.slice(0, 6);
 
   return (
-    <div className="relative overflow-x-clip">
-      <Glow
-        blobs={[
-          { size: "560px", pos: { left: "-160px", top: "-200px" }, color: "#8bbcff", opacity: 0.6 },
-          { size: "480px", pos: { right: "-140px", top: "-40px" }, color: "#6ff0ea", opacity: 0.5, delay: 2 },
-          { size: "500px", pos: { left: "34%", top: "620px" }, color: "#c8b6ff", opacity: 0.4, delay: 4 },
-        ]}
-      />
+    <>
+      {/* ===================== MASTHEAD ===================== */}
+      <section className="nb-wrap pb-[clamp(2.2rem,4.5vw,3.4rem)] pt-[clamp(2.2rem,5vw,4rem)]">
+        <p className="nb-marker">for mentors and team leads</p>
 
-      {/* ============================ HERO ============================ */}
-      <section className="mx-auto grid max-w-6xl items-center gap-12 px-4 pb-16 pt-28 sm:px-6 lg:grid-cols-[1.02fr_0.98fr] lg:gap-10 lg:pb-20 lg:pt-32 lg:px-8">
-        <RiseGroup>
-          <RiseItem>
-            <span className="ac-chip inline-flex items-center gap-2">
-              <Users className="h-3.5 w-3.5 text-primary" aria-hidden />
-              <span className="ac-eyebrow">For mentors &amp; team leads</span>
-            </span>
-          </RiseItem>
-          <RiseItem>
-            <h1 className="mt-5 text-balance font-display text-4xl font-extrabold leading-[1.04] sm:text-5xl lg:text-[3.3rem]">
-              Onboard your <span style={BRAND_GRADIENT}>whole team</span> in one
-              build season.
-            </h1>
-          </RiseItem>
-          <RiseItem>
-            <p className="mt-5 max-w-xl text-pretty text-lg leading-relaxed text-foreground/70">
-              LearnFRC gives your team a structured curriculum for every
-              department, and automatically groups everyone who signs up with
-              your team number — so you can all see each other&apos;s progress
-              from kickoff to competition. Completely free.
+        <h1 className="max-w-[20ch]">
+          Your team already has a curriculum. It just has not been written down.
+        </h1>
+
+        <p className="nb-lede mt-[clamp(1rem,2vw,1.5rem)]">
+          Every job on an FRC team is in here, in order, with a quiz at the end
+          of each lesson. Members who sign up with your team number are grouped
+          together, so you can see who has actually done it.
+        </p>
+
+        <div className="mt-[clamp(1.4rem,2.6vw,2rem)] flex flex-wrap gap-3">
+          <Link href="/teams" className="nb-btn">
+            Go to your team
+          </Link>
+          <Link href="/guides" className="nb-btn-ghost">
+            Browse the curriculum
+          </Link>
+        </div>
+
+        <div className="nb-rule mt-[clamp(1.8rem,3.6vw,2.6rem)] flex flex-wrap gap-x-[clamp(1.6rem,5vw,4rem)] gap-y-3 pt-[clamp(0.9rem,2vw,1.3rem)]">
+          {TALLY.map((item) => (
+            <p key={item.unit} className="nb-count">
+              {item.n}
+              <small>{item.unit}</small>
             </p>
-          </RiseItem>
-          <RiseItem>
-            <div className="mt-7 flex flex-wrap items-center gap-3">
-              <Link href="/teams" className="ac-btn text-sm">
-                Go to your team <ArrowRight className="h-4 w-4" aria-hidden />
-              </Link>
-              <Link href="/guides" className="ac-btn-ghost text-sm">
-                Browse the curriculum
-              </Link>
-            </div>
-          </RiseItem>
-          <RiseItem>
-            <div className="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground">
-              <span>
-                <b className="font-semibold text-foreground">
-                  <AnimatedCounter value={11} />
-                </b>{" "}
-                departments
-              </span>
-              <span>
-                <b className="font-semibold text-foreground">
-                  <AnimatedCounter value={394} />
-                </b>{" "}
-                lessons
-              </span>
-              <span>
-                <b className="font-semibold text-foreground">$0</b> — always
-                free
-              </span>
-            </div>
-          </RiseItem>
-        </RiseGroup>
-
-        <TeamPanel roster={SAMPLE_ROSTER} />
+          ))}
+        </div>
       </section>
 
-      {/* ============= HOW IT WORKS — the signature 3-step rail ========= */}
-      <section className="mx-auto max-w-3xl px-4 py-14 sm:px-6 lg:px-8">
-        <Reveal className="text-center">
-          <p className="ac-eyebrow justify-center">Three steps, zero setup</p>
-          <h2 className="mt-3 text-balance font-display text-3xl font-bold sm:text-4xl">
-            How it works
+      {/* ===================== NO SETUP ===================== */}
+      <section className="nb-wrap pb-[clamp(2.4rem,5vw,3.8rem)]">
+        <div className="mb-[clamp(1.4rem,3vw,2.2rem)] max-w-[46rem]">
+          <h2 className="max-w-[22ch]">
+            There is no admin dashboard, because there is nothing to administer.
           </h2>
-          <p className="mx-auto mt-3 max-w-xl text-lg leading-relaxed text-foreground/70">
-            No admin dashboard, no invite codes. Your team assembles itself.
+          <p className="nb-sub mt-3">
+            No seats to buy, no invite codes to chase down, no roster to keep in
+            a spreadsheet. Three things happen, and you only do the first one.
           </p>
-        </Reveal>
+        </div>
 
-        <OnboardingRail steps={STEPS} />
+        <OnboardingStrip steps={STEPS} />
+
+        <p className="nb-pen mt-[clamp(0.9rem,2vw,1.2rem)] max-w-[30ch] rotate-[-0.9deg]">
+          tell them the number once at the first meeting
+        </p>
       </section>
 
-      {/* ============= WHAT YOUR TEAM GETS — features + stats =========== */}
-      <section className="mx-auto max-w-6xl px-4 py-14 sm:px-6 lg:px-8">
-        <Reveal className="text-center">
-          <p className="ac-eyebrow justify-center">Why teams pick LearnFRC</p>
-          <h2 className="mt-3 text-balance font-display text-3xl font-bold sm:text-4xl">
-            Everything a rookie season needs
-          </h2>
-        </Reveal>
+      {/* ===================== WHAT IT LOOKS LIKE =====================
+          Two columns of different weights, not two matching cards: the offer is
+          running text with rules between it, and the roster is a taped sheet.
+          They are doing different jobs, so they are not drawn the same. */}
+      <section className="nb-wrap nb-rule py-[clamp(2.4rem,5vw,3.8rem)]">
+        <div className="grid items-start gap-[clamp(1.8rem,4vw,3.4rem)] min-[900px]:grid-cols-[minmax(0,1.25fr)_minmax(0,0.85fr)]">
+          <div>
+            <h2 className="max-w-[18ch]">What your team gets out of it.</h2>
 
-        <RevealGroup className="mt-10 grid gap-5 md:grid-cols-3">
-          {FEATURES.map((f) => (
-            <RevealItem key={f.title}>
-              <Hover className="h-full" lift={-5}>
-                <div className="ac-card h-full p-6">
-                  <span
-                    className="ac-badge flex h-12 w-12 items-center justify-center"
-                    style={{ "--a": "#2560e6" } as CSSProperties}
-                  >
-                    <f.icon className="h-6 w-6" aria-hidden />
-                  </span>
-                  <h3 className="mt-4 font-display text-lg font-bold">{f.title}</h3>
-                  <p className="mt-2 text-[15px] leading-relaxed text-muted-foreground">
-                    {f.body}
-                  </p>
+            <dl className="mt-[clamp(1.2rem,2.6vw,1.8rem)]">
+              {OFFER.map((item, i) => (
+                <div
+                  key={item.title}
+                  className={
+                    i === 0 ? "pb-5" : "nb-hair pb-5 pt-5 last:pb-0"
+                  }
+                >
+                  <dt className="text-[clamp(1.1rem,0.98rem+0.5vw,1.35rem)] font-extrabold leading-[1.1] tracking-[-0.02em]">
+                    {item.title}
+                  </dt>
+                  <dd className="mt-2 max-w-[56ch] text-[0.97rem] leading-[1.5] text-graphite">
+                    {item.body}
+                  </dd>
                 </div>
-              </Hover>
-            </RevealItem>
-          ))}
-        </RevealGroup>
+              ))}
+            </dl>
+          </div>
 
-        <RevealGroup className="mt-5 grid grid-cols-2 gap-4 md:grid-cols-4">
-          {STATS.map((s) => (
-            <RevealItem key={s.label}>
-              <Hover className="h-full">
-                <div className="ac-glass h-full p-5 text-center">
-                  <div
-                    className="font-display text-3xl font-extrabold leading-none"
-                    style={BRAND_GRADIENT}
-                  >
-                    <AnimatedCounter value={s.value} suffix={s.suffix} />
-                  </div>
-                  <div className="mt-1.5 text-[13px] uppercase tracking-wider text-muted-foreground">
-                    {s.label}
-                  </div>
-                </div>
-              </Hover>
-            </RevealItem>
-          ))}
-        </RevealGroup>
+          <RosterSheet roster={SAMPLE_ROSTER} />
+        </div>
       </section>
 
-      {/* ==================== SUGGESTED ROOKIE TRACK ==================== */}
+      {/* ===================== WHERE TO POINT ROOKIES ===================== */}
       {track.length > 0 && (
-        <section className="mx-auto max-w-6xl px-4 py-14 sm:px-6 lg:px-8">
-          <Reveal className="text-center">
-            <p className="ac-eyebrow justify-center">Suggested rookie track</p>
-            <h2 className="mt-3 text-balance font-display text-3xl font-bold sm:text-4xl">
-              A starting path for new members
-            </h2>
-            <p className="mx-auto mt-3 max-w-xl text-lg leading-relaxed text-foreground/70">
-              Not sure where to point rookies? Start them here and work down
-              — or let them pick the department they&apos;re joining in the
-              pit.
+        <section className="nb-wrap nb-rule py-[clamp(2.4rem,5vw,3.8rem)]">
+          <div className="mb-[clamp(1.4rem,3vw,2.1rem)] flex flex-wrap items-end justify-between gap-x-8 gap-y-3">
+            <div>
+              <h2 className="max-w-[19ch]">
+                Hand a new member this list on day one.
+              </h2>
+              <p className="nb-sub mt-3">
+                The first {track.length} departments, in catalogue order. It is
+                the order that assumes nothing, so a rookie who works down it
+                can be useful in the shop before they have picked a job.
+              </p>
+            </div>
+            <p className="nb-pen max-w-[20ch] rotate-[1.3deg] min-[900px]:text-right">
+              safety before anyone touches a tool
             </p>
-          </Reveal>
+          </div>
 
-          <RevealGroup className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {track.map((d, i) => {
-              const m = deptMeta(d.slug);
-              return (
-                <RevealItem key={d.slug}>
-                  <Hover className="h-full">
-                    <Link
-                      href={`/guides/${d.slug}`}
-                      className="ac-tile group block h-full p-[18px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                      style={{ "--a": m.color } as CSSProperties}
-                    >
-                      <div className="flex items-center gap-4">
-                        <span
-                          className="ac-badge flex h-12 w-12 shrink-0 items-center justify-center"
-                          style={{ "--a": m.color } as CSSProperties}
-                        >
-                          <Icon name={m.icon} className="h-6 w-6" aria-hidden />
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <span
-                              className="text-xs font-bold tabular-nums"
-                              style={{ color: inkFor(m.color) }}
-                            >
-                              {String(i + 1).padStart(2, "0")}
-                            </span>
-                            <div className="line-clamp-2 text-[15px] font-semibold leading-snug text-foreground">
-                              {d.name}
-                            </div>
-                          </div>
-                          {d.tagline && (
-                            <div className="mt-0.5 line-clamp-2 text-sm leading-snug text-muted-foreground">
-                              {d.tagline}
-                            </div>
-                          )}
-                        </div>
-                        <ArrowUpRight
-                          className="h-4 w-4 shrink-0 text-foreground/60 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
-                          aria-hidden
-                        />
-                      </div>
-                    </Link>
-                  </Hover>
-                </RevealItem>
-              );
-            })}
-          </RevealGroup>
+          <ol className="nb-box grid gap-x-[clamp(1.4rem,4vw,3rem)] p-[clamp(1.1rem,2.6vw,1.9rem)] min-[720px]:grid-cols-2">
+            {track.map((dept, i) => (
+              <li
+                key={dept.slug}
+                className={
+                  // Two columns fill row-wise, so the second item is also on the
+                  // top row and must not draw a rule above itself there either.
+                  i === 0
+                    ? ""
+                    : i === 1
+                      ? "border-t border-dashed border-rule min-[720px]:border-t-0"
+                      : "border-t border-dashed border-rule"
+                }
+              >
+                <Link
+                  href={`/guides/${dept.slug}`}
+                  className="group flex min-h-11 items-baseline gap-3.5 py-3"
+                >
+                  <span className="nb-slug shrink-0 font-bold text-blue">
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block font-semibold leading-snug decoration-blue decoration-2 underline-offset-4 group-hover:text-blue group-hover:underline">
+                      {dept.name}
+                    </span>
+                    {dept.tagline && (
+                      <span className="mt-0.5 block text-[0.88rem] leading-snug text-graphite">
+                        {dept.tagline}
+                      </span>
+                    )}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ol>
         </section>
       )}
 
-      {/* ============================= CTA ============================= */}
-      <section className="mx-auto max-w-6xl px-4 pb-20 pt-6 sm:px-6 lg:px-8">
-        <Reveal>
-          <div className="ac-glass relative overflow-hidden p-8 text-center sm:p-12">
-            <div
-              aria-hidden
-              className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-[radial-gradient(circle,rgba(26,169,214,0.25),transparent_70%)] blur-2xl"
-            />
-            <p className="ac-eyebrow flex items-center justify-center gap-1.5">
-              <Sparkles className="h-3.5 w-3.5" aria-hidden /> Ready when you
-              are
-            </p>
-            <h2 className="mx-auto mt-3 max-w-xl text-balance font-display text-3xl font-bold sm:text-4xl">
-              Ready to onboard your team?
+      {/* ===================== THE ASK =====================
+          The one inverted surface on the page, spent on the single action a
+          mentor has to take. Everything above it argues; this states the step. */}
+      <section className="nb-slab py-[clamp(2.4rem,5vw,3.8rem)]">
+        <div className="nb-wrap grid items-end gap-[clamp(1.4rem,3.5vw,3rem)] min-[900px]:grid-cols-[minmax(0,1.3fr)_minmax(0,0.8fr)]">
+          <div>
+            <h2 className="max-w-[17ch] text-[clamp(1.6rem,1.1rem+1.9vw,2.55rem)]">
+              Add your team number, then tell everyone else to.
             </h2>
-            <p className="mx-auto mt-4 max-w-lg text-[15px] leading-relaxed text-muted-foreground">
-              Add your team number and tell your members to do the same —
-              everyone groups together automatically. It&apos;s free, and
-              there&apos;s nothing to set up.
+            <p className="mt-3 max-w-[42ch] text-[0.95rem] text-[rgba(245,246,242,0.85)]">
+              That is the entire setup. Reading needs no account at all, so a
+              rookie can start on the shop floor tonight and sign up later for
+              the ticks and the certificate.
             </p>
-            <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-              <Link href="/teams" className="ac-btn text-sm">
-                Go to your team <ArrowRight className="h-4 w-4" aria-hidden />
+
+            <div className="mt-[clamp(1.4rem,3vw,2rem)] flex flex-wrap gap-3">
+              <Link
+                href="/teams"
+                className="nb-btn border-card bg-card text-blue"
+              >
+                Go to your team
               </Link>
-              <Link href="/guides" className="ac-btn-ghost text-sm">
-                Browse the curriculum
+              <Link
+                href="/paths"
+                className="nb-btn-ghost border-card text-card"
+              >
+                Pick a route for them
               </Link>
             </div>
           </div>
-        </Reveal>
+
+          <p className="nb-stamp">
+            <b>$0</b>
+            <span>no seats, no upgrade, no ads</span>
+          </p>
+        </div>
       </section>
-    </div>
+    </>
   );
 }

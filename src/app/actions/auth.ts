@@ -58,7 +58,7 @@ export async function signIn(
     if (!prof) return { error: "No account found with that username." };
     const { data: u } = await admin.auth.admin.getUserById(prof.id as string);
     email = u?.user?.email ?? "";
-    if (!email) return { error: "Couldn't sign you in — try your email." };
+    if (!email) return { error: "Couldn't sign you in. Try your email instead." };
   }
 
   const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -100,7 +100,7 @@ export async function signUp(
   const username = usernameRaw.toLowerCase().replace(/[^a-z0-9_]/g, "");
   if (!username || username.length < 3)
     return {
-      error: "Choose a username — at least 3 characters (letters, numbers, _).",
+      error: "Choose a username: at least 3 characters (letters, numbers, _).",
     };
 
   // Block offensive usernames / names at creation time (local, no AI).
@@ -109,8 +109,8 @@ export async function signUp(
     return {
       error:
         badField === "username"
-          ? "That username isn't allowed — please choose another."
-          : "That name isn't allowed — please use a different one.",
+          ? "That username isn't allowed. Please choose another."
+          : "That name isn't allowed. Please use a different one.",
     };
 
   let teamNum: number | null = null;
@@ -262,7 +262,7 @@ export async function requestPasswordReset(
     // Rate-limit is the one case worth surfacing so a user isn't left waiting
     // on an email that was throttled; everything else stays anti-enumeration.
     if (error.status === 429)
-      return { error: "Too many attempts — wait a minute and try again." };
+      return { error: "Too many attempts. Wait a minute and try again." };
     console.error("requestPasswordReset:", error.message);
   }
   return { success: true };

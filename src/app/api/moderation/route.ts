@@ -91,7 +91,7 @@ export async function GET(req: Request) {
     submissions: (subs ?? []).map((s) => ({
       id: s.id,
       title: s.title,
-      department: dt.get(s.department_id as string) ?? "—",
+      department: dt.get(s.department_id as string) ?? "-",
       module: s.module_id
         ? (mt.get(s.module_id as string) ?? "an existing module")
         : `New module: ${s.new_module_title ?? "Community Lessons"}`,

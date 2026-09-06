@@ -33,7 +33,7 @@ export async function submitNewContent(input: {
     return { error: "Pick a module, or name a new one." };
 
   if (!(await rateLimit("submit-content", 5, 3600, user.id)))
-    return { error: "You've submitted a few lessons recently — try again in a bit." };
+    return { error: "You've submitted a few lessons recently. Try again in a bit." };
 
   const { error } = await supabase.from("content_submissions").insert({
     submitter_id: user.id,

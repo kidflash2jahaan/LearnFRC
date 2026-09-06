@@ -1,16 +1,6 @@
-import type { CSSProperties, ComponentType } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import {
-  Users,
-  CheckCircle2,
-  Gauge,
-  LayoutGrid,
-  ArrowRight,
-  Sparkles,
-  UserPlus,
-} from "lucide-react";
 import { getSession } from "@/lib/auth";
 import {
   getTeamByNumber,
@@ -18,16 +8,7 @@ import {
   getReferralCount,
 } from "@/lib/queries";
 import { ShareButton } from "@/components/share-button";
-import { AnimatedCounter } from "@/components/animated-counter";
 import { clampPct, pluralize } from "@/lib/utils";
-import {
-  RiseGroup,
-  RiseItem,
-  Reveal,
-  RevealGroup,
-  RevealItem,
-  Glow,
-} from "@/components/motion/primitives";
 import {
   SubteamBoard,
   SubteamMeter,
@@ -48,98 +29,71 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-const BRAND_GRADIENT: CSSProperties = {
-  background: "linear-gradient(120deg, #2560e6, #1aa9d6)",
-  WebkitBackgroundClip: "text",
-  backgroundClip: "text",
-  color: "transparent",
-};
-
+/**
+ * /teams is the sign-out sheet on the pit wall.
+ *
+ * A member comes here to answer three questions in order: who else from my
+ * team is here, which subteams has nobody picked up, and how do I get more
+ * people in. The page is laid out in exactly that order, and the middle
+ * question gets the most room because it is the only one that ends in
+ * somebody doing something.
+ */
 export default async function TeamsPage() {
   const { user, profile } = await getSession();
   if (!user) redirect("/login?next=/teams");
 
-  return (
-    <div className="relative overflow-x-clip">
-      <Glow
-        blobs={[
-          { size: "620px", pos: { left: "-170px", top: "-200px" }, color: "#8bbcff", opacity: 0.65 },
-          { size: "560px", pos: { right: "-160px", top: "-120px" }, color: "#6ff0ea", opacity: 0.5, delay: 2 },
-          { size: "520px", pos: { left: "34%", top: "480px" }, color: "#c8b6ff", opacity: 0.4, delay: 4 },
-        ]}
-      />
+  if (!profile?.team_number) return <NoTeamNumber />;
 
-      <div className="mx-auto max-w-6xl px-4 pb-12 pt-28 sm:px-6 lg:px-8">
-        {!profile?.team_number ? (
-          <EmptyState />
-        ) : (
-          await renderTeam(profile.team_number, user.id, profile.username)
-        )}
-      </div>
-    </div>
-  );
+  return renderTeam(profile.team_number, user.id, profile.username);
 }
 
-/* ----------------------------------------------------------------- */
-/*  No team number yet — a welcoming onboarding card                  */
-/* ----------------------------------------------------------------- */
-function EmptyState() {
+/* ------------------------------------------------------------------ */
+/*  No team number on the profile yet                                  */
+/* ------------------------------------------------------------------ */
+
+/**
+ * There is no team to draw, so the page is one card and one field to fill in.
+ * Nothing is faked here: an empty roster and four zeroed figures would be a
+ * report on a team that does not exist yet.
+ */
+function NoTeamNumber() {
   return (
-    <section className="mx-auto max-w-2xl pt-8 text-center">
-      <RiseGroup>
-        <RiseItem>
-          <span className="ac-chip inline-flex items-center gap-2">
-            <Users className="h-3.5 w-3.5 text-primary" aria-hidden />
-            <span className="ac-eyebrow">Your pit crew</span>
-          </span>
-        </RiseItem>
-        <RiseItem>
-          <h1 className="mt-5 text-balance font-display text-4xl font-extrabold leading-[1.04] sm:text-5xl">
-            See your whole{" "}
-            <span style={BRAND_GRADIENT}>team&apos;s progress</span>
-          </h1>
-        </RiseItem>
-        <RiseItem>
-          <p className="mx-auto mt-5 max-w-xl text-pretty text-lg leading-relaxed text-foreground/70">
-            Add your FRC team number and everyone on your team who uses
-            LearnFRC shows up here automatically — no codes, no setup.
-            You&apos;ll all see each other&apos;s progress and push each
-            other to finish before build season.
-          </p>
-        </RiseItem>
-        <RiseItem>
-          <div className="mx-auto mt-8 max-w-md">
-            <div className="ac-glass p-6 text-left">
-              <div className="flex items-center gap-3">
-                <span
-                  className="ac-badge flex h-11 w-11 shrink-0 items-center justify-center"
-                  style={{ "--a": "#2560e6" } as CSSProperties}
-                >
-                  <UserPlus className="h-5 w-5" aria-hidden />
-                </span>
-                <div>
-                  <p className="text-base font-bold text-foreground">
-                    One number links you all
-                  </p>
-                  <p className="mt-0.5 text-sm text-muted-foreground">
-                    It&apos;s the same team number you use at every event.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </RiseItem>
-        <RiseItem>
-          <div className="mt-7 flex justify-center">
-            <Link href="/settings" className="ac-btn text-sm">
-              Add your team number <ArrowRight className="h-4 w-4" aria-hidden />
-            </Link>
-          </div>
-        </RiseItem>
-      </RiseGroup>
+    <section className="nb-wrap pb-[clamp(3rem,6vw,5rem)] pt-[clamp(2.2rem,5vw,3.8rem)]">
+      <div className="nb-box nb-tilt-2 relative mx-auto max-w-[44rem] p-[clamp(1.4rem,3.2vw,2.4rem)]">
+        <span className="nb-tape -top-3 left-[18%] rotate-[-4deg]" aria-hidden="true" />
+        <span className="nb-tape -bottom-3 right-[16%] rotate-[2.8deg]" aria-hidden="true" />
+
+        <p className="nb-marker">team / not set</p>
+
+        <h1 className="text-[clamp(1.8rem,1.3rem+2.2vw,2.9rem)]">
+          Put your team number on your profile.
+        </h1>
+
+        <p className="nb-lede mt-[clamp(1rem,2vw,1.4rem)]">
+          It is the one you already use at every event, and it is the only
+          setup this page has. Everyone who signs up with the same number lands
+          on the same sheet: no codes, no invites to accept, no admin.
+        </p>
+
+        <ul className="nb-hair mt-[clamp(1.2rem,2.4vw,1.8rem)] flex flex-col gap-2 pt-[clamp(1.2rem,2.4vw,1.8rem)] text-[0.95rem] text-graphite">
+          <li>- who on your team is here, and how far each of them has got</li>
+          <li>- which of the 11 subteams nobody has picked up yet</li>
+          <li>- one link and one QR code for pulling the rest of them in</li>
+        </ul>
+
+        <div className="mt-[clamp(1.3rem,2.6vw,1.9rem)]">
+          <Link href="/settings" className="nb-btn">
+            Add your team number
+          </Link>
+        </div>
+      </div>
     </section>
   );
 }
+
+/* ------------------------------------------------------------------ */
+/*  The sheet                                                          */
+/* ------------------------------------------------------------------ */
 
 async function renderTeam(
   teamNumber: number,
@@ -174,17 +128,14 @@ async function renderTeam(
     isYou: m.isYou,
   }));
 
-  // ── Subteam coverage ────────────────────────────────────────────────────
   // Departments ARE subteams, so this is the one team view a member can act
-  // on. Only usernames/avatars cross the boundary — the coverage query never
-  // opens the profiles table at all.
+  // on. Only usernames and avatars cross the boundary: the coverage query
+  // never opens the profiles table at all.
   const byId = new Map(rosterMembers.map((m) => [m.userId, m]));
   const coverage = await getTeamSubteamCoverage(members.map((m) => m.userId));
   const subteamRows: SubteamRow[] = coverage.map((c) => ({
     slug: c.slug,
     name: c.name,
-    accent: c.accent,
-    icon: c.icon,
     lessonCount: c.lessonCount,
     teamCompleted: c.teamCompleted,
     crew: c.members.flatMap((cm) => {
@@ -205,81 +156,48 @@ async function renderTeam(
 
   const gapRows = subteamRows.filter((r) => r.crew.length === 0);
   const claimedCount = subteamRows.length - gapRows.length;
-  // Distinct lessons the team has finished between them — NOT the sum of the
+  // Distinct lessons the team has finished between them, NOT the sum of the
   // per-member counts, which double-counts a lesson two people both did.
   const distinctDone = subteamRows.reduce((s, r) => s + r.teamCompleted, 0);
   const solo = members.length <= 1;
 
-  const stats: {
-    icon: ComponentType<{ className?: string }>;
-    label: string;
-    value: number;
-    suffix?: string;
-    accent: string;
-  }[] = [
-    { icon: Users, label: "Members", value: members.length, accent: "var(--primary)" },
+  const tally: { figure: string; label: string }[] = [
+    { figure: String(members.length), label: pluralize(members.length, "member") },
     {
-      icon: LayoutGrid,
-      label: "Subteams covered",
-      value: claimedCount,
-      suffix: `/${subteamRows.length}`,
-      accent: "var(--magenta)",
+      figure: `${claimedCount}/${subteamRows.length}`,
+      label: "subteams claimed",
     },
     {
-      icon: CheckCircle2,
-      label: "Lessons completed",
-      value: totalCompleted,
-      accent: "var(--accent)",
+      figure: totalCompleted.toLocaleString(),
+      label: "lessons finished, counting everyone",
     },
-    { icon: Gauge, label: "Avg. completion", value: avgPct, suffix: "%", accent: "var(--primary)" },
+    { figure: `${avgPct}%`, label: "average through the catalogue" },
   ];
 
   return (
-    <div className="space-y-14">
-      {/* ============================ HERO ============================ */}
-      {/* Signature: the pit crew panel — overlapping avatar lineup +      */}
-      {/* readiness ring, the crew's shared progress in one glass device. */}
-      <section className="grid items-center gap-10 lg:grid-cols-2 lg:gap-12">
-        <RiseGroup>
-          <RiseItem>
-            <span className="ac-chip inline-flex items-center gap-2">
-              <Users className="h-3.5 w-3.5 text-primary" aria-hidden />
-              <span className="ac-eyebrow">Your pit crew</span>
-            </span>
-          </RiseItem>
-          <RiseItem>
-            <h1 className="mt-5 text-balance font-display text-4xl font-extrabold leading-[1.02] sm:text-5xl lg:text-[3.4rem]">
-              Team <span style={BRAND_GRADIENT}>#{teamNumber}</span>
-            </h1>
-          </RiseItem>
-          <RiseItem>
-            <p className="mt-5 max-w-xl text-pretty text-lg leading-relaxed text-foreground/70">
-              {solo ? (
-                <>
-                  You&apos;re the only one from #{teamNumber} here so far.
-                  Below is every subteam on the team — what you&apos;re
-                  covering, and what&apos;s still wide open.
-                </>
-              ) : (
-                <>
-                  Everyone who signed up with team #{teamNumber} is in the pit —
-                  with every subteam laid out so you can see who&apos;s covering
-                  what, and what nobody has picked up yet.
-                </>
-              )}
-            </p>
-          </RiseItem>
-          <RiseItem>
-            <div className="mt-7 flex flex-wrap items-center gap-3">
-              <Link href="/guides" className="ac-btn text-sm">
-                Keep climbing <ArrowRight className="h-4 w-4" aria-hidden />
-              </Link>
-              <Link href="#subteams" className="ac-btn-ghost text-sm">
-                {gapRows.length > 0 ? "See what's missing" : "See who's on what"}
-              </Link>
-            </div>
-          </RiseItem>
-        </RiseGroup>
+    <>
+      {/* ===================== MASTHEAD ===================== */}
+      <section className="nb-wrap grid items-start gap-[clamp(1.8rem,4vw,3.4rem)] pb-[clamp(1.8rem,3.6vw,2.8rem)] pt-[clamp(2.2rem,5vw,3.8rem)] lg:grid-cols-[minmax(0,1.35fr)_minmax(0,0.8fr)]">
+        <div>
+          <p className="nb-marker">the pit sheet</p>
+
+          <h1 className="max-w-[14ch]">Team {teamNumber}, and who is on what.</h1>
+
+          <p className="nb-lede mt-[clamp(1rem,2vw,1.5rem)]">
+            {solo
+              ? `You are the only one from ${teamNumber} here so far. Every subteam on the team is ruled out below: what you have covered, and what is still wide open.`
+              : `Everyone who signed up with team ${teamNumber} is on this sheet, with all 11 subteams ruled out so you can see who is covering what and what nobody has picked up.`}
+          </p>
+
+          <div className="mt-[clamp(1.4rem,2.6vw,2rem)] flex flex-wrap gap-3">
+            <Link href="/guides" className="nb-btn">
+              Open the guides
+            </Link>
+            <Link href="#subteams" className="nb-btn-ghost">
+              {gapRows.length > 0 ? "See what is open" : "See who is on what"}
+            </Link>
+          </div>
+        </div>
 
         <CrewPanel
           teamNumber={teamNumber}
@@ -291,176 +209,143 @@ async function renderTeam(
         />
       </section>
 
-      {/* ==================== INVITE (solo lead) ===================== */}
-      {/* 109 of 144 teams here are exactly one person, and for that person a  */}
-      {/* roster is a list of themselves. The empty roster IS the invite       */}
-      {/* moment, so on a team of one the invite runs directly under the hero  */}
-      {/* instead of at the bottom of the page — an offer, not a report that   */}
-      {/* nobody else showed up. On a team with a crew it stays where it was.  */}
+      {/* ===================== THE TALLY =====================
+          Four figures ruled across the page. Not cards: a card per number
+          would make four objects to compare where there are only four
+          numbers to read. */}
+      <section className="nb-wrap pb-[clamp(2.4rem,5vw,3.6rem)]">
+        <div className="nb-rule grid grid-cols-2 gap-x-[clamp(1rem,3vw,2.4rem)] gap-y-[clamp(1.2rem,2.4vw,1.6rem)] pt-[clamp(1.2rem,2.4vw,1.8rem)] sm:grid-cols-4">
+          {tally.map((t, i) => (
+            <div
+              key={t.label}
+              className={
+                i > 0
+                  ? "sm:border-l sm:border-dashed sm:pl-[clamp(1rem,2.4vw,1.8rem)]"
+                  : undefined
+              }
+            >
+              <p className="nb-count text-[clamp(1.7rem,1.2rem+1.4vw,2.3rem)]">
+                {t.figure}
+              </p>
+              <p className="nb-slug mt-1.5 leading-relaxed">{t.label}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ================= INVITE, FOR A TEAM OF ONE =================
+          109 of 144 teams here are exactly one person, and for that person a
+          roster is a list of themselves. The empty roster IS the invite
+          moment, so on a team of one the invite runs directly under the
+          masthead: an offer, not a report that nobody else showed up. On a
+          team with a crew it stays at the bottom where it always was. */}
       {solo && username ? (
-        <Reveal>
-          <section id="invite" className="scroll-mt-28">
-            <TeamInvite
-              username={username}
-              teamNumber={teamNumber}
-              referralCount={referralCount}
-              tone="solo"
-            />
-          </section>
-        </Reveal>
+        <section id="invite" className="nb-wrap pb-[clamp(2.4rem,5vw,3.6rem)]">
+          <TeamInvite
+            username={username}
+            teamNumber={teamNumber}
+            referralCount={referralCount}
+            tone="solo"
+          />
+        </section>
       ) : null}
 
-      {/* =========================== STATS =========================== */}
-      <RevealGroup className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {stats.map((s) => (
-          <RevealItem key={s.label}>
-            <div
-              className="ac-tile flex items-center gap-3 px-5 py-5"
-              style={{ "--a": s.accent } as CSSProperties}
-            >
-              <span
-                className="ac-badge flex h-11 w-11 shrink-0 items-center justify-center"
-                style={{ "--a": s.accent } as CSSProperties}
-              >
-                <s.icon className="h-5 w-5" aria-hidden />
-              </span>
-              <span className="min-w-0">
-                <span className="block text-2xl font-bold leading-none tracking-tight text-foreground tabular-nums">
-                  <AnimatedCounter value={s.value} suffix={s.suffix} />
-                </span>
-                <span className="mt-1.5 block truncate text-xs font-semibold uppercase tracking-wide text-foreground">
-                  {s.label}
-                </span>
-              </span>
-            </div>
-          </RevealItem>
-        ))}
-      </RevealGroup>
-
-      {/* ========================== SUBTEAMS ========================= */}
-      {/* An FRC team is split into subteams and so is this catalog — one      */}
-      {/* department each. This is the section that makes the page a TEAM      */}
-      {/* tool: a named, checkable gap ("nobody is on Electrical") is a        */}
-      {/* specific person to go ask, and it reads the same for a team of one.  */}
-      <section id="subteams" className="scroll-mt-28">
-        <Reveal>
-          <div className="flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <span className="ac-eyebrow inline-flex items-center gap-1.5">
-                <span className="inline-block h-2 w-2 rounded-full bg-primary" aria-hidden />
-                Who&apos;s on what
-              </span>
-              <h2 className="mt-2 font-display text-3xl font-bold tracking-tight text-foreground">
-                Subteam coverage
-              </h2>
-              <p className="mt-1 max-w-lg text-base text-foreground/70">
-                {claimedCount} of {subteamRows.length} subteams have someone
-                from #{teamNumber} on them
-                {gapRows.length > 0
-                  ? ". The dashed ones are wide open."
-                  : " — the whole robot, covered."}
-              </p>
-            </div>
-            {/* Distinct lessons, deliberately worded differently from the
-                "Lessons completed" stat above — that one sums every member,
-                this one counts each lesson once however many people did it. */}
-            <span className="ac-chip text-xs font-semibold tabular-nums">
-              Covers {distinctDone} of {totalLessons} lessons
-            </span>
+      {/* ===================== COVERAGE =====================
+          The section that makes this a team tool rather than a profile. A
+          named, checkable gap ("nobody is on Electrical") is a specific person
+          to go and ask, and it reads the same on a team of one. */}
+      <section id="subteams" className="nb-wrap pb-[clamp(2.6rem,5vw,4rem)]">
+        <div className="mb-[clamp(1.2rem,2.6vw,1.8rem)] flex flex-wrap items-end justify-between gap-x-8 gap-y-4">
+          <div>
+            <p className="nb-marker">who is on what</p>
+            <h2>Subteam coverage</h2>
+            <p className="nb-sub mt-3">
+              {claimedCount} of {subteamRows.length} subteams have somebody from{" "}
+              {teamNumber} on them
+              {gapRows.length > 0
+                ? ". The dashed lines are the ones nobody has picked up."
+                : ", which is the whole robot covered."}
+            </p>
           </div>
-        </Reveal>
+          {/* Distinct lessons, deliberately worded apart from the tally above:
+              that one sums every member, this one counts each lesson once
+              however many people finished it. */}
+          <p className="nb-slug shrink-0">
+            covers {distinctDone.toLocaleString()} of{" "}
+            {totalLessons.toLocaleString()} lessons
+          </p>
+        </div>
 
-        <Reveal delay={0.05}>
-          <div className="mt-5">
-            <SubteamMeter rows={subteamRows} />
-          </div>
-        </Reveal>
+        <SubteamMeter rows={subteamRows} />
 
-        <Reveal delay={0.08}>
-          <div className="mt-5">
-            <SubteamGapCard
-              teamNumber={teamNumber}
-              username={username}
-              gaps={gapRows.map((r) => subteamLabel(r.name))}
-              gapAccent={gapRows[0]?.accent}
-              coveredCount={claimedCount}
-              totalSubteams={subteamRows.length}
-              soloMember={solo}
-              teamCompleted={distinctDone}
-              totalLessons={totalLessons}
-            />
-          </div>
-        </Reveal>
+        <div className="mt-[clamp(1.4rem,3vw,2.2rem)]">
+          <SubteamGapCard
+            teamNumber={teamNumber}
+            username={username}
+            gaps={gapRows.map((r) => subteamLabel(r.name))}
+            coveredCount={claimedCount}
+            totalSubteams={subteamRows.length}
+            soloMember={solo}
+            teamCompleted={distinctDone}
+            totalLessons={totalLessons}
+          />
+        </div>
 
-        <div className="mt-5">
+        <div className="mt-[clamp(1.6rem,3.4vw,2.6rem)]">
           <SubteamBoard rows={subteamRows} />
         </div>
       </section>
 
-      {/* =========================== ROSTER ========================== */}
-      <section>
-        <Reveal>
-          <div className="flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <span className="ac-eyebrow inline-flex items-center gap-1.5">
-                <span className="inline-block h-2 w-2 rounded-full bg-primary" aria-hidden />
-                {solo ? "Where you're at" : "The leaderboard"}
-              </span>
-              <h2 className="mt-2 font-display text-3xl font-bold tracking-tight text-foreground">
-                {solo ? "Your progress" : "The roster"}
-              </h2>
-              <p className="mt-1 max-w-lg text-base text-foreground/70">
-                {solo
-                  ? `One row, for now. Anyone who signs up with #${teamNumber} lands here automatically, ranked by lessons finished.`
-                  : "Ranked by lessons finished. The one on top wears the crown — for now."}
-              </p>
-            </div>
-            <span className="ac-chip text-xs font-semibold">
-              {pluralize(members.length, "member")}
-            </span>
+      {/* ===================== ROSTER ===================== */}
+      <section className="nb-wrap pb-[clamp(2.6rem,5vw,4rem)]">
+        <div className="mb-[clamp(1.2rem,2.6vw,1.8rem)] flex flex-wrap items-end justify-between gap-x-8 gap-y-4">
+          <div>
+            <p className="nb-marker">the roster</p>
+            <h2>{solo ? "Where you are at" : "Who is furthest along"}</h2>
+            <p className="nb-sub mt-3">
+              {solo
+                ? `One row, for now. Anyone who signs up with ${teamNumber} lands on this sheet automatically, ranked by lessons finished.`
+                : "Ranked by lessons finished. Your own row is washed blue and barred in the margin."}
+            </p>
           </div>
-        </Reveal>
-
-        <div className="mt-6">
-          {members.length === 0 ? (
-            <Reveal>
-              <div className="ac-card px-6 py-16 text-center">
-                <div
-                  className="ac-badge mx-auto flex h-14 w-14 items-center justify-center"
-                  style={{ "--a": "var(--primary)" } as CSSProperties}
-                >
-                  <Sparkles className="h-6 w-6" aria-hidden />
-                </div>
-                <p className="mt-4 text-lg font-bold text-foreground">
-                  You&apos;re the first one here
-                </p>
-                <p className="mx-auto mt-1.5 max-w-sm text-base leading-relaxed text-foreground/70">
-                  Tell your teammates to sign up with team #{teamNumber} and
-                  they&apos;ll appear on the roster automatically.
-                </p>
-              </div>
-            </Reveal>
-          ) : (
-            <Roster members={rosterMembers} totalLessons={totalLessons} />
-          )}
+          <p className="nb-slug shrink-0">
+            {pluralize(members.length, "member")}
+          </p>
         </div>
+
+        {members.length === 0 ? (
+          <div className="nb-note max-w-[46rem]">
+            <p className="nb-slug">roster / empty</p>
+            <p className="mt-2 text-[0.95rem] leading-snug">
+              You are the first one here. Tell your teammates to sign up with
+              team {teamNumber} and they appear on this sheet on their own.
+            </p>
+          </div>
+        ) : (
+          // Capped for the same reason as the leaderboard's board: a
+          // five-column sheet stretched to the full gutter puts the XP figure
+          // a hand's width from the name it belongs to.
+          <div className="max-w-[58rem]">
+            <Roster members={rosterMembers} totalLessons={totalLessons} />
+          </div>
+        )}
       </section>
 
-      {/* ========================== INVITE =========================== */}
-      {/* The real referral card, not a bare homepage link. Both share       */}
-      {/* controls on this page used to point at https://learnfrc.com with   */}
-      {/* no `?ref=`, so every teammate recruited from the team page landed  */}
-      {/* unattributed and neither side ever got the +25 XP the copy         */}
-      {/* promises. TeamInvite hands out ONE url across its copy control,    */}
-      {/* its share sheet, its QR and the printable handout, so a signup     */}
-      {/* from any of them is credited to the same person and stamped        */}
-      {/* `via=team-invite`. (The subteam gap card above still emits a bare  */}
-      {/* `?ref=` with no `&via=` — attributed, just not surface-tagged.)    */}
-      {/*                                                                    */}
-      {/* Rendered here only when it is NOT already up under the hero, so a  */}
-      {/* solo member never gets the same panel twice.                       */}
+      {/* ===================== INVITE =====================
+          The real referral panel, not a bare homepage link. Both share
+          controls on this page used to point at https://learnfrc.com with no
+          `?ref=`, so every teammate recruited from the team page landed
+          unattributed and neither side ever got the +25 XP the copy promises.
+          TeamInvite hands out ONE url across its copy control, its share
+          sheet, its QR and the printable handout, so a signup from any of
+          them is credited to the same person and stamped `via=team-invite`.
+          (The gap card above still emits a bare `?ref=` with no `&via=`:
+          attributed, just not surface-tagged.)
+
+          Rendered here only when it is not already up under the masthead, so
+          a solo member never gets the same panel twice. */}
       {!solo || !username ? (
-        <Reveal>
+        <section className="nb-wrap pb-[clamp(3rem,6vw,5rem)]">
           {username ? (
             <TeamInvite
               username={username}
@@ -470,43 +355,38 @@ async function renderTeam(
           ) : (
             <UnattributedInvite teamNumber={teamNumber} />
           )}
-        </Reveal>
+        </section>
       ) : null}
-    </div>
+    </>
   );
 }
 
 /**
- * Fallback for the handful of accounts with no username yet — there is no
+ * Fallback for the handful of accounts with no username yet. There is no
  * `?ref=` to build a referral link from, so this can only send a plain signup
- * link — and no QR or handout, both of which would print a code that credits
- * nobody. Everyone else gets the real TeamInvite above.
+ * link, and no QR or handout: both would print a code that credits nobody.
+ * Everyone else gets the real TeamInvite above.
  */
 function UnattributedInvite({ teamNumber }: { teamNumber: number }) {
   return (
-    <div className="ac-glass flex flex-col gap-4 p-7 sm:flex-row sm:items-center sm:justify-between">
-      <div className="flex items-start gap-3">
-        <span
-          className="ac-badge flex h-11 w-11 shrink-0 items-center justify-center"
-          style={{ "--a": "var(--accent)" } as CSSProperties}
-        >
-          <UserPlus className="h-5 w-5" aria-hidden />
-        </span>
-        <div>
-          <h2 className="text-lg font-bold tracking-tight text-foreground">
-            Grow the crew
-          </h2>
-          <p className="mt-1 text-base leading-relaxed text-foreground/70">
-            Anyone who signs up with team #{teamNumber} joins the roster
-            automatically — no codes, no setup.
-          </p>
-        </div>
+    <div className="nb-box flex flex-col gap-5 p-[clamp(1.2rem,2.6vw,1.9rem)] sm:flex-row sm:items-center sm:justify-between sm:gap-8">
+      <div className="min-w-0">
+        <p className="nb-marker">invite / free for your team</p>
+        <h2 className="text-[clamp(1.2rem,1rem+0.9vw,1.6rem)]">Grow the crew</h2>
+        <p className="nb-sub mt-2.5 text-[0.95rem]">
+          Anyone who signs up with team {teamNumber} joins this sheet on their
+          own: no codes, no setup.{" "}
+          <Link href="/settings" className="nb-link">
+            Pick a username
+          </Link>{" "}
+          and the link starts crediting you the +25 XP too.
+        </p>
       </div>
       <div className="shrink-0">
         <ShareButton
           variant="brand"
           label="Share invite"
-          text={`Join our FRC team on LearnFRC — sign up with team #${teamNumber} and we can track each other's progress and learn together:`}
+          text={`Join our FRC team on LearnFRC. Sign up with team ${teamNumber} and we can track each other's progress and learn together:`}
           url="https://learnfrc.com/signup"
         />
       </div>

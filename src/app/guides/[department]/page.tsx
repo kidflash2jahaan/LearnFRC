@@ -1,38 +1,13 @@
 import type { Metadata } from "next";
-import type { CSSProperties } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import {
-  ArrowLeft,
-  BookOpen,
-  Layers,
-  Check,
-  Wrench,
-  ListChecks,
-  ExternalLink,
-  Sparkles,
-  Clock,
-  Route as RouteIcon,
-} from "lucide-react";
 import { getDepartmentBySlug, getAllDepartmentSlugs, flattenLessons } from "@/lib/queries";
-import { deptMeta, inkFor } from "@/lib/departments";
-import { Icon } from "@/lib/icon-map";
-import { AnimatedCounter } from "@/components/animated-counter";
 import { JsonLd } from "@/components/json-ld";
 import type { Resource } from "@/lib/types";
-import {
-  Rise,
-  RiseGroup,
-  RiseItem,
-  Reveal,
-  RevealGroup,
-  RevealItem,
-  Glow,
-} from "@/components/motion/primitives";
 import { MyProgressProvider } from "@/components/progress/my-progress";
+import { TITLE_BLOCK_CELL, TITLE_BLOCK_FIGURE } from "./_mastery-panel";
 import {
   DeptMastery,
-  DeptStatStrip,
   DeptCtaRow,
   DeptFooterHeading,
   DeptModules,
@@ -44,8 +19,8 @@ const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com";
 
 // Static/ISR: the catalog is identical for everyone and crawlers, so this page
 // is prerendered and revalidated on the catalog window. Per-user progress
-// (checkmarks, continue state, mastery) hydrates client-side from
-// /api/me/progress — see the `Dept*` islands below. (Previously force-dynamic
+// (ticks, continue state, mastery) hydrates client-side from
+// /api/me/progress, see the `Dept*` islands below. (Previously force-dynamic
 // only to read the session; that read now lives entirely on the client.)
 export const revalidate = 86400; // daily background ISR floor; content edits push live via /api/revalidate (hourly was needless ISR-write churn)
 export const dynamicParams = true; // unknown slugs still render on-demand → notFound
@@ -148,6 +123,19 @@ export async function generateMetadata({
   };
 }
 
+/**
+ * One department, as a sheet out of the binder.
+ *
+ * A person here has already chosen. What they need is the shape of the thing
+ * (how big is it, how long will it take, how far in am I) and then the path
+ * itself. So the sheet is laid out the way a drawing is: the masthead names it,
+ * a ruled title block states its figures, and the body carries the work, with
+ * the notes that do not fit in the path running down the margin.
+ *
+ * The old page said the same numbers three times, in hero chips, in a strip of
+ * four tiles, and again above the module list. They are printed once now, in
+ * the title block, which is the only place a drawing puts them.
+ */
 export default async function DepartmentPage({
   params,
 }: {
@@ -157,14 +145,13 @@ export default async function DepartmentPage({
   const dept = await getDepartmentBySlug(department);
   if (!dept) notFound();
 
-  const meta = deptMeta(dept.slug);
   const flat = flattenLessons(dept);
   const totalLessons = flat.length;
   const totalModules = dept.modules.length;
   // Ordered lesson refs the client islands use to derive progress (completed
   // set → counts, mastery %, and the continue/next destination) after hydration.
   // Titles ride along so the resume affordance can NAME the next lesson instead
-  // of saying "continue" — one array, passed by reference to every island, so
+  // of saying "continue". One array, passed by reference to every island, so
   // the RSC payload carries it exactly once.
   const lessons = flat.map((l) => ({
     id: l.id,
@@ -178,11 +165,8 @@ export default async function DepartmentPage({
   const tools = (dept.tools ?? []) as string[];
   const prereqs = (dept.prerequisites ?? []) as string[];
   const sources = (dept.sources ?? []) as Resource[];
-
-  const accent = meta.color;
-  // Darker, same-hue tone for accent text/numbers/icons — the neon accents
-  // (electrical yellow especially) are illegible as text on the light theme.
-  const ink = inkFor(accent);
+  const hasMargin =
+    learn.length > 0 || tools.length > 0 || prereqs.length > 0 || sources.length > 0;
 
   // Estimated total time across every lesson, surfaced as an at-a-glance stat.
   const totalMinutes = flat.reduce((sum, l) => sum + (l.estimated_minutes ?? 0), 0);
@@ -192,7 +176,6 @@ export default async function DepartmentPage({
 
   return (
     <MyProgressProvider>
-    <div className="relative overflow-x-clip">
       <JsonLd
         data={{
           "@context": "https://schema.org",
@@ -239,168 +222,109 @@ export default async function DepartmentPage({
         }}
       />
 
-      <Glow
-        blobs={[
-          { size: "640px", pos: { left: "-180px", top: "-240px" }, color: accent, opacity: 0.4 },
-          { size: "560px", pos: { right: "-160px", top: "-120px" }, color: "#6ff0ea", opacity: 0.4, delay: 2 },
-          { size: "520px", pos: { left: "34%", top: "560px" }, color: "#c8b6ff", opacity: 0.32, delay: 4 },
-        ]}
-      />
+      {/* ===================== MASTHEAD =====================
+          The visible trail matches the BreadcrumbList above it, so the page
+          tells a reader and a crawler the same thing about where it sits. */}
+      <section className="nb-wrap pb-[clamp(1.6rem,3vw,2.4rem)] pt-[clamp(1.6rem,3.5vw,2.6rem)]">
+        <nav aria-label="Breadcrumb">
+          <ol className="nb-slug m-0 flex list-none flex-wrap items-center gap-x-2 p-0">
+            <li>
+              <Link href="/" className="hover:text-blue hover:underline">
+                Home
+              </Link>
+            </li>
+            <li aria-hidden="true">/</li>
+            <li>
+              <Link href="/guides" className="hover:text-blue hover:underline">
+                Guides
+              </Link>
+            </li>
+            <li aria-hidden="true">/</li>
+            <li aria-current="page" className="text-ink">
+              {dept.slug}
+            </li>
+          </ol>
+        </nav>
 
-      {/* ============================ HERO ============================ */}
-      <section className="mx-auto max-w-6xl px-4 pb-8 pt-28 sm:px-6 lg:px-8 lg:pt-32">
-        <Rise>
-          <Link
-            href="/guides"
-            className="group/back -my-2 inline-flex min-h-11 items-center gap-1.5 rounded-full px-1 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-          >
-            <ArrowLeft className="h-4 w-4 transition-transform group-hover/back:-translate-x-0.5" aria-hidden />
-            All departments
-          </Link>
-        </Rise>
+        <h1 className="mt-[clamp(1rem,2vw,1.5rem)] max-w-[15ch]">{dept.name}</h1>
 
-        <div className="mt-6 grid items-center gap-10 lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-14">
-          {/* hero copy */}
-          <RiseGroup>
-            <RiseItem>
-              <div className="flex items-center gap-3">
-                <span
-                  className="ac-badge flex h-14 w-14 shrink-0 items-center justify-center"
-                  style={{ "--a": accent } as CSSProperties}
-                >
-                  <Icon name={meta.icon} className="h-7 w-7" aria-hidden />
-                </span>
-                <span className="ac-chip inline-flex items-center gap-2">
-                  <Sparkles className="h-3.5 w-3.5 text-primary" aria-hidden />
-                  <span className="ac-eyebrow">Department curriculum</span>
-                </span>
-              </div>
-            </RiseItem>
+        {dept.tagline && <p className="nb-lede mt-5">{dept.tagline}</p>}
 
-            <RiseItem>
-              <h1 className="mt-5 text-balance font-display text-4xl font-extrabold leading-[1.04] sm:text-5xl lg:text-[3.3rem]">
-                <span
-                  style={{
-                    background: `linear-gradient(120deg, ${ink}, var(--accent))`,
-                    WebkitBackgroundClip: "text",
-                    backgroundClip: "text",
-                    color: "transparent",
-                  }}
-                >
-                  {dept.name}
-                </span>
-              </h1>
-            </RiseItem>
+        {dept.description && (
+          <p className="mt-4 max-w-[62ch] text-graphite">{dept.description}</p>
+        )}
 
-            {dept.tagline && (
-              <RiseItem>
-                <p className="mt-4 max-w-2xl text-pretty text-xl font-medium text-foreground/80">
-                  {dept.tagline}
-                </p>
-              </RiseItem>
-            )}
-
-            {dept.description && (
-              <RiseItem>
-                <p className="mt-3 max-w-2xl text-pretty text-lg leading-relaxed text-foreground/70">
-                  {dept.description}
-                </p>
-              </RiseItem>
-            )}
-
-            <RiseItem>
-              <div className="mt-6 flex flex-wrap items-center gap-2.5">
-                <span className="ac-chip inline-flex items-center gap-1.5">
-                  <Layers className="h-4 w-4" style={{ color: ink }} aria-hidden />
-                  <AnimatedCounter value={totalModules} /> modules
-                </span>
-                <span className="ac-chip inline-flex items-center gap-1.5">
-                  <BookOpen className="h-4 w-4" style={{ color: ink }} aria-hidden />
-                  <AnimatedCounter value={totalLessons} /> lessons
-                </span>
-                <span className="ac-chip inline-flex items-center gap-1.5">
-                  <Clock className="h-4 w-4" style={{ color: ink }} aria-hidden />~
-                  <AnimatedCounter value={totalHours} suffix="h" /> total
-                </span>
-              </div>
-            </RiseItem>
-
-            <RiseItem>
-              <DeptCtaRow variant="hero" deptSlug={dept.slug} lessons={lessons} />
-            </RiseItem>
-          </RiseGroup>
-
-          {/* SIGNATURE: mission-progress mastery ring */}
-          <DeptMastery lessons={lessons} accent={accent} ink={ink} />
+        <div className="mt-[clamp(1.4rem,2.6vw,2rem)]">
+          <DeptCtaRow variant="hero" deptSlug={dept.slug} lessons={lessons} />
         </div>
 
-        {/* stat strip */}
-        <DeptStatStrip
-          lessons={lessons}
-          totalModules={totalModules}
-          totalLessons={totalLessons}
-          totalHours={totalHours}
-          accent={accent}
-          ink={ink}
-        />
+        <p className="nb-pen mt-5 max-w-[26ch] rotate-[-1.2deg]">
+          nobody reads these in order, that is fine
+        </p>
       </section>
 
-      {/* ======================= THE CURRICULUM ======================= */}
-      <div className="mx-auto grid max-w-6xl grid-cols-1 gap-10 px-4 py-8 sm:px-6 lg:grid-cols-3 lg:gap-12 lg:px-8 lg:py-12">
-        {/* main: the module path */}
-        <div className="min-w-0 lg:col-span-2">
-          {/* Week rhythm + resume + next badge. Renders nothing for a
-              logged-out reader or a crawler, so the static HTML below is
-              untouched — see the note on DeptWeekGoal. */}
+      {/* ===================== TITLE BLOCK =====================
+          Every figure on this page, printed once. Three of the four cells are
+          catalogue facts and render on the server; only mastery has to know who
+          is reading, so only mastery is an island.
+
+          The grid flips to one column at the width `.nb-panel` turns its
+          dividing rule from vertical to horizontal, so the cells and the rules
+          between them can never disagree about which way the block runs. */}
+      <section className="nb-wrap pb-[clamp(2rem,4vw,3rem)]">
+        <div className="nb-box grid grid-cols-1 min-[861px]:grid-cols-4">
+          <span className="nb-tape -top-3 left-[8%] rotate-[-3.4deg]" aria-hidden="true" />
+
+          <div className={TITLE_BLOCK_CELL}>
+            <p className="nb-slug">modules</p>
+            <p className={`${TITLE_BLOCK_FIGURE} min-[861px]:mt-1`}>
+              {totalModules}
+            </p>
+          </div>
+
+          <div className={TITLE_BLOCK_CELL}>
+            <p className="nb-slug">lessons</p>
+            <p className={`${TITLE_BLOCK_FIGURE} min-[861px]:mt-1`}>
+              {totalLessons}
+            </p>
+          </div>
+
+          <div className={TITLE_BLOCK_CELL}>
+            <p className="nb-slug">reading time</p>
+            <p className={`${TITLE_BLOCK_FIGURE} min-[861px]:mt-1`}>
+              {totalHours}
+              <small>hours</small>
+            </p>
+          </div>
+
+          <DeptMastery lessons={lessons} />
+        </div>
+      </section>
+
+      {/* ===================== THE PATH, AND THE MARGIN ===================== */}
+      <div className="nb-wrap grid gap-[clamp(2rem,4vw,3.2rem)] pb-[clamp(2.6rem,5vw,4rem)] lg:grid-cols-[minmax(0,1fr)_minmax(0,19rem)]">
+        <div className="min-w-0">
+          {/* Week rhythm, resume, next badge. Renders nothing for a reader with
+              no tracked progress, so the static HTML below is untouched. */}
           <DeptWeekGoal
             deptSlug={dept.slug}
             deptName={dept.name}
             lessons={lessons}
-            accent={accent}
-            ink={ink}
           />
 
-          <Reveal className="mb-6 flex items-end justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <span
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
-                style={{
-                  background: `color-mix(in srgb, ${accent} 14%, transparent)`,
-                  color: ink,
-                }}
-              >
-                <RouteIcon className="h-5 w-5" aria-hidden />
-              </span>
-              <div>
-                <p className="ac-eyebrow">The learning path</p>
-                <h2 className="mt-0.5 font-display text-2xl font-bold">Modules &amp; lessons</h2>
-              </div>
-            </div>
-            <span className="hidden shrink-0 text-sm text-muted-foreground sm:block">
-              <AnimatedCounter value={totalModules} /> modules ·{" "}
-              <AnimatedCounter value={totalLessons} /> lessons
-            </span>
-          </Reveal>
-
-          {/* the connected spine + interactive module accordion */}
-          <div className="relative">
-            <span
-              aria-hidden
-              className="pointer-events-none absolute bottom-6 left-[19px] top-4 hidden w-px sm:block"
-              style={{
-                background: `linear-gradient(180deg, ${accent}, color-mix(in srgb, ${accent} 10%, transparent))`,
-              }}
-            />
-            <DeptModules
-              departmentSlug={dept.slug}
-              modules={dept.modules}
-              accent={accent}
-            />
+          <div className="mb-[clamp(1.2rem,2.4vw,1.8rem)]">
+            <p className="nb-marker">the path</p>
+            <h2 className="text-[clamp(1.6rem,1.1rem+1.6vw,2.4rem)]">
+              Modules and lessons
+            </h2>
           </div>
 
-          {/* community authoring: contribute a whole new lesson */}
-          <div className="mt-6 flex flex-wrap items-center gap-2 border-t border-border pt-6 text-sm text-muted-foreground">
-            <span>Know something this department is missing?</span>
+          <DeptModules departmentSlug={dept.slug} modules={dept.modules} />
+
+          <div className="nb-hair mt-[clamp(1.8rem,3.5vw,2.6rem)] flex flex-wrap items-center gap-x-4 gap-y-3 pt-[clamp(1.4rem,2.6vw,1.9rem)]">
+            <p className="text-[0.95rem] text-graphite">
+              Know something this department is missing?
+            </p>
             <DeptSuggest
               departmentId={dept.id}
               departmentName={dept.name}
@@ -410,156 +334,130 @@ export default async function DepartmentPage({
           </div>
         </div>
 
-        {/* sidebar: the field guide */}
-        <aside className="lg:sticky lg:top-24 lg:self-start">
-        <RevealGroup className="space-y-5">
-          {learn.length > 0 && (
-            <RevealItem>
-              <div className="ac-card p-5">
-                <h3 className="mb-3 flex items-center gap-2 text-base font-bold">
-                  <span
-                    className="flex h-8 w-8 items-center justify-center rounded-xl"
-                    style={{
-                      background: `color-mix(in srgb, ${accent} 14%, transparent)`,
-                      color: ink,
-                    }}
-                  >
-                    <Sparkles className="h-4 w-4" aria-hidden />
-                  </span>
-                  What you&apos;ll learn
-                </h3>
-                <ul className="space-y-2.5">
-                  {learn.map((item, i) => (
-                    <li key={i} className="flex gap-2.5 text-[15px] leading-relaxed text-foreground/85">
-                      <Check className="mt-0.5 h-4 w-4 shrink-0" style={{ color: ink }} aria-hidden />
-                      <span>{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </RevealItem>
-          )}
+        {/* The margin: one sheet of notes, ruled off into sections, rather than
+            four separate cards saying four separate things.
 
-          {tools.length > 0 && (
-            <RevealItem>
-              <div className="ac-card p-5">
-                <h3 className="mb-3 flex items-center gap-2 text-base font-bold">
-                  <span
-                    className="flex h-8 w-8 items-center justify-center rounded-xl"
-                    style={{
-                      background: `color-mix(in srgb, ${accent} 14%, transparent)`,
-                      color: ink,
-                    }}
-                  >
-                    <Wrench className="h-4 w-4" aria-hidden />
-                  </span>
-                  Tools &amp; tech
-                </h3>
-                <div className="flex flex-wrap gap-2">
-                  {tools.map((t, i) => (
-                    <span
-                      key={i}
-                      className="ac-tile inline-flex items-center rounded-full px-3 py-1.5 text-sm font-medium"
-                      style={{ "--a": accent, color: ink } as CSSProperties}
-                    >
-                      {t}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </RevealItem>
-          )}
+            It does NOT stick. On a real department this sheet runs past 1700px
+            against an 800px viewport, and a sticky element taller than the
+            viewport pins at the top and puts its own tail permanently out of
+            reach: the sources list simply could not be scrolled to. Margin
+            notes are read once, beside the page, so they scroll with it. */}
+        {hasMargin && (
+          <aside aria-label="Field notes">
+            <div className="nb-box nb-tilt-2 p-[clamp(1.1rem,2.2vw,1.5rem)]">
+              <span className="nb-tape -top-3 right-6 rotate-[2.8deg]" aria-hidden="true" />
 
-          {prereqs.length > 0 && (
-            <RevealItem>
-              <div className="ac-card p-5">
-                <h3 className="mb-3 flex items-center gap-2 text-base font-bold">
-                  <span
-                    className="flex h-8 w-8 items-center justify-center rounded-xl"
-                    style={{
-                      background: `color-mix(in srgb, ${accent} 14%, transparent)`,
-                      color: ink,
-                    }}
-                  >
-                    <ListChecks className="h-4 w-4" aria-hidden />
-                  </span>
-                  Before you start
-                </h3>
-                <ul className="space-y-2 text-[15px] leading-relaxed text-foreground/85">
-                  {prereqs.map((p, i) => (
-                    <li key={i} className="flex gap-2.5">
-                      <Check className="mt-0.5 h-4 w-4 shrink-0" style={{ color: ink }} aria-hidden />
-                      <span>{p}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </RevealItem>
-          )}
+              {learn.length > 0 && (
+                <section className="nb-hair mt-5 pt-5 [&:first-of-type]:mt-0 [&:first-of-type]:border-t-0 [&:first-of-type]:pt-0">
+                  <h2 className="text-[1rem] font-extrabold tracking-[-0.02em]">
+                    What you will learn
+                  </h2>
+                  <ul className="mt-2.5 list-none p-0">
+                    {learn.map((item, i) => (
+                      <li key={i} className="relative mt-2 pl-4 text-[0.92rem] leading-snug">
+                        <span aria-hidden="true" className="absolute left-0 font-bold text-blue">
+                          -
+                        </span>
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
 
-          {sources.length > 0 && (
-            <RevealItem>
-              <div className="ac-card p-5">
-                <h3 className="mb-3 flex items-center gap-2 text-base font-bold">
-                  <span
-                    className="flex h-8 w-8 items-center justify-center rounded-xl"
-                    style={{
-                      background: `color-mix(in srgb, ${accent} 14%, transparent)`,
-                      color: ink,
-                    }}
-                  >
-                    <BookOpen className="h-4 w-4" aria-hidden />
-                  </span>
-                  Sources
-                </h3>
-                <ul className="space-y-1">
-                  {sources.slice(0, 8).map((s, i) => (
-                    <li key={i}>
-                      <a
-                        href={s.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="group/src flex min-h-11 items-center gap-2 rounded-lg px-2 py-2 text-sm text-muted-foreground transition-colors hover:bg-primary/5 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              {/* A parts list, not a row of chips. These are real part numbers
+                  ("REV Power Distribution Hub (PDH, REV-11-1850)"), and an
+                  `nb-tag` is `white-space: nowrap`, so eight of the fifteen on
+                  electrical-wiring drew 430px wide inside a 304px margin and
+                  ran off the page. Space Mono is what this system uses for an
+                  identifier anyway, and `break-words` means no part number can
+                  ever blow the column open again. */}
+              {tools.length > 0 && (
+                <section className="nb-hair mt-5 pt-5 [&:first-of-type]:mt-0 [&:first-of-type]:border-t-0 [&:first-of-type]:pt-0">
+                  <h2 className="text-[1rem] font-extrabold tracking-[-0.02em]">
+                    Tools you will touch
+                  </h2>
+                  <ul className="mt-2.5 list-none p-0">
+                    {tools.map((t, i) => (
+                      <li
+                        key={i}
+                        className="nb-slug relative mt-1.5 break-words pl-4 text-ink"
                       >
-                        <ExternalLink className="h-3.5 w-3.5 shrink-0 transition-colors group-hover/src:text-primary" aria-hidden />
-                        <span>{s.title}</span>
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </RevealItem>
-          )}
-        </RevealGroup>
-        </aside>
+                        <span aria-hidden="true" className="absolute left-0 font-bold text-blue">
+                          -
+                        </span>
+                        {t}
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
+
+              {prereqs.length > 0 && (
+                <section className="nb-hair mt-5 pt-5 [&:first-of-type]:mt-0 [&:first-of-type]:border-t-0 [&:first-of-type]:pt-0">
+                  <h2 className="text-[1rem] font-extrabold tracking-[-0.02em]">
+                    Before you start
+                  </h2>
+                  <ul className="mt-2.5 list-none p-0">
+                    {prereqs.map((p, i) => (
+                      <li key={i} className="relative mt-2 pl-4 text-[0.92rem] leading-snug">
+                        <span aria-hidden="true" className="absolute left-0 font-bold text-blue">
+                          -
+                        </span>
+                        {p}
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
+
+              {sources.length > 0 && (
+                <section className="nb-hair mt-5 pt-5 [&:first-of-type]:mt-0 [&:first-of-type]:border-t-0 [&:first-of-type]:pt-0">
+                  <h2 className="text-[1rem] font-extrabold tracking-[-0.02em]">
+                    Where this comes from
+                  </h2>
+                  <ul className="mt-1.5 list-none p-0">
+                    {sources.slice(0, 8).map((s, i) => (
+                      <li key={i} className="nb-hair first:border-t-0">
+                        <a
+                          href={s.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex min-h-11 items-center text-[0.92rem] leading-snug text-ink hover:text-blue hover:underline hover:decoration-2 hover:underline-offset-4"
+                        >
+                          {s.title}
+                          <span className="sr-only"> (opens in a new tab)</span>
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
+            </div>
+          </aside>
+        )}
       </div>
 
-      {/* ============================= CTA ============================ */}
-      <section className="mx-auto max-w-6xl px-4 py-14 sm:px-6 lg:px-8">
-        <Reveal>
-          <div className="ac-glass relative overflow-hidden p-8 text-center sm:p-12" style={{ "--a": accent } as CSSProperties}>
-            <div
-              aria-hidden
-              className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full blur-2xl"
-              style={{ background: `radial-gradient(circle, ${accent}, transparent 70%)`, opacity: 0.25 }}
-            />
-            <span
-              className="ac-badge relative mx-auto mb-5 flex h-14 w-14 items-center justify-center"
-              style={{ "--a": accent } as CSSProperties}
-            >
-              <Icon name={meta.icon} className="h-7 w-7" aria-hidden />
-            </span>
-            <DeptFooterHeading deptName={dept.name} lessons={lessons} />
-            <p className="relative mx-auto mt-3 max-w-xl text-pretty text-base text-muted-foreground">
-              {totalModules} modules, {totalLessons} lessons, all free — grounded in
-              the real Game Manual and WPILib docs. Read now, track your mastery
-              when you sign up.
-            </p>
+      {/* ===================== THE SIGN-OFF =====================
+          A ruled band, not a fourth card. The page has already handed over a
+          module log full of links; what is left is one line telling the reader
+          what happens if they finish, and the button that starts it. */}
+      <section className="nb-wrap pb-[clamp(3rem,6vw,5rem)]">
+        <div className="nb-rule pt-[clamp(1.8rem,3.5vw,2.6rem)]">
+          <DeptFooterHeading deptName={dept.name} lessons={lessons} />
+
+          <p className="nb-sub mt-3">
+            {totalModules} {totalModules === 1 ? "module" : "modules"} and{" "}
+            {totalLessons} lessons, free to read without an account, written
+            against the real Game Manual and the WPILib docs. Sign in when you
+            want the ticks to stick and the certificate at the end.
+          </p>
+
+          <div className="mt-[clamp(1.4rem,2.6vw,2rem)]">
             <DeptCtaRow variant="footer" deptSlug={dept.slug} lessons={lessons} />
           </div>
-        </Reveal>
+        </div>
       </section>
-    </div>
     </MyProgressProvider>
   );
 }

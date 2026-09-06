@@ -1,12 +1,46 @@
 import { ImageResponse } from "next/og";
-import { ogFonts } from "@/app/_og/font";
+import { ogFonts, OG_DISPLAY, OG_MONO } from "@/app/_og/font";
 
-export const alt = "LearnFRC — Master FIRST Robotics Competition";
+export const alt =
+  "LearnFRC, the notebook every FIRST Robotics Competition team wishes it had";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
+const PAPER = "#E6E8E3";
+const CARD = "#F5F6F2";
+const INK = "#16181B";
+const GRAPHITE = "#565C60";
+const BLUE = "#1B36C8";
+const KRAFT = "#C4A77D";
+const RULE = "rgba(22,24,27,0.30)";
+const GRID = "rgba(27,54,200,0.055)";
+
+/**
+ * The link preview, as a sheet out of the binder.
+ *
+ * Two things the site does in CSS have to be built by hand here, because Satori
+ * (what renders an ImageResponse) supports neither:
+ *
+ *  - The 23px graph ruling. There is no repeating background, so the grid is
+ *    drawn as absolutely positioned 1px divs. 80 of them costs nothing next to
+ *    the fonts, and it is what makes the card read as paper at thumbnail size.
+ *  - The torn tape. There is no clip-path, so the strip is a plain kraft
+ *    rectangle rotated a few degrees. It has to be the LAST child, because
+ *    Satori paints siblings in document order and a strip declared before the
+ *    card simply disappears behind it.
+ *
+ * The eight-value elliptical radius is not supported, but the four-value corner
+ * shorthand is, and that is enough: a big corner opposite a tight one is what
+ * makes the box read as ruled by hand rather than as a rounded rectangle. The
+ * rest of the identity is the 2px ink border with a 1px rule set inside it, at
+ * its own slightly different radius.
+ */
+const COLS = Math.ceil(size.width / 23);
+const ROWS = Math.ceil(size.height / 23);
+
 export default async function Image() {
   const fonts = await ogFonts();
+
   return new ImageResponse(
     (
       <div
@@ -14,107 +48,154 @@ export default async function Image() {
           width: "100%",
           height: "100%",
           display: "flex",
-          flexDirection: "column",
-          justifyContent: "center",
-          padding: "84px",
-          background: "linear-gradient(135deg, #eef3fd 0%, #dde8f8 55%, #e7edfb 100%)",
-          fontFamily: "Baloo 2",
           position: "relative",
+          background: PAPER,
+          fontFamily: OG_DISPLAY,
+          color: INK,
         }}
       >
-        {/* soft Arena-Clay glows (light, not neon) */}
-        <div
-          style={{
-            position: "absolute",
-            top: -220,
-            left: -120,
-            width: 720,
-            height: 720,
-            borderRadius: "9999px",
-            background: "radial-gradient(circle, rgba(47,107,255,0.16), transparent 62%)",
-            display: "flex",
-          }}
-        />
-        <div
-          style={{
-            position: "absolute",
-            bottom: -260,
-            right: -140,
-            width: 760,
-            height: 760,
-            borderRadius: "9999px",
-            background: "radial-gradient(circle, rgba(26,169,214,0.18), transparent 62%)",
-            display: "flex",
-          }}
-        />
+        {/* graph ruling */}
+        {Array.from({ length: COLS }, (_, i) => (
+          <div
+            key={`c${i}`}
+            style={{
+              position: "absolute",
+              left: i * 23,
+              top: 0,
+              width: 1,
+              height: size.height,
+              background: GRID,
+            }}
+          />
+        ))}
+        {Array.from({ length: ROWS }, (_, i) => (
+          <div
+            key={`r${i}`}
+            style={{
+              position: "absolute",
+              left: 0,
+              top: i * 23,
+              width: size.width,
+              height: 1,
+              background: GRID,
+            }}
+          />
+        ))}
 
-        {/* brand mark — identical to the favicon: blue→cyan tile, white robot */}
-        <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
-          <svg width="92" height="92" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <linearGradient id="g" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
-                <stop stopColor="#2f6bff" />
-                <stop offset="1" stopColor="#1aa9d6" />
-              </linearGradient>
-            </defs>
-            <rect width="32" height="32" rx="8" fill="url(#g)" />
-            <rect x="15.1" y="5.4" width="1.8" height="4" rx="0.9" fill="#ffffff" />
-            <circle cx="16" cy="5.2" r="1.7" fill="#ffffff" />
-            <rect x="8" y="9.8" width="16" height="13" rx="4" fill="#ffffff" />
-            <circle cx="12.9" cy="15.8" r="1.9" fill="#2560e6" />
-            <circle cx="19.1" cy="15.8" r="1.9" fill="#1aa9d6" />
-            <rect x="12.6" y="19.2" width="6.8" height="1.7" rx="0.85" fill="#2560e6" opacity="0.5" />
-          </svg>
-          <div style={{ display: "flex", fontSize: 44, fontWeight: 800, letterSpacing: "-0.02em" }}>
-            <span style={{ color: "#16203a" }}>Learn</span>
-            <span style={{ color: "#2560e6" }}>FRC</span>
+        {/* the card */}
+        <div
+          style={{
+            position: "absolute",
+            left: 54,
+            top: 52,
+            width: size.width - 108,
+            height: size.height - 104,
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+            padding: "56px 64px",
+            background: CARD,
+            border: `2px solid ${INK}`,
+            borderRadius: "34px 10px 30px 12px",
+            transform: "rotate(-0.55deg)",
+          }}
+        >
+          {/* the inset hairline */}
+          <div
+            style={{
+              position: "absolute",
+              left: 3,
+              top: 3,
+              right: 3,
+              bottom: 3,
+              border: `1px solid ${RULE}`,
+              borderRadius: "30px 8px 26px 10px",
+              display: "flex",
+            }}
+          />
+
+          {/* logotype */}
+          <div style={{ display: "flex", alignItems: "center", fontSize: 40, fontWeight: 800, letterSpacing: "-0.04em" }}>
+            <span>learn</span>
+            <span
+              style={{
+                marginLeft: 6,
+                padding: "2px 12px 6px",
+                color: BLUE,
+                border: `3px solid ${BLUE}`,
+                borderRadius: "14px 5px 12px 6px",
+                transform: "rotate(-1.4deg)",
+                display: "flex",
+              }}
+            >
+              FRC
+            </span>
+          </div>
+
+          <div
+            style={{
+              marginTop: 34,
+              fontSize: 82,
+              fontWeight: 800,
+              lineHeight: 1.02,
+              letterSpacing: "-0.03em",
+              maxWidth: 900,
+              display: "flex",
+            }}
+          >
+            Every job on an FRC team, written down.
+          </div>
+
+          <div
+            style={{
+              marginTop: 26,
+              fontSize: 30,
+              fontWeight: 400,
+              lineHeight: 1.32,
+              color: GRAPHITE,
+              maxWidth: 780,
+              display: "flex",
+            }}
+          >
+            Free, structured, and open to read without an account.
+          </div>
+
+          {/* the mono slug line, ruled off */}
+          <div
+            style={{
+              marginTop: 40,
+              paddingTop: 22,
+              borderTop: `1px dashed ${RULE}`,
+              display: "flex",
+              alignItems: "center",
+              fontFamily: OG_MONO,
+              fontWeight: 700,
+              fontSize: 23,
+              color: GRAPHITE,
+            }}
+          >
+            <span style={{ color: INK }}>11 departments</span>
+            <span style={{ margin: "0 14px" }}>/</span>
+            <span style={{ color: INK }}>394 lessons</span>
+            <span style={{ margin: "0 14px" }}>/</span>
+            <span>learnfrc.com</span>
           </div>
         </div>
 
-        <div
-          style={{
-            marginTop: 44,
-            fontSize: 86,
-            fontWeight: 800,
-            color: "#16203a",
-            lineHeight: 1.04,
-            letterSpacing: "-0.03em",
-            maxWidth: 960,
-            display: "flex",
-          }}
-        >
-          Master FIRST Robotics Competition
-        </div>
-
-        <div
-          style={{
-            marginTop: 30,
-            fontSize: 33,
-            color: "#55668a",
-            maxWidth: 900,
-            lineHeight: 1.3,
-            display: "flex",
-          }}
-        >
-          Structured, web-grounded guides for every department — 11 departments · 394 lessons.
-        </div>
-
+        {/* the tape, over the card's top edge */}
         <div
           style={{
             position: "absolute",
-            bottom: 66,
-            left: 84,
+            left: 300,
+            top: 30,
+            width: 168,
+            height: 44,
+            background: KRAFT,
+            opacity: 0.82,
+            transform: "rotate(-3.4deg)",
             display: "flex",
-            alignItems: "center",
-            gap: 14,
-            fontSize: 26,
-            color: "#7a8aa8",
-            fontWeight: 600,
           }}
-        >
-          <div style={{ display: "flex", width: 10, height: 10, borderRadius: 9999, background: "#2560e6" }} />
-          learnfrc.com
-        </div>
+        />
       </div>
     ),
     { ...size, fonts }

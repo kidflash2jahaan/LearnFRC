@@ -1,20 +1,9 @@
-import type { CSSProperties } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import {
-  ArrowLeft,
-  ArrowRight,
-  BookOpen,
-  Clock,
-  Calendar,
-  FileText,
-  Hash,
-  Sparkles,
-} from "lucide-react";
 import { getRelated } from "@/lib/blog-data";
 import { getArticles, getOverviewStats } from "@/lib/queries";
-import { Markdown } from "@/components/markdown";
+import { Markdown, extractHeadings } from "@/components/markdown";
 import { ArticleSuggestEdit } from "@/components/blog/article-suggest-edit";
 import { Provenance, extractLinkedReferences } from "@/components/lesson/provenance";
 import { JsonLd } from "@/components/json-ld";
@@ -23,59 +12,9 @@ import { ShareButton } from "@/components/share-button";
 import { ArticleViewBeacon } from "@/components/article-view-beacon";
 import { ArticleSignupHook } from "@/components/blog/article-signup-hook";
 import { ArticleNextStep } from "@/components/blog/article-next-step";
-import { AnimatedCounter } from "@/components/animated-counter";
-import {
-  RiseGroup,
-  RiseItem,
-  Reveal,
-  RevealGroup,
-  RevealItem,
-  Hover,
-  Glow,
-} from "@/components/motion/primitives";
-import { ReadingRail, type TocItem } from "./_reading-rail";
+import { ReadingRail } from "./_reading-rail";
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com";
-
-const GRADIENT_TEXT: CSSProperties = {
-  background: "linear-gradient(120deg,#2560e6,#1aa9d6)",
-  WebkitBackgroundClip: "text",
-  backgroundClip: "text",
-  color: "transparent",
-};
-
-/** Turn a heading string into a URL-safe anchor id. */
-function slugify(s: string): string {
-  return s
-    .toLowerCase()
-    .replace(/[^\w\s-]/g, "")
-    .trim()
-    .replace(/\s+/g, "-");
-}
-
-/** Pull the "## " headings out of the markdown, in order, for the TOC. */
-function buildToc(markdown: string): TocItem[] {
-  const items: TocItem[] = [];
-  const seen = new Map<string, number>();
-  for (const line of markdown.split("\n")) {
-    const m = /^##\s+(.+?)\s*$/.exec(line);
-    if (!m) continue;
-    const text = m[1].replace(/\*\*|\*|`/g, "").trim();
-    let id = slugify(text) || "section";
-    const n = seen.get(id) ?? 0;
-    seen.set(id, n + 1);
-    if (n > 0) id = `${id}-${n}`;
-    items.push({ id, text });
-  }
-  return items;
-}
-
-/** Split a title into a solid lead and a gradient-highlighted final word. */
-function splitTitle(title: string): { lead: string; tail: string } {
-  const words = title.trim().split(" ");
-  const tail = words.pop() ?? title;
-  return { lead: words.join(" "), tail };
-}
 
 export async function generateStaticParams() {
   const articles = await getArticles();
@@ -114,8 +53,6 @@ export async function generateMetadata({
   };
 }
 
-const STATS_ICON_CLASS = "mx-auto mb-1 h-4 w-4 text-primary";
-
 export default async function ArticlePage({
   params,
 }: {
@@ -128,9 +65,15 @@ export default async function ArticlePage({
   if (!a) notFound();
   const url = `${SITE}/blog/${a.slug}`;
   const related = getRelated(articles, a.slug, 3);
-  const toc = buildToc(a.content);
+
+  // The contents list comes from the SAME function that stamps the ids onto
+  // the rendered headings, so every anchor in the rail is guaranteed to exist.
+  // The page's old local `buildToc` had its own slug rules and its own
+  // duplicate counter, and the rail papered over the mismatch by tagging
+  // headings in DOM order.
+  const toc = extractHeadings(a.content).filter((h) => h.level === 2);
+  const hasRail = toc.length > 1;
   const wordCount = a.content.trim().split(/\s+/).length;
-  const { lead: titleLead, tail: titleTail } = splitTitle(a.title);
 
   const formattedDate = new Date(`${a.date}T12:00:00`).toLocaleDateString("en-US", {
     year: "numeric",
@@ -154,17 +97,11 @@ export default async function ArticlePage({
   };
 
   // Emit FAQ rich-result schema only when the article actually has an FAQ
-  // section with a real list of questions (Google requires ≥1; we want ≥2).
+  // section with a real list of questions (Google requires 1 or more; we want 2).
   const faqs = parseFaqs(a.content);
 
-  const stats = [
-    { icon: Clock, value: a.readMins, suffix: " min", label: "to read" },
-    { icon: FileText, value: wordCount, suffix: "", label: "words" },
-    { icon: Hash, value: toc.length, suffix: "", label: "sections" },
-  ];
-
   return (
-    <article className="relative overflow-x-clip text-foreground">
+    <article>
       <ArticleViewBeacon slug={a.slug} />
       <JsonLd data={jsonLd} />
       <JsonLd
@@ -192,117 +129,69 @@ export default async function ArticlePage({
         />
       )}
 
-      <Glow
-        blobs={[
-          { size: "620px", pos: { left: "-180px", top: "-240px" }, color: "#8bbcff", opacity: 0.6 },
-          { size: "560px", pos: { right: "-160px", top: "-120px" }, color: "#6ff0ea", opacity: 0.5, delay: 3 },
-          { size: "520px", pos: { left: "38%", top: "560px" }, color: "#c8b6ff", opacity: 0.35, delay: 6 },
-        ]}
-      />
+      {/* ===================== THE HEAD OF THE SHEET =====================
+          A page torn out of the binder starts with its own filing line, not
+          with a hero. The figures that used to be three tiles here are one
+          ruled mono line: they are reference data about the page, and the
+          page's job is to be read, not to advertise its own word count. */}
+      <header className="nb-wrap pb-[clamp(1.4rem,3vw,2.2rem)] pt-[clamp(1.8rem,4vw,3rem)]">
+        <Link
+          href="/blog"
+          className="nb-slug inline-flex min-h-[var(--tap)] items-center text-ink hover:text-blue hover:underline hover:decoration-blue hover:decoration-2 hover:underline-offset-4"
+        >
+          back to all articles
+        </Link>
 
-      {/* ============================ HERO ============================ */}
-      <header className="mx-auto max-w-3xl px-4 pb-8 pt-28 sm:px-6 lg:px-8">
-        <RiseGroup>
-          <RiseItem>
-            <Link
-              href="/blog"
-              className="group -my-2 inline-flex min-h-11 items-center gap-1.5 rounded-full py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-            >
-              <ArrowLeft
-                aria-hidden
-                className="h-4 w-4 transition-transform group-hover:-translate-x-0.5"
-              />
-              Back to all articles
-            </Link>
-          </RiseItem>
+        <p className="nb-marker mt-3">article / {a.readMins} min</p>
 
-          <RiseItem>
-            <div className="mt-6 flex flex-wrap items-center gap-2.5">
-              <span className="ac-chip inline-flex items-center gap-1.5">
-                <BookOpen aria-hidden className="h-3.5 w-3.5 text-primary" />
-                <span className="ac-eyebrow">FRC Article</span>
-              </span>
-              <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
-                <Clock aria-hidden className="h-3.5 w-3.5" /> {a.readMins} min read
-              </span>
-              <span aria-hidden className="text-border">
-                •
-              </span>
-              <time
-                dateTime={a.date}
-                className="inline-flex items-center gap-1.5 text-sm text-muted-foreground"
-              >
-                <Calendar aria-hidden className="h-3.5 w-3.5" /> {formattedDate}
-              </time>
-            </div>
-          </RiseItem>
+        <h1 className="max-w-[20ch] text-[clamp(2rem,1.15rem+2.9vw,3.4rem)]">
+          {a.title}
+        </h1>
 
-          <RiseItem>
-            <h1 className="mt-5 text-balance font-display text-3xl font-bold leading-[1.08] tracking-tight sm:text-4xl md:text-5xl">
-              {titleLead && `${titleLead} `}
-              <span style={GRADIENT_TEXT}>{titleTail}</span>
-            </h1>
-          </RiseItem>
+        {a.description && <p className="nb-lede mt-5">{a.description}</p>}
 
-          {a.description && (
-            <RiseItem>
-              <p className="mt-5 max-w-2xl text-lg leading-relaxed text-foreground/70">
-                {a.description}
-              </p>
-            </RiseItem>
-          )}
-
-          <RiseItem>
-            <div className="mt-7 flex flex-wrap items-center gap-3">
-              <Link href="/signup" className="ac-btn text-sm">
-                Start learning — free <ArrowRight aria-hidden className="h-4 w-4" />
-              </Link>
-              <ShareButton
-                variant="outline"
-                label="Share"
-                text={`${a.title} — a free FRC article on LearnFRC`}
-                url={url}
-              />
-            </div>
-          </RiseItem>
-
-          <RiseItem>
-            <dl className="mt-8 grid grid-cols-3 gap-3">
-              {stats.map((s) => (
-                <Hover key={s.label} lift={-3} scale={1.02} className="h-full">
-                  <div className="ac-card h-full rounded-2xl px-4 py-3 text-center">
-                    <dt className="sr-only">{s.label}</dt>
-                    <s.icon aria-hidden className={STATS_ICON_CLASS} />
-                    <dd className="font-display text-xl font-extrabold leading-none text-foreground">
-                      <AnimatedCounter value={s.value} suffix={s.suffix} />
-                    </dd>
-                    <p className="mt-1 text-xs text-muted-foreground">{s.label}</p>
-                  </div>
-                </Hover>
-              ))}
-            </dl>
-          </RiseItem>
-        </RiseGroup>
+        <div className="nb-hair mt-[clamp(1.3rem,2.6vw,1.9rem)] flex flex-wrap items-center justify-between gap-x-6 gap-y-3 pt-4">
+          <p className="nb-slug">
+            <time dateTime={a.date}>{formattedDate}</time>
+            {" / "}
+            {wordCount.toLocaleString()} words
+            {" / "}
+            {toc.length} {toc.length === 1 ? "section" : "sections"}
+          </p>
+          <ShareButton
+            variant="outline"
+            label="Share"
+            text={`${a.title}, a free FRC article on LearnFRC`}
+            url={url}
+          />
+        </div>
       </header>
 
-      <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
-        <hr aria-hidden className="ac-divider" />
-      </div>
+      {/* ===================== BODY AND MARGIN INDEX =====================
+          The prose column sets its own 68ch measure from `nb-prose`; the rail
+          only becomes a column at xl, and only when there is more than one
+          section to index. Nothing above it clips overflow, so the sticky
+          index tracks properly. */}
+      <div
+        className={`nb-wrap grid gap-[clamp(1.8rem,4vw,3.4rem)] pb-[clamp(2rem,4vw,3rem)] ${
+          hasRail ? "xl:grid-cols-[minmax(0,1fr)_15rem]" : ""
+        }`}
+      >
+        {/* `min-w-0` is load-bearing. A grid item defaults to `min-width:auto`,
+            which is its MIN-CONTENT width, and a wide markdown table inside
+            `nb-scroll` has a min-content width of ~720px. Without this the
+            column grows to 720px inside a 500px phone, and because the root
+            clips horizontal overflow the reader simply loses the right-hand
+            third of every paragraph. With it, the column is the grid's width
+            and the table scrolls inside its own scroller, which is what
+            `nb-scroll` is for. */}
+        <div data-article-body className="min-w-0">
+          <Markdown content={a.content} />
 
-      {/* ===================== BODY + READING RAIL ==================== */}
-      <div className="mx-auto grid max-w-6xl grid-cols-1 gap-10 px-4 pt-8 sm:px-6 lg:px-8 xl:grid-cols-[minmax(0,1fr)_16rem]">
-        {/* Article body */}
-        <div className="mx-auto w-full max-w-3xl xl:mx-0" data-article-body>
-          <Reveal delay={0.1}>
-            <Markdown content={a.content} />
-          </Reveal>
-          {/* Provenance. Articles have no `resources` column the way lessons
-              do, so the reference list is the set of external links the prose
-              itself cites — real links, labelled as exactly that, and simply
-              absent on the articles that link out to nothing. Nothing here is
-              generated to fill the space. Not wrapped in <Reveal>: this block
-              is the credibility answer to "AI slop", so it ships in the first
-              paint and in the static HTML. */}
+          {/* Articles have no `resources` column the way lessons do, so the
+              reference list is the set of external links the prose itself
+              cites: real links, labelled as exactly that, and simply absent on
+              the articles that link out to nothing. */}
           <Provenance
             kind="article"
             path={`/blog/${a.slug}`}
@@ -320,109 +209,83 @@ export default async function ArticlePage({
           </Provenance>
         </div>
 
-        {/* Signature: fixed reading-progress bar (all sizes) + sticky TOC
-            scroll-spy (xl+). No ancestor here uses overflow-hidden, so the
-            sticky nav tracks correctly. */}
-        <aside className="xl:order-none">
-          <ReadingRail items={toc} />
-        </aside>
+        {hasRail && (
+          <aside>
+            <ReadingRail items={toc} />
+          </aside>
+        )}
       </div>
 
-      {/* Bridge into the guides. Deliberately ABOVE the two account asks: a
+      {/* The bridge into the guides sits ABOVE the account ask on purpose: a
           reader who just got their answer owes us nothing, so the first thing
-          after the article should be more of what they came for, not a signup
-          form. 85% of article readers never reach a second page today. */}
+          after the article should be more of what they came for. */}
       <ArticleNextStep slug={a.slug} />
 
-      {/* logged-out conversion hook — contextual "continue the path" */}
+      {/* Logged-out conversion hook, contextual to what brought them here. */}
       <ArticleSignupHook lessonCount={siteStats.lessonCount} slug={a.slug} />
 
-      {/* ======================== KEEP READING ======================= */}
+      {/* ===================== KEEP READING =====================
+          Three panels inside one drawn frame rather than three free-floating
+          cards: they are the same kind of thing, read in whatever order, so
+          they share a sheet. */}
       {related.length > 0 && (
-        <section className="mx-auto max-w-6xl px-4 pt-16 sm:px-6 lg:px-8">
-          <Reveal>
-            <p className="ac-eyebrow flex items-center gap-1.5">
-              <Sparkles aria-hidden className="h-3.5 w-3.5" /> Keep reading
-            </p>
-            <h2 className="mt-2 font-display text-2xl font-bold tracking-tight">
-              More from the pit
+        <section className="nb-wrap pt-[clamp(2.4rem,5vw,3.6rem)]">
+          <div className="mb-[clamp(1.1rem,2.4vw,1.7rem)] flex flex-wrap items-end justify-between gap-x-8 gap-y-2">
+            <h2 className="text-[clamp(1.5rem,1.1rem+1.4vw,2.3rem)]">
+              Next in the same pile
             </h2>
-          </Reveal>
-          <RevealGroup className="mt-6 grid gap-4 sm:grid-cols-3">
+            <p className="nb-pen max-w-[22ch] rotate-[1.4deg] min-[860px]:text-right">
+              these are the closest, not the newest
+            </p>
+          </div>
+
+          {/* The breakpoint is 860px, not md, because that is where
+              `.nb-panel + .nb-panel` turns its 2px divider from vertical to
+              horizontal. Splitting into columns any earlier would leave the
+              panels side by side with the rules still running across them. */}
+          <div className="nb-box grid overflow-hidden min-[860px]:grid-cols-3">
             {related.map((r) => (
-              <RevealItem key={r.slug}>
-                <Hover className="h-full" lift={-5}>
-                  <Link
-                    href={`/blog/${r.slug}`}
-                    className="ac-card group flex h-full flex-col gap-3 rounded-2xl p-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-                  >
-                    <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                      <Clock aria-hidden className="h-3 w-3" /> {r.readMins} min read
-                    </span>
-                    <h3 className="font-display font-semibold leading-snug tracking-tight transition-colors group-hover:text-primary">
-                      {r.title}
-                    </h3>
-                    <span className="mt-auto inline-flex items-center gap-1 text-sm font-medium text-primary">
-                      Read
-                      <ArrowRight
-                        aria-hidden
-                        className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5"
-                      />
-                    </span>
-                  </Link>
-                </Hover>
-              </RevealItem>
+              <Link
+                key={r.slug}
+                href={`/blog/${r.slug}`}
+                className="nb-panel group hover:bg-[rgba(27,54,200,0.05)]"
+              >
+                <p className="nb-slug">{r.readMins} min read</p>
+                <h3 className="mt-2 group-hover:underline group-hover:decoration-blue group-hover:decoration-2 group-hover:underline-offset-[5px]">
+                  {r.title}
+                </h3>
+                <p className="mt-2 text-[0.92rem] leading-snug text-graphite">
+                  {r.description}
+                </p>
+                <span className="nb-hair nb-slug mt-auto pt-3 text-ink group-hover:text-blue">
+                  read it
+                </span>
+              </Link>
             ))}
-          </RevealGroup>
+          </div>
         </section>
       )}
 
-      {/* ============================= CTA =========================== */}
-      <section className="mx-auto max-w-6xl px-4 pb-20 pt-14 sm:px-6 lg:px-8">
-        <Reveal>
-          <div
-            className="ac-glass relative overflow-hidden p-8 text-center sm:px-16 sm:py-12"
-            style={{ "--a": "#2560e6" } as CSSProperties}
-          >
-            <div
-              aria-hidden
-              className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-[radial-gradient(circle,rgba(26,169,214,0.25),transparent_70%)] blur-2xl"
-            />
-            <span className="ac-badge mx-auto mb-4 flex h-12 w-12 items-center justify-center">
-              <BookOpen aria-hidden className="h-6 w-6" />
-            </span>
-            <h2 className="text-balance font-display text-2xl font-bold tracking-tight sm:text-3xl">
-              Start learning FRC — <span style={GRADIENT_TEXT}>free</span>
-            </h2>
-            <p className="mx-auto mt-3 max-w-md text-base leading-relaxed text-foreground/70">
-              Structured lessons and quizzes across every department. Create a
-              free account to save your progress, track your team, and earn a
-              certificate.
-            </p>
-            <div className="mt-7 flex flex-wrap items-center justify-center gap-6">
-              {[
-                { value: 394, suffix: "", label: "lessons" },
-                { value: 11, suffix: "", label: "departments" },
-                { value: 100, suffix: "%", label: "free" },
-              ].map((s) => (
-                <div key={s.label} className="flex flex-col items-center">
-                  <span className="font-display text-2xl font-bold text-primary">
-                    <AnimatedCounter value={s.value} suffix={s.suffix} />
-                  </span>
-                  <span className="text-xs font-medium text-muted-foreground">{s.label}</span>
-                </div>
-              ))}
-            </div>
-            <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
-              <Link href="/signup" className="ac-btn text-sm">
-                Create your free account <ArrowRight aria-hidden className="h-4 w-4" />
-              </Link>
-              <Link href="/guides" className="ac-btn-ghost text-sm">
-                Browse the guides first
-              </Link>
-            </div>
-          </div>
-        </Reveal>
+      {/* ===================== THE END OF THE SHEET =====================
+          Not a fourth call to action. By this point the reader has been handed
+          the lessons that continue the subject and the three articles nearest
+          to it, so the only thing left is the two doors out of the binder,
+          written as one line. */}
+      <section className="nb-wrap pb-[clamp(3rem,6vw,5rem)] pt-[clamp(2.4rem,5vw,3.6rem)]">
+        <div className="nb-rule flex flex-wrap items-center gap-x-6 gap-y-3 pt-[clamp(1.2rem,2.4vw,1.8rem)]">
+          <p className="nb-slug">end of sheet</p>
+          <p className="text-graphite">
+            Keep going with{" "}
+            <Link href="/blog" className="nb-link">
+              the other {articles.length - 1} articles
+            </Link>
+            , or work through{" "}
+            <Link href="/guides" className="nb-link">
+              all {siteStats.lessonCount.toLocaleString()} lessons
+            </Link>{" "}
+            across {siteStats.deptCount} departments.
+          </p>
+        </div>
       </section>
     </article>
   );

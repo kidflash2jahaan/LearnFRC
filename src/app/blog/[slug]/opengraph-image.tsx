@@ -1,15 +1,52 @@
 import { ImageResponse } from "next/og";
 import { getArticles } from "@/lib/queries";
-import { ogFonts } from "@/app/_og/font";
+import { ogFonts, OG_DISPLAY, OG_MONO } from "@/app/_og/font";
 
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 export const alt = "LearnFRC article";
 
+const PAPER = "#E6E8E3";
+const CARD = "#F5F6F2";
+const INK = "#16181B";
+const GRAPHITE = "#565C60";
+const BLUE = "#1B36C8";
+const KRAFT = "#C4A77D";
+const RULE = "rgba(22,24,27,0.30)";
+const GRID = "rgba(27,54,200,0.055)";
+
 /**
- * Keep long headlines inside the card. Satori has no line-clamp, so we clamp by
- * character count and step the type down — together these cap the title block at
- * ~3 lines for every article, so nothing ever spills past the 630px canvas.
+ * An article's link preview: the page itself, torn out of the binder.
+ *
+ * It is deliberately NOT the site card with a different headline. The site
+ * card is a centred sheet led by the logotype, because it is introducing the
+ * whole binder. This one is a single article, so it reads like one: the ink
+ * rule runs down the left margin, the title is set hard against it, and the
+ * logotype is demoted to the filing line at the foot where the page number
+ * would be.
+ *
+ * Two things the site does in CSS have to be built by hand, because Satori
+ * (what renders an ImageResponse) supports neither:
+ *
+ *  - The 23px graph ruling. There is no repeating background, so the grid is
+ *    drawn as absolutely positioned 1px divs.
+ *  - The torn tape. There is no clip-path, so the strip is a plain kraft
+ *    rectangle rotated a few degrees. It has to be the LAST child, because
+ *    Satori paints siblings in document order and a strip declared before the
+ *    card simply disappears behind it.
+ *
+ * The eight-value elliptical radius is not supported either, but the
+ * four-value corner shorthand is, and a big corner opposite a tight one is
+ * what makes the box read as ruled by hand rather than as a rounded rectangle.
+ */
+const COLS = Math.ceil(size.width / 23);
+const ROWS = Math.ceil(size.height / 23);
+
+/**
+ * Keep long headlines inside the card. Satori has no line-clamp, so we clamp
+ * by character count and step the type down. Together these cap the title
+ * block at about three lines for every article, so nothing spills off the
+ * canvas.
  */
 const MAX_TITLE_CHARS = 108;
 
@@ -19,10 +56,10 @@ function clampTitle(title: string): string {
 }
 
 function titleFontSize(len: number): number {
-  if (len <= 34) return 82;
-  if (len <= 58) return 70;
-  if (len <= 82) return 60;
-  return 52;
+  if (len <= 34) return 78;
+  if (len <= 58) return 66;
+  if (len <= 82) return 57;
+  return 50;
 }
 
 export default async function Image({
@@ -43,155 +80,175 @@ export default async function Image({
           width: "100%",
           height: "100%",
           display: "flex",
-          flexDirection: "column",
-          justifyContent: "space-between",
-          padding: "72px",
-          background:
-            "linear-gradient(135deg, #eef3fd 0%, #dde8f8 55%, #e7edfb 100%)",
-          fontFamily: "Baloo 2",
           position: "relative",
+          background: PAPER,
+          fontFamily: OG_DISPLAY,
+          color: INK,
         }}
       >
-        {/* soft Arena-Clay glows (light, not neon) */}
+        {/* graph ruling */}
+        {Array.from({ length: COLS }, (_, i) => (
+          <div
+            key={`c${i}`}
+            style={{
+              position: "absolute",
+              left: i * 23,
+              top: 0,
+              width: 1,
+              height: size.height,
+              background: GRID,
+            }}
+          />
+        ))}
+        {Array.from({ length: ROWS }, (_, i) => (
+          <div
+            key={`r${i}`}
+            style={{
+              position: "absolute",
+              left: 0,
+              top: i * 23,
+              width: size.width,
+              height: 1,
+              background: GRID,
+            }}
+          />
+        ))}
+
+        {/* the sheet */}
         <div
           style={{
             position: "absolute",
-            top: -240,
-            right: -150,
-            width: 740,
-            height: 740,
-            borderRadius: "9999px",
-            background:
-              "radial-gradient(circle, rgba(37,96,230,0.16), transparent 62%)",
+            left: 52,
+            top: 50,
+            width: size.width - 104,
+            height: size.height - 100,
             display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+            padding: "54px 62px 54px 96px",
+            background: CARD,
+            border: `2px solid ${INK}`,
+            borderRadius: "12px 32px 10px 30px",
+            transform: "rotate(0.5deg)",
           }}
-        />
-        <div
-          style={{
-            position: "absolute",
-            bottom: -280,
-            left: -160,
-            width: 720,
-            height: 720,
-            borderRadius: "9999px",
-            background:
-              "radial-gradient(circle, rgba(26,169,214,0.18), transparent 62%)",
-            display: "flex",
-          }}
-        />
-
-        {/* brand mark — identical to the favicon: blue→cyan tile, white robot */}
-        <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
-          <svg
-            width="64"
-            height="64"
-            viewBox="0 0 32 32"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <defs>
-              <linearGradient
-                id="g"
-                x1="0"
-                y1="0"
-                x2="32"
-                y2="32"
-                gradientUnits="userSpaceOnUse"
-              >
-                <stop stopColor="#2f6bff" />
-                <stop offset="1" stopColor="#1aa9d6" />
-              </linearGradient>
-            </defs>
-            <rect width="32" height="32" rx="8" fill="url(#g)" />
-            <rect x="15.1" y="5.4" width="1.8" height="4" rx="0.9" fill="#ffffff" />
-            <circle cx="16" cy="5.2" r="1.7" fill="#ffffff" />
-            <rect x="8" y="9.8" width="16" height="13" rx="4" fill="#ffffff" />
-            <circle cx="12.9" cy="15.8" r="1.9" fill="#2560e6" />
-            <circle cx="19.1" cy="15.8" r="1.9" fill="#1aa9d6" />
-            <rect
-              x="12.6"
-              y="19.2"
-              width="6.8"
-              height="1.7"
-              rx="0.85"
-              fill="#2560e6"
-              opacity="0.5"
-            />
-          </svg>
-          <div style={{ display: "flex", fontSize: 34, fontWeight: 800 }}>
-            <span style={{ color: "#16203a" }}>Learn</span>
-            <span style={{ color: "#2560e6" }}>FRC</span>
-          </div>
-        </div>
-
-        <div style={{ display: "flex", flexDirection: "column" }}>
+        >
+          {/* the inset hairline */}
           <div
             style={{
-              fontSize: 24,
-              fontWeight: 700,
-              textTransform: "uppercase",
-              letterSpacing: 3,
-              color: "#2560e6",
+              position: "absolute",
+              left: 3,
+              top: 3,
+              right: 3,
+              bottom: 3,
+              border: `1px solid ${RULE}`,
+              borderRadius: "10px 28px 8px 26px",
               display: "flex",
             }}
-          >
-            FRC Article
-          </div>
+          />
+
+          {/* the ballpoint margin rule the title is set against */}
           <div
             style={{
-              marginTop: 16,
+              position: "absolute",
+              left: 62,
+              top: 62,
+              bottom: 62,
+              width: 6,
+              background: BLUE,
+              display: "flex",
+            }}
+          />
+
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              fontFamily: OG_MONO,
+              fontWeight: 700,
+              fontSize: 22,
+              letterSpacing: "0.05em",
+              color: GRAPHITE,
+            }}
+          >
+            <span>article</span>
+            <span style={{ margin: "0 12px" }}>/</span>
+            <span style={{ color: INK }}>{readMins ? `${readMins} min read` : "free to read"}</span>
+          </div>
+
+          <div
+            style={{
+              marginTop: 26,
               fontSize: titleFontSize(title.length),
               fontWeight: 800,
-              color: "#16203a",
-              lineHeight: 1.06,
+              lineHeight: 1.04,
               letterSpacing: "-0.03em",
-              maxWidth: 1010,
+              maxWidth: 940,
               display: "flex",
               overflow: "hidden",
             }}
           >
             {title}
           </div>
-          {/* blue→cyan accent rule, the Arena Clay signature */}
+
+          {/* the filing line, ruled off, with the logotype demoted into it */}
           <div
             style={{
-              marginTop: 28,
-              width: 200,
-              height: 8,
-              borderRadius: 9999,
-              background: "linear-gradient(90deg, #2560e6, #1aa9d6)",
+              marginTop: 38,
+              paddingTop: 22,
+              borderTop: `1px dashed ${RULE}`,
               display: "flex",
+              alignItems: "center",
+              fontFamily: OG_MONO,
+              fontWeight: 700,
+              fontSize: 22,
+              color: GRAPHITE,
             }}
-          />
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                fontFamily: OG_DISPLAY,
+                fontSize: 30,
+                fontWeight: 800,
+                letterSpacing: "-0.04em",
+                color: INK,
+              }}
+            >
+              <span>learn</span>
+              <span
+                style={{
+                  marginLeft: 5,
+                  padding: "1px 9px 4px",
+                  color: BLUE,
+                  border: `3px solid ${BLUE}`,
+                  borderRadius: "11px 4px 9px 5px",
+                  transform: "rotate(-1.4deg)",
+                  display: "flex",
+                }}
+              >
+                FRC
+              </span>
+            </div>
+            <span style={{ margin: "0 16px" }}>/</span>
+            <span>learnfrc.com</span>
+          </div>
         </div>
 
+        {/* the tape, over the sheet's bottom edge */}
         <div
           style={{
+            position: "absolute",
+            right: 210,
+            bottom: 28,
+            width: 172,
+            height: 44,
+            background: KRAFT,
+            opacity: 0.82,
+            transform: "rotate(2.6deg)",
             display: "flex",
-            alignItems: "center",
-            gap: 14,
-            fontSize: 24,
-            color: "#7a8aa8",
-            fontWeight: 600,
           }}
-        >
-          <div
-            style={{
-              display: "flex",
-              width: 10,
-              height: 10,
-              borderRadius: 9999,
-              background: "#2560e6",
-            }}
-          />
-          learnfrc.com
-          {readMins ? (
-            <div style={{ display: "flex", gap: 14 }}>
-              <span>·</span>
-              <span>{readMins} min read</span>
-            </div>
-          ) : null}
-        </div>
+        />
       </div>
     ),
     { ...size, fonts }

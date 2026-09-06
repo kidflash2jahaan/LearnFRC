@@ -1,19 +1,22 @@
 "use client";
 
 import * as React from "react";
-import { motion, useReducedMotion } from "framer-motion";
-import { Check, Copy } from "lucide-react";
 
 /**
- * The invite link, shown and copyable — the smallest possible client boundary
- * on an otherwise server-rendered invite panel.
+ * The invite link, written out and copyable.
  *
- * Same control shape as the leaderboard/dashboard InviteCard so the site has
- * one copy affordance, not two that behave differently.
+ * The smallest possible client boundary on an otherwise server-rendered invite
+ * panel: everything except the clipboard call renders on the server.
  *
- * Hydration-safe: `copied` starts false on both server and client, so the
- * rendered tree and text are identical at hydration, and reduced motion only
- * ever changes `transition` — never what is rendered.
+ * Drawn as a slip of paper with the URL written on it in mono, because that is
+ * what a link is in this system: an identifier, so it is Space Mono, and it is
+ * shown in full rather than hidden behind a button, so somebody copying it by
+ * hand onto a whiteboard can read every character.
+ *
+ * Hydration-safe: `copied` starts false on both server and client, so the first
+ * client render is identical to the SSR output. The label reports back through
+ * a live region, and it holds a fixed minimum width so the row cannot reflow
+ * when "Copy" becomes "Copied".
  */
 export function CopyLink({
   url,
@@ -23,45 +26,46 @@ export function CopyLink({
   label?: string;
 }) {
   const [copied, setCopied] = React.useState(false);
-  const reduce = useReducedMotion();
+
+  // A pending timeout has to be cleared, or a click just before unmount sets
+  // state on a component that is already gone.
+  const timer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  React.useEffect(
+    () => () => {
+      if (timer.current) clearTimeout(timer.current);
+    },
+    []
+  );
 
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(url);
       setCopied(true);
-      setTimeout(() => setCopied(false), 1800);
+      if (timer.current) clearTimeout(timer.current);
+      timer.current = setTimeout(() => setCopied(false), 1800);
     } catch {
-      /* clipboard blocked — the link is visible and selectable either way */
+      /* clipboard blocked: the link is written out above, and selectable */
     }
   };
 
   return (
-    <div className="flex min-w-0 items-center gap-2 rounded-2xl border border-border bg-white/60 py-1.5 pl-4 pr-1.5">
+    <div className="flex flex-wrap items-center gap-2.5">
       <span
-        className="min-w-0 flex-1 truncate text-sm text-foreground/80"
+        className="nb-box-sm nb-slug min-w-0 flex-1 basis-[16rem] truncate px-3 py-3 text-ink"
         aria-label={label}
       >
         {url}
       </span>
-      <motion.button
+      <button
         type="button"
         onClick={copy}
+        className="nb-btn-ghost nb-btn-sm shrink-0"
         aria-label={copied ? `${label} copied` : `Copy ${label.toLowerCase()}`}
-        aria-live="polite"
-        className="inline-flex min-h-[44px] shrink-0 items-center gap-1.5 rounded-xl px-3 text-sm font-semibold text-primary transition-colors hover:bg-primary/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-        whileHover={reduce ? undefined : { y: -1 }}
-        whileTap={{ scale: 0.96 }}
-        transition={
-          reduce ? { duration: 0 } : { type: "spring", stiffness: 320, damping: 22 }
-        }
       >
-        {copied ? (
-          <Check className="h-4 w-4" aria-hidden />
-        ) : (
-          <Copy className="h-4 w-4" aria-hidden />
-        )}
-        {copied ? "Copied!" : "Copy"}
-      </motion.button>
+        <span aria-live="polite" className="min-w-[6ch] text-center">
+          {copied ? "Copied" : "Copy"}
+        </span>
+      </button>
     </div>
   );
 }

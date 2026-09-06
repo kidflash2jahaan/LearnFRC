@@ -2,14 +2,20 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Plus, X, Check, Loader2, AlertCircle } from "lucide-react";
 import { submitNewContent } from "@/app/actions/content-submissions";
-import { Button } from "@/components/ui/button";
 
 /**
- * Community authoring entry point on a department page. Logged-in users propose
- * a whole new lesson (into an existing module or a new one they name); the admin
- * reviews and, on accept, it becomes a real lesson.
+ * Community authoring entry point on a department page. A signed-in reader
+ * proposes a whole new lesson, into an existing module or a new one they name;
+ * an admin reviews it and, on accept, it becomes a real lesson.
+ *
+ * The dialog is an `nb-surface`, the one floating sheet in this system: a
+ * drawn sheet with an offset ink drop, laid over a flat ink scrim. Not a
+ * blurred pane, because nothing here gets depth from a blur.
+ *
+ * Three things the old dialog was missing and a dialog has to have: Escape
+ * closes it, focus moves into it on open and back to the trigger on close, and
+ * the heading it is labelled by is the heading you can actually see.
  */
 export function SuggestNewContent({
   departmentId,
@@ -35,15 +41,67 @@ export function SuggestNewContent({
   const [done, setDone] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
+  const triggerRef = React.useRef<HTMLButtonElement>(null);
+  const sheetRef = React.useRef<HTMLDivElement>(null);
+  const firstFieldRef = React.useRef<HTMLSelectElement>(null);
+
+  /** Everything inside the sheet a keyboard can land on, in document order. */
+  const FOCUSABLE =
+    'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
+
+  // Hold the page still behind the sheet, close on Escape, keep Tab inside it,
+  // and hand focus in on open and back to the trigger on close. Escape is
+  // ignored mid-submit for the same reason the close button is: the request is
+  // already in flight.
+  //
+  // The Tab wrap is not optional decoration. `aria-modal` tells assistive tech
+  // the rest of the page is inert, but it does nothing to the tab order, so
+  // without this a keyboard user tabs straight out of the dialog and into the
+  // department page behind it with no way of knowing they have left.
   React.useEffect(() => {
-    if (open) {
-      const prev = document.body.style.overflow;
-      document.body.style.overflow = "hidden";
-      return () => {
-        document.body.style.overflow = prev;
-      };
-    }
-  }, [open]);
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    firstFieldRef.current?.focus();
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        if (pending) return;
+        setOpen(false);
+        triggerRef.current?.focus();
+        return;
+      }
+      if (e.key !== "Tab") return;
+
+      const sheet = sheetRef.current;
+      if (!sheet) return;
+      const items = sheet.querySelectorAll<HTMLElement>(FOCUSABLE);
+      if (items.length === 0) return;
+
+      const first = items[0];
+      const last = items[items.length - 1];
+      const here = document.activeElement;
+      const inside = here instanceof Node && sheet.contains(here);
+
+      // Wrapping at both ends, and pulling focus back in if it somehow escaped.
+      if (e.shiftKey ? here === first || !inside : here === last || !inside) {
+        e.preventDefault();
+        (e.shiftKey ? last : first).focus();
+      }
+    };
+
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open, pending]);
+
+  function close() {
+    if (pending) return;
+    setOpen(false);
+    triggerRef.current?.focus();
+  }
 
   async function submit() {
     setPending(true);
@@ -65,11 +123,8 @@ export function SuggestNewContent({
 
   if (!isLoggedIn) {
     return (
-      <Link
-        href={loginPath}
-        className="inline-flex items-center gap-2 text-sm font-semibold text-primary hover:underline"
-      >
-        <Plus className="h-4 w-4" aria-hidden /> Log in to contribute a lesson
+      <Link href={loginPath} className="nb-link">
+        Log in to contribute a lesson
       </Link>
     );
   }
@@ -77,154 +132,210 @@ export function SuggestNewContent({
   return (
     <>
       <button
+        ref={triggerRef}
         type="button"
         onClick={() => {
           setDone(false);
           setError(null);
           setOpen(true);
         }}
-        className="ac-btn-ghost text-sm"
+        className="nb-btn-ghost nb-btn-sm"
       >
-        <Plus className="h-4 w-4" aria-hidden /> Contribute a lesson
+        Contribute a lesson
       </button>
 
       {open && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 p-4 backdrop-blur-sm"
-          role="dialog"
-          aria-modal="true"
-          aria-label={`Contribute a lesson to ${departmentName}`}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(22,24,27,0.55)] p-4"
           onClick={(e) => {
-            if (e.target === e.currentTarget && !pending) setOpen(false);
+            if (e.target === e.currentTarget) close();
           }}
         >
-          <div className="ac-card flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden p-0">
-            <div className="flex items-center justify-between gap-3 border-b border-border px-5 py-4">
+          <div
+            ref={sheetRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="contribute-heading"
+            className="nb-surface flex max-h-[90dvh] w-full max-w-3xl flex-col overflow-hidden"
+          >
+            <div className="flex items-center justify-between gap-3 border-b-2 border-ink px-5 py-4">
               <div className="min-w-0">
-                <h2 className="truncate font-display text-lg font-bold">Contribute a lesson</h2>
-                <p className="truncate text-sm text-muted-foreground">{departmentName}</p>
+                <h2
+                  id="contribute-heading"
+                  className="truncate text-[1.15rem] font-extrabold tracking-[-0.025em]"
+                >
+                  Contribute a lesson
+                </h2>
+                <p className="nb-slug truncate">dept / {departmentName}</p>
               </div>
               <button
                 type="button"
-                onClick={() => !pending && setOpen(false)}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                onClick={close}
+                disabled={pending}
+                className="nb-box-sm grid size-11 shrink-0 place-items-center font-mono text-lg leading-none disabled:cursor-not-allowed disabled:text-graphite"
                 aria-label="Close"
               >
-                <X className="h-5 w-5" aria-hidden />
+                <span aria-hidden="true">x</span>
               </button>
             </div>
 
             {done ? (
               <div className="flex flex-col items-center gap-3 px-6 py-14 text-center">
-                <span className="flex h-14 w-14 items-center justify-center rounded-full bg-success/15 text-success">
-                  <Check className="h-7 w-7" aria-hidden />
-                </span>
-                <h3 className="font-display text-xl font-bold">Thanks — lesson submitted</h3>
-                <p className="max-w-sm text-sm text-muted-foreground">
-                  An admin will review it. If accepted, it becomes a real lesson in this department.
+                <svg
+                  viewBox="0 0 40 40"
+                  className="size-12"
+                  fill="none"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M6 21.5 15.5 31 34 9"
+                    stroke="var(--blue)"
+                    strokeWidth="4"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+                <h3 className="text-[1.2rem]">Lesson submitted</h3>
+                <p className="max-w-[42ch] text-[0.95rem] text-graphite">
+                  An admin reads every submission. If it is accepted it becomes a
+                  real lesson in this department, with your name on it.
                 </p>
-                <Button variant="brand" onClick={() => setOpen(false)} className="mt-2">
+                <button type="button" onClick={close} className="nb-btn mt-2">
                   Done
-                </Button>
+                </button>
               </div>
             ) : (
               <>
-                <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4">
-                  <div>
-                    <label className="mb-1.5 block text-sm font-medium">Module</label>
+                <div className="flex flex-1 flex-col gap-5 overflow-y-auto px-5 py-5">
+                  <div className="nb-field">
+                    <label className="nb-label" htmlFor="contribute-module">
+                      Module
+                    </label>
                     <select
+                      id="contribute-module"
+                      ref={firstFieldRef}
                       value={moduleId}
                       onChange={(e) => setModuleId(e.target.value)}
                       disabled={pending}
-                      className="ac-input w-full"
+                      className="nb-input nb-select"
                     >
                       {modules.map((m) => (
                         <option key={m.id} value={m.id}>
                           {m.title}
                         </option>
                       ))}
-                      <option value="__new">➕ Propose a new module…</option>
+                      <option value="__new">Propose a new module</option>
                     </select>
                   </div>
+
                   {moduleId === "__new" && (
-                    <div>
-                      <label className="mb-1.5 block text-sm font-medium">New module name</label>
+                    <div className="nb-field">
+                      <label className="nb-label" htmlFor="contribute-new-module">
+                        New module name
+                      </label>
                       <input
+                        id="contribute-new-module"
                         value={newModule}
                         onChange={(e) => setNewModule(e.target.value)}
                         disabled={pending}
-                        placeholder="e.g. Advanced Swerve Tuning"
-                        className="ac-input w-full"
+                        placeholder="Advanced swerve tuning"
+                        className="nb-input"
                         maxLength={120}
                       />
                     </div>
                   )}
-                  <div>
-                    <label className="mb-1.5 block text-sm font-medium">Lesson title</label>
+
+                  <div className="nb-field">
+                    <label className="nb-label" htmlFor="contribute-title">
+                      Lesson title
+                    </label>
                     <input
+                      id="contribute-title"
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
                       disabled={pending}
-                      placeholder="e.g. Wiring the roboRIO safely"
-                      className="ac-input w-full"
+                      placeholder="Wiring the roboRIO safely"
+                      className="nb-input"
                       maxLength={160}
                     />
+                    <p className="nb-hint">
+                      Name the thing someone would search for, not the topic.
+                    </p>
                   </div>
-                  <div>
-                    <label className="mb-1.5 block text-sm font-medium">
-                      One-line summary <span className="text-muted-foreground">(optional)</span>
+
+                  <div className="nb-field">
+                    <label className="nb-label" htmlFor="contribute-summary">
+                      One-line summary, optional
                     </label>
                     <input
+                      id="contribute-summary"
                       value={summary}
                       onChange={(e) => setSummary(e.target.value)}
                       disabled={pending}
-                      className="ac-input w-full"
+                      className="nb-input"
                       maxLength={200}
                     />
                   </div>
-                  <div>
-                    <label className="mb-1.5 block text-sm font-medium">Lesson content (Markdown)</label>
+
+                  <div className="nb-field">
+                    <label className="nb-label" htmlFor="contribute-content">
+                      Lesson content
+                    </label>
                     <textarea
+                      id="contribute-content"
                       value={content}
                       onChange={(e) => setContent(e.target.value)}
                       disabled={pending}
                       spellCheck
-                      placeholder={"## Overview\n\nWrite the lesson here in Markdown…"}
-                      className="ac-input h-[34vh] w-full resize-none font-mono text-[13px] leading-relaxed"
+                      placeholder={"## Overview\n\nWrite the lesson here."}
+                      className="nb-input h-[34vh] min-h-[12rem] font-mono text-[0.83rem] leading-relaxed"
                     />
+                    <p className="nb-hint">
+                      Markdown. Headings, lists, tables and code blocks all render.
+                    </p>
                   </div>
-                  <div>
-                    <label className="mb-1.5 block text-sm font-medium">
-                      Note to the reviewer <span className="text-muted-foreground">(optional)</span>
+
+                  <div className="nb-field">
+                    <label className="nb-label" htmlFor="contribute-note">
+                      Note to the reviewer, optional
                     </label>
                     <input
+                      id="contribute-note"
                       value={note}
                       onChange={(e) => setNote(e.target.value)}
                       disabled={pending}
-                      className="ac-input w-full"
+                      className="nb-input"
                       maxLength={1000}
                     />
+                    <p className="nb-hint">
+                      Where the information came from, or what you were unsure about.
+                    </p>
                   </div>
+
                   {error && (
-                    <div className="flex items-start gap-2 rounded-xl border border-destructive/30 bg-destructive/10 px-3.5 py-3 text-sm text-destructive">
-                      <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-                      <span>{error}</span>
-                    </div>
+                    <p className="nb-error" role="alert">
+                      {error}
+                    </p>
                   )}
                 </div>
-                <div className="flex items-center justify-end gap-3 border-t border-border px-5 py-4">
-                  <Button variant="ghost" onClick={() => setOpen(false)} disabled={pending}>
+
+                <div className="flex items-center justify-end gap-3 border-t-2 border-ink px-5 py-4">
+                  <button
+                    type="button"
+                    onClick={close}
+                    disabled={pending}
+                    className="nb-btn-ghost nb-btn-sm"
+                  >
                     Cancel
-                  </Button>
-                  <Button variant="brand" onClick={submit} disabled={pending}>
-                    {pending ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> Sending…
-                      </>
-                    ) : (
-                      "Submit lesson"
-                    )}
-                  </Button>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={submit}
+                    disabled={pending}
+                    className="nb-btn nb-btn-sm"
+                  >
+                    {pending ? "Sending" : "Submit lesson"}
+                  </button>
                 </div>
               </>
             )}

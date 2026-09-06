@@ -1,57 +1,42 @@
-"use client";
-
-import type { CSSProperties } from "react";
-import { motion, useReducedMotion } from "framer-motion";
-import { Mail, CheckCircle2 } from "lucide-react";
-
 /**
- * Signature element for the verify-email interstitial: a glossy mail badge
- * "broadcasting" the confirmation signal outward in soft pulsing rings, with
- * a reassuring checkmark chip that springs in once the signal lands. Purely
- * decorative — the tree is identical regardless of motion preference; only
- * `animate`/`transition` change, per the primitives' reduced-motion contract.
+ * The postmark: a sealed envelope with its cancellation bars, drawn in two
+ * strokes.
+ *
+ * What was here before was a mail badge broadcasting pulsing rings forever,
+ * with a checkmark that sprang in on a spring. Three problems with that. It
+ * looped, and nothing in this system loops or breathes while you are reading.
+ * It claimed something untrue, because the tick landed on a timer whether or
+ * not the address was real. And it cost a client component and a motion
+ * library to say one word the heading already said.
+ *
+ * So it is a drawing now, and a Server Component: no state, no motion, no
+ * hydration, stroked in `currentColor` so it takes the ink of whatever surface
+ * it is set on. The line coordinates are deliberately a fraction off square,
+ * because a rectangle drawn with a ruler reads as machined and a binder is
+ * drawn freehand.
+ *
+ * The filename is unchanged so the route folder keeps one private component
+ * per concern; only the thing it draws is different.
  */
-export function SignalBeacon() {
-  const reduce = useReducedMotion();
-
+export function Postmark({ className }: { className?: string }) {
   return (
-    <div className="relative mx-auto flex h-28 w-28 items-center justify-center" aria-hidden>
-      {[0, 1].map((i) => (
-        <motion.span
-          key={i}
-          className="absolute inset-0 rounded-full border-2"
-          style={{ borderColor: "color-mix(in srgb, var(--primary) 45%, transparent)" }}
-          animate={reduce ? undefined : { scale: [1, 1.65, 1.65], opacity: [0.55, 0, 0] }}
-          transition={
-            reduce
-              ? { duration: 0 }
-              : { duration: 2.4, repeat: Infinity, ease: "easeOut", delay: i * 1.2 }
-          }
-        />
-      ))}
-
-      <motion.span
-        className="ac-badge relative flex h-16 w-16 items-center justify-center"
-        style={{ "--a": "#2560e6" } as CSSProperties}
-        initial={{ scale: 0.7, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={
-          reduce ? { duration: 0 } : { type: "spring", stiffness: 260, damping: 18, delay: 0.15 }
-        }
-      >
-        <Mail className="h-7 w-7" />
-      </motion.span>
-
-      <motion.span
-        className="absolute -bottom-1 -right-1 flex h-8 w-8 items-center justify-center rounded-full bg-white text-success shadow-md ring-1 ring-white"
-        initial={{ scale: 0, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={
-          reduce ? { duration: 0 } : { type: "spring", stiffness: 280, damping: 16, delay: 0.9 }
-        }
-      >
-        <CheckCircle2 className="h-5 w-5" />
-      </motion.span>
-    </div>
+    <svg
+      viewBox="0 0 104 70"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2.6}
+      strokeLinejoin="round"
+      strokeLinecap="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      {/* the envelope, sitting a degree or two off true */}
+      <path d="M3.5 9.5 L99.5 4.5 L101 60 L5 65.5 Z" />
+      {/* the flap, creased down the middle */}
+      <path d="M4 10 L52.5 41 L99.5 5" />
+      {/* cancellation bars, the mark a sorting office leaves behind */}
+      <path d="M63 50.5 h30 M61.5 56 h31 M64.5 61 h27" strokeWidth={2} opacity={0.55} />
+    </svg>
   );
 }

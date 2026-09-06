@@ -3,7 +3,6 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ArrowRight, Search, Sparkles } from "lucide-react";
 
 /* ==================================================================== */
 /*  "Did you mean …" recovery for a 404                                  */
@@ -14,6 +13,11 @@ import { ArrowRight, Search, Sparkles } from "lucide-react";
 /*  matches the requested path against the real content index and offers */
 /*  the closest pages. It never auto-redirects: the URL genuinely is a   */
 /*  404, so we return 404 and let the reader choose.                     */
+/*                                                                       */
+/*  The matching below is untouched. Only the presentation is new: the   */
+/*  suggestions are rows in an nb-surface list, each one labelled with   */
+/*  the mono slug of where it lives, because that is how anything in     */
+/*  this binder says which drawer it came out of.                        */
 /* ==================================================================== */
 
 type Dept = { slug: string; name: string; tagline: string | null };
@@ -79,7 +83,7 @@ export function RouteRecovery() {
   React.useEffect(() => {
     let alive = true;
     // Deep paths only — a bare typo like "/gudies" has nothing to recover to
-    // beyond the tiles already on the page.
+    // beyond the routes already on the page.
     if (segments(pathname).length < 2) return;
 
     fetch("/api/search-index")
@@ -91,12 +95,12 @@ export function RouteRecovery() {
           ...(data.departments ?? []).map((d) => ({
             href: `/guides/${d.slug}`,
             title: d.name,
-            context: "Department",
+            context: `dept / ${d.slug}`,
           })),
           ...(data.lessons ?? []).map((l) => ({
             href: `/guides/${l.deptSlug}/${l.moduleSlug}/${l.slug}`,
             title: l.title,
-            context: l.deptName,
+            context: `lesson / ${l.deptSlug}`,
           })),
         ];
 
@@ -122,33 +126,20 @@ export function RouteRecovery() {
   }, []);
 
   return (
-    <div className="mt-8 w-full">
+    <div className="mt-8 w-full text-left">
       {suggestions.length > 0 && (
-        <div className="ac-card w-full p-4 text-left sm:p-5">
-          <p className="flex items-center gap-2 font-display text-sm font-bold text-foreground">
-            <Sparkles className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" focusable="false" />
-            Did you mean one of these?
+        <div className="nb-surface overflow-hidden">
+          <p className="nb-slug border-b-2 border-ink px-4 py-2.5">
+            closest sheets in the binder
           </p>
-          <ul className="mt-3 flex flex-col gap-1">
+          <ul>
             {suggestions.map((s) => (
               <li key={s.href}>
-                <Link
-                  href={s.href}
-                  className="group flex min-h-11 items-center gap-3 rounded-xl px-3 py-2 transition-colors hover:bg-primary/[0.07] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                >
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-semibold text-foreground">
-                      {s.title}
-                    </span>
-                    <span className="block truncate text-xs text-muted-foreground">
-                      {s.context}
-                    </span>
+                <Link href={s.href} className="nb-menu-item flex-col items-start gap-0.5 py-2.5">
+                  <span className="nb-slug">{s.context}</span>
+                  <span className="w-full truncate text-[0.95rem] font-semibold">
+                    {s.title}
                   </span>
-                  <ArrowRight
-                    className="h-4 w-4 shrink-0 text-primary transition-transform duration-300 group-hover:translate-x-1"
-                    aria-hidden="true"
-                    focusable="false"
-                  />
                 </Link>
               </li>
             ))}
@@ -159,13 +150,10 @@ export function RouteRecovery() {
       <button
         type="button"
         onClick={openSearch}
-        className="ac-chip mt-4 inline-flex min-h-11 items-center gap-2 px-4 text-sm font-medium text-foreground transition-colors hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        className="nb-btn-ghost nb-btn-sm mt-4"
       >
-        <Search className="h-4 w-4 text-primary" aria-hidden="true" focusable="false" />
         Search every lesson
-        <kbd className="hidden rounded-md border border-border px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground sm:inline">
-          ⌘K
-        </kbd>
+        <span className="nb-slug font-bold text-ink">⌘K</span>
       </button>
     </div>
   );

@@ -221,7 +221,7 @@ export function GuestMigration({ enabled = true }: { enabled?: boolean }) {
         const kept = clearMigratedGuestLessons(owned);
         if (kept.length)
           console.warn(
-            `${LOG} kept ${kept.length} completion(s) in this browser rather than deleting them — the account does not have them yet: ${kept.join(", ")}`
+            `${LOG} kept ${kept.length} completion(s) in this browser rather than deleting them, because the account does not have them yet: ${kept.join(", ")}`
           );
       }
 
@@ -229,7 +229,7 @@ export function GuestMigration({ enabled = true }: { enabled?: boolean }) {
         toast.success(
           `${migrated} lesson${migrated === 1 ? "" : "s"} you finished before signing up ${
             migrated === 1 ? "is" : "are"
-          } now saved to your account${xp ? ` — +${xp} XP` : ""}.`
+          } now saved to your account${xp ? `, +${xp} XP` : ""}.`
         );
         router.refresh();
       }

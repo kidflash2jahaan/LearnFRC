@@ -26,11 +26,11 @@ export async function sendFeedback(
     return { error: "That message is a bit too long." };
   if (emailRaw && !EMAIL_RE.test(emailRaw))
     return {
-      error: "That email doesn't look right — leave it blank or fix it.",
+      error: "That email doesn't look right. Leave it blank, or fix it.",
     };
 
   if (!(await rateLimit("feedback", 8, 3600)))
-    return { error: "Too many messages — please try again later." };
+    return { error: "Too many messages. Please try again later." };
 
   const supabase = await createClient();
   const {
@@ -61,7 +61,7 @@ export async function sendFeedback(
 
   const res = await sendEmail({
     to: adminEmail,
-    subject: "LearnFRC — feedback / topic request",
+    subject: "LearnFRC: feedback / topic request",
     html: feedbackEmailHtml({
       message,
       fromEmail: fromEmail || undefined,
@@ -69,7 +69,7 @@ export async function sendFeedback(
     }),
     replyTo: fromEmail || undefined,
   });
-  if (!res.ok) return { error: "Couldn't send right now — please try again." };
+  if (!res.ok) return { error: "Couldn't send right now. Please try again." };
   return { success: true };
 }
 
@@ -109,7 +109,7 @@ export async function replyToFeedback(
       original: (row.message as string) || null,
     }),
   });
-  if (!res.ok) return { error: "Couldn't send the reply — try again." };
+  if (!res.ok) return { error: "Couldn't send the reply. Try again." };
 
   await admin
     .from("feedback")

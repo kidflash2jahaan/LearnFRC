@@ -1,47 +1,9 @@
-import type { CSSProperties } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import {
-  ArrowRight,
-  ArrowUpRight,
-  Sparkles,
-  BookOpen,
-  ClipboardCheck,
-  Award,
-  LayoutGrid,
-  Wrench,
-  Calculator,
-  Cable,
-  Move3d,
-  BatteryCharging,
-  Ruler,
-  Route,
-  LifeBuoy,
-  Terminal,
-  Lightbulb,
-  Network,
-  BatteryWarning,
-  Wifi,
-  Compass,
-  ScanLine,
-  AlertTriangle,
-} from "lucide-react";
-import { Icon } from "@/lib/icon-map";
-import { deptMeta, inkFor } from "@/lib/departments";
 import { getDepartments, getOverviewStats } from "@/lib/queries";
 import { DEPT_CATALOG } from "@/lib/dept-catalog";
 import { PATHS } from "@/lib/paths-data";
-import { AnimatedCounter } from "@/components/animated-counter";
 import { SocialProof } from "@/components/social-proof";
-import {
-  RiseGroup,
-  RiseItem,
-  Reveal,
-  RevealGroup,
-  RevealItem,
-  Hover,
-  Glow,
-} from "@/components/motion/primitives";
 import { HeroPanel, type HeroDept } from "./_hero-panel";
 
 // Title/description/OG are inherited from the root layout defaults (which are
@@ -49,32 +11,52 @@ import { HeroPanel, type HeroDept } from "./_hero-panel";
 export const metadata: Metadata = {
   // Tighter than the sitewide fallback so the home SERP snippet isn't truncated.
   description:
-    "Free, structured guides to every department of the FIRST Robotics Competition — mechanical, CAD, programming, electrical, strategy, business and more.",
+    "Free, structured guides to every department of the FIRST Robotics Competition: mechanical, CAD, programming, electrical, strategy, business and more.",
   alternates: { canonical: "/" },
 };
 
-const BRAND_GRADIENT: CSSProperties = {
-  background: "linear-gradient(120deg, #2560e6, #1aa9d6)",
-  WebkitBackgroundClip: "text",
-  backgroundClip: "text",
-  color: "transparent",
-};
+/**
+ * Where each index card sits on the wall.
+ *
+ * The eleven departments are pinned to a 12-column grid in rows that sum to
+ * exactly 12 (5+4+3, 3+4+5, 5+3+4, 7+5), so the wall never ends on a half-empty
+ * row. Every card gets its own tilt and its own tape angle: the system's rule is
+ * that no two pieces on one screen were straightened the same way, and a shared
+ * angle is the thing that makes a "hand-taped" wall read as a CSS loop instead.
+ *
+ * Class names are written out in full rather than composed, because Tailwind
+ * scans raw source text and would never see a string it has to concatenate.
+ */
+const WALL = [
+  { span: "sm:col-span-6 lg:col-span-5", tilt: "nb-tilt-1", tape: "left-[16px] rotate-[-4deg]" },
+  { span: "sm:col-span-6 lg:col-span-4", tilt: "nb-tilt-2", tape: "left-[24%] rotate-[3.2deg]" },
+  { span: "sm:col-span-6 lg:col-span-3", tilt: "nb-tilt-3", tape: "left-[12px] rotate-[-2.4deg]" },
+  { span: "sm:col-span-6 lg:col-span-3", tilt: "nb-tilt-4", tape: "right-[14px] rotate-[4.4deg]" },
+  { span: "sm:col-span-6 lg:col-span-4", tilt: "nb-tilt-1", tape: "left-[28%] rotate-[-5deg]" },
+  { span: "sm:col-span-6 lg:col-span-5", tilt: "nb-tilt-2", tape: "left-[18px] rotate-[2.6deg]" },
+  { span: "sm:col-span-6 lg:col-span-5", tilt: "nb-tilt-3", tape: "right-[20%] rotate-[-3.4deg]" },
+  { span: "sm:col-span-6 lg:col-span-3", tilt: "nb-tilt-4", tape: "left-[14px] rotate-[5.2deg]" },
+  { span: "sm:col-span-6 lg:col-span-4", tilt: "nb-tilt-1", tape: "left-[32%] rotate-[-2deg]" },
+  { span: "sm:col-span-6 lg:col-span-7", tilt: "nb-tilt-2", tape: "left-[24px] rotate-[3.8deg]", wide: true },
+  { span: "sm:col-span-12 lg:col-span-5", tilt: "nb-tilt-3", tape: "right-[18%] rotate-[-4.8deg]" },
+] as const;
 
-const STEPS = [
+/** The read, quiz, certificate loop. Printed on the one inverted band. */
+const LOOP = [
   {
-    icon: BookOpen,
-    title: "Read the guides",
-    body: "Clear, complete lessons for every department — grounded in the real Game Manual and WPILib docs. No login needed to read.",
+    n: "1",
+    title: "Read the lesson",
+    body: "One lesson is one topic, sized to finish in a single meeting. Nothing is gated, so you can open it on the shop floor without an account.",
   },
   {
-    icon: ClipboardCheck,
-    title: "Pass the quizzes",
-    body: "Every lesson ends in a quick quiz that checks what actually matters at competition — and earns you XP on the leaderboard.",
+    n: "2",
+    title: "Pass the quiz",
+    body: "Every lesson ends in a short quiz on the thing that actually breaks robots, not the vocabulary word you skimmed past. Retakes are unlimited.",
   },
   {
-    icon: Award,
-    title: "Earn certificates",
-    body: "Finish a department and print a certificate — real proof you learned the whole role, from your first day in the pit.",
+    n: "3",
+    title: "Keep the certificate",
+    body: "Clear every quiz in a department and it issues a certificate for that department. Mentors use them to see who is trained on what.",
   },
 ];
 
@@ -84,55 +66,89 @@ const STEPS = [
  * the highest-intent pages we publish (someone searching "no robot code" needs
  * an answer in the next ten minutes), and they are the ones a homepage link
  * genuinely helps a human find. Slugs are verified against the articles table.
+ *
+ * `symptom` is the lookup key, so it is set as a mono slug: it is what the
+ * person in the pit would type, and it has to be scannable down the column.
  */
 const PIT_FIXES = [
   {
     href: "/blog/frc-no-robot-code-driver-station-troubleshooting",
-    icon: AlertTriangle,
-    symptom: "Driver Station says “No Robot Code”",
+    symptom: "driver station says no robot code",
     title: "Every cause of No Robot Code, in the order to check them",
   },
   {
     href: "/blog/frc-wpilib-deploy-troubleshooting",
-    icon: Terminal,
-    symptom: "Your code won’t deploy",
+    symptom: "the code will not deploy",
     title: "WPILib deploy failures: build errors, RIO comms, and Gradle",
   },
   {
     href: "/blog/frc-status-lights-and-error-codes",
-    icon: Lightbulb,
-    symptom: "A light is blinking and nobody knows why",
-    title: "FRC status lights & blink codes: the complete decoder",
+    symptom: "a light is blinking and nobody knows why",
+    title: "FRC status lights and blink codes: the complete decoder",
   },
   {
     href: "/blog/frc-radio-networking-guide",
-    icon: Wifi,
-    symptom: "You can’t connect to the robot",
-    title: "Robot radio & networking: setup, IP addresses, and the 2026 change",
+    symptom: "nothing can connect to the robot",
+    title: "Robot radio and networking: setup, IP addresses, and the 2026 change",
   },
   {
     href: "/blog/frc-can-bus",
-    icon: Network,
-    symptom: "CAN devices keep dropping off the bus",
-    title: "FRC CAN bus explained — and how to fix common problems",
+    symptom: "can devices keep dropping off the bus",
+    title: "FRC CAN bus explained, and how to fix common problems",
   },
   {
     href: "/blog/frc-battery-guide",
-    icon: BatteryWarning,
-    symptom: "Batteries die halfway through a match",
+    symptom: "batteries die halfway through a match",
     title: "FRC battery guide: charging, care, testing, and safety",
   },
   {
     href: "/blog/frc-swerve-module-offsets-calibration",
-    icon: Compass,
-    symptom: "Swerve wheels point the wrong way",
+    symptom: "swerve wheels point the wrong way",
     title: "Swerve module offsets: calibration and backwards wheels",
   },
   {
     href: "/blog/frc-inspection-checklist-guide",
-    icon: ScanLine,
-    symptom: "You have to pass inspection today",
+    symptom: "inspection is in an hour",
     title: "How to pass FRC robot inspection: full walkthrough",
+  },
+];
+
+/**
+ * The five calculators, set as a reference table rather than as cards: what a
+ * calculator is worth is entirely in what you feed it and what it hands back,
+ * and a three-column table says both at a glance where a tile would only say
+ * the name twice.
+ */
+const TOOLS = [
+  {
+    href: "/tools/frc-budget-calculator",
+    name: "Team budget",
+    input: "line items and quantities",
+    output: "what a season actually costs, itemized for a sponsor",
+  },
+  {
+    href: "/tools/frc-wire-gauge-calculator",
+    name: "Wire gauge",
+    input: "current, run length, gauge",
+    output: "voltage drop, checked against the minimum legal AWG",
+  },
+  {
+    href: "/tools/frc-tipping-calculator",
+    name: "Tip-over",
+    input: "track, wheelbase, center of gravity",
+    output: "the angle where the robot goes over",
+  },
+  {
+    href: "/tools/frc-current-budget",
+    name: "Brownout",
+    input: "every motor and its stall draw",
+    output: "total draw against the 120 A main breaker and the roboRIO threshold",
+  },
+  {
+    href: "/tools/frc-deflection-calculator",
+    name: "Deflection",
+    input: "span, load, section",
+    output: "how far that arm or rail sags, plus the safety factor",
   },
 ];
 
@@ -160,81 +176,41 @@ export default async function HomePage() {
           sort_order: i,
         }));
 
-  // Top departments by lesson count feed the hero telemetry meters.
+  // Top departments by lesson count feed the share meters on the hero card.
+  // Departments carry no colour and no icon in this system, so nothing but the
+  // name, the slug and the count crosses into the panel.
   const heroDepts: HeroDept[] = [...departments]
     .sort((a, b) => (b.lessonCount ?? 0) - (a.lessonCount ?? 0))
     .slice(0, 4)
     .map((d) => ({
       slug: d.slug,
       name: d.name,
-      color: deptMeta(d.slug).color,
-      icon: deptMeta(d.slug).icon,
       lessons: d.lessonCount ?? 0,
     }));
 
   return (
-    <div className="relative overflow-x-clip">
-      <Glow
-        blobs={[
-          { size: "640px", pos: { left: "-170px", top: "-220px" }, color: "#8bbcff", opacity: 0.65 },
-          { size: "580px", pos: { right: "-190px", top: "-120px" }, color: "#6ff0ea", opacity: 0.55, delay: 2 },
-          { size: "540px", pos: { left: "30%", top: "520px" }, color: "#c8b6ff", opacity: 0.45, delay: 4 },
-        ]}
-      />
-
-      {/* ============================ HERO ============================ */}
-      <section className="mx-auto grid max-w-7xl items-center gap-12 px-4 pb-16 pt-28 sm:px-6 lg:grid-cols-2 lg:gap-10 lg:pb-20 lg:pt-36 lg:px-8">
-        <RiseGroup>
-          <RiseItem>
-            <span className="ac-chip inline-flex items-center gap-2">
-              <Sparkles className="h-3.5 w-3.5 text-primary" aria-hidden />
-              <span className="ac-eyebrow">Free · no login to read a guide</span>
-            </span>
-          </RiseItem>
-          <RiseItem>
-            <h1 className="mt-5 text-balance font-display text-4xl font-extrabold leading-[1.02] sm:text-5xl lg:text-[3.4rem]">
-              Every seat on the team,{" "}
-              <span style={BRAND_GRADIENT}>mastered.</span>
-            </h1>
-          </RiseItem>
-          <RiseItem>
-            <p className="mt-5 max-w-xl text-pretty text-lg leading-relaxed text-foreground/70">
-              An FRC team is eleven teams in one — build, code, CAD, wiring,
-              scouting, business, drive team and more. LearnFRC teaches all of
-              them with written guides, quizzes, and printable certificates.
-              Built by students, free for everyone.
-            </p>
-          </RiseItem>
-          <RiseItem>
-            <div className="mt-7 flex flex-wrap items-center gap-3">
-              <Link href="/signup" className="ac-btn text-sm">
-                Start learning <ArrowRight className="h-4 w-4" aria-hidden />
-              </Link>
-              <Link href="/guides" className="ac-btn-ghost text-sm">
-                Browse the guides
-              </Link>
-            </div>
-          </RiseItem>
-          <RiseItem>
-            <div className="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground">
-              <span>
-                <b className="font-semibold text-foreground">
-                  <AnimatedCounter value={stats.lessonCount} />
-                </b>{" "}
-                lessons
-              </span>
-              <span>
-                <b className="font-semibold text-foreground">
-                  <AnimatedCounter value={stats.deptCount} />
-                </b>{" "}
-                departments
-              </span>
-              <span>
-                <b className="font-semibold text-foreground">$0</b> — always
-              </span>
-            </div>
-          </RiseItem>
-        </RiseGroup>
+    <div className="nb-route">
+      {/* ===================== 1. HERO ==========================
+          Asymmetric split: the claim on the left, the catalogue taped up on
+          the right. No eyebrow, no trust strip, no badge. Four things only. */}
+      <section className="nb-wrap grid items-start gap-[clamp(1.6rem,4vw,3.6rem)] pb-[clamp(3rem,6vw,5rem)] pt-[clamp(2.4rem,5vw,4.2rem)] lg:grid-cols-[minmax(0,1.5fr)_minmax(0,0.82fr)]">
+        <div>
+          <h1 className="max-w-[21ch]">
+            Every job on an FRC team, <span className="nb-mark">written down</span>.
+          </h1>
+          <p className="nb-lede mt-[clamp(1rem,2vw,1.5rem)]">
+            {stats.deptCount} departments, from swerve geometry to sponsor
+            letters. Free to read, and nothing sits behind a login.
+          </p>
+          <div className="mt-[clamp(1.4rem,2.6vw,2rem)] flex flex-wrap gap-3">
+            <Link href="/signup" className="nb-btn">
+              Start learning
+            </Link>
+            <Link href="/guides" className="nb-btn-ghost">
+              Browse the departments
+            </Link>
+          </div>
+        </div>
 
         <HeroPanel
           lessonCount={stats.lessonCount}
@@ -243,285 +219,291 @@ export default async function HomePage() {
         />
       </section>
 
-      {/* ======================= DEPARTMENT MAP ======================= */}
-      <section className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
-        <Reveal>
-          <p className="ac-eyebrow">Pick your department</p>
-          <div className="mt-2 flex flex-wrap items-end justify-between gap-4">
-            <h2 className="max-w-xl text-balance font-display text-3xl font-bold sm:text-4xl">
-              Every role on the team, one map
-            </h2>
-            <Link
-              href="/guides"
-              className="group inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-primary"
-            >
-              <LayoutGrid className="h-4 w-4" aria-hidden />
-              All guides
-              <ArrowUpRight
-                className="h-4 w-4 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
-                aria-hidden
-              />
-            </Link>
-          </div>
-        </Reveal>
+      {/* ================ 2. THE DEPARTMENT WALL =================
+          The page's primary action, and the only place eleven of anything
+          appears. Unequal spans on a 12-column grid, every card taped and
+          tilted, so the wall reads as pinned paper rather than as a card kit. */}
+      <section id="departments" className="nb-rule">
+        <div className="nb-wrap py-[clamp(2.6rem,5vw,4.4rem)]">
+          <p className="nb-marker">
+            {stats.deptCount} departments / {stats.lessonCount} lessons
+          </p>
+          <h2>Pick the department you are actually on.</h2>
+          <p className="nb-sub mt-4">
+            Every lesson lives in exactly one department, so a new member can be
+            handed a place to start on their first day and a mentor can see what
+            is left.
+          </p>
 
-        <RevealGroup className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {departments.map((d) => {
-            const m = deptMeta(d.slug);
-            return (
-              <RevealItem key={d.slug}>
-                <Hover className="h-full">
-                  <Link
-                    href={`/guides/${d.slug}`}
-                    className="ac-tile relative block h-full p-[18px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                    style={{ "--a": m.color } as CSSProperties}
+          <div className="mt-[clamp(1.6rem,3.4vw,2.6rem)] grid grid-cols-12 gap-[clamp(0.85rem,1.7vw,1.35rem)]">
+            {departments.map((d, i) => {
+              const cell = WALL[i % WALL.length];
+              const lessons = d.lessonCount ?? 0;
+              return (
+                <Link
+                  key={d.slug}
+                  href={`/guides/${d.slug}`}
+                  className={`nb-box nb-lift ${cell.tilt} ${cell.span} col-span-12 flex flex-col p-[clamp(1rem,1.9vw,1.45rem)] no-underline ${
+                    "wide" in cell && cell.wide
+                      ? "lg:flex-row lg:items-center lg:gap-[clamp(1.2rem,3vw,2.6rem)]"
+                      : ""
+                  }`}
+                >
+                  <span
+                    aria-hidden="true"
+                    className={`nb-tape -top-3 h-[21px] w-[74px] ${cell.tape}`}
+                  />
+                  <div
+                    className={
+                      "wide" in cell && cell.wide
+                        ? "mb-3 lg:mb-0 lg:min-w-0 lg:flex-1"
+                        : "mb-3"
+                    }
                   >
-                    <ArrowUpRight
-                      className="absolute right-4 top-4 h-[18px] w-[18px] text-foreground/40"
-                      aria-hidden
-                    />
-                    <span
-                      className="ac-badge flex h-11 w-11 items-center justify-center"
-                      style={{ "--a": m.color } as CSSProperties}
-                    >
-                      <Icon name={m.icon} className="h-[22px] w-[22px]" aria-hidden />
-                    </span>
-                    <h3 className="mt-3 font-display text-[16px] font-bold leading-tight text-foreground">
-                      {d.name}
-                    </h3>
+                    <p className="nb-slug">dept / {d.slug}</p>
+                    <h3 className="mt-2">{d.name}</h3>
                     {d.tagline && (
-                      <p className="mt-1 line-clamp-2 text-[13px] leading-snug text-foreground/65">
+                      <p className="mt-2 text-[0.92rem] leading-snug text-graphite">
                         {d.tagline}
                       </p>
                     )}
-                    <p
-                      className="mt-3 text-xs font-bold uppercase tracking-wide"
-                      style={{ color: inkFor(m.color) }}
-                    >
-                      {d.lessonCount ? `${d.lessonCount} lessons` : "Open the track"}
-                    </p>
-                  </Link>
-                </Hover>
-              </RevealItem>
-            );
-          })}
-        </RevealGroup>
-
-        {/* Ready-made routes through several departments, for people who don't
-            know which single tile to click. */}
-        <Reveal className="mt-6">
-          <div className="ac-glass p-6 sm:p-7">
-            <div className="flex flex-wrap items-end justify-between gap-4">
-              <div>
-                <p className="ac-eyebrow flex items-center gap-1.5">
-                  <Route className="h-3.5 w-3.5" aria-hidden /> Not sure which one?
-                </p>
-                <h3 className="mt-1.5 font-display text-xl font-bold sm:text-2xl">
-                  Follow a ready-made route
-                </h3>
-                <p className="mt-1.5 max-w-lg text-sm leading-relaxed text-muted-foreground">
-                  Each path strings several departments together in the order a
-                  real team actually learns them — so you always know what comes
-                  next.
-                </p>
-              </div>
-              <Link href="/paths" className="ac-btn-ghost shrink-0 text-sm">
-                All paths <ArrowRight className="h-4 w-4" aria-hidden />
-              </Link>
-            </div>
-
-            <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
-              {PATHS.map((p) => (
-                <Hover key={p.slug} className="h-full" lift={-4}>
-                  <Link
-                    href={`/paths/${p.slug}`}
-                    className="ac-card group flex h-full items-start gap-3 rounded-2xl p-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring lg:flex-col lg:gap-2.5"
+                  </div>
+                  {/* mt-auto pins the foot to the bottom of a short card. The
+                      mb-3 above is what keeps the dashed rule off the last line
+                      of a card whose copy fills the box, where mt-auto resolves
+                      to nothing. */}
+                  <div
+                    className={`nb-hair mt-auto flex items-baseline justify-between gap-3 pt-4 ${
+                      "wide" in cell && cell.wide
+                        ? "lg:mt-0 lg:flex-col lg:items-start lg:gap-2 lg:border-t-0 lg:border-l lg:border-dashed lg:border-l-[var(--rule)] lg:pl-[clamp(1.1rem,2.4vw,2rem)] lg:pt-0"
+                        : ""
+                    }`}
                   >
-                    <span
-                      className="ac-badge flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
-                      style={{ "--a": p.color } as CSSProperties}
-                    >
-                      <Icon name={p.icon} className="h-[18px] w-[18px]" aria-hidden />
-                    </span>
-                    <span className="min-w-0">
-                      <span className="block font-display text-[14px] font-bold leading-snug text-foreground transition-colors group-hover:text-primary">
-                        {p.title}
+                    {lessons > 0 ? (
+                      <span className="nb-count">
+                        {lessons}
+                        <small>lessons</small>
                       </span>
-                      <span className="mt-1 block text-xs text-muted-foreground">
-                        {p.steps.length} departments
-                      </span>
-                    </span>
-                  </Link>
-                </Hover>
-              ))}
-            </div>
+                    ) : (
+                      <span />
+                    )}
+                    <span className="nb-slug text-ink">open</span>
+                  </div>
+                </Link>
+              );
+            })}
           </div>
-        </Reveal>
+        </div>
       </section>
 
-      {/* ========================= HOW IT WORKS ========================= */}
-      <section className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
-        <Reveal className="text-center">
-          <p className="ac-eyebrow">Read, quiz, certify</p>
-          <h2 className="mx-auto mt-2 max-w-lg text-balance font-display text-3xl font-bold sm:text-4xl">
-            From rookie to robot-ready
-          </h2>
-        </Reveal>
-        <RevealGroup className="mt-10 grid gap-5 md:grid-cols-3">
-          {STEPS.map((s, i) => (
-            <RevealItem key={s.title}>
-              <Hover className="h-full" lift={-5}>
-                <div className="ac-card relative h-full p-6">
-                  <span
-                    aria-hidden
-                    className="pointer-events-none absolute right-5 top-4 font-display text-4xl font-extrabold text-foreground/10"
-                  >
-                    {i + 1}
-                  </span>
-                  <span
-                    className="ac-badge flex h-12 w-12 items-center justify-center"
-                    style={{ "--a": "#2560e6" } as CSSProperties}
-                  >
-                    <s.icon className="h-6 w-6" aria-hidden />
-                  </span>
-                  <h3 className="mt-4 font-display text-lg font-bold">{s.title}</h3>
-                  <p className="mt-2 text-[15px] leading-relaxed text-muted-foreground">
+      {/* ================== 3. THE LOOP ==========================
+          The one inverted surface on the page, spent on the thing that makes
+          this a course and not a wiki: read, quiz, certificate. Card stock on
+          ballpoint blue, with the step numbers set as index chits. */}
+      <section id="certificates" className="nb-slab">
+        <div className="nb-wrap grid gap-[clamp(1.6rem,4vw,3.2rem)] py-[clamp(2.6rem,5vw,4rem)] lg:grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)]">
+          <div>
+            <h2 className="max-w-[16ch] text-card">
+              Read it, pass the quiz, keep the certificate.
+            </h2>
+            <p className="mt-4 max-w-[34ch] text-[0.98rem] leading-relaxed text-[rgba(245,246,242,0.85)]">
+              Certificates are issued per department, not per lesson, which is
+              why the departments are the shape of the whole site.
+            </p>
+          </div>
+
+          <ol className="flex flex-col">
+            {LOOP.map((s, i) => (
+              <li
+                key={s.n}
+                className={`flex gap-4 ${i > 0 ? "nb-hair mt-5 pt-5" : ""}`}
+              >
+                <span
+                  aria-hidden="true"
+                  className="nb-box-sm grid h-11 w-11 shrink-0 place-items-center font-mono text-lg font-bold text-ink"
+                >
+                  {s.n}
+                </span>
+                <div className="min-w-0">
+                  <h3 className="text-card">{s.title}</h3>
+                  <p className="mt-2 max-w-[52ch] text-[0.95rem] leading-relaxed text-[rgba(245,246,242,0.85)]">
                     {s.body}
                   </p>
                 </div>
-              </Hover>
-            </RevealItem>
-          ))}
-        </RevealGroup>
+              </li>
+            ))}
+          </ol>
+        </div>
       </section>
 
-      {/* ========================== WHO USES IT ========================== */}
-      {/* Named teams (written permission only) + measured aggregates. The
-          quote slot inside stays empty until a real reply arrives. */}
-      <SocialProof />
-
-      {/* =========================== FREE TOOLS =========================== */}
-      <section className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
-        <Reveal>
-          <p className="ac-eyebrow flex items-center gap-1.5">
-            <Wrench className="h-3.5 w-3.5" aria-hidden /> Free FRC tools
-          </p>
-          <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
-            <h2 className="max-w-xl text-balance font-display text-3xl font-bold sm:text-4xl">
-              Calculators that get the numbers right
-            </h2>
-            <Link href="/tools" className="ac-btn-ghost shrink-0 text-sm">
-              All tools <ArrowRight className="h-4 w-4" aria-hidden />
-            </Link>
-          </div>
-        </Reveal>
-        <RevealGroup className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          {[
-            { href: "/tools/frc-budget-calculator", icon: Calculator, title: "Team Budget", desc: "What your season will actually cost — itemized, sponsor-ready." },
-            { href: "/tools/frc-wire-gauge-calculator", icon: Cable, title: "Wire Gauge", desc: "Voltage drop + a check against FRC's minimum-AWG rules." },
-            { href: "/tools/frc-tipping-calculator", icon: Move3d, title: "Tip-Over", desc: "Will your robot tip? Enter track, wheelbase, CoG height." },
-            { href: "/tools/frc-current-budget", icon: BatteryCharging, title: "Brownout", desc: "Total draw vs the 120 A main breaker + roboRIO threshold." },
-            { href: "/tools/frc-deflection-calculator", icon: Ruler, title: "Deflection", desc: "Will that arm or rail sag? Sag, bending stress, safety factor." },
-          ].map((t) => (
-            <RevealItem key={t.href}>
-              <Hover className="h-full" lift={-5}>
-                <Link
-                  href={t.href}
-                  className="ac-card group flex h-full flex-col gap-2.5 rounded-2xl p-[18px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                >
-                  <span className="ac-badge flex h-10 w-10 items-center justify-center rounded-2xl">
-                    <t.icon className="h-5 w-5" aria-hidden />
-                  </span>
-                  <h3 className="font-display text-lg font-bold tracking-tight transition-colors group-hover:text-primary">
-                    {t.title}
-                  </h3>
-                  <p className="text-sm leading-relaxed text-foreground/70">{t.desc}</p>
-                  <span className="mt-auto inline-flex items-center gap-1 pt-1 text-sm font-semibold text-primary">
-                    Open <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" aria-hidden />
-                  </span>
-                </Link>
-              </Hover>
-            </RevealItem>
-          ))}
-        </RevealGroup>
-      </section>
-
-      {/* ======================== FIX IT IN THE PIT ======================== */}
-      <section className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
-        <Reveal>
-          <p className="ac-eyebrow flex items-center gap-1.5">
-            <LifeBuoy className="h-3.5 w-3.5" aria-hidden /> Fix it in the pit
-          </p>
-          <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
-            <h2 className="max-w-xl text-balance font-display text-3xl font-bold sm:text-4xl">
-              Forty minutes to your next match
-            </h2>
-            <Link href="/blog" className="ac-btn-ghost shrink-0 text-sm">
-              <BookOpen className="h-4 w-4" aria-hidden /> All articles
-            </Link>
-          </div>
-          <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-muted-foreground">
-            The failures that actually stop a robot on competition day, each with
-            a walkthrough that starts at the most likely cause.
-          </p>
-        </Reveal>
-
-        <RevealGroup className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {PIT_FIXES.map((f) => (
-            <RevealItem key={f.href} className="h-full">
-              <Hover className="h-full" lift={-4}>
-                <Link
-                  href={f.href}
-                  className="ac-card group flex h-full items-center gap-3.5 rounded-2xl p-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                >
-                  <span className="ac-badge flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
-                    <f.icon className="h-5 w-5" aria-hidden />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block font-display text-[15px] font-bold leading-snug text-foreground transition-colors group-hover:text-primary">
-                      {f.symptom}
-                    </span>
-                    <span className="mt-0.5 block text-[13px] leading-snug text-muted-foreground">
-                      {f.title}
-                    </span>
-                  </span>
-                  <ArrowUpRight
-                    className="h-4 w-4 shrink-0 text-foreground/40 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
-                    aria-hidden
-                  />
-                </Link>
-              </Hover>
-            </RevealItem>
-          ))}
-        </RevealGroup>
-      </section>
-
-      {/* =========================== CTA BAND =========================== */}
-      <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
-        <Reveal>
-          <div className="ac-glass relative overflow-hidden p-8 text-center sm:p-12">
-            <div
-              aria-hidden
-              className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-[radial-gradient(circle,rgba(26,169,214,0.25),transparent_70%)] blur-2xl"
-            />
-            <p className="ac-eyebrow">Kickoff is closer than you think</p>
-            <h2 className="mx-auto mt-3 max-w-xl text-balance font-display text-3xl font-bold sm:text-4xl">
-              Start your first lesson — <span style={BRAND_GRADIENT}>free.</span>
-            </h2>
-            <p className="mx-auto mt-3 max-w-md text-[15px] leading-relaxed text-muted-foreground">
-              No experience needed. No credit card. Pick a department, track
-              your progress across all 11, and go.
+      {/* ================= 4. THE ROUTE SHEET ====================
+          For the reader who cannot pick a card off the wall. Split layout: the
+          question on the left, the five routes ruled down the right, each
+          printed as the chain of departments it actually walks through. */}
+      <section id="paths">
+        <div className="nb-wrap grid gap-[clamp(1.6rem,4vw,3.2rem)] py-[clamp(2.6rem,5vw,4.4rem)] lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.35fr)]">
+          <div>
+            <h2 className="max-w-[14ch]">Not sure which one is yours?</h2>
+            <p className="nb-sub mt-4">
+              Each route strings several departments together in the order a
+              real team learns them, so you always know what comes next.
             </p>
-            <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
-              <Link href="/signup" className="ac-btn text-sm">
-                Create your free account <ArrowRight className="h-4 w-4" aria-hidden />
+            <Link href="/paths" className="nb-btn-ghost mt-6">
+              All paths
+            </Link>
+          </div>
+
+          <ul className="flex flex-col">
+            {PATHS.map((p, i) => (
+              <li key={p.slug}>
+                <Link
+                  href={`/paths/${p.slug}`}
+                  className={`group block no-underline ${
+                    i > 0 ? "nb-hair mt-5 pt-5" : ""
+                  }`}
+                >
+                  <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                    <h3 className="group-hover:underline group-hover:decoration-blue group-hover:decoration-2 group-hover:underline-offset-4">
+                      {p.title}
+                    </h3>
+                    <span className="nb-slug shrink-0">
+                      {p.steps.length} departments
+                    </span>
+                  </div>
+                  {/* The chain is the content: it is what tells you whether a
+                      route covers the part of the team you are on. */}
+                  <p className="nb-slug mt-2 break-words">
+                    {p.steps.map((s) => s.deptSlug).join("  /  ")}
+                  </p>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
+      {/* ================ 5. THE PIT CHECKLIST ===================
+          The carbon-copy log. Symptom in the left column because that is the
+          thing someone is scanning for with forty minutes on the clock. */}
+      <section id="pit" className="nb-rule">
+        <div className="nb-wrap py-[clamp(2.6rem,5vw,4.4rem)]">
+          <p className="nb-marker">pit checklist / {PIT_FIXES.length} entries</p>
+          <h2 className="max-w-[26ch]">
+            When the robot dies forty minutes before your match.
+          </h2>
+          <p className="nb-sub mt-4">
+            Each of these starts at the most likely cause and works down the
+            list, because in the pit nobody has time to read a survey of the
+            problem space.
+          </p>
+
+          <div className="nb-list mt-[clamp(1.4rem,3vw,2.2rem)]">
+            {PIT_FIXES.map((f) => (
+              <Link key={f.href} href={f.href} className="nb-row">
+                <span className="nb-slug">{f.symptom}</span>
+                <h3>{f.title}</h3>
+                <span className="nb-slug">read it</span>
               </Link>
-              <Link href="/guides" className="ac-btn-ghost text-sm">
-                Explore guides
+            ))}
+          </div>
+
+          <div className="mt-[clamp(1.4rem,2.8vw,2rem)]">
+            <Link href="/blog" className="nb-btn-ghost">
+              All articles
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* ================== 6. THE CALCULATORS ===================
+          A reference table, ruled into one card. What you give it and what it
+          gives back are the whole value, so both get a column. */}
+      <section id="tools" className="nb-rule">
+        <div className="nb-wrap py-[clamp(2.6rem,5vw,4.4rem)]">
+          <h2>Calculators that get the numbers right.</h2>
+          <p className="nb-sub mt-4">
+            Each one shows its working, so the answer is something you can put
+            in front of a mentor and defend.
+          </p>
+
+          <div className="nb-box mt-[clamp(1.4rem,3vw,2.2rem)] p-[clamp(1.1rem,2.4vw,1.8rem)]">
+            <div className="nb-scroll">
+              <table className="nb-table min-w-[38rem]">
+                <caption className="sr-only">
+                  The five LearnFRC calculators, what each one takes as input,
+                  and what it returns.
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col">calculator</th>
+                    <th scope="col">what you give it</th>
+                    <th scope="col">what it tells you</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {TOOLS.map((t) => (
+                    <tr key={t.href}>
+                      <td className="font-semibold">
+                        {/* inline-block + py-3 lifts the hit area to 45px. An
+                            inline link here is only 21px tall, under the 44px
+                            floor, and a table cell cannot carry the target
+                            itself. */}
+                        <Link href={t.href} className="nb-link inline-block py-3">
+                          {t.name}
+                        </Link>
+                      </td>
+                      <td className="text-graphite">{t.input}</td>
+                      <td>{t.output}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="mt-[clamp(1.2rem,2.4vw,1.8rem)]">
+            <Link href="/tools" className="nb-btn-ghost">
+              All tools
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* ======================= 7. PROOF ========================
+          Named teams (written permission only) and measured aggregates. The
+          quote slot inside stays empty until a real reply arrives. */}
+      <div className="nb-rule">
+        <SocialProof />
+      </div>
+
+      {/* ======================= 8. CLOSE ========================
+          One card, taped down, never straightened. Same two labels as the hero
+          so the page only ever asks for two things. */}
+      <section className="nb-rule">
+        <div className="nb-wrap py-[clamp(2.6rem,5vw,4.4rem)]">
+          <div className="nb-box nb-tilt-4 grid gap-[clamp(1.2rem,3vw,2.4rem)] p-[clamp(1.4rem,3vw,2.4rem)] lg:grid-cols-[minmax(0,1.4fr)_minmax(0,0.7fr)] lg:items-center">
+            <span
+              aria-hidden="true"
+              className="nb-tape -top-3 left-[38%] rotate-[-2.8deg]"
+            />
+            <div>
+              <h2 className="max-w-[18ch]">Start with one lesson.</h2>
+              <p className="nb-sub mt-4">
+                Reading needs no account. Make one when you want the quizzes to
+                count toward a certificate, and your progress to survive the
+                walk back to the shop.
+              </p>
+            </div>
+            <div className="flex flex-col gap-3 lg:border-l lg:border-dashed lg:border-l-[var(--rule)] lg:pl-[clamp(1.2rem,3vw,2.2rem)]">
+              <Link href="/signup" className="nb-btn">
+                Start learning
+              </Link>
+              <Link href="/guides" className="nb-btn-ghost">
+                Browse the departments
               </Link>
             </div>
           </div>
-        </Reveal>
+        </div>
       </section>
     </div>
   );

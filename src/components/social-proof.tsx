@@ -1,15 +1,7 @@
-import type { CSSProperties } from "react";
 import Link from "next/link";
 import { unstable_cache } from "next/cache";
-import { Users, Quote } from "lucide-react";
 import { getSocialProofStats as fetchSocialProofStats } from "@/lib/social-proof-stats";
 import { LiveStats } from "@/components/live-stat";
-import {
-  Reveal,
-  RevealGroup,
-  RevealItem,
-  Hover,
-} from "@/components/motion/primitives";
 import { LISTED_TEAMS, TEAM_QUOTES } from "@/lib/team-quotes";
 
 // 24 hours, matching CATALOG_TTL in src/lib/queries.ts. This is deliberately
@@ -40,6 +32,9 @@ const getSocialProofStats = unstable_cache(
   { revalidate: SOCIAL_PROOF_TTL, tags: ["social-proof"] }
 );
 
+/** Four angles, so no two cards on the wall were straightened the same. */
+const TILT = ["nb-tilt-2", "nb-tilt-3", "nb-tilt-1", "nb-tilt-4"] as const;
+
 /**
  * Home page social proof.
  *
@@ -50,6 +45,11 @@ const getSocialProofStats = unstable_cache(
  *
  * Quotes come from TEAM_QUOTES and render only when it has entries. See that
  * file before adding anything to either array.
+ *
+ * The team number is set as a stamp, in the mono face every other identifier on
+ * this site uses, on its own small card. That is the whole visual claim being
+ * made: a number, and one sentence describing exactly what that team agreed to.
+ * Nothing here is allowed to look like a logo wall.
  */
 export async function SocialProof() {
   // Never let a stats read take the home page down, and never render a zero:
@@ -58,97 +58,78 @@ export async function SocialProof() {
   const showStats = stats !== null && stats.learners > 0;
 
   return (
-    <section className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
-      <Reveal>
-        <p className="ac-eyebrow flex items-center gap-1.5">
-          <Users className="h-3.5 w-3.5" aria-hidden /> Who uses it
-        </p>
-        <h2 className="mt-2 max-w-xl text-balance font-display text-3xl font-bold sm:text-4xl">
-          Who’s actually using this
-        </h2>
-        {/* Deliberately count-agnostic: this stays true whether LISTED_TEAMS
-            has one team or ten, so nobody has to remember to edit it. */}
-        <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-muted-foreground">
-          It’s a fair thing to ask about a site one student built. Here’s what I
-          can back up: every team named below said yes in writing, and every
-          number is counted straight from the database.
-        </p>
-      </Reveal>
+    <section className="nb-wrap py-[clamp(2.6rem,5vw,4.4rem)]">
+      <p className="nb-marker">who uses it</p>
+      <h2>Who is actually using this</h2>
+      <p className="nb-sub mt-4">
+        It&rsquo;s a fair thing to ask about a site one student built.
+        Here&rsquo;s what I can back up: every team named below said yes in
+        writing, and every number is counted straight from the database.
+      </p>
 
-      {/* Named teams. A team appears here only after it has said yes in
-          writing, and only with the claim it actually agreed to. */}
-      <RevealGroup className="mt-8 grid grid-cols-1 gap-4">
-        {LISTED_TEAMS.map((t) => (
-          <RevealItem key={t.team}>
-            <Hover lift={-4}>
-              <div className="ac-glass p-6 sm:p-7">
-                {/* Stacked at 375px so the copy gets the full card width,
-                    side by side from sm up. */}
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
-                  <span
-                    aria-hidden
-                    className="ac-tile flex h-16 w-16 shrink-0 items-center justify-center font-display text-xl font-extrabold text-foreground"
-                    style={{ "--a": "#2560e6" } as CSSProperties}
-                  >
-                    {t.team}
-                  </span>
-                  <div className="min-w-0">
-                    <h3 className="font-display text-lg font-bold leading-snug sm:text-xl">
-                      Team {t.team} {t.use}
-                    </h3>
-                    <p className="mt-2 text-[15px] leading-relaxed text-muted-foreground">
-                      They gave written permission to be listed here, and that’s
-                      the whole claim. I’m not stretching it into anything
-                      bigger. If your team is happy to be listed too,{" "}
-                      <Link
-                        href="/contact"
-                        className="font-semibold text-primary underline-offset-2 hover:underline"
-                      >
-                        send me a message
-                      </Link>
-                      .
-                    </p>
-                  </div>
+      {/* A team appears here only after it has said yes in writing, and only
+          with the claim it actually agreed to. */}
+      <ul className="mt-8 flex flex-col gap-5">
+        {LISTED_TEAMS.map((t, i) => (
+          <li key={t.team}>
+            <div className={`nb-box ${TILT[i % TILT.length]} p-[clamp(1.2rem,2.6vw,1.8rem)]`}>
+              <span className="nb-tape -top-3 left-[12%] rotate-[-3.8deg]" aria-hidden="true" />
+              <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
+                <span
+                  aria-hidden="true"
+                  className="nb-box-sm grid h-16 w-16 shrink-0 place-items-center font-mono text-xl font-bold tabular-nums"
+                >
+                  {t.team}
+                </span>
+                <div className="min-w-0">
+                  <p className="nb-slug">team / {t.team}</p>
+                  <h3 className="mt-1.5">
+                    Team {t.team} {t.use}
+                  </h3>
+                  <p className="mt-3 max-w-[60ch] text-[0.95rem] leading-relaxed text-graphite">
+                    They gave written permission to be listed here, and
+                    that&rsquo;s the whole claim. I&rsquo;m not stretching it
+                    into anything bigger. If your team is happy to be listed
+                    too,{" "}
+                    <Link href="/contact" className="nb-link">
+                      send me a message
+                    </Link>
+                    .
+                  </p>
                 </div>
               </div>
-            </Hover>
-          </RevealItem>
+            </div>
+          </li>
         ))}
-      </RevealGroup>
+      </ul>
 
       {showStats && (
         <>
           <LiveStats initial={stats} />
-
-          <Reveal>
-            <p className="mt-4 max-w-2xl text-[13px] leading-relaxed text-muted-foreground">
-              These come out of the database when the page rebuilds, not from
-              anything I type in by hand. The team count is how many different
-              FRC team numbers people have put on their profiles, so it’s teams
-              with at least one account here.
-            </p>
-          </Reveal>
+          <p className="nb-hint mt-4 max-w-[62ch]">
+            These come out of the database when the page rebuilds, not from
+            anything I type in by hand. The team count is how many different FRC
+            team numbers people have put on their profiles, so it&rsquo;s teams
+            with at least one account here.
+          </p>
         </>
       )}
 
       {/* Quotes render only when a real one has arrived. Nothing here is ever
           written by me or by an AI — see src/lib/team-quotes.ts. */}
       {TEAM_QUOTES.length > 0 && (
-        <RevealGroup className="mt-4 grid grid-cols-1 gap-4">
+        <ul className="mt-6 flex flex-col gap-4">
           {TEAM_QUOTES.map((q) => (
-            <RevealItem key={q.team}>
-              <figure className="ac-card p-6 sm:p-7">
-                <Quote className="h-5 w-5 text-primary" aria-hidden />
-                <blockquote className="mt-3 text-pretty text-[17px] leading-relaxed text-foreground">
-                  “{q.quote}”
+            <li key={q.team}>
+              <figure className="nb-note">
+                <blockquote className="text-pretty text-[1.05rem] leading-relaxed">
+                  {q.quote}
                 </blockquote>
-                <figcaption className="mt-3 text-sm font-semibold text-muted-foreground">
-                  {q.attribution}
-                </figcaption>
+                <figcaption className="nb-slug mt-3">{q.attribution}</figcaption>
               </figure>
-            </RevealItem>
+            </li>
           ))}
-        </RevealGroup>
+        </ul>
       )}
     </section>
   );

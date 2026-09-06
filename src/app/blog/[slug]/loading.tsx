@@ -1,108 +1,128 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
 /**
- * Article reading skeleton.
+ * An article while its markdown is still being read.
  *
- * Mirrors page.tsx:
- *   root   → <article className="relative overflow-x-clip text-foreground">
- *   header → mx-auto max-w-3xl px-4 pb-8 pt-28 sm:px-6 lg:px-8
- *   body   → mx-auto grid max-w-6xl grid-cols-1 gap-10 px-4 pt-8 sm:px-6 lg:px-8
- *            xl:grid-cols-[minmax(0,1fr)_16rem]
- * The TOC rail only becomes a column at xl, and the body itself is a centred
- * max-w-3xl block below that — both are reproduced so the prose column does not
- * move when the article swaps in.
+ * It holds the finished sheet's shape: the filing line and the ruled meta row
+ * at the head, the prose column with the margin index beside it at xl, the
+ * blue bridge band, and the three-panel strip at the foot.
+ *
+ * The prose block is drawn as real ruled lines of text rather than one grey
+ * slab, because a wall of grey where the reading is supposed to be reads as a
+ * broken page rather than as a page on its way.
  */
+
+/** A placeholder that has to read on the ballpoint band instead of on paper. */
+const ON_SLAB = "bg-[rgba(245,246,242,0.22)] border-[rgba(245,246,242,0.35)]";
+
+/** One paragraph of prose, at the 68ch measure `nb-prose` sets. */
+function Para({ widths }: { widths: string[] }) {
+  return (
+    <div className="flex flex-col gap-2.5">
+      {widths.map((w, i) => (
+        <Skeleton key={i} className="h-4" style={{ width: w }} />
+      ))}
+    </div>
+  );
+}
+
 export default function ArticleLoading() {
   return (
-    <article className="relative overflow-x-clip text-foreground">
-      {/* ============================ HERO ============================ */}
-      <header className="mx-auto max-w-3xl px-4 pb-8 pt-28 sm:px-6 lg:px-8">
-        {/* "Back to all articles" (-my-2 + min-h-11 → ~28px box) */}
-        <Skeleton className="h-7 w-48 rounded-full" />
+    <article>
+      {/* ===================== THE HEAD OF THE SHEET ===================== */}
+      <header className="nb-wrap pb-[clamp(1.4rem,3vw,2.2rem)] pt-[clamp(1.8rem,4vw,3rem)]">
+        <Skeleton className="h-[var(--tap)] w-44" />
 
-        {/* article chip + read time + date */}
-        <div className="mt-6 flex flex-wrap items-center gap-2.5">
-          <Skeleton className="h-7 w-32 rounded-full" />
-          <Skeleton className="h-5 w-28 rounded" />
-          <Skeleton className="h-5 w-36 rounded" />
+        <Skeleton className="mt-3 h-4 w-36" />
+
+        {/* h1, two lines at the article clamp */}
+        <Skeleton className="mt-4 h-[clamp(2rem,2.9vw,3.4rem)] w-[min(30rem,96%)]" />
+        <Skeleton className="mt-2 h-[clamp(2rem,2.9vw,3.4rem)] w-[min(21rem,70%)]" />
+
+        {/* nb-lede, two lines capped at 46ch */}
+        <div className="mt-5 flex max-w-[46ch] flex-col gap-2.5">
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-[78%]" />
         </div>
 
-        {/* h1 — text-3xl / sm:text-4xl / md:text-5xl, leading-[1.08] */}
-        <Skeleton className="mt-5 h-9 w-[92%] rounded-xl sm:h-11 md:h-12" />
-        <Skeleton className="mt-2.5 h-9 w-[64%] rounded-xl sm:h-11 md:h-12" />
-
-        {/* description — mt-5 max-w-2xl text-lg */}
-        <div className="mt-5 max-w-2xl space-y-2.5">
-          <Skeleton className="h-5 w-full rounded" />
-          <Skeleton className="h-5 w-[86%] rounded" />
-        </div>
-
-        {/* CTA row */}
-        <div className="mt-7 flex flex-wrap items-center gap-3">
-          <Skeleton className="h-11 w-52 rounded-2xl" />
-          <Skeleton className="h-11 w-28 rounded-2xl" />
-        </div>
-
-        {/* three stat cards — mt-8 grid grid-cols-3 gap-3, ac-card rounded-2xl */}
-        <div className="mt-8 grid grid-cols-3 gap-3">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} className="h-[86px] rounded-2xl" />
-          ))}
+        <div className="nb-hair mt-[clamp(1.3rem,2.6vw,1.9rem)] flex flex-wrap items-center justify-between gap-x-6 gap-y-3 pt-4">
+          <Skeleton className="h-3.5 w-[min(22rem,80%)]" />
+          <Skeleton className="h-[var(--tap)] w-28" />
         </div>
       </header>
 
-      {/* the ac-divider between hero and body */}
-      <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
-        <Skeleton className="h-px w-full rounded-none" />
-      </div>
+      {/* ===================== BODY AND MARGIN INDEX ===================== */}
+      <div className="nb-wrap grid gap-[clamp(1.8rem,4vw,3.4rem)] pb-[clamp(2rem,4vw,3rem)] xl:grid-cols-[minmax(0,1fr)_15rem]">
+        <div className="max-w-[68ch]">
+          <Para widths={["100%", "96%", "99%", "62%"]} />
 
-      {/* ===================== BODY + READING RAIL ==================== */}
-      <div className="mx-auto grid max-w-6xl grid-cols-1 gap-10 px-4 pt-8 sm:px-6 lg:px-8 xl:grid-cols-[minmax(0,1fr)_16rem]">
-        <div className="mx-auto w-full max-w-3xl xl:mx-0">
-          <div className="space-y-3.5">
-            <Skeleton className="h-4 w-full rounded" />
-            <Skeleton className="h-4 w-[96%] rounded" />
-            <Skeleton className="h-4 w-[99%] rounded" />
-            <Skeleton className="h-4 w-[68%] rounded" />
+          {/* an h2, which nb-prose rules off above */}
+          <div className="nb-rule mt-9 pt-[1.1rem]">
+            <Skeleton className="h-[clamp(1.5rem,1.2vw+1.1rem,2rem)] w-[58%]" />
+          </div>
+          <div className="mt-[1.1rem]">
+            <Para widths={["100%", "93%", "97%", "58%"]} />
           </div>
 
-          <Skeleton className="mt-9 h-7 w-[58%] rounded-lg" />
-          <div className="mt-4 space-y-3.5">
-            <Skeleton className="h-4 w-full rounded" />
-            <Skeleton className="h-4 w-[93%] rounded" />
-            <Skeleton className="h-4 w-[97%] rounded" />
-            <Skeleton className="h-4 w-[60%] rounded" />
+          {/* a pull-out note in the body */}
+          <Skeleton className="mt-[1.1rem] h-32 rounded-hand-sm" />
+
+          <div className="nb-rule mt-9 pt-[1.1rem]">
+            <Skeleton className="h-[clamp(1.5rem,1.2vw+1.1rem,2rem)] w-[46%]" />
+          </div>
+          <div className="mt-[1.1rem]">
+            <Para widths={["100%", "90%", "95%", "71%", "44%"]} />
           </div>
 
-          <Skeleton className="mt-6 h-36 rounded-[20px]" />
-
-          <Skeleton className="mt-9 h-7 w-[46%] rounded-lg" />
-          <div className="mt-4 space-y-3.5">
-            <Skeleton className="h-4 w-full rounded" />
-            <Skeleton className="h-4 w-[90%] rounded" />
-            <Skeleton className="h-4 w-[95%] rounded" />
-            <Skeleton className="h-4 w-[52%] rounded" />
-          </div>
-
-          {/* provenance / references block */}
-          <Skeleton className="mt-10 h-48 rounded-[20px]" />
+          {/* sources and corrections */}
+          <Skeleton className="mt-10 h-56 w-full rounded-hand" />
         </div>
 
-        {/* sticky TOC rail — only a column at xl, same as the page */}
-        <aside className="xl:order-none">
-          <Skeleton className="hidden h-[360px] rounded-[20px] xl:block" />
+        {/* the margin index, a column only at xl */}
+        <aside className="hidden xl:block">
+          <Skeleton className="h-3.5 w-32" />
+          <div className="mt-3 flex flex-col gap-3">
+            {[92, 76, 88, 64, 84, 70].map((w, i) => (
+              <Skeleton key={i} className="h-9" style={{ width: `${w}%` }} />
+            ))}
+          </div>
         </aside>
       </div>
 
-      {/* ========================= KEEP READING ======================== */}
-      <section className="mx-auto max-w-6xl px-4 pt-16 sm:px-6 lg:px-8">
-        <Skeleton className="h-4 w-40 rounded" />
-        <Skeleton className="mt-2 h-9 w-72 max-w-full rounded-xl sm:h-10" />
-        <div className="mt-6 grid gap-4 sm:grid-cols-3">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} className="h-44 rounded-[20px]" />
-          ))}
+      {/* ===================== THE BRIDGE BAND ===================== */}
+      <section className="nb-slab mt-[clamp(2.4rem,5vw,3.6rem)] py-[clamp(2.2rem,4.5vw,3.4rem)]">
+        <div className="nb-wrap">
+          <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-4">
+            <div className="min-w-0">
+              <Skeleton className={`h-3.5 w-40 ${ON_SLAB}`} />
+              <Skeleton className={`mt-3 h-[clamp(1.55rem,1.7vw,2.5rem)] w-[min(26rem,90%)] ${ON_SLAB}`} />
+              <Skeleton className={`mt-4 h-4 w-[min(30rem,100%)] ${ON_SLAB}`} />
+            </div>
+            <Skeleton className={`h-[var(--tap)] w-40 shrink-0 ${ON_SLAB}`} />
+          </div>
+
+          <div className="mt-[clamp(1.5rem,3vw,2.2rem)] grid gap-x-[clamp(1.4rem,3vw,2.6rem)] min-[860px]:grid-cols-3">
+            {Array.from({ length: 3 }, (_, i) => (
+              <div key={i} className="nb-hair py-[clamp(0.9rem,1.8vw,1.15rem)]">
+                <Skeleton className={`h-3.5 w-24 ${ON_SLAB}`} />
+                <Skeleton className={`mt-2.5 h-5 w-[92%] ${ON_SLAB}`} />
+                <Skeleton className={`mt-2.5 h-3.5 w-full ${ON_SLAB}`} />
+                <Skeleton className={`mt-2 h-3.5 w-[64%] ${ON_SLAB}`} />
+              </div>
+            ))}
+          </div>
         </div>
+      </section>
+
+      {/* ===================== THE ACCOUNT ASK ===================== */}
+      <section className="nb-wrap pt-[clamp(2.4rem,5vw,3.6rem)]">
+        <Skeleton className="h-[15rem] max-w-[44rem] rounded-hand" />
+      </section>
+
+      {/* ===================== KEEP READING ===================== */}
+      <section className="nb-wrap pb-[clamp(3rem,6vw,5rem)] pt-[clamp(2.4rem,5vw,3.6rem)]">
+        <Skeleton className="mb-[clamp(1.1rem,2.4vw,1.7rem)] h-[clamp(1.5rem,2.5vw,2.3rem)] w-[min(18rem,70%)]" />
+        <Skeleton className="h-[15rem] w-full rounded-hand" />
       </section>
     </article>
   );

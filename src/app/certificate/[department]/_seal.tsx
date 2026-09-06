@@ -1,132 +1,109 @@
-"use client";
-
-import * as React from "react";
-import { motion, useReducedMotion } from "framer-motion";
-import { Icon } from "@/lib/icon-map";
-import { AnimatedCounter } from "@/components/animated-counter";
+/**
+ * THE INSPECTION STAMP.
+ *
+ * A certificate in a build binder is not a foil medallion, it is a page that
+ * somebody stamped and initialled. So the credential mark here is a rubber
+ * stamp: a ruled box, struck at an angle, with the ink slightly off register
+ * because a hand pressed it. That misregistration is the second border behind
+ * the first, and it is the whole reason the thing reads as pressed rather than
+ * drawn.
+ *
+ * WHAT IT IS NOT. It was a rotating ring of micro-type around a gradient
+ * medallion, which needed a perfect circle, three colours the palette does not
+ * own, a drop shadow and an infinite animation. All four are out of the system.
+ * The stamp is two borders, four lines of Space Mono and one tilt.
+ *
+ * Both marks are Server Components: nothing here has state and nothing moves.
+ */
 
 /**
- * Signature visual: the credential seal. A slow-rotating ring of
- * "LEARNFRC · CERTIFIED · …" micro-type circles a glossy medallion in the
- * department accent, with a little ribbon underneath — the thing you'd
- * actually want printed and pinned to a pit wall.
+ * The earned mark. Pressed into the top corner of the certificate, the way an
+ * inspector stamps a drawing, not centred like a sticker.
  */
-export function CertificateSeal({
-  icon,
-  color,
-  to,
-  ink,
-  ringText,
+export function CertificateStamp({
+  deptSlug,
+  year,
 }: {
-  icon: string;
-  color: string;
-  to: string;
-  ink: string;
-  ringText: string;
+  /** The department's mono slug, which always fits on one line. The full name
+      is set on the certificate's own rule, where it has the width for it. */
+  deptSlug: string;
+  year: number;
 }) {
-  const reduce = useReducedMotion();
-  const rawId = React.useId();
-  const pathId = `seal-ring-${rawId.replace(/[^a-zA-Z0-9]/g, "")}`;
-
   return (
-    <div className="relative mx-auto flex h-40 w-40 items-center justify-center">
-      <motion.svg
-        viewBox="0 0 200 200"
-        className="absolute inset-0 h-full w-full"
-        aria-hidden
-        animate={reduce ? undefined : { rotate: 360 }}
-        transition={reduce ? undefined : { duration: 46, repeat: Infinity, ease: "linear" }}
-      >
-        <defs>
-          <path id={pathId} d="M 100,100 m -84,0 a 84,84 0 1,1 168,0 a 84,84 0 1,1 -168,0" />
-        </defs>
-        <text fontSize="10.5" fontWeight={700} letterSpacing="2.5" fill={ink}>
-          <textPath href={`#${pathId}`} startOffset="0%">
-            {ringText}
-          </textPath>
-        </text>
-      </motion.svg>
-
-      <div
-        className="relative flex h-24 w-24 items-center justify-center rounded-full text-white"
-        style={{
-          background: `linear-gradient(160deg, ${color}, ${to})`,
-          boxShadow: `0 12px 24px -6px color-mix(in srgb, ${color} 55%, transparent), inset 0 1px 0 rgba(255,255,255,0.55)`,
-          border: "3px solid rgba(255,255,255,0.85)",
-        }}
-      >
-        <Icon name={icon} className="h-10 w-10" />
-      </div>
-
-      <svg
-        aria-hidden
-        viewBox="0 0 100 40"
-        className="absolute -bottom-5 left-1/2 h-10 w-24 -translate-x-1/2"
-      >
-        <path d="M20 0 L2 38 L20 30 L28 40 Z" fill={color} opacity="0.85" />
-        <path d="M80 0 L98 38 L80 30 L72 40 Z" fill={to} opacity="0.85" />
-      </svg>
-    </div>
+    <span
+      className="relative inline-block rotate-[-4.5deg] select-none print:rotate-[-4.5deg]"
+      role="img"
+      aria-label={`Stamped: LearnFRC certified, ${deptSlug}, ${year}`}
+    >
+      {/* The off-register second strike. Decoration, and the only thing that
+          makes two rectangles look like a stamp instead of a border. */}
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute -inset-[3px] rotate-[1.6deg] rounded-[var(--hand-s)] border-2 border-blue/30"
+      />
+      <span className="nb-box-sm relative block border-blue bg-transparent px-[1.15rem] py-[0.85rem] text-center">
+        <span className="nb-slug block text-[0.72rem] font-bold tracking-[0.22em] text-blue">
+          LEARNFRC
+        </span>
+        <span
+          aria-hidden="true"
+          className="mt-1.5 block h-px w-full bg-blue/45"
+        />
+        <span className="nb-slug mt-1.5 block text-[1rem] font-bold tracking-[0.14em] text-blue">
+          CERTIFIED
+        </span>
+        <span
+          aria-hidden="true"
+          className="mt-1.5 block h-px w-full bg-blue/45"
+        />
+        <span className="nb-slug mt-1.5 block text-[0.68rem] tracking-[0.06em] text-blue">
+          {deptSlug}
+        </span>
+        <span className="nb-slug block text-[0.68rem] tracking-[0.18em] text-blue">
+          {year}
+        </span>
+      </span>
+    </span>
   );
 }
 
 /**
- * Locked-state companion: a dimmed medallion waiting behind a spring-drawn
- * progress ring, so the earned seal is visible in outline before it's real.
+ * The same box before anybody stamped it: dashed, graphite, and carrying the
+ * figure that is missing rather than the one that is earned. Pairing the two
+ * shapes is what makes the locked page legible in a glance, and it survives a
+ * greyscale photocopy because the difference is the stroke, not the colour.
  */
-export function ProgressSeal({
+export function UnstampedBox({
   pct,
-  icon,
-  color,
-  to,
-  ink,
+  done,
+  total,
 }: {
   pct: number;
-  icon: string;
-  color: string;
-  to: string;
-  ink: string;
+  done: number;
+  total: number;
 }) {
-  const reduce = useReducedMotion();
-  const r = 54;
-  const c = 2 * Math.PI * r;
-  const clamped = Math.min(100, Math.max(0, pct));
-  const offset = c - (c * clamped) / 100;
-
   return (
-    <div className="relative mx-auto flex h-40 w-40 items-center justify-center">
-      <div
-        aria-hidden
-        className="absolute inset-6 rounded-full opacity-25 blur-[0.5px] grayscale"
-        style={{ background: `linear-gradient(160deg, ${color}, ${to})` }}
-      />
-      <div aria-hidden className="absolute inset-6 flex items-center justify-center rounded-full opacity-40 grayscale">
-        <Icon name={icon} className="h-9 w-9 text-white" />
-      </div>
-
-      <svg viewBox="0 0 120 120" className="absolute inset-0 h-full w-full -rotate-90" aria-hidden>
-        <circle cx="60" cy="60" r={r} fill="none" stroke="rgba(120,145,190,0.22)" strokeWidth="8" />
-        <motion.circle
-          cx="60"
-          cy="60"
-          r={r}
-          fill="none"
-          stroke={ink}
-          strokeWidth="8"
-          strokeLinecap="round"
-          strokeDasharray={c}
-          initial={{ strokeDashoffset: c }}
-          animate={{ strokeDashoffset: offset }}
-          transition={reduce ? { duration: 0 } : { type: "spring", stiffness: 55, damping: 18, delay: 0.3 }}
-        />
-      </svg>
-
-      <div className="relative flex flex-col items-center justify-center">
-        <span className="font-display text-3xl font-bold" style={{ color: ink }}>
-          <AnimatedCounter value={clamped} suffix="%" />
+    <span
+      className="relative inline-block rotate-[-2.4deg] select-none"
+      role="img"
+      aria-label={`Not signed off yet, ${done} of ${total} lessons finished`}
+    >
+      <span className="relative block rounded-[var(--hand-s)] border-2 border-dashed border-graphite bg-transparent px-[1.15rem] py-[0.9rem] text-center">
+        <span className="nb-slug block text-[0.72rem] font-bold tracking-[0.22em]">
+          LEARNFRC
         </span>
-        <span className="text-xs font-medium text-muted-foreground">complete</span>
-      </div>
-    </div>
+        <span
+          aria-hidden="true"
+          className="mt-1.5 block h-px w-full bg-[var(--rule)]"
+        />
+        <span className="nb-count mt-2 block text-[1.9rem] text-ink">
+          {pct}
+          <span className="text-[1rem]">%</span>
+        </span>
+        <span className="nb-slug mt-1 block text-[0.68rem] tracking-[0.12em]">
+          not signed off
+        </span>
+      </span>
+    </span>
   );
 }

@@ -101,11 +101,11 @@ export async function POST(req: Request) {
   );
   if (!message) return fail(400, "Please describe the problem.");
   if (message.length < MIN_MESSAGE)
-    return fail(400, "Please add a little more detail — what's wrong, and where?");
+    return fail(400, "Please add a little more detail: what's wrong, and where?");
   if (message.length > MAX_MESSAGE)
     return fail(
       400,
-      `That's longer than ${MAX_MESSAGE} characters — please trim it down.`
+      `That's longer than ${MAX_MESSAGE} characters. Please trim it down.`
     );
 
   // Optional. Blank is the expected case: this path exists precisely so people
@@ -114,7 +114,7 @@ export async function POST(req: Request) {
     typeof input.email === "string" ? input.email : ""
   ).toLowerCase();
   if (emailRaw && (emailRaw.length > MAX_EMAIL || !EMAIL_RE.test(emailRaw)))
-    return fail(400, "That email doesn't look right — fix it or leave it blank.");
+    return fail(400, "That email doesn't look right. Fix it, or leave it blank.");
 
   // Free text, not a trusted URL. It is stored and rendered as text (React
   // escapes it in the admin inbox, and `feedbackEmailHtml` escapes it in the
@@ -135,7 +135,7 @@ export async function POST(req: Request) {
   if (!allowed)
     return fail(
       429,
-      "That's a lot of reports from one connection — please try again later."
+      "That's a lot of reports from one connection. Please try again later."
     );
 
   const stored = `[${KIND_LABEL[kind]}] ${message}`;
@@ -154,7 +154,7 @@ export async function POST(req: Request) {
     // a correction the site promised to act on is gone. Log it AND fail loudly
     // so the form can tell them to try again.
     console.error("[report-error] insert failed:", error.message);
-    return fail(500, "Couldn't save that just now — please try again.");
+    return fail(500, "Couldn't save that just now. Please try again.");
   }
 
   // Notification is best-effort: the row above is the durable record, so a
@@ -165,7 +165,7 @@ export async function POST(req: Request) {
   if (adminEmail) {
     const res = await sendEmail({
       to: adminEmail,
-      subject: `LearnFRC — ${KIND_LABEL[kind].toLowerCase()} (anonymous form)`,
+      subject: `LearnFRC: ${KIND_LABEL[kind].toLowerCase()} (anonymous form)`,
       html: feedbackEmailHtml({
         message: stored,
         fromEmail: emailRaw || undefined,
@@ -177,7 +177,7 @@ export async function POST(req: Request) {
       console.error("[report-error] admin notification failed:", res.error);
   } else {
     console.warn(
-      "[report-error] ADMIN_EMAILS is unset — report stored, nobody notified."
+      "[report-error] ADMIN_EMAILS is unset. Report stored, nobody notified."
     );
   }
 

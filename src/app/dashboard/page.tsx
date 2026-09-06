@@ -1,39 +1,16 @@
-import type { CSSProperties } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import {
-  ArrowRight,
-  ArrowUpRight,
-  BookOpenCheck,
-  CheckCircle2,
-  Flame,
-  GraduationCap,
-  Layers,
-  Play,
-  Sparkles,
-  Trophy,
-  Zap,
-} from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { DepartmentCard } from "@/components/department-card";
 import { TeamInvite } from "@/components/team/team-invite";
 import { FirstRunGuide } from "@/components/dashboard/first-run-guide";
 import { FirstRunLaunch } from "@/components/onboarding/first-run-launch";
+import { ResumeCard } from "@/components/progress/resume-card";
 import { readStartGoalId } from "@/lib/recommend";
 import { GuestMigration } from "@/components/guest-migration";
 import { ProfileSetupForm } from "@/components/onboarding/profile-setup-form";
-import {
-  Reveal,
-  RevealGroup,
-  RevealItem,
-  RiseGroup,
-  RiseItem,
-  Hover,
-  Glow,
-} from "@/components/motion/primitives";
-import { AnimatedCounter } from "@/components/animated-counter";
 import {
   AchievementBadge,
   type AchievementView,
@@ -48,11 +25,38 @@ import {
 import { suggestUsername } from "@/lib/onboarding";
 import { getProfileSetupState, needsUsernameSetup } from "@/lib/onboarding-server";
 import { createClient } from "@/lib/supabase/server";
-import { deptMeta, inkFor } from "@/lib/departments";
 import { clampPct, pluralize } from "@/lib/utils";
 import type { Achievement } from "@/lib/types";
-import { InstrumentPanel } from "./_instrument-panel";
+import { ProgressLedger } from "./_instrument-panel";
 import { WhatsNew } from "./_whats-new";
+
+/**
+ * The dashboard, rebuilt as the working page of the binder.
+ *
+ * The page answers two questions in the order a learner actually asks them:
+ * "what do I open next" and "how far along am I". So it runs top to bottom as
+ * one sheet: a ruled masthead with the name, the tally block, the one lesson to
+ * open, the departments wall, the badge drawer. Nothing is a floating panel and
+ * nothing animates in as you scroll past it.
+ *
+ * WHAT WAS DELETED, on purpose:
+ *  - Six identical stat cards. They are one ruled tally now, in `ProgressLedger`
+ *    (see that file for the reasoning). Six boxes reading 0 is the shape a new
+ *    account used to meet first.
+ *  - The duplicate calls to action. A zero-progress learner used to be pointed
+ *    at the same lesson three times: the first-run card, the "continue
+ *    learning" card, and a "complete your first lesson" block at the bottom.
+ *    The big resume card is now rendered only once there is something to
+ *    resume; before that, the first-run card is the whole answer.
+ *  - The separate "streak at risk" card, which linked to the lesson the resume
+ *    card below it already linked to. The streak is a fact about today, so it
+ *    is now a margin note ON that card rather than a second card with its own
+ *    button.
+ *
+ * BEHAVIOUR IS UNCHANGED: the same session gate, the same five queries, the
+ * same streak and level arithmetic, the same three invite slots keyed to the
+ * same engagement threshold, and the same `#invite-card` anchor.
+ */
 
 export const metadata: Metadata = {
   title: "Dashboard · LearnFRC",
@@ -93,18 +97,6 @@ function streakFromDates(timestamps: string[]): number {
   return streak;
 }
 
-const BRAND_GRADIENT: CSSProperties = {
-  background: "linear-gradient(120deg,#2560e6,#1aa9d6)",
-  WebkitBackgroundClip: "text",
-  backgroundClip: "text",
-  color: "transparent",
-};
-
-// shared blue→cyan progress fill
-const XP_BAR_STYLE = {
-  background: "linear-gradient(90deg,var(--primary),var(--accent))",
-} as const;
-
 export default async function DashboardPage() {
   const { user, profile } = await getSession();
   if (!user) redirect("/login?next=/dashboard");
@@ -120,23 +112,25 @@ export default async function DashboardPage() {
   // Returning before the dashboard's queries also means we do not spend them.
   if (needsUsernameSetup(profile)) {
     return (
-      <div className="relative overflow-x-clip">
-        <Glow
-          blobs={[
-            { size: "560px", pos: { left: "-160px", top: "-180px" }, color: "#8bbcff", opacity: 0.55 },
-            { size: "520px", pos: { right: "-170px", top: "40px" }, color: "#6ff0ea", opacity: 0.4, delay: 2.5 },
-          ]}
-        />
-        <div className="mx-auto max-w-xl px-4 pt-28 pb-20 sm:px-6 lg:px-8">
-          <Reveal>
+      <section className="nb-wrap pb-[clamp(3rem,6vw,5rem)] pt-[clamp(2.2rem,5vw,4rem)]">
+        <div className="max-w-[38rem]">
+          <p className="nb-marker">one thing first</p>
+          <h1 className="text-[clamp(1.9rem,1.3rem+2vw,2.9rem)]">
+            Pick the handle your team will see.
+          </h1>
+          <p className="nb-lede mt-[clamp(0.9rem,2vw,1.3rem)]">
+            It becomes your profile address and the name on the leaderboard.
+            Nothing else on the account works until it is set.
+          </p>
+          <div className="mt-[clamp(1.4rem,2.6vw,2rem)]">
             <ProfileSetupForm
               mode="username"
               suggested={suggestUsername(user.email)}
               required
             />
-          </Reveal>
+          </div>
         </div>
-      </div>
+      </section>
     );
   }
 
@@ -232,6 +226,9 @@ export default async function DashboardPage() {
     earnedAt: earnedMap.get(a.id) ?? null,
   }));
   const achievementsEarned = achievements.filter((a) => a.earned).length;
+  const achievementsPct = achievements.length
+    ? clampPct((achievementsEarned / achievements.length) * 100)
+    : 0;
 
   // ── Level / XP ────────────────────────────────────────────────
   const xp = profile?.xp ?? 0;
@@ -270,7 +267,7 @@ export default async function DashboardPage() {
   const INVITE_EARNED_AT = 5;
   const inviteEarned = completedCount >= INVITE_EARNED_AT;
 
-  // Framing reflects what they've done. No urgency, no guilt — for someone who
+  // Framing reflects what they've done. No urgency, no guilt: for someone who
   // has already referred people, the honest encouragement is that it worked.
   // The card itself already prints the referral count twice (chip + body), so
   // the lead-in acknowledges it qualitatively instead of stating it a third
@@ -293,9 +290,7 @@ export default async function DashboardPage() {
   const inviteNode = profile?.username ? (
     <div id="invite-card" className="scroll-mt-28">
       {inviteEarned && (
-        <p className="mb-3 max-w-2xl text-[15px] leading-relaxed text-foreground/70">
-          {inviteLead}
-        </p>
+        <p className="nb-sub mb-4 max-w-[58ch]">{inviteLead}</p>
       )}
       <TeamInvite
         username={profile.username}
@@ -375,507 +370,339 @@ export default async function DashboardPage() {
     }
   }
 
-  const stats = [
-    { icon: BookOpenCheck, label: "Lessons completed", value: completedCount, accent: "#2560e6" },
-    { icon: Layers, label: "Departments in progress", value: departmentsInProgress, accent: "#1aa9d6" },
-    { icon: GraduationCap, label: "Departments completed", value: departmentsCompleted, accent: "#12b565" },
-    { icon: Trophy, label: "Achievements earned", value: achievementsEarned, accent: "#f5a623" },
-    { icon: Flame, label: "Day streak", value: streak, accent: "#ff8a3d" },
-    { icon: Zap, label: "Total XP", value: xp, accent: "#7c5cff" },
-  ];
-
-  const cm = continueLesson ? deptMeta(continueLesson.deptSlug) : null;
+  const resumeHref = continueLesson
+    ? `/guides/${continueLesson.deptSlug}/${continueLesson.moduleSlug}/${continueLesson.lessonSlug}`
+    : null;
+  // The big card is only worth drawing once there is something to RESUME. At
+  // zero progress the first-run block above already points at this exact
+  // lesson, and two cards for one link is how a page teaches people to ignore
+  // its cards.
+  const showResume = !!(continueLesson && resumeHref && completedCount > 0);
+  const showProfileNudge =
+    !setup.show && !!profile?.username && !profile?.team_number;
 
   return (
-    <div className="relative overflow-x-clip">
-      <Glow
-        blobs={[
-          { size: "560px", pos: { left: "-160px", top: "-180px" }, color: "#8bbcff", opacity: 0.55 },
-          { size: "520px", pos: { right: "-170px", top: "40px" }, color: "#6ff0ea", opacity: 0.4, delay: 2.5 },
-          { size: "480px", pos: { left: "38%", top: "620px" }, color: "#c8b6ff", opacity: 0.32, delay: 5 },
-        ]}
-      />
+    <>
+      {/* Migrate any guest (pre-signup) progress into this account, once. */}
+      <GuestMigration />
 
-      <div className="mx-auto max-w-7xl px-4 pt-28 pb-20 sm:px-6 lg:px-8">
-        {/* Migrate any guest (pre-signup) progress into this account, once. */}
-        <GuestMigration />
-        {/* Google sign-ins have no handle and usually no team — ask once here,
-            skippable, top of the page. */}
-        {setup.show && (
-          <Reveal className="mb-8">
-            <ProfileSetupForm
-              mode={setup.mode}
-              suggested={suggestUsername(user.email)}
-              required={setup.required}
-            />
-          </Reveal>
-        )}
-        {/* FIRST RUN — the only surface a zero-progress learner sees here.
-            45% of accounts never finish a single lesson, and the loss is
-            entirely upstream of the content: they land on a dashboard built for
-            someone with a history and are handed 394 lessons across 11
-            departments with no default.
+      {/* ===================== ENTRY GATES =====================
+          Only two things ever render here, and both are one-time: the OAuth
+          profile ask, and the first-run block for an account with nothing
+          ticked off yet. Neither is chrome a returning learner ever sees. */}
+      {(setup.show || completedCount === 0) && (
+        <section className="nb-wrap pt-[clamp(2.2rem,5vw,3.6rem)]">
+          <div className="grid gap-[clamp(1rem,2.4vw,1.6rem)]">
+            {/* Google sign-ins have no handle and usually no team. Ask once,
+                here, skippable, before anything else on the page. */}
+            {setup.show && (
+              <ProfileSetupForm
+                mode={setup.mode}
+                suggested={suggestUsername(user.email)}
+                required={setup.required}
+              />
+            )}
 
-            FirstRunLaunch renders the goal-aware five-lesson plan when the
-            learner has answered the one question on /start, so returning here
-            shows their plan rather than resetting them. With no answer stored
-            it falls back to the generic next-lesson card, and the banner below
-            offers the question — the email confirmation link cannot reliably
-            route people to /start (Supabase's template hardcodes its own
-            destination), so the dashboard has to be a real entry point rather
-            than a backstop. */}
-        {completedCount === 0 && (
-          <Reveal className="mb-8">
-            <div className="space-y-4">
-              {startGoalId ? (
+            {/* FIRST RUN. `FirstRunLaunch` renders the goal-aware five-lesson
+                plan when the learner already answered the one question on
+                /start, so coming back here shows their plan rather than
+                resetting them. With no answer stored it falls back to the
+                generic next-lesson card, and the row below offers the question:
+                the email confirmation link cannot reliably route people to
+                /start (Supabase's template hardcodes its own destination), so
+                the dashboard has to be a real entry point, not a backstop. */}
+            {completedCount === 0 &&
+              (startGoalId ? (
                 <FirstRunLaunch userId={user.id} />
               ) : (
                 <>
-                  {continueLesson && cm && (
+                  {continueLesson && resumeHref && (
                     <FirstRunGuide
-                      href={`/guides/${continueLesson.deptSlug}/${continueLesson.moduleSlug}/${continueLesson.lessonSlug}`}
+                      href={resumeHref}
                       lessonTitle={continueLesson.lessonTitle}
                       deptName={continueLesson.deptName}
                     />
                   )}
                   <Link
                     href="/start"
-                    className="ac-tile flex items-center justify-between gap-3 p-3.5 text-left transition-colors hover:bg-white/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                    style={{ "--a": "#2560e6" } as CSSProperties}
+                    className="nb-box nb-lift flex flex-wrap items-center justify-between gap-x-6 gap-y-3 p-[clamp(0.95rem,2vw,1.3rem)]"
                   >
                     <span className="min-w-0">
-                      <span className="block text-[15px] font-semibold text-foreground">
-                        Not sure where to start?
-                      </span>
-                      <span className="mt-0.5 block text-sm leading-snug text-foreground/70">
-                        Answer one question and we&apos;ll lay out your first
-                        five lessons.
+                      <span className="nb-slug block">not sure where to start</span>
+                      <span className="mt-1 block text-[1.02rem] font-bold leading-tight">
+                        Answer one question, get five lessons.
                       </span>
                     </span>
-                    <ArrowRight
-                      className="h-4 w-4 shrink-0 text-primary"
-                      aria-hidden
-                    />
+                    <span className="nb-btn-ghost nb-btn-sm shrink-0">
+                      Build my plan
+                    </span>
                   </Link>
                 </>
-              )}
+              ))}
+          </div>
+        </section>
+      )}
+
+      {/* ===================== MASTHEAD =====================
+          The top of a shop-log page: who is writing, and what state the work is
+          in. Nothing is boxed, because a masthead is written on the paper. */}
+      <section className="nb-wrap pb-[clamp(1.4rem,3vw,2.2rem)] pt-[clamp(2.2rem,5vw,3.6rem)]">
+        <div className="flex flex-wrap items-end justify-between gap-x-10 gap-y-5">
+          <div className="min-w-0">
+            <p className="nb-marker">your binder</p>
+
+            <div className="flex items-center gap-[clamp(0.9rem,2vw,1.3rem)]">
+              <Avatar
+                name={displayName}
+                src={profile?.avatar_url}
+                seed={user.id}
+                className="h-16 w-16 text-[1.15rem]"
+              />
+              <h1 className="min-w-0 text-[clamp(2rem,1.3rem+2.4vw,3.4rem)]">
+                Hey, {firstName}
+              </h1>
             </div>
-          </Reveal>
-        )}
 
-        {/* ============================ HERO — SIGNATURE INSTRUMENT ============================ */}
-        <section className="grid items-center gap-10 lg:grid-cols-[1.05fr_1fr] lg:gap-14">
-          <RiseGroup>
-            <RiseItem>
-              <span className="ac-chip inline-flex items-center gap-2">
-                <Sparkles className="h-3.5 w-3.5 text-primary" aria-hidden />
-                <span className="ac-eyebrow">Your telemetry</span>
-              </span>
-            </RiseItem>
+            <p className="nb-lede mt-[clamp(0.9rem,2vw,1.2rem)]">
+              {completedCount > 0
+                ? `${pluralize(completedCount, "lesson")} cleared, ${pluralize(
+                    departmentsInProgress,
+                    "department"
+                  )} open${streak > 1 ? `, ${streak} days running` : ""}.`
+                : "Nothing ticked off yet. Open one lesson and this page starts keeping score."}
+            </p>
 
-            <RiseItem>
-              <div className="mt-5 flex items-center gap-4">
-                <Avatar
-                  name={displayName}
-                  src={profile?.avatar_url}
-                  seed={user.id}
-                  className="h-16 w-16 shrink-0 shadow-[0_10px_26px_rgba(38,78,150,0.22),inset_0_1px_0_rgba(255,255,255,0.9)] ring-2 ring-white/80"
-                />
-                <div className="min-w-0">
-                  <h1 className="truncate text-balance font-display text-4xl font-extrabold leading-tight sm:text-5xl">
-                    Hey, <span style={BRAND_GRADIENT}>{firstName}</span>
-                  </h1>
-                  <p className="mt-1 text-[15px] leading-relaxed text-foreground/70">
-                    {completedCount > 0
-                      ? `${pluralize(completedCount, "lesson")} cleared${
-                          streak > 1 ? ` · ${streak}-day streak (${xpMultiplier}× XP)` : ""
-                        }`
-                      : "Fresh start — pick a department and begin your build season."}
-                  </p>
-                </div>
-              </div>
-            </RiseItem>
-
-            <RiseItem>
-              <div className="mt-6 flex flex-wrap items-center gap-2.5 text-sm">
-                <span className="ac-chip inline-flex items-center gap-1.5 font-semibold">
-                  <Zap className="h-3.5 w-3.5 text-primary" aria-hidden />
-                  Level {level}
-                </span>
-                <span className="ac-chip inline-flex items-center gap-1.5 font-semibold">
-                  <AnimatedCounter value={xp} /> XP total
-                </span>
-                {streak > 0 && (
-                  <span className="ac-chip inline-flex items-center gap-1.5 font-semibold">
-                    <Flame className="h-3.5 w-3.5" style={{ color: "#c2410c" }} aria-hidden />
-                    {streak}-day streak
-                  </span>
-                )}
-              </div>
-            </RiseItem>
-
-            <RiseItem>
-              <div className="mt-7 flex flex-wrap items-center gap-3">
-                {continueLesson && cm ? (
-                  <Link
-                    href={`/guides/${continueLesson.deptSlug}/${continueLesson.moduleSlug}/${continueLesson.lessonSlug}`}
-                    className="ac-btn text-sm"
-                  >
-                    <Play className="h-4 w-4 fill-current" aria-hidden />
-                    {continueLesson.fresh ? "Start learning" : "Continue learning"}
-                  </Link>
-                ) : (
-                  <Link href="/guides" className="ac-btn text-sm">
-                    <Play className="h-4 w-4 fill-current" aria-hidden />
-                    Browse the guides
-                  </Link>
-                )}
-                <Link href="/leaderboard" className="ac-btn-ghost text-sm">
-                  <Trophy className="h-4 w-4" aria-hidden />
-                  Leaderboard
+            <div className="mt-[clamp(1.2rem,2.4vw,1.7rem)] flex flex-wrap gap-3">
+              {resumeHref ? (
+                <Link href={resumeHref} className="nb-btn">
+                  {continueLesson?.fresh ? "Start learning" : "Continue learning"}
                 </Link>
-              </div>
-            </RiseItem>
-          </RiseGroup>
+              ) : (
+                <Link href="/guides" className="nb-btn">
+                  Browse the guides
+                </Link>
+              )}
+              <Link href="/leaderboard" className="nb-btn-ghost">
+                Leaderboard
+              </Link>
+            </div>
+          </div>
 
-          <InstrumentPanel
+          {/* One pen annotation on the page, and it says the thing the figures
+              cannot: which number is the one that matters this week. */}
+          <p className="nb-pen max-w-[20ch] rotate-[1.4deg] min-[900px]:text-right">
+            {streak > 1
+              ? "the streak is the multiplier, not the trophy"
+              : "five in a week is where it starts to stick"}
+          </p>
+        </div>
+      </section>
+
+      {/* ===================== THE TALLY ===================== */}
+      <section className="nb-wrap pb-[clamp(2rem,4vw,3.2rem)]">
+        <div className="grid gap-[clamp(1rem,2.4vw,1.6rem)]">
+          <ProgressLedger
             level={level}
             levelPct={levelPct}
-            xpToNext={xpToNext}
-            xp={xp}
             xpIntoLevel={xpIntoLevel}
+            xpToNext={xpToNext}
+            nextLevel={nextLevel}
+            xp={xp}
             streak={streak}
             xpMultiplier={xpMultiplier}
-            nextLevel={nextLevel}
+            lessonsCompleted={completedCount}
+            departmentsInProgress={departmentsInProgress}
+            departmentsCompleted={departmentsCompleted}
+            achievementsEarned={achievementsEarned}
+            achievementsTotal={achievements.length}
+          />
+
+          <WhatsNew inviteHref={profile?.username ? "#invite-card" : "/settings"} />
+
+          {/* Fallback nudge for the team gap. Suppressed while the setup card
+              is up top, which already asks for it inline, and kept for learners
+              who skipped that card so the ask survives without repeating. */}
+          {showProfileNudge && (
+            <Link
+              href="/settings"
+              className="nb-box nb-lift flex flex-wrap items-center justify-between gap-x-6 gap-y-3 p-[clamp(0.95rem,2vw,1.3rem)]"
+            >
+              <span className="min-w-0">
+                <span className="nb-slug block">profile / team number</span>
+                <span className="mt-1 block text-[1.02rem] font-bold leading-tight">
+                  Add your team number.
+                </span>
+                <span className="mt-0.5 block text-[0.9rem] text-graphite">
+                  It puts your team beside your name on the leaderboard.
+                </span>
+              </span>
+              <span className="nb-btn-ghost nb-btn-sm shrink-0">Settings</span>
+            </Link>
+          )}
+        </div>
+      </section>
+
+      {/* ===================== NEXT UP ===================== */}
+      {showResume && continueLesson && resumeHref && (
+        <section className="nb-wrap border-t-2 border-ink py-[clamp(2.2rem,4.5vw,3.6rem)]">
+          <h2 className="text-[clamp(1.5rem,1.1rem+1.4vw,2.3rem)]">Next up</h2>
+
+          {/* The streak is a fact about today, so it is a note on the card
+              rather than a second card with its own button. No countdown and no
+              "expires at midnight": a lapsed streak just starts again, which is
+              worth knowing and is the opposite of a threat. */}
+          {streakAtRisk && (
+            <div className="nb-note mt-[clamp(1rem,2.2vw,1.5rem)] max-w-[46rem]">
+              <p className="nb-slug">{streak} days running</p>
+              <p className="mt-1.5 text-[0.95rem] leading-snug">
+                A lesson today makes it {streak + 1}, and back-to-back days pay{" "}
+                {xpMultiplier}x XP. One lesson is enough.
+              </p>
+            </div>
+          )}
+
+          <ResumeCard
+            className="mt-[clamp(1.2rem,2.6vw,1.8rem)]"
+            variant="tile"
+            href={resumeHref}
+            lessonTitle={continueLesson.lessonTitle}
+            deptName={continueLesson.deptName}
+            deptSlug={continueLesson.deptSlug}
+            moduleTitle={continueLesson.moduleTitle}
+            pct={continueLesson.pct}
+            fresh={continueLesson.fresh}
           />
         </section>
+      )}
 
-        {/* ============================ STREAK AT RISK ============================ */}
-        {streakAtRisk && continueLesson && cm && (
-          <Reveal className="mt-8">
-            <Hover lift={-3} className="block">
-              <Link
-                href={`/guides/${continueLesson.deptSlug}/${continueLesson.moduleSlug}/${continueLesson.lessonSlug}`}
-                className="ac-tile group flex items-center justify-between gap-4 p-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:p-5"
-                style={{ "--a": "#ff8a3d" } as CSSProperties}
-              >
-                <div className="flex min-w-0 items-center gap-3">
-                  <span
-                    className="ac-badge flex h-11 w-11 shrink-0 items-center justify-center"
-                    style={{ "--a": "#ff8a3d" } as CSSProperties}
-                  >
-                    <Flame className="h-5 w-5" aria-hidden />
-                  </span>
-                  <div className="min-w-0">
-                    {/* States the fact, not a countdown. "Keep your streak
-                        alive… it resets at midnight" is a manufactured deadline
-                        pointed at a teenager, and it makes a missed evening feel
-                        like losing something. The streak is real and it does
-                        lapse, so we say what it IS and what today's lesson adds
-                        — and a lapsed streak just starts again, which is worth
-                        knowing and is the opposite of a threat. */}
-                    <p className="text-[15px] font-bold text-foreground">
-                      {streak} days running 🔥
-                    </p>
-                    <p className="text-sm leading-snug text-foreground/70">
-                      A lesson today makes it {streak + 1} — and back-to-back
-                      days earn bonus XP. Next up:{" "}
-                      <span className="font-semibold text-foreground">
-                        {continueLesson.lessonTitle}
-                      </span>
-                      .
-                    </p>
-                  </div>
-                </div>
-                <span className="ac-btn inline-flex shrink-0 self-center text-sm">
-                  <Play className="h-4 w-4 fill-current" aria-hidden />
-                  <span className="hidden sm:inline">1 lesson</span>
-                </span>
-              </Link>
-            </Hover>
-          </Reveal>
-        )}
-
-        {/* ============================ WHAT'S NEW ============================ */}
-        <WhatsNew
-          inviteHref={profile?.username ? "#invite-card" : "/settings"}
-          className="mt-8"
-        />
-
-        {/* ============================ PROFILE NUDGE ============================ */}
-        {/* Fallback nudge for the team gap. Suppressed while the setup card is
-            up top, which already asks for it inline — and kept for learners who
-            skipped that card, so the ask survives without repeating itself. */}
-        {!setup.show && profile?.username && !profile?.team_number && (
-          <Reveal className="mt-8">
-            <Hover lift={-3}>
-              <Link
-                href="/settings"
-                className="ac-card group flex items-center justify-between gap-4 p-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-              >
-                <div className="flex min-w-0 items-center gap-3">
-                  <span
-                    className="ac-badge flex h-11 w-11 shrink-0 items-center justify-center"
-                    style={{ "--a": "#2560e6" } as CSSProperties}
-                  >
-                    <Sparkles className="h-5 w-5" aria-hidden />
-                  </span>
-                  <div className="min-w-0">
-                    <p className="text-[15px] font-semibold text-foreground">
-                      Complete your profile
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Add your FRC team number to rep your team on the
-                      leaderboard.
-                    </p>
-                  </div>
-                </div>
-                <ArrowRight
-                  className="h-4 w-4 shrink-0 text-primary transition-transform group-hover:translate-x-1"
-                  aria-hidden
-                />
-              </Link>
-            </Hover>
-          </Reveal>
-        )}
-
-        {/* ============================ CONTINUE LEARNING ============================ */}
-        {/* Learning comes first: this used to sit below the stat grid and the
-            invite ask. It is the reason the page exists, so it leads. */}
-        {continueLesson && cm && (
-          <Reveal className="mt-8">
-            <Hover lift={-3} className="block">
-              <Link
-                href={`/guides/${continueLesson.deptSlug}/${continueLesson.moduleSlug}/${continueLesson.lessonSlug}`}
-                className="ac-tile group block p-6 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:p-8"
-                style={{ "--a": cm.color } as CSSProperties}
-              >
-                <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="min-w-0">
-                    <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-foreground/75">
-                      <Play className="h-3.5 w-3.5 fill-current" aria-hidden />
-                      {continueLesson.fresh ? "Start learning" : "Continue learning"}
-                    </span>
-                    <h2 className="mt-2 text-balance font-display text-2xl font-bold leading-tight text-foreground sm:text-3xl">
-                      {continueLesson.lessonTitle}
-                    </h2>
-                    <p className="mt-1.5 text-[15px] font-medium text-foreground/75">
-                      {continueLesson.deptName} · {continueLesson.moduleTitle}
-                    </p>
-                    {!continueLesson.fresh && (
-                      <div className="mt-4 max-w-sm">
-                        <div className="mb-1.5 flex items-center justify-between text-xs font-semibold text-foreground/75">
-                          <span>{continueLesson.deptName} progress</span>
-                          <span className="text-foreground">{continueLesson.pct}%</span>
-                        </div>
-                        <Progress
-                          value={continueLesson.pct}
-                          className="h-2 bg-white/45"
-                          barClassName="bg-[color-mix(in_srgb,var(--a)_78%,#141f2c)]"
-                        />
-                      </div>
-                    )}
-                  </div>
-                  <span className="ac-btn inline-flex shrink-0 self-start text-sm sm:self-center">
-                    {continueLesson.fresh ? "Begin" : "Resume"}
-                    <ArrowRight
-                      className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1"
-                      aria-hidden
-                    />
-                  </span>
-                </div>
-              </Link>
-            </Hover>
-          </Reveal>
-        )}
-
-        {/* ============================ INVITE — EARNED SLOT ============================ */}
-        {/* Directly after the lesson they're mid-way through: the one moment on
-            this page where "you actually use this" is self-evident. */}
-        {inviteNode && inviteEarned && (
-          <Reveal className="mt-8">{inviteNode}</Reveal>
-        )}
-
-        {/* ============================ MISSION READOUT — STAT CARDS ============================ */}
-        <Reveal className="mt-12" delay={0.04}>
-          <p className="ac-eyebrow">Mission readout</p>
-          <h2 className="mt-2 font-display text-2xl font-bold text-foreground">
-            Every gauge on the board
-          </h2>
-        </Reveal>
-        <RevealGroup className="mt-5 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-6">
-          {stats.map((s) => (
-            <RevealItem key={s.label}>
-              <Hover lift={-4} className="h-full">
-                <div className="ac-card group h-full p-4">
-                  <span
-                    className="ac-badge mb-3 flex h-10 w-10 items-center justify-center transition-transform duration-300 group-hover:scale-110"
-                    style={{ "--a": s.accent } as CSSProperties}
-                  >
-                    <s.icon className="h-5 w-5" aria-hidden />
-                  </span>
-                  <div
-                    className="font-display text-3xl font-bold tabular-nums"
-                    style={{ color: inkFor(s.accent) }}
-                  >
-                    <AnimatedCounter value={s.value} />
-                  </div>
-                  <div className="mt-1 text-[13px] font-medium leading-snug text-muted-foreground">
-                    {s.label}
-                  </div>
-                </div>
-              </Hover>
-            </RevealItem>
-          ))}
-        </RevealGroup>
-
-        {/* ============================ YOUR DEPARTMENTS ============================ */}
-        <section className="mt-14">
-          <Reveal>
-            <div className="flex items-end justify-between gap-4">
-              <div>
-                <p className="ac-eyebrow">{departments.length} departments</p>
-                <h2 className="mt-2 font-display text-2xl font-bold text-foreground sm:text-3xl">
-                  Your departments
-                </h2>
-                <p className="mt-1.5 text-[15px] text-muted-foreground">
-                  Pick up where you left off across every track.
-                </p>
-              </div>
-              <Link
-                href="/guides"
-                className="group inline-flex min-h-11 shrink-0 items-center gap-1.5 text-sm font-semibold text-primary"
-              >
-                All guides
-                <ArrowUpRight
-                  className="h-4 w-4 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
-                  aria-hidden
-                />
-              </Link>
-            </div>
-          </Reveal>
-
-          {deptProgress.length > 0 ? (
-            <RevealGroup className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {deptProgress.map(({ dept, pct }, i) => (
-                <RevealItem key={dept.slug}>
-                  <DepartmentCard
-                    slug={dept.slug}
-                    name={dept.name}
-                    tagline={dept.tagline}
-                    moduleCount={dept.moduleCount}
-                    lessonCount={dept.lessonCount}
-                    progressPct={pct}
-                    index={i + 1}
-                  />
-                </RevealItem>
-              ))}
-            </RevealGroup>
-          ) : (
-            <Reveal className="mt-6">
-              <div className="ac-card p-10 text-center text-[15px] text-muted-foreground">
-                Departments are loading — check back in a moment, or{" "}
-                <Link
-                  href="/guides"
-                  className="font-semibold text-primary underline-offset-4 hover:underline"
-                >
-                  browse the guides
-                </Link>
-                .
-              </div>
-            </Reveal>
-          )}
+      {/* ===================== INVITE, EARNED SLOT =====================
+          Directly after the lesson they are mid-way through: the one moment on
+          this page where "you actually use this" is self-evident. */}
+      {inviteNode && inviteEarned && (
+        <section className="nb-wrap border-t-2 border-ink py-[clamp(2.2rem,4.5vw,3.6rem)]">
+          {inviteNode}
         </section>
+      )}
 
-        {/* ============================ INVITE — QUIET SLOT ============================ */}
-        {/* 1–4 lessons in: still deciding whether they like this. The card stays
-            reachable (and keeps #invite-card anchored for the What's New CTA)
-            but carries no personalised prompt and sits below the learning. */}
-        {inviteNode && !inviteEarned && completedCount > 0 && (
-          <Reveal className="mt-14">{inviteNode}</Reveal>
-        )}
+      {/* ===================== DEPARTMENTS ===================== */}
+      <section className="nb-wrap border-t-2 border-ink py-[clamp(2.2rem,4.5vw,3.6rem)]">
+        <div className="mb-[clamp(1.4rem,3vw,2.2rem)] flex flex-wrap items-end justify-between gap-x-8 gap-y-4">
+          <div>
+            <h2 className="text-[clamp(1.5rem,1.1rem+1.4vw,2.3rem)]">
+              Your {departments.length} departments
+            </h2>
+            <p className="nb-sub mt-3">
+              Every card carries the percentage of its lessons you have ticked
+              off. Open any of them in any order.
+            </p>
+          </div>
+          <Link href="/guides" className="nb-btn-ghost nb-btn-sm shrink-0">
+            The whole catalogue
+          </Link>
+        </div>
 
-        {/* ============================ ACHIEVEMENTS ============================ */}
-        {achievements.length > 0 && (
-          <section className="mt-14">
-            <Reveal>
-              <div className="flex items-end justify-between gap-4">
-                <div>
-                  <p className="ac-eyebrow">Unlocks</p>
-                  <h2 className="mt-2 font-display text-2xl font-bold text-foreground sm:text-3xl">
-                    Achievements
-                  </h2>
-                  <p className="mt-1.5 text-[15px] text-muted-foreground">
-                    {achievementsEarned > 0
-                      ? `${achievementsEarned} of ${achievements.length} unlocked — keep going.`
-                      : `Complete lessons to unlock all ${achievements.length} badges.`}
-                  </p>
-                </div>
-                <span className="ac-chip shrink-0 text-xs font-semibold">
-                  {achievementsEarned}/{achievements.length} unlocked
-                </span>
-              </div>
-            </Reveal>
-
-            <Reveal delay={0.05} className="mt-4">
-              <Progress
-                value={clampPct((achievementsEarned / achievements.length) * 100)}
-                className="h-2.5 bg-white/55"
-                barClassName="bg-[linear-gradient(90deg,var(--primary),var(--accent))]"
-                style={XP_BAR_STYLE}
+        {deptProgress.length > 0 ? (
+          <div className="grid gap-[clamp(0.9rem,1.9vw,1.4rem)] min-[640px]:grid-cols-2 min-[1024px]:grid-cols-3">
+            {deptProgress.map(({ dept, pct }, i) => (
+              <DepartmentCard
+                key={dept.slug}
+                slug={dept.slug}
+                name={dept.name}
+                tagline={dept.tagline}
+                moduleCount={dept.moduleCount}
+                lessonCount={dept.lessonCount}
+                progressPct={pct}
+                index={i}
               />
-            </Reveal>
-
-            <RevealGroup className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-              {achievements.map((a) => (
-                <RevealItem key={a.slug}>
-                  <AchievementBadge achievement={a} />
-                </RevealItem>
-              ))}
-            </RevealGroup>
-          </section>
+            ))}
+          </div>
+        ) : (
+          <div className="nb-box max-w-[44rem] p-[clamp(1.2rem,2.6vw,1.9rem)]">
+            <p className="nb-slug">departments</p>
+            <p className="mt-2 text-[0.98rem] leading-snug text-graphite">
+              The catalogue did not come back this time. Reload the page, or go
+              straight to{" "}
+              <Link href="/guides" className="nb-link">
+                the guides
+              </Link>
+              .
+            </p>
+          </div>
         )}
 
-        {/* ============================ ZERO STATE ENCOURAGEMENT ============================ */}
+        {/* At zero progress the departments wall IS the browse surface, so the
+            only thing left to say is which tab to open when none of them
+            obviously fits. That is a sentence, so it is written as one. */}
         {completedCount === 0 && (
-          <Reveal className="mt-14">
-            <div className="ac-glass relative overflow-hidden p-8 text-center sm:p-10">
-              <div
-                aria-hidden
-                className="pointer-events-none absolute left-1/2 top-[-30%] h-56 w-72 -translate-x-1/2 rounded-full opacity-40 blur-3xl"
-                style={{ background: "radial-gradient(circle,rgba(37,96,230,0.3),transparent 70%)" }}
-              />
-              <span
-                className="ac-badge relative mx-auto flex h-16 w-16 items-center justify-center"
-                style={{ "--a": "#2560e6" } as CSSProperties}
-              >
-                <CheckCircle2 className="h-8 w-8" aria-hidden />
-              </span>
-              <h2 className="mt-5 font-display text-2xl font-bold text-foreground">
-                Complete your first lesson
-              </h2>
-              <p className="mx-auto mt-2 max-w-md text-[15px] leading-relaxed text-foreground/70">
-                Mark a lesson complete to earn XP, start your streak, and unlock your
-                first achievement. Gracious professionalism starts with rep one.
-              </p>
-              <div className="mt-6 flex justify-center">
-                <Link href="/guides/getting-started" className="ac-btn text-sm">
-                  Start with the basics <ArrowRight className="h-4 w-4" aria-hidden />
-                </Link>
-              </div>
-            </div>
-          </Reveal>
+          <p className="nb-sub mt-[clamp(1.4rem,3vw,2.2rem)]">
+            None of them the obvious one? Open{" "}
+            <Link href="/guides/getting-started" className="nb-link">
+              Getting Started
+            </Link>
+            . It walks the whole map of what each department does in a season,
+            and every other tab makes more sense afterwards.
+          </p>
         )}
+      </section>
 
-        {/* ============================ INVITE — DORMANT SLOT ============================ */}
-        {/* Zero lessons: nothing to vouch for yet, so nobody is asked to
-            recommend anything. The card renders last, purely so the What's New
-            "Invite teammates" link still has somewhere to land for a learner
-            who deliberately goes looking for it. */}
-        {inviteNode && completedCount === 0 && (
-          <Reveal className="mt-14">{inviteNode}</Reveal>
-        )}
-      </div>
-    </div>
+      {/* ===================== INVITE, QUIET SLOT =====================
+          One to four lessons in: still deciding whether they like this. The
+          card stays reachable (and keeps #invite-card anchored for the What's
+          New link) but carries no personalised prompt. */}
+      {inviteNode && !inviteEarned && completedCount > 0 && (
+        <section className="nb-wrap border-t-2 border-ink py-[clamp(2.2rem,4.5vw,3.6rem)]">
+          {inviteNode}
+        </section>
+      )}
+
+      {/* ===================== THE BADGE DRAWER ===================== */}
+      {achievements.length > 0 && (
+        <section className="nb-wrap border-t-2 border-ink py-[clamp(2.2rem,4.5vw,3.6rem)]">
+          <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-4">
+            <div>
+              <h2 className="text-[clamp(1.5rem,1.1rem+1.4vw,2.3rem)]">
+                Badges
+              </h2>
+              <p className="nb-sub mt-3">
+                {achievementsEarned > 0
+                  ? `${achievementsEarned} of ${achievements.length} earned. The locked ones print how far off they are.`
+                  : `All ${achievements.length} of them unlock from lessons you were going to read anyway.`}
+              </p>
+            </div>
+            <p className="nb-count shrink-0">
+              {achievementsEarned}
+              <small>of {achievements.length}</small>
+            </p>
+          </div>
+
+          <div className="mt-[clamp(1rem,2.2vw,1.5rem)] max-w-[28rem]">
+            <Progress
+              value={achievementsPct}
+              aria-label={`${achievementsEarned} of ${achievements.length} badges earned`}
+            />
+          </div>
+
+          <div className="mt-[clamp(1.2rem,2.6vw,1.8rem)] grid gap-[clamp(0.75rem,1.6vw,1.1rem)] min-[520px]:grid-cols-2 min-[860px]:grid-cols-3 min-[1120px]:grid-cols-4">
+            {achievements.map((a) => (
+              <AchievementBadge key={a.slug} achievement={a} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ===================== INVITE, DORMANT SLOT =====================
+          Zero lessons: nothing to vouch for yet, so nobody is asked to
+          recommend anything. The card renders last, purely so the What's New
+          link still has somewhere to land for a learner who goes looking. */}
+      {inviteNode && completedCount === 0 && (
+        <section className="nb-wrap border-t-2 border-ink py-[clamp(2.2rem,4.5vw,3.6rem)]">
+          {inviteNode}
+        </section>
+      )}
+
+      {/* The page always ends on paper, never on a card butted against the
+          footer's own rule. */}
+      <div className="pb-[clamp(1.5rem,3vw,2.5rem)]" />
+    </>
   );
 }

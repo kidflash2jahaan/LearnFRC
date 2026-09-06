@@ -1,111 +1,192 @@
-import { Skeleton } from "@/components/ui/skeleton";
-
 /**
  * /admin is the heaviest render on the site: six aggregate query bundles
  * (`getAdminStats`, `getRetentionStats`, `getFunnelStats`, pending edits,
  * pending submissions, feedback) are awaited in one `Promise.all` before a
  * single byte of the page can be produced. That wait is what this covers.
  *
- * Geometry is read off src/app/admin/page.tsx rather than eyeballed. The
- * container and grid tracks are copied exactly; every block height below is
- * added up from the compiled type scale:
- *  - container  `mx-auto max-w-6xl px-4 pt-20 pb-20 sm:px-6 lg:px-8 lg:pt-24`
- *  - header row 44px — the h1 is 32px but the AutoRefresh chip is `min-h-11`
- *  - stat grid  `grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 lg:grid-cols-6`,
- *    17 tiles, `mt-5`. Tile height is NOT constant across breakpoints and the
- *    skeleton must not pretend it is. Added up from the type scale rather
- *    than eyeballed — every tile is
- *      padding (p-3=24 / sm:p-3.5=28) + 2px `.ac-tile` border
- *      + label row 16.5   (text-[11px] sets font-size only, so it inherits
- *                          preflight's html line-height:1.5 → 11 × 1.5)
- *      + mt-1.5 6 + the number's line-height
- *      + mt-0.5 2 + hint lines × 15.125  (leading-snug 1.375 × 11)
- *    The number is `text-xl sm:text-2xl lg:text-xl` — 28 / 32 / 28px — and
- *    `hero` bumps it one step to 32 / 36 / 32: StatTile sizes it by TILE
- *    width, so it steps up at sm and is given back at lg. Every hint is
- *    `line-clamp-2`, and grid items stretch, so a ROW is as tall as its
- *    tallest tile — one 2-line hint sets the row.
+ * The rule this file follows: draw everything that is KNOWN, and only put a
+ * placeholder where a figure goes. The binder's furniture does not depend on
+ * the query, so the gutter, the ink rules, the ruled tally page, the blue band
+ * and all nine drawer headers are real here, not grey blocks. What pulses is
+ * the handful of words and numbers the database has not handed over yet.
  *
- *    Worked through row by row (2 / 3 / 6 across) that lands at
- *    ≈101 / 111 / 114px, i.e. `h-[100px] sm:h-[112px]`. Two values, not
- *    three: the sm and lg rows differ by ~3px because lg gives the number
- *    size back at the same moment its 6-across tile (~120px of text at the
- *    1024px breakpoint) starts wrapping more hints to the second line.
- *    Radius is `.ac-tile`'s 20px (rounded-2xl would be 16px).
- *  - panels     every CollapsiblePanel is CLOSED on first paint
- *    (`defaultOpen` is never passed), so each one is a bare header row:
- *    32px icon + py-3/sm:py-3.5 + the 1px `.ac-card` border = 58/62px.
- *    Nine of them: Growth, Activation funnel, the six in the two-column
- *    grid, and Feedback.
+ * Geometry is read off src/app/admin/page.tsx rather than eyeballed:
+ *  - masthead   `nb-wrap pt-10 lg:pt-16`, then the same two-column grid
+ *  - band       `nb-slab mt-14 lg:mt-20`, four stamps at 2 across, 4 at sm
+ *  - tally      one `nb-box`, three `nb-panel`s, 4 / 4 / 3 readings
+ *  - drawers    every one is CLOSED on first paint (`defaultOpen` is never
+ *               passed), so each is a bare header: 2px rule + py-4 + a slug
+ *               line + a title line, about 74px. Nine of them: Growth,
+ *               Activation funnel, the six in the two-column grid, Feedback.
  *
- * The one deliberate approximation is the coverage footnote under the grid —
- * its length is data-dependent (the backfill sentence exists only while
- * there are backfilled rows), so it is modelled as a line count that steps
- * down as the column widens rather than pretending one count fits.
+ * The one deliberate approximation is the coverage note under the band. Its
+ * length is data-dependent (the backfill sentence exists only while there are
+ * backfilled rows), so it is modelled as a line count that steps down as the
+ * column widens rather than pretending one count fits every case.
  *
- * Not mirrored: the `<Glow>` blobs. They are `pointer-events-none` and
- * absolutely positioned, contribute no layout, and re-mounting them here
- * would only restart their drift when the real page swaps in — the same
- * call src/app/dashboard/loading.tsx makes.
- *
- * Known and accepted mismatch: a NON-admin gets the "Access denied" card
- * (`mx-auto flex max-w-md flex-col items-center px-4 pt-40 pb-20`), which
- * this looks nothing like. That branch is free — `getSession()` returns
- * without a network call when there is no auth cookie, so it renders about
- * as fast as the fallback can be swapped out — while the admin branch is
- * the six-query wait this file exists to cover. /admin is unlinked except
- * in the navbar for admins, so shaping the skeleton around the one visitor
- * who actually waits is the right trade.
+ * Known and accepted mismatch: a NON-admin gets the locked-drawer card, which
+ * this looks nothing like. That branch is free, because `getSession()` returns
+ * without a network call when there is no auth cookie, so it renders about as
+ * fast as this fallback can be swapped out, while the admin branch is the
+ * six-query wait this file exists to cover. Shaping the skeleton around the one
+ * visitor who actually waits is the right trade.
  */
+
+/** One pulsing line. `w` is a Tailwind width class, so callers stay declarative. */
+function Line({ w, className = "" }: { w: string; className?: string }) {
+  return <span className={`nb-skeleton block h-3 ${w} ${className}`} />;
+}
+
+/** A closed drawer: the 2px rule and the header block are real, the words are not. */
+function DrawerRow() {
+  return (
+    <div className="nb-rule px-1 py-4">
+      <Line w="w-40" />
+      <span className="nb-skeleton mt-2.5 block h-5 w-56 max-w-full" />
+    </div>
+  );
+}
+
+/** One ruled reading on the tally page. */
+function ReadingRow() {
+  return (
+    <div className="nb-hair flex items-baseline justify-between gap-3 py-2.5 first:border-t-0 first:pt-0">
+      <span className="min-w-0 flex-1">
+        <span className="nb-skeleton block h-4 w-40 max-w-full" />
+        <Line w="w-28 max-w-full" className="mt-2" />
+      </span>
+      <span className="nb-skeleton block h-5 w-14 shrink-0" />
+    </div>
+  );
+}
+
 export default function AdminLoading() {
   return (
-    <div className="mx-auto max-w-6xl px-4 pt-20 pb-20 sm:px-6 lg:px-8 lg:pt-24">
-      {/* Header: "Dashboard" h1 + the live auto-refresh chip. */}
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-        <Skeleton className="h-8 w-40 rounded-xl" />
-        <Skeleton className="h-11 w-48 rounded-full" />
+    <div className="pb-24">
+      {/* Masthead: marker, headline, lede, the auto-refresh stamp, and the
+          taped card of things that want a person. */}
+      <section className="nb-wrap pt-10 lg:pt-16">
+        <div className="grid items-start gap-10 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,0.9fr)] lg:gap-16">
+          <div>
+            <Line w="w-32" />
+            {/* The h1 is clamp(2.2rem, 3.6rem) at line-height .98, and it wraps
+                to two lines at every width the two-column grid produces. */}
+            <span className="nb-skeleton mt-5 block h-[clamp(2.2rem,1rem+3.4vw,3.6rem)] w-full" />
+            <span className="nb-skeleton mt-2 block h-[clamp(2.2rem,1rem+3.4vw,3.6rem)] w-4/5" />
+            <div className="mt-6 flex flex-col gap-2">
+              <Line w="w-full max-w-[46ch]" />
+              <Line w="w-full max-w-[46ch]" />
+              <Line w="w-2/3 max-w-[46ch]" />
+            </div>
+            <Line w="w-44" className="mt-6" />
+          </div>
+
+          <div>
+            {/* The card itself is drawn, tape and all. Only its four figures
+                are missing, so nothing jumps when they land. */}
+            <div className="nb-box nb-tilt-1 p-[clamp(1.15rem,2.4vw,1.65rem)]">
+              <span className="nb-tape -top-3 left-[20%] rotate-[-3.4deg]" aria-hidden="true" />
+              <span className="nb-tape -bottom-3 right-[14%] rotate-[2.6deg]" aria-hidden="true" />
+              <Line w="w-48 max-w-full" className="mb-3" />
+              <div className="mt-1 border-t border-dashed border-rule pt-1">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center gap-3 border-t border-[rgba(22,24,27,0.13)] py-2.5 first:border-t-0"
+                  >
+                    <span className="nb-skeleton block h-8 w-12 shrink-0" />
+                    <span className="min-w-0 flex-1">
+                      <span className="nb-skeleton block h-4 w-full max-w-[14rem]" />
+                      <Line w="w-24" className="mt-2" />
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* The blue band is real. Four stamps, each a big figure over a ruled
+          caption, so the band never changes height when the numbers arrive. */}
+      <section className="nb-slab mt-14 py-[clamp(2.2rem,4.6vw,3.4rem)] lg:mt-20">
+        <div className="nb-wrap grid gap-10 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,2fr)] lg:items-end lg:gap-16">
+          <div>
+            <span className="nb-skeleton block h-[clamp(1.6rem,1.1rem+1.9vw,2.5rem)] w-4/5" />
+            <div className="mt-5 flex flex-col gap-2">
+              <Line w="w-full max-w-[34ch]" />
+              <Line w="w-3/4 max-w-[34ch]" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-x-8 gap-y-9 sm:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i}>
+                <span className="nb-skeleton block h-[clamp(2.5rem,1.4rem+3.6vw,4.4rem)] w-full" />
+                <span className="mt-[0.6rem] block border-t border-[rgba(245,246,242,0.4)] pt-[0.55rem]">
+                  <Line w="w-full" />
+                  <Line w="w-2/3" className="mt-1.5" />
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Coverage note. Three lines wide, five at sm, seven on a phone: the
+          same paragraph, wrapped by the column it sits in. */}
+      <div className="nb-wrap mt-6">
+        <div className="nb-note max-w-[70ch]">
+          <Line w="w-52" />
+          <div className="mt-3 flex flex-col gap-2">
+            <Line w="w-full" />
+            <Line w="w-full" />
+            <Line w="w-3/4 lg:w-2/5" />
+            <Line w="w-full lg:hidden" />
+            <Line w="w-2/3 lg:hidden" />
+            <Line w="w-full sm:hidden" />
+            <Line w="w-1/2 sm:hidden" />
+          </div>
+        </div>
       </div>
 
-      {/* Every number, one grid — 17 tiles. */}
-      <div className="mt-5 grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 lg:grid-cols-6">
-        {Array.from({ length: 17 }).map((_, i) => (
-          <Skeleton
-            key={i}
-            className="h-[100px] rounded-[20px] sm:h-[112px]"
-          />
-        ))}
-      </div>
+      {/* The tally page: the box and its two ink rules are drawn, the eleven
+          readings are not. 4 / 4 / 3, matching the three columns above. */}
+      <section className="nb-wrap mt-14 lg:mt-20">
+        <div className="mb-7">
+          <Line w="w-44" />
+          <span className="nb-skeleton mt-4 block h-[clamp(1.6rem,1.1rem+1.9vw,2.5rem)] w-full max-w-[22ch]" />
+        </div>
+        <div className="nb-box grid grid-cols-1 min-[861px]:grid-cols-3">
+          {[4, 4, 3].map((rows, col) => (
+            <section key={col} className="nb-panel">
+              <Line w="w-36" />
+              <div className="mt-3">
+                {Array.from({ length: rows }).map((_, i) => (
+                  <ReadingRow key={i} />
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+      </section>
 
-      {/* Coverage footnote: 11px / leading-relaxed, so h-3 + space-y-1.5 is
-          exactly one 18px line. Three lines wide, six at sm, eight on a
-          phone — the same paragraph, wrapped by the column it sits in. */}
-      <div className="mt-2 space-y-1.5">
-        <Skeleton className="h-3 w-full rounded-md" />
-        <Skeleton className="h-3 w-full rounded-md" />
-        <Skeleton className="h-3 w-3/4 rounded-md lg:w-2/5" />
-        <Skeleton className="h-3 w-full rounded-md lg:hidden" />
-        <Skeleton className="h-3 w-full rounded-md lg:hidden" />
-        <Skeleton className="h-3 w-2/3 rounded-md lg:hidden" />
-        <Skeleton className="h-3 w-full rounded-md sm:hidden" />
-        <Skeleton className="h-3 w-1/2 rounded-md sm:hidden" />
-      </div>
-
-      {/* Growth. */}
-      <Skeleton className="mt-6 h-[58px] rounded-[20px] sm:h-[62px]" />
-
-      {/* Activation funnel. */}
-      <Skeleton className="mt-3 h-[58px] rounded-[20px] sm:h-[62px]" />
-
-      {/* Where they come from · Engagement · Teams & referrals ·
-          Top articles · Achievements · Recent activity. */}
-      <div className="mt-3 grid items-start gap-3 lg:grid-cols-2">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <Skeleton key={i} className="h-[58px] rounded-[20px] sm:h-[62px]" />
-        ))}
-      </div>
-
-      {/* Feedback. */}
-      <Skeleton className="mt-3 h-[58px] rounded-[20px] sm:h-[62px]" />
+      {/* Nine closed drawers, in the same two full-width, six paired,
+          one full-width arrangement the page uses. */}
+      <section className="nb-wrap mt-14 lg:mt-20">
+        <div className="mb-7">
+          <Line w="w-56" />
+          <span className="nb-skeleton mt-4 block h-[clamp(1.6rem,1.1rem+1.9vw,2.5rem)] w-full max-w-[16ch]" />
+        </div>
+        <DrawerRow />
+        <DrawerRow />
+        <div className="grid items-start lg:grid-cols-2 lg:gap-x-14">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <DrawerRow key={i} />
+          ))}
+        </div>
+        <DrawerRow />
+        <div className="nb-rule" />
+      </section>
     </div>
   );
 }

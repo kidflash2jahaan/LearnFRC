@@ -1,46 +1,18 @@
-import type { CSSProperties, ReactNode } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import {
-  BadgeCheck,
-  BookOpen,
-  Compass,
-  ExternalLink,
-  GitPullRequestArrow,
-  Library,
-  Mail,
-  NotebookPen,
-  PencilLine,
-  Rss,
-  Scale,
-  SearchCheck,
-  ShieldCheck,
-  Sparkles,
-  User,
-} from "lucide-react";
-import type { LucideIcon } from "lucide-react";
 import { getDepartments, getArticles } from "@/lib/queries";
 import { JsonLd } from "@/components/json-ld";
-import { AnimatedCounter } from "@/components/animated-counter";
-import {
-  RiseGroup,
-  RiseItem,
-  Reveal,
-  RevealGroup,
-  RevealItem,
-  Hover,
-  Glow,
-} from "@/components/motion/primitives";
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com";
 // NOT an email address. learnfrc.com publishes no MX record, so anything
-// printed here bounced — and this page also emitted it as machine-readable
+// printed here bounced, and this page also emitted it as machine-readable
 // JSON-LD, so a bad address was being handed to crawlers as fact. A personal
 // mailbox is not an option: the maintainer is a minor. The JSON-LD below now
 // carries a `contactPoint` with this URL instead of an `email`.
 const CONTACT_PATH = "/contact";
 const REPO = "https://github.com/kidflash2jahaan/LearnFRC";
 const AUTHOR = "Jahaan Pardhanani";
+const MANUAL = "https://www.firstinspires.org/robotics/frc/game-and-season";
 
 export const metadata: Metadata = {
   title: "About LearnFRC — who writes it and how it's checked",
@@ -60,71 +32,46 @@ export const metadata: Metadata = {
 // out of date the way a hard-coded "394 lessons" would.
 export const revalidate = 86400;
 
-const BRAND_GRADIENT: CSSProperties = {
-  background: "linear-gradient(120deg, #2560e6, #1aa9d6, #7c5cff)",
-  WebkitBackgroundClip: "text",
-  backgroundClip: "text",
-  color: "transparent",
-};
+/**
+ * The colophon page of the binder: who wrote it, what it was written from, and
+ * what happens when it is wrong.
+ *
+ * It used to be a wall of identical gradient cards, each with a coloured icon
+ * tile in a hue the palette does not own, under drifting light. A reader
+ * arrives here to decide whether to trust a page before they rely on it in
+ * their pit, and a stack of equal cards tells them nothing about which claim
+ * carries weight. So the page is built as one spread with four different
+ * textures, in the order the reader's question actually goes:
+ *
+ *   1. who is responsible          taped masthead card, tilted, never straightened
+ *   2. what is in the binder       a ruled tally of live figures, printed off a rule
+ *   3. how a page gets written     one hand-ruled card, four numbered entries
+ *   4. everything else             plain measured prose under 2px ink rules
+ *
+ * Server Component. Nothing on this page holds state and nothing animates.
+ */
 
-const LINK =
-  "font-medium text-primary underline decoration-primary/40 underline-offset-2 transition-colors hover:text-accent hover:decoration-accent break-words";
-const strong = "font-semibold text-foreground";
-
-/* ---------- copy primitives (mirrors /privacy and /terms) ---------- */
-
-function P({ children }: { children: ReactNode }) {
-  return (
-    <p className="mt-3 text-[16px] leading-[1.7] text-foreground/80 first:mt-0">
-      {children}
-    </p>
-  );
-}
-
-function Bullets({ items }: { items: ReactNode[] }) {
-  return (
-    <ul className="mt-3 list-disc space-y-2 pl-5 text-[16px] leading-[1.7] text-foreground/80 marker:text-primary/60">
-      {items.map((it, i) => (
-        <li key={i}>{it}</li>
-      ))}
-    </ul>
-  );
-}
-
-type Section = {
-  id: string;
-  title: string;
-  icon: LucideIcon;
-  accent: string;
-  body: ReactNode;
-};
-
-/* ---------- how a lesson gets written (the E-E-A-T bit) ---------- */
-
-const PIPELINE: { n: string; icon: LucideIcon; title: string; body: string }[] = [
+/** How a lesson gets written. Four steps, in order, drawn as a numbered log. */
+const PIPELINE: { n: string; title: string; body: string }[] = [
   {
     n: "01",
-    icon: Library,
     title: "Start from primary sources",
-    body: "Every lesson is scoped against the documents that actually govern FRC — the WPILib docs, the FIRST game manual and team updates, and vendor documentation from the companies whose parts you're using. Each department page lists the sources its lessons draw from, and lessons link out to the originals so you can check the claim yourself.",
+    body: "Every lesson is scoped against the documents that actually govern FRC: the WPILib docs, the FIRST game manual and team updates, and vendor documentation from the companies whose parts you're using. Each department page lists the sources its lessons draw from, and lessons link out to the originals so you can check the claim yourself.",
   },
   {
     n: "02",
-    icon: Sparkles,
     title: "Draft with AI assistance",
-    body: "The first draft of a lesson is AI-assisted, written against those sources rather than from memory. This is disclosed on every page of the site, not buried here — you should always know how what you're reading was made.",
+    body: "The first draft of a lesson is AI-assisted, written against those sources rather than from memory. This is disclosed on every page of the site, not buried here. You should always know how what you're reading was made.",
   },
   {
     n: "03",
-    icon: SearchCheck,
     title: "Review for accuracy before publishing",
-    body: "Drafts are reviewed against the sources before they go live. Rules, part numbers, deadlines, and API names are the things most likely to be wrong or out of date, so those get checked hardest — and anything that couldn't be verified gets cut rather than hedged.",
+    body: "Drafts are reviewed against the sources before they go live. Rules, part numbers, deadlines, and API names are the things most likely to be wrong or out of date, so those get checked hardest, and anything that couldn't be verified gets cut rather than hedged.",
   },
   {
     n: "04",
-    icon: GitPullRequestArrow,
     title: "Fix it in the open when it's wrong",
-    body: "Readers can suggest an edit on any lesson or article. Every open suggestion is public on the contributions page — you can see what's been reported, what's been merged, and who reported it.",
+    body: "Readers can suggest an edit on any lesson or article. Every open suggestion is public on the contributions page: you can see what's been reported, what's been merged, and who reported it.",
   },
 ];
 
@@ -139,200 +86,11 @@ export default async function AboutPage() {
   const lessonCount = departments.reduce((s, d) => s + d.lessonCount, 0);
   const articleCount = articles.length;
 
-  const stats = [
-    { label: "departments", value: deptCount },
-    { label: "modules", value: moduleCount },
-    { label: "lessons", value: lessonCount },
-    { label: "articles", value: articleCount },
-  ];
-
-  const SECTIONS: Section[] = [
-    {
-      id: "what",
-      title: "What LearnFRC is",
-      icon: Compass,
-      accent: "#2560e6",
-      body: (
-        <>
-          <P>
-            LearnFRC is a free, structured curriculum for the FIRST Robotics
-            Competition. It covers {deptCount} departments — mechanical build, CAD,
-            programming, electrical, controls, strategy, business, outreach and
-            more — broken into {moduleCount} modules and {lessonCount} lessons, plus{" "}
-            {articleCount} longer articles on the things teams ask about every
-            season: budgets, grants, offseason events, swerve, scouting.
-          </P>
-          <P>
-            It exists because most of what a rookie needs to know is real but
-            scattered — a Chief Delphi thread from 2019, a paragraph in the WPILib
-            docs, a vendor PDF, someone&apos;s team handbook that never left their
-            Drive. LearnFRC puts it in one place, in an order that makes sense if
-            you&apos;re starting from zero.
-          </P>
-          <P>
-            Everything is free to read without an account. An account only exists
-            so the site can remember what you&apos;ve finished, group you with your
-            team, and let you suggest edits under your name.{" "}
-            <span className={strong}>
-              There are no ads, nothing to buy, and no paid tier
-            </span>{" "}
-            — this is not a business.
-          </P>
-        </>
-      ),
-    },
-    {
-      id: "who",
-      title: "Who builds it",
-      icon: User,
-      accent: "#7c5cff",
-      body: (
-        <>
-          <P>
-            LearnFRC is a one-person project. I&apos;m{" "}
-            <span className={strong}>{AUTHOR}</span>, a high-school student in the
-            FRC community, and I build, write, edit, and run the site.
-          </P>
-          <P>
-            That&apos;s worth saying plainly, because it tells you how to read this
-            site. There is no company behind LearnFRC, no editorial staff, and no
-            institutional review board. What there is instead: primary sources on
-            every claim, a disclosed drafting process, a public correction queue,
-            and one person whose name is on all of it. If something here is wrong,
-            it&apos;s mine to fix — and{" "}
-            <Link className={LINK} href={CONTACT_PATH}>
-              you can tell me directly
-            </Link>
-            , without an account.
-          </P>
-          <P>
-            LearnFRC is in beta and the code is public on{" "}
-            <a
-              className={LINK}
-              href={REPO}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              GitHub
-            </a>
-            .
-          </P>
-        </>
-      ),
-    },
-    {
-      id: "trust",
-      title: "What we won't pretend to be",
-      icon: Scale,
-      accent: "#c2740f",
-      body: (
-        <>
-          <Bullets
-            items={[
-              <>
-                <span className={strong}>Not the rulebook.</span> LearnFRC explains
-                the game, but the{" "}
-                <a
-                  className={LINK}
-                  href="https://www.firstinspires.org/robotics/frc/game-and-season"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  official FIRST game manual
-                </a>{" "}
-                is the only authority on rules. Where they disagree, the manual
-                wins and we&apos;re wrong.
-              </>,
-              <>
-                <span className={strong}>Not affiliated with FIRST.</span> LearnFRC
-                is an independent educational project and is not affiliated with,
-                sponsored by, or endorsed by FIRST®. FIRST® and FRC® are
-                trademarks of FIRST.
-              </>,
-              <>
-                <span className={strong}>Not a substitute for building.</span>{" "}
-                Reading about swerve is not the same as assembling one. The lessons
-                are written to get you to the shop faster, not to replace it.
-              </>,
-              <>
-                <span className={strong}>Not finished.</span> The site is in beta.
-                Content is added and revised continuously, and a lesson written for
-                one season may need updating for the next.
-              </>,
-            ]}
-          />
-        </>
-      ),
-    },
-    {
-      id: "correct",
-      title: "Found something wrong? Fix it",
-      icon: PencilLine,
-      accent: "#0a7a43",
-      body: (
-        <>
-          <P>
-            Corrections are the most valuable thing you can send. There are two
-            ways to send one:
-          </P>
-          <Bullets
-            items={[
-              <>
-                <span className={strong}>Suggest an edit on the page itself.</span>{" "}
-                Open any{" "}
-                <Link className={LINK} href="/guides">
-                  lesson
-                </Link>{" "}
-                or{" "}
-                <Link className={LINK} href="/blog">
-                  article
-                </Link>{" "}
-                and use the &quot;Suggest an edit&quot; control. You&apos;ll need a
-                free account so the change is attributable to someone. Your
-                suggestion lands in a public queue on the{" "}
-                <Link className={LINK} href="/contributions">
-                  contributions page
-                </Link>
-                , where anyone can see what&apos;s open, what was merged, and who
-                sent it.
-              </>,
-              <>
-                <span className={strong}>Just describe it.</span> If it&apos;s
-                faster to say what&apos;s wrong than to write the fix, use the{" "}
-                <Link className={LINK} href={CONTACT_PATH}>
-                  contact form
-                </Link>{" "}
-                with the page URL. No account, and no email address unless you
-                want a reply.
-              </>,
-            ]}
-          />
-          <P>
-            Rule references, part numbers, prices, and deadlines go stale every
-            season — those are exactly the reports worth sending.
-          </P>
-        </>
-      ),
-    },
-    {
-      id: "follow",
-      title: "Following along",
-      icon: Rss,
-      accent: "#1aa9d6",
-      body: (
-        <>
-          <P>
-            New articles are published to an{" "}
-            <a className={LINK} href="/rss.xml">
-              RSS feed
-            </a>{" "}
-            you can add to any reader, and there&apos;s an email list in the footer
-            of every page if you&apos;d rather get new lessons that way. Both are
-            free, and the email list is one-click unsubscribe.
-          </P>
-        </>
-      ),
-    },
+  const tally = [
+    { value: deptCount, label: "departments", note: "one per job on a team" },
+    { value: moduleCount, label: "modules", note: "a department, broken up" },
+    { value: lessonCount, label: "lessons", note: "written and reviewed" },
+    { value: articleCount, label: "articles", note: "longer, season-specific" },
   ];
 
   const jsonLd = {
@@ -359,7 +117,7 @@ export default async function AboutPage() {
         description:
           "High-school student in the FIRST Robotics Competition community; builds, writes, and edits LearnFRC.",
         // No `email`. The domain runs no mail server, so any address here is a
-        // machine-readable claim that resolves to a bounce — and this node
+        // machine-readable claim that resolves to a bounce, and this node
         // describes a minor. Reach him through the Organization contactPoint.
         knowsAbout: [
           "FIRST Robotics Competition",
@@ -384,7 +142,7 @@ export default async function AboutPage() {
         founder: { "@id": `${SITE}/#person` },
         // `contactPoint` with a `url` instead of `email`: ContactPoint inherits
         // `url` from Thing and `contactType` is one of its own properties, so
-        // this is valid schema.org — and unlike the address it replaces, it
+        // this is valid schema.org, and unlike the address it replaces, it
         // points somewhere that answers.
         contactPoint: {
           "@type": "ContactPoint",
@@ -410,257 +168,359 @@ export default async function AboutPage() {
   };
 
   return (
-    <div className="relative overflow-x-clip">
+    <>
       <JsonLd data={jsonLd} />
 
-      <Glow
-        blobs={[
-          {
-            size: "560px",
-            pos: { left: "-160px", top: "-180px" },
-            color: "#8bbcff",
-            opacity: 0.55,
-          },
-          {
-            size: "500px",
-            pos: { right: "-150px", top: "60px" },
-            color: "#c8b6ff",
-            opacity: 0.42,
-            delay: 2,
-          },
-          {
-            size: "480px",
-            pos: { left: "35%", top: "860px" },
-            color: "#6ff0ea",
-            opacity: 0.3,
-            delay: 4,
-          },
-        ]}
-      />
-
-      {/* ============================ HERO ============================ */}
-      <header className="mx-auto grid max-w-6xl gap-10 px-4 pb-14 pt-28 sm:px-6 lg:grid-cols-[1.15fr_0.85fr] lg:items-center lg:px-8">
-        <RiseGroup>
-          <RiseItem>
-            <span className="ac-chip inline-flex items-center gap-2">
-              <BadgeCheck className="h-3.5 w-3.5 text-primary" aria-hidden />
-              <span className="ac-eyebrow">About LearnFRC</span>
-            </span>
-          </RiseItem>
-          <RiseItem>
-            <h1 className="mt-5 text-balance font-display text-4xl font-extrabold leading-[1.05] tracking-tight sm:text-5xl">
-              One student,{" "}
-              <span style={BRAND_GRADIENT}>every department.</span>
+      {/* ---- 1. masthead ------------------------------------------------ */}
+      <div className="nb-wrap pb-[clamp(2rem,4vw,3rem)] pt-[clamp(2.2rem,5vw,3.8rem)]">
+        <div className="grid gap-[clamp(1.6rem,4vw,3.4rem)] lg:grid-cols-[minmax(0,1.45fr)_minmax(0,0.85fr)] lg:items-start">
+          <div>
+            <p className="nb-marker">about / the colophon</p>
+            <h1>
+              One student, <span className="nb-mark">every department</span>.
             </h1>
-          </RiseItem>
-          <RiseItem>
-            <p className="mt-4 max-w-xl text-pretty text-lg leading-relaxed text-foreground/70">
-              LearnFRC is a free, structured FRC curriculum built and maintained by{" "}
-              {AUTHOR}, a high-school student. This page is the honest version:
-              who writes it, what it&apos;s drafted from, how it gets checked, and
-              how to tell me when it&apos;s wrong.
+            <p className="nb-lede mt-5">
+              LearnFRC is a free FRC curriculum built and maintained by {AUTHOR},
+              a high-school student. This page is the honest version: who writes
+              it, what it is drafted from, how it gets checked, and how to tell
+              me when it is wrong.
             </p>
-          </RiseItem>
-          <RiseItem>
-            <div className="mt-6 flex flex-wrap items-center gap-3">
-              <Link href="/guides" className="ac-btn text-sm">
-                <BookOpen className="h-4 w-4" aria-hidden />
+            <div className="mt-7 flex flex-wrap gap-3">
+              <Link href="/guides" className="nb-btn">
                 Browse the guides
               </Link>
-              <a href="#how" className="ac-btn-ghost text-sm">
+              <a href="#how" className="nb-btn-ghost">
                 How lessons are made
               </a>
             </div>
-          </RiseItem>
-        </RiseGroup>
+          </div>
 
-        {/* live catalog panel — real numbers, straight from the DB */}
-        <Reveal>
-          <div className="ac-glass p-6 sm:p-7">
-            <p className="ac-eyebrow">The curriculum today</p>
-            <dl className="mt-4 grid grid-cols-2 gap-3">
-              {stats.map((s) => (
-                <div key={s.label} className="ac-card p-4">
-                  <dt className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    {s.label}
-                  </dt>
-                  <dd className="mt-1 font-display text-3xl font-extrabold tracking-tight text-foreground">
-                    <AnimatedCounter value={s.value} />
-                  </dd>
-                </div>
-              ))}
-            </dl>
-            <p className="mt-5 text-sm leading-relaxed text-muted-foreground">
-              Counted live from the catalog, not typed in by hand. Free to read
-              without an account — no ads, nothing to buy.
+          {/* The masthead card. Not a stats panel: the numbers get their own
+              rule below. This card answers the only question a reader has at
+              the top of an about page, which is who is on the hook. */}
+          <div className="lg:justify-self-end lg:pt-2">
+            <div className="nb-box nb-tilt-1 w-full max-w-sm p-[clamp(1.2rem,2.4vw,1.7rem)]">
+              <span className="nb-tape -top-3 left-[24%] rotate-[-3.4deg]" aria-hidden="true" />
+              <span className="nb-tape -bottom-3 right-[18%] rotate-[2.6deg]" aria-hidden="true" />
+
+              <p className="nb-slug border-b border-dashed border-rule pb-3">
+                who is responsible
+              </p>
+              <p className="mt-4 text-[1.15rem] font-bold leading-tight">{AUTHOR}</p>
+              <p className="mt-1 text-[0.95rem] text-graphite">
+                Writes, edits, builds and runs the site. No company, no
+                editorial staff, no review board.
+              </p>
+
+              <dl className="nb-hair mt-4 pt-4">
+                {[
+                  ["drafted", "AI-assisted, against sources"],
+                  ["reviewed", "by hand, before publishing"],
+                  ["corrected", "in public, with the date"],
+                ].map(([k, v]) => (
+                  <div
+                    key={k}
+                    className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 py-1.5"
+                  >
+                    <dt className="nb-slug min-w-[5.5rem] font-bold text-ink">{k}</dt>
+                    <dd className="min-w-0 flex-1 text-[0.92rem] text-graphite">{v}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+            <p className="nb-pen mt-4 rotate-[-1.2deg] pl-2">
+              if it&rsquo;s wrong, it&rsquo;s mine to fix
             </p>
           </div>
-        </Reveal>
-      </header>
+        </div>
+      </div>
 
-      {/* ===================== HOW A LESSON IS MADE ===================== */}
-      <section
-        id="how"
-        className="mx-auto max-w-6xl scroll-mt-28 px-4 pb-4 sm:px-6 lg:px-8"
-      >
-        <Reveal>
-          <div className="flex items-center gap-3">
-            <span
-              aria-hidden
-              className="ac-badge grid h-10 w-10 shrink-0 place-items-center rounded-xl"
-              style={{ "--a": "#2560e6" } as CSSProperties}
-            >
-              <NotebookPen className="h-5 w-5" aria-hidden />
-            </span>
-            <h2 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">
-              How a lesson gets written
-            </h2>
-          </div>
-          <p className="mt-3 max-w-2xl text-[16px] leading-[1.7] text-foreground/80">
-            You should be able to judge whether to trust a page before you rely on
-            it in your pit. Here is the whole process, in order.
-          </p>
-        </Reveal>
-
-        <RevealGroup className="mt-8 grid gap-4 sm:grid-cols-2">
-          {PIPELINE.map((step) => {
-            const Ico = step.icon;
-            return (
-              <RevealItem key={step.n}>
-                <Hover lift={-3} scale={1.005}>
-                  <div className="ac-card h-full p-6">
-                    <div className="flex items-center gap-3">
-                      <span
-                        aria-hidden
-                        className="ac-badge grid h-9 w-9 shrink-0 place-items-center rounded-xl"
-                        style={{ "--a": "#1aa9d6" } as CSSProperties}
-                      >
-                        <Ico className="h-4 w-4" aria-hidden />
-                      </span>
-                      <span className="font-mono text-sm font-semibold text-muted-foreground/70">
-                        {step.n}
-                      </span>
-                      <h3 className="min-w-0 text-lg font-bold tracking-tight">
-                        {step.title}
-                      </h3>
-                    </div>
-                    <p className="mt-3 text-[15px] leading-[1.7] text-foreground/80">
-                      {step.body}
-                    </p>
-                  </div>
-                </Hover>
-              </RevealItem>
-            );
-          })}
-        </RevealGroup>
-
-        <Reveal>
-          <div className="mt-4 flex flex-col items-start gap-4 rounded-2xl border border-border bg-card/60 p-6 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-3">
-              <span
-                aria-hidden
-                className="ac-badge grid h-11 w-11 shrink-0 place-items-center"
-                style={{ "--a": "#0a7a43" } as CSSProperties}
-              >
-                <ShieldCheck className="h-5 w-5" aria-hidden />
-              </span>
-              <p className="text-[15px] leading-relaxed text-foreground/80">
-                Every correction anyone has sent is visible — including the ones
-                still open.
-              </p>
+      {/* ---- 2. the tally ------------------------------------------------
+          Four live figures ruled off the way a count is written on a printed
+          sheet: a heavy rule, the number under it, the unit under that. Each
+          cell carries its own rule rather than sitting in a card, so the row
+          reads as one table and not as four tiles. */}
+      <div className="nb-wrap pb-[clamp(2.4rem,5vw,4rem)]">
+        <p className="nb-marker">the catalogue today</p>
+        <dl className="grid gap-x-[clamp(1rem,2.5vw,2rem)] gap-y-6 sm:grid-cols-2 lg:grid-cols-4">
+          {tally.map((t) => (
+            <div key={t.label} className="border-t-2 border-ink pt-3">
+              <dd className="nb-count text-[clamp(2rem,1.2rem+2.4vw,3.1rem)] leading-none">
+                {t.value.toLocaleString()}
+              </dd>
+              <dt className="mt-2 text-[1.02rem] font-bold">{t.label}</dt>
+              <p className="nb-slug mt-1">{t.note}</p>
             </div>
-            <Link href="/contributions" className="ac-btn shrink-0 text-sm">
+          ))}
+        </dl>
+        <p className="nb-hint mt-5 max-w-[56ch]">
+          Counted from the catalogue when this page was built, not typed in by
+          hand. Everything is free to read without an account: no ads, nothing
+          to buy, no paid tier.
+        </p>
+      </div>
+
+      {/* ---- 3. how a page gets written ---------------------------------- */}
+      <section id="how" className="nb-wrap border-t-2 border-ink py-[clamp(2.4rem,5vw,4rem)]">
+        <div className="max-w-[52ch]">
+          <p className="nb-marker">how a lesson gets written</p>
+          <h2>You should be able to check my work.</h2>
+          <p className="nb-sub mt-4">
+            Before you rely on a page in your pit, you should be able to judge
+            whether to trust it. Here is the whole process, in order.
+          </p>
+        </div>
+
+        {/* One card, four ruled entries. A 2x2 grid of cards would say the four
+            steps are alternatives; a numbered log says they happen in order. */}
+        <div className="nb-box mt-[clamp(1.6rem,3.4vw,2.4rem)] p-[clamp(1.1rem,2.6vw,2rem)]">
+          <span className="nb-tape -top-3 left-[8%] rotate-[-2.8deg]" aria-hidden="true" />
+
+          <ol className="list-none">
+            {PIPELINE.map((step, i) => (
+              <li
+                key={step.n}
+                className={
+                  "grid grid-cols-[auto_minmax(0,1fr)] gap-x-[clamp(1rem,2.4vw,1.8rem)] gap-y-2 " +
+                  (i > 0 ? "nb-hair mt-6 pt-6" : "")
+                }
+              >
+                {/* The number is decorative: <ol> already carries the order,
+                    and reading "01" before every heading only doubles it. */}
+                <span
+                  aria-hidden="true"
+                  className="nb-box-sm grid h-11 w-11 rotate-[-2deg] place-items-center border-blue font-mono text-[1rem] font-bold text-blue"
+                >
+                  {step.n}
+                </span>
+                <div className="min-w-0">
+                  <h3>{step.title}</h3>
+                  <p className="mt-2 max-w-[64ch] text-[0.97rem] leading-relaxed text-graphite">
+                    {step.body}
+                  </p>
+                </div>
+              </li>
+            ))}
+          </ol>
+
+          <div className="nb-hair mt-6 flex flex-wrap items-center justify-between gap-4 pt-6">
+            <p className="max-w-[44ch] text-[0.97rem] text-graphite">
+              Every correction anyone has sent is visible, including the ones
+              still open.
+            </p>
+            <Link href="/contributions" className="nb-btn nb-btn-sm shrink-0">
               See the correction queue
             </Link>
           </div>
-        </Reveal>
+        </div>
       </section>
 
-      {/* ========================= LONG-FORM BODY ========================= */}
-      <div className="mx-auto max-w-6xl px-4 pb-24 pt-12 sm:px-6 lg:px-8">
-        <div className="max-w-3xl">
-          <RevealGroup className="space-y-4">
-            {SECTIONS.map((s) => {
-              const Ico = s.icon;
-              return (
-                <RevealItem key={s.id}>
-                  <Hover lift={-3} scale={1.005}>
-                    <section id={s.id} className="ac-card scroll-mt-28 p-6 sm:p-8">
-                      <h2 className="flex items-center gap-3 text-xl font-bold tracking-tight sm:text-2xl">
-                        <span
-                          aria-hidden
-                          className="ac-badge grid h-10 w-10 shrink-0 place-items-center rounded-xl"
-                          style={{ "--a": s.accent } as CSSProperties}
-                        >
-                          <Ico className="h-5 w-5" aria-hidden />
-                        </span>
-                        <span className="min-w-0">{s.title}</span>
-                      </h2>
-                      <div className="mt-4">{s.body}</div>
-                    </section>
-                  </Hover>
-                </RevealItem>
-              );
-            })}
-          </RevealGroup>
+      {/* ---- 4. the long read --------------------------------------------
+          Plain prose from here down. The reader who got this far is reading,
+          not scanning, and boxing paragraphs would only put a border between
+          them and the text. Sections open on the same 2px ink rule the binder
+          uses to change subject. */}
+      <div className="nb-wrap pb-[clamp(3rem,6vw,4.5rem)]">
+        <section id="what" className="border-t-2 border-ink pt-[clamp(2rem,4vw,3rem)]">
+          <p className="nb-marker">what LearnFRC is</p>
+          <h2 className="max-w-[18ch]">A curriculum, not a forum thread.</h2>
+          <div className="nb-prose mt-5">
+            <p>
+              LearnFRC is a free, structured curriculum for the FIRST Robotics
+              Competition. It covers {deptCount} departments, from mechanical
+              build and CAD to programming, electrical, controls, strategy,
+              business and outreach, broken into {moduleCount} modules and{" "}
+              {lessonCount} lessons, plus {articleCount} longer articles on the
+              things teams ask about every season: budgets, grants, offseason
+              events, swerve, scouting.
+            </p>
+            <p>
+              It exists because most of what a rookie needs to know is real but
+              scattered: a Chief Delphi thread from 2019, a paragraph in the
+              WPILib docs, a vendor PDF, someone&rsquo;s team handbook that
+              never left their Drive. LearnFRC puts it in one place, in an order
+              that makes sense if you&rsquo;re starting from zero.
+            </p>
+            <p>
+              Everything is free to read without an account. An account only
+              exists so the site can remember what you&rsquo;ve finished, group
+              you with your team, and let you suggest edits under your name.
+            </p>
+          </div>
+        </section>
 
-          <Reveal>
-            <Hover lift={-3} scale={1.005}>
-              <div className="mt-6 flex flex-col items-start gap-4 rounded-2xl border border-border bg-card/60 p-6 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-center gap-3">
-                  <span
-                    aria-hidden
-                    className="ac-badge grid h-11 w-11 shrink-0 place-items-center"
-                    style={{ "--a": "#2560e6" } as CSSProperties}
-                  >
-                    <Mail className="h-5 w-5" aria-hidden />
-                  </span>
-                  <p className="text-[15px] text-foreground/80">
-                    Questions, corrections, or something you wish LearnFRC covered?
-                  </p>
-                </div>
-                <Link href={CONTACT_PATH} className="ac-btn shrink-0 text-sm">
-                  <Mail className="h-4 w-4" aria-hidden />
-                  Message me
-                </Link>
-              </div>
-            </Hover>
-          </Reveal>
-
-          <Reveal>
-            <div className="mt-6 flex flex-wrap items-center gap-3">
+        <section id="who" className="mt-[clamp(2.4rem,5vw,3.6rem)] border-t-2 border-ink pt-[clamp(2rem,4vw,3rem)]">
+          <p className="nb-marker">who builds it</p>
+          <h2 className="max-w-[18ch]">One person, and his name is on it.</h2>
+          <div className="nb-prose mt-5">
+            <p>
+              I&rsquo;m {AUTHOR}, a high-school student in the FRC community,
+              and I build, write, edit, and run the site.
+            </p>
+            <p>
+              That&rsquo;s worth saying plainly, because it tells you how to
+              read this site. There is no company behind LearnFRC, no editorial
+              staff, and no institutional review board. What there is instead:
+              primary sources on every claim, a disclosed drafting process, a
+              public correction queue, and one person whose name is on all of
+              it. If something here is wrong, it&rsquo;s mine to fix, and{" "}
+              <Link className="nb-link" href={CONTACT_PATH}>
+                you can tell me directly
+              </Link>
+              , without an account.
+            </p>
+            <p>
+              LearnFRC is in beta and the code is public on{" "}
               <a
+                className="nb-link"
                 href={REPO}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="ac-chip inline-flex min-h-[44px] items-center gap-2 text-sm text-foreground/75"
               >
-                Source on GitHub
-                <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+                GitHub
               </a>
-              <a
-                href="/rss.xml"
-                className="ac-chip inline-flex min-h-[44px] items-center gap-2 text-sm text-foreground/75"
-              >
-                <Rss className="h-3.5 w-3.5 text-primary" aria-hidden />
-                RSS feed
-              </a>
-              <Link
-                href="/privacy"
-                className="ac-chip inline-flex min-h-[44px] items-center gap-2 text-sm text-foreground/75"
-              >
-                <ShieldCheck className="h-3.5 w-3.5 text-primary" aria-hidden />
-                Privacy
-              </Link>
-            </div>
-          </Reveal>
+              .
+            </p>
+          </div>
+        </section>
 
-          <p className="mt-8 text-xs leading-relaxed text-muted-foreground">
-            LearnFRC is an independent educational project and is not affiliated
-            with or endorsed by FIRST®. FIRST® and FRC® are trademarks of FIRST.
+        {/* The four disclaimers. Written out as a dl rather than a bullet list
+            because each one is a claim and its consequence, and the ruled
+            two-part shape says so without a bullet doing the work. */}
+        <section id="trust" className="mt-[clamp(2.4rem,5vw,3.6rem)] border-t-2 border-ink pt-[clamp(2rem,4vw,3rem)]">
+          <p className="nb-marker">what this is not</p>
+          <h2 className="max-w-[20ch]">Four things LearnFRC won&rsquo;t pretend to be.</h2>
+
+          <dl className="mt-6 max-w-[68ch]">
+            <div className="border-t border-dashed border-rule py-4">
+              <dt className="font-bold">Not the rulebook.</dt>
+              <dd className="mt-1.5 text-[0.99rem] leading-relaxed text-graphite">
+                LearnFRC explains the game, but the{" "}
+                <a className="nb-link" href={MANUAL} target="_blank" rel="noopener noreferrer">
+                  official FIRST game manual
+                </a>{" "}
+                is the only authority on rules. Where they disagree, the manual
+                wins and we&rsquo;re wrong.
+              </dd>
+            </div>
+            <div className="border-t border-dashed border-rule py-4">
+              <dt className="font-bold">Not affiliated with FIRST.</dt>
+              <dd className="mt-1.5 text-[0.99rem] leading-relaxed text-graphite">
+                LearnFRC is an independent educational project and is not
+                affiliated with, sponsored by, or endorsed by FIRST®. FIRST®
+                and FRC® are trademarks of FIRST.
+              </dd>
+            </div>
+            <div className="border-t border-dashed border-rule py-4">
+              <dt className="font-bold">Not a substitute for building.</dt>
+              <dd className="mt-1.5 text-[0.99rem] leading-relaxed text-graphite">
+                Reading about swerve is not the same as assembling one. The
+                lessons are written to get you to the shop faster, not to
+                replace it.
+              </dd>
+            </div>
+            <div className="border-y border-dashed border-rule py-4">
+              <dt className="font-bold">Not finished.</dt>
+              <dd className="mt-1.5 text-[0.99rem] leading-relaxed text-graphite">
+                The site is in beta. Content is added and revised continuously,
+                and a lesson written for one season may need updating for the
+                next.
+              </dd>
+            </div>
+          </dl>
+        </section>
+
+        <section id="correct" className="mt-[clamp(2.4rem,5vw,3.6rem)] border-t-2 border-ink pt-[clamp(2rem,4vw,3rem)]">
+          <p className="nb-marker">found something wrong</p>
+          <h2 className="max-w-[20ch]">Corrections are the most useful thing you can send.</h2>
+          <div className="nb-prose mt-5">
+            <p>There are two ways to send one.</p>
+            <p>
+              <strong>Suggest an edit on the page itself.</strong>{" "}Open any{" "}
+              <Link className="nb-link" href="/guides">
+                lesson
+              </Link>{" "}
+              or{" "}
+              <Link className="nb-link" href="/blog">
+                article
+              </Link>{" "}
+              and use the &ldquo;Suggest an edit&rdquo; control. You&rsquo;ll
+              need a free account so the change is attributable to someone. Your
+              suggestion lands in a public queue on the{" "}
+              <Link className="nb-link" href="/contributions">
+                contributions page
+              </Link>
+              , where anyone can see what&rsquo;s open, what was merged, and who
+              sent it.
+            </p>
+            <p>
+              <strong>Or just describe it.</strong>{" "}If it&rsquo;s faster to say
+              what&rsquo;s wrong than to write the fix, use the{" "}
+              <Link className="nb-link" href={CONTACT_PATH}>
+                contact form
+              </Link>{" "}
+              with the page URL. No account, and no email address unless you
+              want a reply.
+            </p>
+            <p>
+              Rule references, part numbers, prices, and deadlines go stale
+              every season. Those are exactly the reports worth sending.
+            </p>
+          </div>
+        </section>
+
+        <section id="follow" className="mt-[clamp(2.4rem,5vw,3.6rem)] border-t-2 border-ink pt-[clamp(2rem,4vw,3rem)]">
+          <p className="nb-marker">following along</p>
+          <h2 className="max-w-[20ch]">New pages, however you read things.</h2>
+          <div className="nb-prose mt-5">
+            <p>
+              New articles are published to an{" "}
+              <a className="nb-link" href="/rss.xml">
+                RSS feed
+              </a>{" "}
+              you can add to any reader, and there&rsquo;s an email list in the
+              footer of every page if you&rsquo;d rather get new lessons that
+              way. Both are free, and the email list is one-click unsubscribe.
+            </p>
+          </div>
+        </section>
+
+        {/* Closing strip: the one question this page can't answer, and the
+            three places to go next. */}
+        <div className="nb-hair mt-[clamp(2.4rem,5vw,3.6rem)] flex flex-wrap items-center justify-between gap-4 pt-6">
+          <p className="max-w-[46ch] text-[0.99rem] text-graphite">
+            Questions, corrections, or something you wish LearnFRC covered?
           </p>
+          <Link href={CONTACT_PATH} className="nb-btn shrink-0">
+            Message me
+          </Link>
         </div>
+
+        <div className="mt-6 flex flex-wrap gap-2.5">
+          <a
+            href={REPO}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="nb-tag min-h-[var(--tap)] px-3"
+          >
+            Source on GitHub
+          </a>
+          <a href="/rss.xml" className="nb-tag min-h-[var(--tap)] px-3">
+            RSS feed
+          </a>
+          <Link href="/privacy" className="nb-tag min-h-[var(--tap)] px-3">
+            Privacy policy
+          </Link>
+          <Link href="/terms" className="nb-tag min-h-[var(--tap)] px-3">
+            Terms of service
+          </Link>
+        </div>
+
+        <p className="nb-hint mt-8 max-w-[68ch]">
+          LearnFRC is an independent educational project and is not affiliated
+          with or endorsed by FIRST®. FIRST® and FRC® are trademarks of FIRST.
+        </p>
       </div>
-    </div>
+    </>
   );
 }

@@ -1,17 +1,5 @@
-import type { CSSProperties, ReactNode } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import {
-  Trophy,
-  ArrowRight,
-  Users,
-  Zap,
-  Sparkles,
-  Flame,
-  CalendarClock,
-} from "lucide-react";
-import { Rise, RiseGroup, RiseItem, Reveal, Glow } from "@/components/motion/primitives";
-import { AnimatedCounter } from "@/components/animated-counter";
 import { type PodiumEntry } from "@/components/leaderboard/podium";
 import { LeaderboardTabs } from "@/components/leaderboard/leaderboard-tabs";
 import { InviteCard } from "@/components/leaderboard/invite-card";
@@ -29,7 +17,7 @@ import type { Profile } from "@/lib/types";
 import { ChampionPanel } from "./_champion-panel";
 
 export const metadata: Metadata = {
-  // The root template appends " · LearnFRC" — don't repeat it here.
+  // The root template appends " · LearnFRC", so don't repeat it here.
   title: "Leaderboard",
   description:
     "See the top FRC learners climbing the ranks — earn XP, level up, and represent your team on the global LearnFRC leaderboard.",
@@ -44,15 +32,8 @@ export const metadata: Metadata = {
   },
 };
 
-const HEADLINE_GRADIENT: CSSProperties = {
-  background: "linear-gradient(120deg,#2560e6,#1aa9d6)",
-  WebkitBackgroundClip: "text",
-  backgroundClip: "text",
-  color: "transparent",
-};
-
-// Public surfaces never show real names — learners are identified by username
-// only. Real names live in private/own views (dashboard, settings, certificate).
+// Public surfaces never show real names: learners are identified by username
+// only. Real names live in private views (dashboard, settings, certificate).
 function displayName(p: Profile): string {
   return p.username?.trim() || "Learner";
 }
@@ -98,6 +79,15 @@ function toWeeklyEntry(
   };
 }
 
+/**
+ * /leaderboard is the results sheet posted on the shop wall.
+ *
+ * A person arrives to answer one of two questions: who is winning, and where
+ * am I. So the standing is the first thing on the page, taped up beside the
+ * masthead, and the full board underneath is a table you can scan for your own
+ * name. Nothing on this page is a scoreboard graphic, because a scoreboard is
+ * for spectators and this is for the person in the row.
+ */
 export default async function LeaderboardPage() {
   const [profiles, weekly, teams, xpTotals, { user, profile }] =
     await Promise.all([
@@ -112,214 +102,154 @@ export default async function LeaderboardPage() {
   const referralCount = uid ? await getReferralCount(uid) : 0;
   const allTimeEntries = profiles.map((p, i) => toEntry(p, i + 1, uid));
   const weeklyEntries = weekly.map((p, i) => toWeeklyEntry(p, i + 1, uid));
-  // Site-wide totals (all learners), so the header matches the admin panel.
+  // Site-wide totals across all learners, so the band matches the admin panel.
   const totalXp = xpTotals.totalXp;
 
   const hasBoard = allTimeEntries.length > 0;
   const top3 = allTimeEntries.slice(0, 3);
 
   return (
-    <div className="relative overflow-x-clip">
-      <Glow
-        blobs={[
-          { size: "640px", pos: { left: "-160px", top: "-200px" }, color: "#8bbcff", opacity: 0.65 },
-          { size: "560px", pos: { right: "-160px", top: "-120px" }, color: "#9bd0ff", opacity: 0.55, delay: 2 },
-          { size: "520px", pos: { left: "34%", top: "440px" }, color: "#6ff0ea", opacity: 0.4, delay: 4 },
-        ]}
-      />
+    <>
+      {/* ===================== MASTHEAD =====================
+          Split, because the page has two jobs at the top: say what the board
+          is, and show the current standing. Neither should wait for a scroll. */}
+      <section className="nb-wrap grid items-start gap-[clamp(1.8rem,4vw,3.4rem)] pb-[clamp(2rem,4vw,3rem)] pt-[clamp(2.2rem,5vw,3.8rem)] lg:grid-cols-[minmax(0,1.35fr)_minmax(0,0.85fr)]">
+        <div>
+          <p className="nb-marker">the standings</p>
 
-      {/* ============================ HERO ============================ */}
-      <section className="mx-auto grid max-w-7xl items-center gap-12 px-4 pb-12 pt-28 sm:px-6 lg:grid-cols-2 lg:gap-10 lg:pb-16 lg:pt-32 lg:px-8">
-        <RiseGroup>
-          <RiseItem>
-            <span className="ac-chip inline-flex items-center gap-2">
-              <Trophy className="h-3.5 w-3.5 text-primary" aria-hidden />
-              <span className="ac-eyebrow">Climb the ranks</span>
-            </span>
-          </RiseItem>
-          <RiseItem>
-            <h1 className="mt-5 text-balance font-display text-4xl font-extrabold leading-[1.02] sm:text-5xl lg:text-[3.4rem]">
-              The <span style={HEADLINE_GRADIENT}>podium</span> is earned, one
-              lesson at a time.
-            </h1>
-          </RiseItem>
-          <RiseItem>
-            <p className="mt-5 max-w-xl text-pretty text-lg leading-relaxed text-foreground/70">
-              Every guide you finish earns XP. Win the weekly sprint, chase
-              the all-time greats, and put your team on the map — the same
-              gracious grind that wins build season.
-            </p>
-          </RiseItem>
-          <RiseItem>
-            <div className="mt-7 flex flex-wrap items-center gap-3">
-              <Link href="/guides" className="ac-btn text-sm">
-                Start climbing <ArrowRight className="h-4 w-4" aria-hidden />
+          <h1 className="max-w-[15ch]">
+            Every lesson you finish moves you up this page.
+          </h1>
+
+          <p className="nb-lede mt-[clamp(1rem,2vw,1.5rem)]">
+            One hundred XP a level, a weekly race that resets every Monday, and
+            a team board so the whole pit can climb together. Reading is free
+            and always was; the ranking is just the part that makes people
+            finish.
+          </p>
+
+          <div className="mt-[clamp(1.4rem,2.6vw,2rem)] flex flex-wrap gap-3">
+            <Link href="/guides" className="nb-btn">
+              Open the guides
+            </Link>
+            {!user && (
+              <Link href="/signup" className="nb-btn-ghost">
+                Make a free account
               </Link>
-              {!user && (
-                <Link href="/signup" className="ac-btn-ghost text-sm">
-                  Create free account
-                </Link>
-              )}
-            </div>
-          </RiseItem>
+            )}
+          </div>
+        </div>
 
-          {hasBoard && (
-            <RiseItem>
-              <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                <StatTile
-                  icon={<Users className="h-4 w-4 text-foreground" aria-hidden />}
-                  accent="#2560e6"
-                  value={<AnimatedCounter value={xpTotals.learners} />}
-                  label={xpTotals.learners === 1 ? "learner ranked" : "learners ranked"}
-                />
-                <StatTile
-                  icon={<Zap className="h-4 w-4 text-foreground" aria-hidden />}
-                  accent="#1aa9d6"
-                  value={<AnimatedCounter value={totalXp} />}
-                  label="XP earned"
-                />
-                <div
-                  className="ac-tile col-span-2 flex items-center justify-center gap-2 px-4 py-3 sm:col-span-1"
-                  style={{ "--a": "#1aa9d6" } as CSSProperties}
-                >
-                  <span className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-accent" aria-hidden />
-                  <CalendarClock className="h-4 w-4 text-foreground/80" aria-hidden />
-                  <span className="text-sm font-semibold text-foreground">
-                    Weekly race resets Monday
-                  </span>
-                </div>
-              </div>
-            </RiseItem>
-          )}
-        </RiseGroup>
-
-        {/* SIGNATURE: the podium moment — current champion, live */}
-        {top3.length > 0 ? (
+        {hasBoard ? (
           <ChampionPanel top3={top3} />
         ) : (
-          <Rise delay={0.2} className="w-full lg:justify-self-end">
-            <div className="ac-glass relative max-w-md rounded-[28px] p-10 text-center">
-              <span
-                className="ac-badge mx-auto mb-5 flex h-16 w-16 items-center justify-center"
-                style={{ "--a": "#ffd23d" } as CSSProperties}
-              >
-                <Trophy className="h-8 w-8" aria-hidden />
-              </span>
-              <h2 className="font-display text-2xl font-bold tracking-tight">
-                The podium is empty
-              </h2>
-              <p className="mt-2 text-base leading-relaxed text-foreground/70">
-                No learners on the board yet. Be the first — start learning,
-                earn XP, and claim the crown.
-              </p>
-              <div className="mt-6 flex justify-center">
-                <Link href="/guides" className="ac-btn text-sm">
-                  Start learning <ArrowRight className="h-4 w-4" aria-hidden />
-                </Link>
-              </div>
+          <div className="nb-box nb-tilt-1 relative p-[clamp(1.2rem,2.6vw,1.8rem)] lg:justify-self-end">
+            <span
+              className="nb-tape -top-3 left-[20%] rotate-[-3.8deg]"
+              aria-hidden="true"
+            />
+            <p className="nb-marker">standings / empty</p>
+            <h2 className="text-[clamp(1.2rem,1rem+0.9vw,1.6rem)]">
+              Nobody is on the board yet
+            </h2>
+            <p className="nb-sub mt-2.5 text-[0.95rem]">
+              Finish one lesson and the top of this page has your name on it,
+              which is a sentence that stops being true fairly quickly.
+            </p>
+            <div className="mt-4">
+              <Link href="/guides" className="nb-btn">
+                Read lesson one
+              </Link>
             </div>
-          </Rise>
+          </div>
         )}
       </section>
 
+      {/* ===================== THE TOTALS =====================
+          The one inverted surface on this page. Figures big enough to read
+          from the other side of the shop, printed once and nowhere else. */}
+      <section className="nb-slab py-[clamp(2rem,4.2vw,3.2rem)]">
+        <div className="nb-wrap grid items-end gap-[clamp(1.3rem,3vw,2.6rem)] min-[900px]:grid-cols-[1.15fr_repeat(2,minmax(0,0.62fr))]">
+          <div>
+            <h2 className="max-w-[16ch] text-[clamp(1.5rem,1.1rem+1.7vw,2.4rem)]">
+              Nobody was paid to be here.
+            </h2>
+            <p className="mt-3 max-w-[36ch] text-[0.95rem] text-[rgba(245,246,242,0.85)]">
+              No marketing budget and no sales calls. Every account on this
+              board found the site, then dragged their team onto it.
+            </p>
+          </div>
+
+          <p className="nb-stamp">
+            <b>{xpTotals.learners.toLocaleString()}</b>
+            <span>{xpTotals.learners === 1 ? "learner" : "learners"}</span>
+          </p>
+          <p className="nb-stamp">
+            <b>{totalXp.toLocaleString()}</b>
+            <span>xp earned</span>
+          </p>
+        </div>
+      </section>
+
       {hasBoard && (
-        <div className="mx-auto max-w-5xl px-4 pb-24 sm:px-6 lg:px-8">
+        <section className="nb-wrap pb-[clamp(3rem,6vw,5rem)] pt-[clamp(2.4rem,5vw,4rem)]">
           {user && profile?.username && (
-            <Reveal>
+            <div className="mb-[clamp(2.2rem,4.4vw,3.4rem)]">
               <InviteCard
                 username={profile.username}
                 count={referralCount}
                 via="leaderboard"
               />
-            </Reveal>
+            </div>
           )}
 
-          {/* Board section header */}
-          <Reveal className="mt-14 text-center">
-            <span className="ac-eyebrow inline-flex items-center justify-center gap-2">
-              <Flame className="h-3.5 w-3.5" aria-hidden />
-              The full board
-            </span>
-            <h2 className="mt-2 text-balance font-display text-3xl font-bold text-foreground">
-              Every rank, every week
-            </h2>
-            <p className="mx-auto mt-1 max-w-lg text-base text-foreground/70">
-              Weekly sprints, the all-time greats, and how your team stacks
-              up — switch the view below.
-            </p>
-          </Reveal>
-
-          <LeaderboardTabs
-            weekly={weeklyEntries}
-            allTime={allTimeEntries}
-            teams={teams.byTotal}
-            teamsPerMember={teams.byMember}
-            minTeamMembers={TEAM_MIN_MEMBERS}
-            userTeam={profile?.team_number ?? null}
-          />
-
-          <Reveal className="mt-14 text-center">
-            <div className="ac-glass relative mx-auto max-w-2xl overflow-hidden rounded-[28px] px-8 py-10">
-              <div
-                aria-hidden
-                className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-[radial-gradient(circle,rgba(37,96,230,0.22),transparent_70%)] blur-2xl"
-              />
-              <span
-                className="ac-badge relative mx-auto mb-4 flex h-12 w-12 items-center justify-center"
-                style={{ "--a": "#2560e6" } as CSSProperties}
-              >
-                <Sparkles className="h-6 w-6" aria-hidden />
-              </span>
-              <h2 className="relative text-balance font-display text-2xl font-bold text-foreground sm:text-3xl">
-                Not on the board yet?
-              </h2>
-              <p className="relative mx-auto mt-2 max-w-md text-base text-foreground/70">
-                Finish a lesson, earn your first XP, and start the climb
-                toward the crown.
+          <div className="mb-[clamp(1.4rem,3vw,2.2rem)] flex flex-wrap items-end justify-between gap-x-8 gap-y-4">
+            <div>
+              <h2>The full board</h2>
+              <p className="nb-sub mt-3">
+                Three ways to read it: the week that is running now, everything
+                ever earned, and the team standing. Your own row is washed blue
+                and barred in the margin wherever you land.
               </p>
-              <div className="relative mt-6 flex justify-center">
-                <Link href="/guides" className="ac-btn text-sm">
-                  Start a lesson <ArrowRight className="h-4 w-4" aria-hidden />
-                </Link>
-              </div>
             </div>
-          </Reveal>
-        </div>
-      )}
-    </div>
-  );
-}
+            <p className="nb-pen max-w-[20ch] rotate-[1.4deg] min-[900px]:text-right">
+              the weekly one is the winnable one
+            </p>
+          </div>
 
-function StatTile({
-  icon,
-  accent,
-  value,
-  label,
-}: {
-  icon: ReactNode;
-  accent: string;
-  value: ReactNode;
-  label: string;
-}) {
-  return (
-    <div
-      className="ac-tile flex items-center gap-3 px-4 py-3"
-      style={{ "--a": accent } as CSSProperties}
-    >
-      <span
-        className="ac-badge flex h-9 w-9 shrink-0 items-center justify-center"
-        style={{ "--a": accent } as CSSProperties}
-      >
-        {icon}
-      </span>
-      <span className="min-w-0">
-        <span className="block text-lg font-bold tabular-nums leading-none text-foreground">
-          {value}
-        </span>
-        <span className="mt-1 block truncate text-sm font-medium text-foreground sm:text-xs">
-          {label}
-        </span>
-      </span>
-    </div>
+          {/* Capped measure. The gutter runs to 1280px, and a five-column
+              standing stretched across all of it strands the XP figure a
+              hand's width from the name it belongs to. A posted sheet is
+              narrower than the wall it is pinned to. */}
+          <div className="max-w-[58rem]">
+            <LeaderboardTabs
+              weekly={weeklyEntries}
+              allTime={allTimeEntries}
+              teams={teams.byTotal}
+              teamsPerMember={teams.byMember}
+              minTeamMembers={TEAM_MIN_MEMBERS}
+              userTeam={profile?.team_number ?? null}
+            />
+          </div>
+
+          {/* Not a third call to action. By this point the reader has scrolled
+              a whole standing, so the only thing left worth saying is how a
+              name gets onto it, and that is one sentence. */}
+          <div className="nb-rule mt-[clamp(2.6rem,5vw,4rem)] pt-[clamp(1.6rem,3.2vw,2.4rem)]">
+            <div className="nb-note max-w-[46rem]">
+              <p className="nb-slug">how xp works</p>
+              <p className="mt-2 text-[0.95rem] leading-snug">
+                Finish a lesson, pass its quiz, earn the XP. There is no other
+                way onto this board and nothing to buy.{" "}
+                <Link href="/guides" className="nb-link">
+                  Pick a department
+                </Link>{" "}
+                and start with whichever one your team is worst at.
+              </p>
+            </div>
+          </div>
+        </section>
+      )}
+    </>
   );
 }

@@ -1,22 +1,22 @@
 "use client";
 
 import * as React from "react";
-import type { CSSProperties } from "react";
 import Link from "next/link";
-import { motion, useReducedMotion } from "framer-motion";
-import { Sparkles, UserPlus, X } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 /**
- * Dismissible "What's new" announcement, shown near the top of the dashboard.
+ * A slip taped to the top of the page once, saying what changed. Dismissed, it
+ * never comes back until the version below is bumped.
  *
- * Hydration-safety contract: localStorage never influences SSR. The component
- * renders `null` on the server AND on the first client render (mounted starts
- * false), so the trees match exactly. Only after mount does an effect read the
- * dismissed flag and reveal the card with a gentle entrance. Reduced motion
- * changes `transition` timing only — never the rendered tree, text, or props.
+ * HYDRATION CONTRACT, unchanged from the version this replaced and still the
+ * reason the component is shaped this way: localStorage never influences SSR.
+ * It renders `null` on the server AND on the first client render (`mounted`
+ * starts false), so the two trees match exactly. Only after mount does an
+ * effect read the dismissed flag and reveal the slip. There is no entrance
+ * animation to reduce-motion around, because the binder has none.
  *
  * The dismissal key is VERSIONED: bump `WHATS_NEW_VERSION` to resurface the
- * card for a future announcement without touching the storage key.
+ * slip for a future announcement without touching the storage key.
  */
 const STORAGE_KEY = "lf_whatsnew";
 const WHATS_NEW_VERSION = "2026-07-redesign";
@@ -32,7 +32,6 @@ export function WhatsNew({
 }) {
   const [mounted, setMounted] = React.useState(false);
   const [dismissed, setDismissed] = React.useState(false);
-  const reduce = useReducedMotion();
 
   React.useEffect(() => {
     setMounted(true);
@@ -41,7 +40,7 @@ export function WhatsNew({
         setDismissed(true);
       }
     } catch {
-      /* localStorage unavailable — show the card */
+      /* localStorage unavailable, show the slip */
     }
   }, []);
 
@@ -58,89 +57,54 @@ export function WhatsNew({
   const onInviteClick = (e: React.MouseEvent) => {
     if (!isAnchor) return;
     const el = document.getElementById(inviteHref.slice(1));
-    if (!el) return; // fall back to native anchor jump
+    if (!el) return; // fall back to the native anchor jump
     e.preventDefault();
-    el.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+    el.scrollIntoView({ block: "start" });
   };
 
   if (!mounted || dismissed) return null;
 
-  const cta = (
-    <>
-      <UserPlus className="h-4 w-4" aria-hidden />
-      Invite teammates
-    </>
-  );
-
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={
-        reduce ? { duration: 0 } : { type: "spring", stiffness: 260, damping: 26 }
-      }
-      className={className}
+    <section
+      aria-labelledby="whats-new-heading"
+      className={cn("nb-box nb-tilt-4 p-[clamp(1rem,2.2vw,1.5rem)]", className)}
     >
-      <div className="ac-card relative overflow-hidden p-4 sm:p-5">
-        {/* soft corner glow — constant, aria-hidden, SSR-stable */}
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -right-16 -top-16 h-44 w-44 rounded-full opacity-50 blur-3xl"
-          style={{
-            background:
-              "radial-gradient(circle, rgba(124,92,255,0.26), transparent 70%)",
-          }}
-        />
+      <span className="nb-tape -top-3 left-[9%] rotate-[-3.6deg]" aria-hidden="true" />
 
-        <button
-          type="button"
-          onClick={dismiss}
-          aria-label="Dismiss what's new"
-          className="absolute right-1.5 top-1.5 z-10 flex h-11 w-11 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-        >
-          <X className="h-4 w-4" aria-hidden />
+      <p className="nb-marker">new in the pit</p>
+
+      <h2 id="whats-new-heading" className="text-[clamp(1.15rem,1rem+0.7vw,1.5rem)]">
+        You can hand your team the link now.
+      </h2>
+
+      <p className="mt-2 max-w-[54ch] text-[0.95rem] leading-snug text-graphite">
+        The whole site was rebuilt, and invites came with it. Every teammate who
+        signs up through your link is worth{" "}
+        <b className="font-bold text-ink">25 XP</b> to you.
+      </p>
+
+      <div className="nb-hair mt-4 flex flex-wrap items-center gap-3 pt-4">
+        {isAnchor ? (
+          <a
+            href={inviteHref}
+            onClick={onInviteClick}
+            className="nb-btn nb-btn-sm"
+          >
+            Invite teammates
+          </a>
+        ) : (
+          <Link href={inviteHref} className="nb-btn nb-btn-sm">
+            Invite teammates
+          </Link>
+        )}
+
+        {/* A written "dismiss", not a floating x. The x needs a 44px target it
+            has nowhere to put, and it reads as chrome; a word in the footer
+            reads as one of the two things you can do with this slip. */}
+        <button type="button" onClick={dismiss} className="nb-btn-ghost nb-btn-sm">
+          Dismiss
         </button>
-
-        <div className="relative flex flex-col gap-4 pr-8 sm:flex-row sm:items-center sm:justify-between sm:gap-5">
-          <div className="flex min-w-0 items-start gap-3">
-            <span
-              className="ac-badge flex h-11 w-11 shrink-0 items-center justify-center"
-              style={{ "--a": "#7c5cff" } as CSSProperties}
-            >
-              <Sparkles className="h-5 w-5" aria-hidden />
-            </span>
-            <div className="min-w-0">
-              <p className="ac-eyebrow">New in the pit</p>
-              <p className="mt-1 text-[15px] leading-relaxed text-foreground/80">
-                LearnFRC just got a full redesign — and you can now{" "}
-                <span className="font-semibold text-foreground">
-                  invite your teammates
-                </span>
-                . Rack up{" "}
-                <span className="font-semibold text-foreground">+25 XP</span> for
-                every one who joins.
-              </p>
-            </div>
-          </div>
-
-          {isAnchor ? (
-            <a
-              href={inviteHref}
-              onClick={onInviteClick}
-              className="ac-btn shrink-0 self-start text-sm sm:self-center"
-            >
-              {cta}
-            </a>
-          ) : (
-            <Link
-              href={inviteHref}
-              className="ac-btn shrink-0 self-start text-sm sm:self-center"
-            >
-              {cta}
-            </Link>
-          )}
-        </div>
       </div>
-    </motion.div>
+    </section>
   );
 }

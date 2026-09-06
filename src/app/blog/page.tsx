@@ -1,34 +1,15 @@
 import type { Metadata } from "next";
-import type { CSSProperties } from "react";
 import Link from "next/link";
-import {
-  ArrowRight,
-  ArrowUpRight,
-  Clock,
-  Compass,
-  LayoutGrid,
-  Newspaper,
-  Sparkles,
-} from "lucide-react";
-import { Icon } from "@/lib/icon-map";
 import { type Article } from "@/lib/blog-data";
 import { getArticles } from "@/lib/queries";
 import { NewsletterForm } from "@/components/newsletter-form";
-import {
-  RiseGroup,
-  RiseItem,
-  Reveal,
-  RevealGroup,
-  RevealItem,
-  Hover,
-  Glow,
-} from "@/components/motion/primitives";
-import { AnimatedCounter } from "@/components/animated-counter";
 import { JsonLd } from "@/components/json-ld";
 import { DeskIndex, type DeskCount } from "./_desk-index";
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com";
 
+// Metadata is frozen: these strings are what the site already ranks on, so
+// they are carried over character for character rather than rewritten.
 export const metadata: Metadata = {
   title: "FRC Guides & Articles",
   description:
@@ -43,13 +24,6 @@ export const metadata: Metadata = {
   },
 };
 
-const BRAND_GRADIENT: CSSProperties = {
-  background: "linear-gradient(120deg, #2560e6, #1aa9d6)",
-  WebkitBackgroundClip: "text",
-  backgroundClip: "text",
-  color: "transparent",
-};
-
 function fmtDate(d: string) {
   return new Date(`${d}T12:00:00`).toLocaleDateString("en-US", {
     year: "numeric",
@@ -59,102 +33,80 @@ function fmtDate(d: string) {
 }
 
 /**
- * Editorial "desks" — the real shelves the library is filed on. Ordered by
+ * Editorial "desks", the real shelves the library is filed on. Ordered by
  * reading order, not size: someone landing here cold should meet "Start Here"
  * and the competition-day troubleshooting shelf before the deep technical ones.
  *
- * Rules are matched against the slug FIRST (deterministic — every one of the
+ * Rules are matched against the slug FIRST (deterministic, every one of the
  * current articles lands on a real desk, none fall through), with the keyword
  * list as a second pass so future articles still file themselves. Purely
  * presentational grouping: no article is invented, duplicated, or dropped.
  */
-const DESKS: { label: string; slug: string; color: string; icon: string; blurb: string; test: RegExp }[] = [
+const DESKS: { label: string; slug: string; blurb: string; test: RegExp }[] = [
   {
     label: "Start Here",
     slug: "start-here",
-    color: "#2560e6",
-    icon: "Rocket",
     blurb: "What FRC is, how a season runs, and how to get on a team.",
     test: /^what-is-frc|start-an-frc|joining-your-first|vs-ftc-vs-vex|rookie-mistakes|kickoff|how-frc-competitions-work|game-manual|team-structure|mentor-guide|gracious/i,
   },
   {
     label: "In the Pit",
     slug: "in-the-pit",
-    color: "#ef4444",
-    icon: "HardHat",
-    blurb: "Competition-day failures and how to diagnose them fast.",
+    blurb: "Competition-day failures, and how to diagnose them fast.",
     test: /troubleshoot|inspection|pit-checklist|status-lights|no-robot-code|bumpers|robot-rules|battery|first-frc-competition|radio-networking|module-offsets/i,
   },
   {
     label: "Drivetrain & Mechanisms",
     slug: "drivetrain-mechanisms",
-    color: "#1aa9d6",
-    icon: "Cog",
     blurb: "Swerve, gearing, intakes, elevators, shooters, and how to build them.",
     test: /swerve|drivetrain|gear-ratio|wheels|chain-vs-belt|intake|elevator|shooter|manufacturing|pneumatics|robot-design-process/i,
   },
   {
     label: "Programming",
     slug: "programming",
-    color: "#7c5cff",
-    icon: "Code2",
     blurb: "WPILib, command-based structure, autonomous, and tuning.",
     test: /program|wpilib|code|software|pid|simulation|pathplanner|choreo|odometry|dashboards|advantagescope|java-vs/i,
   },
   {
     label: "Electrical & Power",
     slug: "electrical-power",
-    color: "#e0803a",
-    icon: "Zap",
     blurb: "Wiring, the control system, motors, and the vendor ecosystems.",
     test: /wire|electrical|can-bus|pdh|roborio|motors|control-system|power|ctre|rev-robotics|phoenix|spark|talon/i,
   },
   {
     label: "Vision & Sensors",
     slug: "vision-sensors",
-    color: "#d64b8a",
-    icon: "Radar",
     blurb: "AprilTags, Limelight, PhotonVision, encoders and gyros.",
     test: /apriltag|limelight|photonvision|vision|sensors/i,
   },
   {
     label: "CAD & Design",
     slug: "cad-design",
-    color: "#12b565",
-    icon: "PenTool",
-    blurb: "Choosing a CAD package and modelling your first parts.",
+    blurb: "Choosing a CAD package, and modelling your first parts.",
     test: /cad|onshape|solidworks/i,
   },
   {
     label: "Scouting & Strategy",
     slug: "scouting-strategy",
-    color: "#0f766e",
-    icon: "LineChart",
     blurb: "Match data, picklists, alliance selection, and drive team.",
     test: /scout|picklist|opr|epa|statbotics|blue-alliance|alliance-selection|defense|ranking-points|districts|world-championship|drive-team/i,
   },
   {
     label: "Awards, Money & Outreach",
     slug: "awards-money-outreach",
-    color: "#c9a227",
-    icon: "Trophy",
     blurb: "Impact Award, sponsorship, grants, budgets and scholarships.",
     test: /impact|award|sponsor|grant|scholarship|budget|fund/i,
   },
   {
     label: "Season & Events",
     slug: "season-events",
-    color: "#64748b",
-    icon: "Star",
-    blurb: "Calendars, kickoff, the offseason, and what's coming in 2027.",
+    blurb: "Calendars, kickoff, the offseason, and what is coming in 2027.",
     test: /2027|calendar|offseason|biocore|systemcore|kit-of-parts|build-season/i,
   },
 ];
 const FALLBACK_DESK = {
   label: "Field Notes",
   slug: "field-notes",
-  color: "#4d5b78",
-  icon: "BookOpen",
   blurb: "Everything else worth writing down.",
 };
 
@@ -168,12 +120,12 @@ function deskFor(a: Article) {
 }
 
 /**
- * The six we'd hand a stranger first. Chosen deliberately, not by recency:
+ * The six we would hand a stranger first. Chosen deliberately, not by recency:
  * the three the site already advertises in its own meta description (starting
  * a team, swerve, the Impact Award), the single most-read article in the
  * library, and the two pieces that explain the whole competition end to end.
- * They also appear in their desk below — this set is a front door, not a
- * separate shelf.
+ * They also appear in their desk below, because this set is a front door and
+ * not a separate shelf.
  */
 const FEATURED_SLUGS = [
   "what-is-frc",
@@ -187,16 +139,6 @@ const FEATURED_SLUGS = [
 export default async function BlogPage() {
   const articles = await getArticles();
   const totalMins = articles.reduce((sum, a) => sum + a.readMins, 0);
-
-  const deskCounts = new Map<string, DeskCount>();
-  for (const a of articles) {
-    const d = deskFor(a);
-    const existing = deskCounts.get(d.label);
-    if (existing) existing.count += 1;
-    else deskCounts.set(d.label, { label: d.label, color: d.color, icon: d.icon, count: 1 });
-  }
-  const desks = [...deskCounts.values()].sort((a, b) => b.count - a.count).slice(0, 4);
-  const deskCount = deskCounts.size;
 
   // The curated front door. Filtered against the live library so a renamed or
   // retired article silently drops out instead of leaving a dead link.
@@ -214,7 +156,23 @@ export default async function BlogPage() {
     }))
     .filter((g) => g.items.length > 0);
 
-  // Collection structured data — the full article library as an ordered list.
+  // The divider card gets every desk that actually has articles on it, in the
+  // same order as the log, so the card is a real index and not a top-N chart.
+  const deskIndex: DeskCount[] = grouped.map((g) => ({
+    label: g.desk.label,
+    slug: g.desk.slug,
+    count: g.items.length,
+  }));
+
+  // Split the front door down the middle, so the contents card reads as two
+  // ruled columns rather than one long list. Ceil keeps the left column longer
+  // when the count is odd, which is how a printed contents page sets.
+  const half = Math.ceil(featured.length / 2);
+  const featuredColumns = [featured.slice(0, half), featured.slice(half)].filter(
+    (col) => col.length > 0
+  );
+
+  // Collection structured data, the full article library as an ordered list.
   const collectionLd = {
     "@context": "https://schema.org",
     "@type": "ItemList",
@@ -228,266 +186,224 @@ export default async function BlogPage() {
   };
 
   return (
-    <div className="relative overflow-x-clip">
+    <>
       <JsonLd data={collectionLd} />
-      <Glow
-        blobs={[
-          { size: "620px", pos: { left: "-180px", top: "-200px" }, color: "#8bbcff", opacity: 0.65 },
-          { size: "560px", pos: { right: "-160px", top: "-120px" }, color: "#6ff0ea", opacity: 0.5, delay: 2 },
-          { size: "520px", pos: { left: "30%", top: "620px" }, color: "#c8b6ff", opacity: 0.4, delay: 4 },
-        ]}
-      />
 
-      {/* ============================ MASTHEAD ============================ */}
-      <section className="mx-auto grid max-w-6xl items-center gap-12 px-4 pb-16 pt-28 sm:px-6 lg:grid-cols-[1.1fr_1fr] lg:gap-10 lg:pb-20 lg:pt-36 lg:px-8">
-        <RiseGroup>
-          <RiseItem>
-            <span className="ac-chip inline-flex items-center gap-2">
-              <Newspaper className="h-3.5 w-3.5 text-primary" aria-hidden />
-              <span className="ac-eyebrow">The LearnFRC Reader</span>
-            </span>
-          </RiseItem>
-          <RiseItem>
-            <h1 className="mt-5 text-balance font-display text-4xl font-extrabold leading-[1.02] sm:text-5xl lg:text-[3.3rem]">
-              FRC articles,{" "}
-              <span style={BRAND_GRADIENT}>decoded for the pit.</span>
+      {/* ===================== MASTHEAD =====================
+          Asymmetric on purpose: the sentence that says what this section is
+          runs down the left, and the card of dividers is taped to the right,
+          which is where a reader's hand goes to find a tab. */}
+      <section className="nb-wrap pb-[clamp(2rem,4vw,3rem)] pt-[clamp(2.2rem,5vw,4rem)]">
+        <div className="grid items-start gap-[clamp(1.8rem,4vw,3.6rem)] lg:grid-cols-[minmax(0,1.45fr)_minmax(0,0.85fr)]">
+          <div>
+            <p className="nb-marker">the loose pages</p>
+
+            <h1 className="max-w-[17ch]">
+              Every question a team ends up googling.
             </h1>
-          </RiseItem>
-          <RiseItem>
-            <p className="mt-5 max-w-xl text-pretty text-lg leading-relaxed text-foreground/70">
-              Practical, no-fluff walkthroughs of the parts of FRC people search
-              for most — starting a team, understanding swerve, winning the
-              Impact Award. Free, written by an FRC student, filed by desk.
+
+            <p className="nb-lede mt-[clamp(1rem,2vw,1.5rem)]">
+              {articles.length} write-ups of the things that break, the things
+              nobody explains, and the parts of a season you only learn by
+              losing a match.
             </p>
-          </RiseItem>
-          <RiseItem>
-            <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center">
-              <NewsletterForm />
-              <Link href="/guides" className="ac-btn-ghost text-sm">
-                <LayoutGrid className="h-4 w-4" aria-hidden /> Browse the guides
+
+            <div className="mt-[clamp(1.3rem,2.6vw,1.9rem)] flex flex-wrap gap-3">
+              <a href="#start-here-six" className="nb-btn">
+                Start with six
+              </a>
+              <Link href="/guides" className="nb-btn-ghost">
+                Browse the guides
               </Link>
             </div>
-          </RiseItem>
-          <RiseItem>
-            <div className="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground">
-              <span>
-                <b className="font-semibold text-foreground">
-                  <AnimatedCounter value={articles.length} />
-                </b>{" "}
-                articles in print
-              </span>
-              <span>
-                <b className="font-semibold text-foreground">
-                  <AnimatedCounter value={totalMins} />
-                </b>{" "}
-                minutes of reading
-              </span>
-              <span>
-                <b className="font-semibold text-foreground">$0</b> — always
-              </span>
-            </div>
-          </RiseItem>
-        </RiseGroup>
 
-        <DeskIndex
-          guideCount={articles.length}
-          totalMins={totalMins}
-          deskCount={deskCount}
-          desks={desks}
-        />
+            <p className="nb-hair nb-slug mt-[clamp(1.3rem,2.6vw,1.9rem)] pt-3">
+              {articles.length} articles / {totalMins.toLocaleString()} minutes
+              of reading / no account to read any of it
+            </p>
+          </div>
+
+          <div>
+            <DeskIndex desks={deskIndex} />
+            <p className="nb-pen mt-4 rotate-[-1.2deg] pl-2">
+              start at the desk your team is worst at
+            </p>
+          </div>
+        </div>
       </section>
 
-      {/* ============================ START HERE =========================== */}
+      {/* ===================== THE FRONT DOOR =====================
+          The contents page a binder opens on: one drawn frame, two ruled
+          columns, six numbered entries. It is not a card grid, because these
+          six are an ordered reading list and cards would say they are peers. */}
       {featured.length > 0 && (
-        <section className="mx-auto max-w-6xl px-4 pb-14 sm:px-6 lg:px-8">
-          <Reveal>
-            <p className="ac-eyebrow flex items-center gap-1.5">
-              <Compass className="h-3.5 w-3.5" aria-hidden /> New here?
-            </p>
-            <h2 className="mt-2 text-balance font-display text-3xl font-bold sm:text-4xl">
-              Start with these {featured.length}
-            </h2>
-            <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-muted-foreground">
-              If you read nothing else, read these — what FRC actually is, how to
-              get a team off the ground, how a competition runs, and the two
-              topics every team ends up arguing about.
-            </p>
-          </Reveal>
+        <section
+          id="start-here-six"
+          className="nb-wrap py-[clamp(2.4rem,5vw,4rem)]"
+        >
+          <div className="nb-rule pt-[clamp(1.8rem,3.5vw,2.6rem)]">
+            <div className="mb-[clamp(1.4rem,3vw,2.2rem)] flex flex-wrap items-end justify-between gap-x-8 gap-y-3">
+              <div>
+                <h2 className="max-w-[18ch]">If you only read {featured.length}</h2>
+                <p className="nb-sub mt-3">
+                  What FRC actually is, how to get a team off the ground, how a
+                  competition day runs, and the two topics every team ends up
+                  arguing about at 1am.
+                </p>
+              </div>
+              <p className="nb-slug shrink-0">read in this order</p>
+            </div>
 
-          <RevealGroup className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {featured.map((a, i) => {
-              const desk = deskFor(a);
-              return (
-                <RevealItem key={a.slug} className="h-full">
-                  <Hover className="h-full" lift={-5}>
-                    <Link
-                      href={`/blog/${a.slug}`}
-                      className="ac-tile group relative flex h-full flex-col p-5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                      style={{ "--a": desk.color } as CSSProperties}
-                    >
-                      <span
-                        aria-hidden
-                        className="pointer-events-none absolute right-4 top-3 font-display text-3xl font-extrabold text-foreground/10"
+            {/* overflow-hidden clips the panels to the frame's hand-drawn
+                corners; without it the 2px divider runs past the border. */}
+            <div className="nb-box grid overflow-hidden min-[860px]:grid-cols-2">
+              {featuredColumns.map((col, colIndex) => (
+                <ol key={colIndex} className="nb-panel list-none">
+                  {col.map((a, i) => {
+                    const n = colIndex * half + i + 1;
+                    return (
+                      <li
+                        key={a.slug}
+                        className="nb-hair py-[clamp(0.9rem,1.8vw,1.15rem)] first:border-t-0 first:pt-0 last:pb-0"
                       >
-                        {i + 1}
-                      </span>
-                      <h3 className="pr-9 font-display text-[17px] font-bold leading-snug text-foreground transition-colors group-hover:text-primary">
-                        {a.title}
-                      </h3>
-                      <p className="mt-2 flex-1 text-sm leading-relaxed text-muted-foreground">
-                        {a.description}
-                      </p>
-                      <span className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-primary">
-                        Read · {a.readMins} min
-                        <ArrowUpRight
-                          className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1 group-hover:-translate-y-1"
-                          aria-hidden
-                        />
-                      </span>
-                    </Link>
-                  </Hover>
-                </RevealItem>
-              );
-            })}
-          </RevealGroup>
+                        <Link href={`/blog/${a.slug}`} className="group flex gap-4">
+                          <span
+                            className="nb-slug shrink-0 pt-1 text-[0.92rem] font-bold text-blue tabular-nums"
+                            aria-hidden="true"
+                          >
+                            {String(n).padStart(2, "0")}
+                          </span>
+                          <span className="min-w-0">
+                            <h3 className="group-hover:underline group-hover:decoration-blue group-hover:decoration-2 group-hover:underline-offset-[5px]">
+                              {a.title}
+                            </h3>
+                            <span className="mt-1.5 block text-[0.92rem] leading-snug text-graphite">
+                              {a.description}
+                            </span>
+                            <span className="nb-slug mt-2 block">
+                              {a.readMins} min
+                            </span>
+                          </span>
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ol>
+              ))}
+            </div>
+          </div>
         </section>
       )}
 
-      {/* ========================= THE FULL LIBRARY ======================== */}
-      <section className="mx-auto max-w-6xl px-4 pb-16 sm:px-6 lg:px-8">
-        <Reveal>
-          <div className="flex flex-wrap items-end justify-between gap-4">
-            <div>
-              <p className="ac-eyebrow">Every article, filed by desk</p>
-              <h2 className="mt-2 text-balance font-display text-3xl font-bold sm:text-4xl">
-                The full library
-              </h2>
-            </div>
-            <span className="hidden items-center gap-1.5 text-xs text-muted-foreground sm:inline-flex">
-              <Sparkles className="h-3.5 w-3.5 text-primary" aria-hidden />
-              <AnimatedCounter value={articles.length} /> articles
-            </span>
-          </div>
+      {/* ===================== THE LOG =====================
+          Every article, as carbon copies filed under the desk that owns it.
+          Rows rather than cards: this is a list to scan for one title, and a
+          hundred cards would be a hundred equally loud invitations. */}
+      <section className="nb-wrap pb-[clamp(2.6rem,5vw,4.4rem)]">
+        <div className="nb-rule pt-[clamp(1.8rem,3.5vw,2.6rem)]">
+          <p className="nb-marker">
+            {articles.length} articles / {grouped.length} desks
+          </p>
+          <p className="nb-sub max-w-[52ch] text-[1.05rem]">
+            Everything in print, filed where a person would go looking for it.
+            Jump straight to a desk, or read down the page.
+          </p>
 
-          <nav aria-label="Jump to a desk" className="mt-6 flex flex-wrap gap-2">
+          <nav
+            aria-label="Jump to a desk"
+            className="mt-[clamp(1.1rem,2.2vw,1.5rem)] flex flex-wrap gap-2"
+          >
             {grouped.map((g) => (
               <a
                 key={g.desk.slug}
                 href={`#${g.desk.slug}`}
-                className="ac-chip inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-foreground/80 transition-colors hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                className="nb-tag min-h-[var(--tap)] px-3"
               >
-                <span
-                  aria-hidden
-                  className="h-1.5 w-1.5 shrink-0 rounded-full"
-                  style={{ background: g.desk.color }}
-                />
                 {g.desk.label}
-                <span className="text-xs font-bold tabular-nums text-muted-foreground">
+                <span className="font-bold text-blue tabular-nums">
                   {g.items.length}
                 </span>
               </a>
             ))}
           </nav>
-        </Reveal>
+        </div>
 
-        <div className="mt-12 space-y-14">
-          {grouped.map((g) => (
-            <section key={g.desk.slug} id={g.desk.slug} className="scroll-mt-24">
-              <Reveal>
-                <div className="flex flex-wrap items-center gap-3">
-                  <span
-                    className="ac-badge flex h-11 w-11 shrink-0 items-center justify-center"
-                    style={{ "--a": g.desk.color } as CSSProperties}
-                  >
-                    <Icon name={g.desk.icon} className="h-[22px] w-[22px]" aria-hidden />
-                  </span>
-                  <div className="min-w-0">
-                    <h3 className="font-display text-2xl font-bold leading-tight">
-                      {g.desk.label}
-                    </h3>
-                    <p className="mt-0.5 text-sm leading-snug text-muted-foreground">
-                      {g.desk.blurb}
-                    </p>
-                  </div>
-                  <span className="ml-auto shrink-0 text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                    {g.items.length} {g.items.length === 1 ? "article" : "articles"}
-                  </span>
-                </div>
-              </Reveal>
+        {grouped.map((g) => (
+          <section
+            key={g.desk.slug}
+            id={g.desk.slug}
+            className="pt-[clamp(2.2rem,4.4vw,3.4rem)]"
+          >
+            <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-2">
+              <div>
+                <h2 className="text-[clamp(1.5rem,1.1rem+1.4vw,2.3rem)]">
+                  {g.desk.label}
+                </h2>
+                <p className="nb-sub mt-2 text-[0.98rem]">{g.desk.blurb}</p>
+              </div>
+              <p className="nb-count shrink-0">
+                {g.items.length}
+                <small>{g.items.length === 1 ? "article" : "articles"}</small>
+              </p>
+            </div>
 
-              <RevealGroup className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                {g.items.map((a) => (
-                  <RevealItem key={a.slug} className="h-full">
-                    <Hover className="h-full" lift={-5}>
-                      <Link
-                        href={`/blog/${a.slug}`}
-                        className="ac-card group flex h-full flex-col p-6 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <span
-                            className="ac-badge flex h-9 w-9 items-center justify-center"
-                            style={{ "--a": g.desk.color } as CSSProperties}
-                          >
-                            <Icon name={g.desk.icon} className="h-[18px] w-[18px]" aria-hidden />
-                          </span>
-                          <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-                            <Clock className="h-3.5 w-3.5" aria-hidden />
-                            {a.readMins} min · {fmtDate(a.date)}
-                          </span>
-                        </div>
-                        <h4 className="mt-4 font-display text-lg font-bold leading-snug text-foreground transition-colors group-hover:text-primary">
-                          {a.title}
-                        </h4>
-                        <p className="mt-2 flex-1 text-[15px] leading-relaxed text-muted-foreground">
-                          {a.description}
-                        </p>
-                        <span className="mt-5 inline-flex items-center gap-1 border-t border-border pt-4 text-sm font-semibold text-primary">
-                          Read
-                          <ArrowUpRight
-                            className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1 group-hover:-translate-y-1"
-                            aria-hidden
-                          />
-                        </span>
-                      </Link>
-                    </Hover>
-                  </RevealItem>
-                ))}
-              </RevealGroup>
-            </section>
-          ))}
+            <div className="nb-list mt-[clamp(1rem,2vw,1.4rem)]">
+              {g.items.map((a) => (
+                <Link key={a.slug} href={`/blog/${a.slug}`} className="nb-row">
+                  <span className="nb-slug">
+                    {a.readMins} min read
+                    <br />
+                    {fmtDate(a.date)}
+                  </span>
+                  {/* Capped at a readable measure rather than filling the
+                      column: the empty space to its right is the ledger
+                      margin, and a 110-character line is not a scannable one. */}
+                  <span className="min-w-0 max-w-[62ch]">
+                    <h3>{a.title}</h3>
+                    <span className="mt-1.5 block text-[0.94rem] leading-snug text-graphite">
+                      {a.description}
+                    </span>
+                  </span>
+                  <span className="nb-slug hidden whitespace-nowrap min-[769px]:block">
+                    open
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </section>
+        ))}
+      </section>
+
+      {/* ===================== THE LIST =====================
+          One ask, at the bottom, after the reader has seen everything on
+          offer. Taped to the page like a sign-up sheet on a shop wall. */}
+      <section className="nb-wrap pb-[clamp(3rem,6vw,5rem)]">
+        <div className="nb-rule pt-[clamp(1.8rem,3.5vw,2.6rem)]">
+          <div className="nb-box nb-tilt-3 grid gap-[clamp(1.2rem,3vw,2.4rem)] p-[clamp(1.3rem,2.8vw,2.1rem)] min-[820px]:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] min-[820px]:items-center">
+            <span
+              className="nb-tape -top-3 left-[12%] rotate-[-3.4deg]"
+              aria-hidden="true"
+            />
+            <span
+              className="nb-tape -bottom-3 right-[16%] rotate-[2.8deg]"
+              aria-hidden="true"
+            />
+
+            <div>
+              <h2 className="text-[clamp(1.4rem,1.1rem+1.2vw,2.1rem)]">
+                One email when a new one goes up.
+              </h2>
+              <p className="mt-3 max-w-[42ch] text-graphite">
+                Nothing else gets sent. The articles stay free and readable
+                without an account either way, so this is only for people who
+                would rather not check back.
+              </p>
+            </div>
+
+            <NewsletterForm className="min-[820px]:justify-self-end" />
+          </div>
         </div>
       </section>
-
-      {/* =========================== NEWSLETTER BAND =========================== */}
-      <section className="mx-auto max-w-6xl px-4 pb-24 sm:px-6 lg:px-8">
-        <Reveal>
-          <div className="ac-glass relative overflow-hidden p-8 text-center sm:p-12">
-            <div
-              aria-hidden
-              className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-[radial-gradient(circle,rgba(26,169,214,0.25),transparent_70%)] blur-2xl"
-            />
-            <p className="ac-eyebrow">New lessons, filed weekly</p>
-            <h2 className="mx-auto mt-3 max-w-xl text-balance font-display text-3xl font-bold sm:text-4xl">
-              Never miss a new{" "}
-              <span style={BRAND_GRADIENT}>article.</span>
-            </h2>
-            <p className="mx-auto mt-3 max-w-md text-[15px] leading-relaxed text-muted-foreground">
-              Join the list for new FRC articles as they&apos;re published — no spam,
-              unsubscribe anytime.
-            </p>
-            <div className="mt-7 flex flex-col items-center gap-3">
-              <NewsletterForm className="justify-self-center" />
-              <Link
-                href="/guides"
-                className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-primary"
-              >
-                Or browse all guides
-                <ArrowRight className="h-4 w-4" aria-hidden />
-              </Link>
-            </div>
-          </div>
-        </Reveal>
-      </section>
-    </div>
+    </>
   );
 }

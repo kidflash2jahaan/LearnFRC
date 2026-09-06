@@ -1,125 +1,93 @@
-"use client";
+/**
+ * Shared geometry for the four cells of the department title block.
+ *
+ * These live here, on the leaf, because the block is assembled in the page (a
+ * Server Component) but one of its cells is a client island, and a constant is
+ * the only thing the two can share without dragging the page's server imports
+ * into the client bundle. The page's `loading.tsx` reads them too, so the
+ * placeholder cannot drift out of alignment with the real block.
+ */
 
-import type { CSSProperties } from "react";
-import { motion, useReducedMotion } from "framer-motion";
-import { AnimatedCounter } from "@/components/animated-counter";
+/** One cell's padding. Identical on all four, or the dividing rules step. */
+export const TITLE_BLOCK_PAD = "p-[clamp(0.95rem,2.6vw,2.1rem)]";
 
 /**
- * Signature hero device: "Mission progress" — a glass instrument with a
- * spring-drawn mastery ring in the department accent. The bright accent is
- * used for the ring fill only; every piece of text on top uses inkFor()
- * so it stays legible on the light glass.
+ * The three catalogue cells. On one column each is a `label .... figure` line;
+ * from 861px, where `.nb-panel` turns its dividing rule vertical, each becomes
+ * a label-over-figure stack.
+ *
+ * `min-[861px]:justify-start` is the load-bearing part. `justify-between` is
+ * right for the row and wrong for the column, where it pushed each figure to
+ * the bottom of the panel while the mastery cell stacked from the top, so no
+ * two figures in the block sat on the same line.
+ */
+export const TITLE_BLOCK_CELL = [
+  "nb-panel flex-row items-baseline justify-between gap-3",
+  TITLE_BLOCK_PAD,
+  "min-[861px]:flex-col min-[861px]:items-start min-[861px]:justify-start",
+].join(" ");
+
+/**
+ * The figure itself. `nb-count` sets the face, the numerals and the blue; the
+ * override only makes it big enough to anchor a four-up block.
+ */
+export const TITLE_BLOCK_FIGURE =
+  "nb-count text-[clamp(1.5rem,1.1rem+1.1vw,2.1rem)]";
+
+/**
+ * The mastery cell of the title block.
+ *
+ * The old version was a glass instrument with a spring-drawn SVG ring and a
+ * green dot pulsing next to the word "Live". None of that is true here: nothing
+ * on this page is live, a perfect circle is not a shape this system draws, and
+ * a ring is unreadable as a figure anyway. Progress in the binder is `nb-meter`,
+ * an ink trough with a blue fill, and the rule that comes with it is that the
+ * number is always printed beside the bar rather than encoded in its length.
+ *
+ * The percentage is the same one the module list and the CTA read, so a reader
+ * never sees two different answers to "how far in am I".
+ *
+ * No hooks and no state: it renders what the island hands it. It has no
+ * "use client" of its own because it does not need one, and it still ends up in
+ * the client bundle by virtue of who imports it.
  */
 export function MasteryPanel({
   pct,
   doneCount,
   totalLessons,
-  accent,
-  ink,
-  loggedIn,
+  tracked,
 }: {
   pct: number;
   doneCount: number;
   totalLessons: number;
-  accent: string;
-  ink: string;
-  loggedIn: boolean;
+  /** True once there is progress to show, from an account or from this browser. */
+  tracked: boolean;
 }) {
-  const reduce = useReducedMotion();
-  const r = 66;
-  const c = 2 * Math.PI * r;
-  const offset = c - (c * Math.min(100, Math.max(0, pct))) / 100;
-  const complete = loggedIn && totalLessons > 0 && doneCount === totalLessons;
-  const started = loggedIn && doneCount > 0 && !complete;
+  const safe = Math.min(100, Math.max(0, pct));
+  const complete = tracked && totalLessons > 0 && doneCount >= totalLessons;
 
   return (
-    <motion.div
-      className="ac-glass relative w-full max-w-sm overflow-hidden p-6 sm:p-7 lg:justify-self-end"
-      style={{ "--a": accent } as CSSProperties}
-      initial={{ opacity: 0, y: 26, rotate: -1.2 }}
-      animate={{ opacity: 1, y: 0, rotate: 0 }}
-      transition={
-        reduce ? { duration: 0 } : { type: "spring", stiffness: 140, damping: 18, delay: 0.25 }
-      }
-      whileHover={reduce ? undefined : { y: -6 }}
-    >
-      <span
-        aria-hidden
-        className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full blur-3xl"
-        style={{ background: `radial-gradient(circle, ${accent}, transparent 70%)`, opacity: 0.28 }}
-      />
+    // A column at every width, unlike its three neighbours: it has a meter and
+    // a line of prose under the figure, and those do not belong on one line.
+    <div className={`nb-panel gap-1 ${TITLE_BLOCK_PAD}`}>
+      <p className="nb-slug">mastered</p>
 
-      <div className="relative flex items-center justify-between gap-3">
-        <span className="ac-eyebrow inline-flex items-center gap-1.5">Mission progress</span>
-        <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.08em] text-success">
-          <motion.span
-            className="h-2 w-2 rounded-full bg-[#12b565]"
-            animate={reduce ? undefined : { scale: [1, 1.35, 1], opacity: [1, 0.6, 1] }}
-            transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
-            aria-hidden
-          />
-          Live
-        </span>
-      </div>
+      <p className={TITLE_BLOCK_FIGURE}>
+        {safe}
+        <small>per cent</small>
+      </p>
 
-      <div className="relative mt-6 flex flex-col items-center">
-        <div className="relative h-40 w-40">
-          <svg viewBox="0 0 160 160" className="h-40 w-40 -rotate-90">
-            <circle
-              cx="80"
-              cy="80"
-              r={r}
-              fill="none"
-              stroke="rgba(120,145,190,0.22)"
-              strokeWidth="14"
-            />
-            <motion.circle
-              cx="80"
-              cy="80"
-              r={r}
-              fill="none"
-              stroke={accent}
-              strokeWidth="14"
-              strokeLinecap="round"
-              strokeDasharray={c}
-              initial={{ strokeDashoffset: c }}
-              animate={{ strokeDashoffset: offset }}
-              transition={
-                reduce ? { duration: 0 } : { type: "spring", stiffness: 55, damping: 18, delay: 0.4 }
-              }
-            />
-          </svg>
-          <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="font-display text-4xl font-extrabold leading-none" style={{ color: ink }}>
-              <AnimatedCounter value={pct} suffix="%" />
-            </span>
-            <span className="mt-1 text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">
-              mastered
-            </span>
-          </div>
-        </div>
+      <span className="nb-meter mt-2 block" aria-hidden="true">
+        <span className="nb-meter-bar" style={{ width: `${safe}%` }} />
+      </span>
 
-        <p className="mt-5 text-sm font-semibold" style={{ color: ink }}>
-          <AnimatedCounter value={doneCount} /> / <AnimatedCounter value={totalLessons} /> lessons
-        </p>
-      </div>
-
-      {!loggedIn && (
-        <p className="relative mt-5 text-center text-[13px] leading-relaxed text-muted-foreground">
-          Reading is free — no login needed. Sign in to light up this ring as
-          you master the department.
-        </p>
-      )}
-      {complete && (
-        <p className="relative mt-5 text-center text-sm font-semibold" style={{ color: ink }}>
-          Department complete. Gracious professionalism, well earned.
-        </p>
-      )}
-      {started && (
-        <p className="relative mt-5 text-center text-[13px] leading-relaxed text-muted-foreground">
-          {totalLessons - doneCount} lessons to the finish line — keep going.
-        </p>
-      )}
-    </motion.div>
+      <p className="nb-hint mt-2">
+        {!tracked
+          ? "reading is free, no account needed"
+          : complete
+            ? "finished, certificate unlocked"
+            : `${doneCount} of ${totalLessons} lessons done`}
+      </p>
+    </div>
   );
 }

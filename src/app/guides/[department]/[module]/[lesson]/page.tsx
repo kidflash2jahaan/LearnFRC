@@ -1,40 +1,14 @@
 import type { Metadata } from "next";
-import type { CSSProperties } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import {
-  ArrowLeft,
-  ArrowRight,
-  Lightbulb,
-  CheckCircle2,
-  ChevronRight,
-  Zap,
-  BookOpen,
-  ListTree,
-  Trophy,
-} from "lucide-react";
 import {
   getDepartmentBySlug,
   getLessonContent,
   getAllDepartmentSlugs,
   flattenLessons,
 } from "@/lib/queries";
-import { deptMeta, inkFor } from "@/lib/departments";
-import { Icon } from "@/lib/icon-map";
 import { Markdown, extractHeadings } from "@/components/markdown";
-import {
-  Rise,
-  RiseGroup,
-  RiseItem,
-  Reveal,
-  RevealGroup,
-  RevealItem,
-  Hover,
-  Glow,
-} from "@/components/motion/primitives";
-import { AnimatedCounter } from "@/components/animated-counter";
 import { JsonLd } from "@/components/json-ld";
-import { cn } from "@/lib/utils";
 import type { Resource, QuizQuestion } from "@/lib/types";
 import { MyProgressProvider } from "@/components/progress/my-progress";
 import {
@@ -57,7 +31,7 @@ import {
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com";
 
-/** Short topic qualifier appended to lesson <title>s ("… — FRC CAD in
+/** Short topic qualifier appended to lesson <title>s ("…, FRC CAD in
     Onshape") so lessons can match FRC-modified searches. */
 const DEPT_TITLE_KEYWORD: Record<string, string> = {
   "getting-started": "Rookie Guide",
@@ -73,17 +47,10 @@ const DEPT_TITLE_KEYWORD: Record<string, string> = {
   safety: "Safety",
 };
 
-const BRAND_GRADIENT: CSSProperties = {
-  background: "linear-gradient(120deg, #2560e6, #1aa9d6)",
-  WebkitBackgroundClip: "text",
-  backgroundClip: "text",
-  color: "transparent",
-};
-
 // Static/ISR: the lesson body is identical for everyone and crawlers, so this
 // page is prerendered and revalidated on the catalog window. Per-user progress
 // (completed state, bookmarks, mastery rail, mark-complete/quiz) hydrates
-// client-side from /api/me/progress — see the `Lesson*` islands below.
+// client-side from /api/me/progress, see the `Lesson*` islands below.
 // (Previously force-dynamic only to read the session; that read is now client.)
 export const revalidate = 86400; // daily background ISR floor; content edits push live via /api/revalidate (hourly was needless ISR-write churn)
 export const dynamicParams = true; // lessons not prebuilt still render on-demand
@@ -178,12 +145,11 @@ export default async function LessonPage({
   const les = mod.lessons.find((l) => l.slug === lesson);
   if (!les) notFound();
 
-  const meta = deptMeta(dept.slug);
   const flat = flattenLessons(dept);
   const idx = flat.findIndex((l) => l.id === les.id);
   const prev = idx > 0 ? flat[idx - 1] : null;
   const next = idx < flat.length - 1 ? flat[idx + 1] : null;
-  // Every lesson id in the department — the client islands derive per-dept
+  // Every lesson id in the department, the client islands derive per-dept
   // progress (reading rail + mobile card) from these + the fetched completion set.
   const flatIds = flat.map((l) => l.id);
 
@@ -203,10 +169,6 @@ export default async function LessonPage({
     : `/guides/${dept.slug}`;
 
   const readMins = Math.max(1, Math.round((content?.split(/\s+/).length ?? 0) / 200));
-  const deptGradient = `linear-gradient(135deg, ${meta.color}, ${meta.to})`;
-  // --a: bright accent (fills/badges); --ai: darker same-hue tone for text.
-  const ink = inkFor(meta.color);
-  const accentStyle = { "--a": meta.color } as CSSProperties;
 
   // Same extraction the Markdown renderer uses, so the rail's ids match the
   // article's rendered heading ids exactly.
@@ -214,7 +176,7 @@ export default async function LessonPage({
 
   // ---- end-of-lesson continuation data (see <LessonNextStep/>) -------------
   // All derived server-side from the department tree we already loaded, so the
-  // whole block is static HTML — crawler-visible, zero extra queries, no CLS.
+  // whole block is static HTML, crawler-visible, zero extra queries, no CLS.
   const moduleHref = `/guides/${dept.slug}/${mod.slug}`;
   const posInModule = mod.lessons.findIndex((l) => l.id === les.id) + 1;
   const toLink = (l: {
@@ -228,7 +190,7 @@ export default async function LessonPage({
     href: `/guides/${dept.slug}/${l.moduleSlug ?? mod.slug}/${l.slug}`,
   });
 
-  // "Related" means same module first — those are genuinely adjacent in scope.
+  // "Related" means same module first, those are genuinely adjacent in scope.
   // Only if this module has nothing else to offer do we fall back to the
   // nearest lessons in the department, and the label says so.
   const skip = new Set([les.id, next?.id].filter(Boolean) as string[]);
@@ -250,20 +212,13 @@ export default async function LessonPage({
 
   const ARTICLE_ID = "lesson-body";
 
+
   return (
     <MyProgressProvider>
-    {/* Records `lesson_opened`. Renders nothing; mounted at the top of the tree
-        so the milestone does not depend on how far down the page a reader
-        scrolls or on which optional block happens to render. */}
-    <LessonOpenBeacon />
-    <div className="relative overflow-x-clip">
-      <Glow
-        blobs={[
-          { size: "620px", pos: { left: "5%", top: "-220px" }, color: "#2560e6", opacity: 0.4 },
-          { size: "560px", pos: { right: "0%", top: "10%" }, color: meta.color, opacity: 0.35, delay: 1.4 },
-          { size: "520px", pos: { left: "22%", top: "700px" }, color: "#1aa9d6", opacity: 0.25, delay: 2.6 },
-        ]}
-      />
+      {/* Records `lesson_opened`. Renders nothing, and it is mounted at the top
+          of the tree so the milestone does not depend on how far down the page
+          a reader scrolls or on which optional block happens to render. */}
+      <LessonOpenBeacon />
 
       <JsonLd
         data={{
@@ -291,7 +246,7 @@ export default async function LessonPage({
         data={{
           "@context": "https://schema.org",
           "@type": "BreadcrumbList",
-          // Mirrors the on-page breadcrumb, module tier included — the
+          // Mirrors the on-page breadcrumb, module tier included, the
           // standalone module route exists now, so this no longer skips a level.
           itemListElement: [
             { "@type": "ListItem", position: 1, name: "Home", item: SITE },
@@ -318,134 +273,97 @@ export default async function LessonPage({
         }}
       />
 
-      <div className="relative mx-auto max-w-6xl px-4 pt-28 pb-20 sm:px-6 lg:px-8">
-        {/* breadcrumb */}
-        <Rise>
-          <nav
-            className="flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground"
-            aria-label="Breadcrumb"
+      {/* ================= THE SHEET HEADER =================
+          This is one page of the binder, so the top of it is written the way a
+          student writes the top of a worksheet: the file path, the title, one
+          line saying what it is, then a ruled row of the facts (which lesson,
+          how long, which module) with the two controls at the end of it. The
+          old page put all of that inside a floating panel; a panel here would
+          be a second sheet laid on the sheet you are already reading. */}
+      <div className="nb-wrap pb-[clamp(2.4rem,5vw,4rem)] pt-[clamp(1.8rem,4vw,3rem)]">
+        <nav aria-label="Breadcrumb" className="nb-slug -my-2 flex flex-wrap items-center gap-x-2">
+          <Link href="/guides" className="inline-flex min-h-11 items-center py-2 hover:text-blue">
+            guides
+          </Link>
+          <span aria-hidden="true">/</span>
+          <Link
+            href={`/guides/${dept.slug}`}
+            className="inline-flex min-h-11 items-center py-2 hover:text-blue"
           >
-            <Link href="/guides" className="transition-colors hover:text-primary">
-              Guides
-            </Link>
-            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50" aria-hidden />
-            <Link href={`/guides/${dept.slug}`} className="transition-colors hover:text-primary">
-              {dept.name}
-            </Link>
-            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50" aria-hidden />
-            {/* Module tier: the rendered trail used to jump dept -> lesson while
-                the BreadcrumbList JSON-LD below asserted a 5-level trail that
-                included the module — a structured-data/on-page mismatch. It also
-                left every module hub with zero inbound links from the lessons it
-                indexes. Both are fixed by rendering the level we already claim. */}
-            <Link href={moduleHref} className="transition-colors hover:text-primary">
-              {mod.title}
-            </Link>
-            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50" aria-hidden />
-            <span className="truncate font-medium text-foreground">{les.title}</span>
-          </nav>
-        </Rise>
+            {dept.slug}
+          </Link>
+          <span aria-hidden="true">/</span>
+          <Link href={moduleHref} className="inline-flex min-h-11 items-center py-2 hover:text-blue">
+            {mod.slug}
+          </Link>
+          <span aria-hidden="true">/</span>
+          <span className="inline-flex min-h-11 items-center py-2 font-bold text-ink">
+            {les.slug}
+          </span>
+        </nav>
 
-        {/* ============================ HERO ============================ */}
-        <header className="mt-6">
-          <RiseGroup className="flex flex-wrap items-center gap-2.5">
-            <RiseItem>
-              <Link
-                href={`/guides/${dept.slug}`}
-                className="ac-chip inline-flex items-center gap-2 !py-1 !pl-1.5 !pr-3.5 transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                style={accentStyle}
-              >
-                <span className="ac-badge flex h-7 w-7 items-center justify-center rounded-full" style={accentStyle}>
-                  <Icon name={meta.icon} className="h-4 w-4" aria-hidden />
-                </span>
-                <span className="text-sm font-medium">{dept.name}</span>
-              </Link>
-            </RiseItem>
-            <RiseItem>
-              <span className="ac-chip inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-                <BookOpen className="h-3.5 w-3.5 text-primary" aria-hidden />
-                <span className="tabular-nums">{readMins} min read</span>
-              </span>
-            </RiseItem>
-            <RiseItem>
-              <LessonStatusChip lessonId={les.id} ink={ink} accentColor={meta.color} />
-            </RiseItem>
-          </RiseGroup>
+        <header className="mt-[clamp(1rem,2.2vw,1.6rem)]">
+          <h1 className="max-w-[17ch]">{les.title}</h1>
 
-          <Rise delay={0.05}>
-            <h1 className="mt-5 text-balance font-display text-3xl font-bold leading-[1.06] tracking-tight sm:text-4xl lg:text-[2.9rem]">
-              <span style={BRAND_GRADIENT}>{les.title}</span>
-            </h1>
-          </Rise>
-          {les.summary && (
-            <Rise delay={0.1}>
-              <p className="mt-4 max-w-2xl text-pretty text-lg leading-relaxed text-foreground/70">
-                {les.summary}
-              </p>
-            </Rise>
-          )}
+          {les.summary && <p className="nb-lede mt-[clamp(0.9rem,1.8vw,1.3rem)]">{les.summary}</p>}
 
-          {/* lesson meta + actions — the glass "control deck" for this lesson */}
-          <Rise delay={0.15}>
-            <div className="mt-7">
-              <div className="ac-glass relative overflow-hidden rounded-3xl p-5 sm:p-6">
-                <span
-                  aria-hidden
-                  className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full opacity-30 blur-2xl"
-                  style={{ background: `radial-gradient(circle, ${meta.color}, transparent 70%)` }}
-                />
-                <div className="relative grid gap-5 sm:grid-cols-[auto_1fr] sm:items-center">
-                  {/* stat cluster */}
-                  <dl className="flex flex-wrap gap-x-7 gap-y-4">
-                    <div>
-                      <dt className="ac-eyebrow">Lesson</dt>
-                      <dd className="mt-1 font-display text-2xl font-bold tabular-nums text-foreground">
-                        <AnimatedCounter value={idx + 1} />
-                        <span className="text-lg text-muted-foreground"> / {flat.length}</span>
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="ac-eyebrow">Reward</dt>
-                      <dd className="mt-1 flex items-center gap-1.5 font-display text-2xl font-bold text-foreground">
-                        <Zap className="h-5 w-5 text-primary" aria-hidden />
-                        +10<span className="text-lg text-muted-foreground">XP</span>
-                      </dd>
-                    </div>
-                    <div className="hidden sm:block">
-                      <dt className="ac-eyebrow">Module</dt>
-                      <dd
-                        className="mt-1 max-w-[16rem] truncate font-display text-base font-semibold text-foreground"
-                        title={mod.title}
-                      >
-                        {mod.title}
-                      </dd>
-                    </div>
-                  </dl>
-
-                  {/* actions */}
-                  <div className="sm:justify-self-end">
-                    <LessonActionsIsland
-                      lessonId={les.id}
-                      deptSlug={dept.slug}
-                      lessonPath={lessonPath}
-                      quizRequired={quiz.length > 0}
-                    />
-                  </div>
-                </div>
+          {/* The facts, ruled off. `dl` because every one of these is a label
+              and its value, and a screen reader should read them as pairs
+              rather than as a run of loose numbers. */}
+          <div className="nb-rule mt-[clamp(1.4rem,2.8vw,2.1rem)] flex flex-wrap items-end justify-between gap-x-[clamp(1.2rem,3vw,2.6rem)] gap-y-5 pt-4">
+            <dl className="flex flex-wrap items-end gap-x-[clamp(1.2rem,3vw,2.6rem)] gap-y-4">
+              <div>
+                <dt className="nb-slug">this lesson</dt>
+                <dd className="nb-count mt-1.5">
+                  {idx + 1}
+                  <small>of {flat.length} in {dept.name}</small>
+                </dd>
               </div>
-            </div>
-          </Rise>
+              <div>
+                <dt className="nb-slug">reading time</dt>
+                <dd className="nb-count mt-1.5">
+                  {readMins}
+                  <small>min</small>
+                </dd>
+              </div>
+              <div className="min-w-0">
+                <dt className="nb-slug">filed under</dt>
+                <dd className="mt-1.5 max-w-[22ch] truncate text-[0.98rem] font-bold leading-tight">
+                  <Link href={moduleHref} className="no-underline hover:text-blue">
+                    {mod.title}
+                  </Link>
+                </dd>
+              </div>
+              <div>
+                <dt className="nb-slug">state</dt>
+                <dd className="mt-1.5">
+                  <LessonStatusChip lessonId={les.id} />
+                </dd>
+              </div>
+            </dl>
+
+            <LessonActionsIsland
+              lessonId={les.id}
+              deptSlug={dept.slug}
+              lessonPath={lessonPath}
+              quizRequired={quiz.length > 0}
+            />
+          </div>
         </header>
 
-        {/* ===================== BODY: rail + article ==================== */}
-        <div className="mt-10 grid gap-10 lg:grid-cols-[300px_minmax(0,1fr)] lg:gap-12">
-          {/* signature: sticky live contents/progress rail (desktop) */}
-          <aside className="hidden lg:block">
-            <div className="sticky top-24">
+        {/* ================= MARGIN + SHEET =================
+            A notebook page has a ruled margin down its left edge and the
+            writing to the right of it. That is the whole layout: the rail is
+            the margin, the 2px ink line between them is the margin rule, and
+            everything the reader came for lives in the second column. Below
+            1024px there is no margin, so the rail's mobile counterpart is the
+            progress card further down. */}
+        <div className="mt-[clamp(2rem,4vw,3.2rem)] grid gap-[clamp(1.8rem,3.5vw,3rem)] lg:grid-cols-[16.5rem_minmax(0,1fr)] lg:gap-0">
+          <aside className="hidden lg:block lg:pr-[clamp(1.6rem,2.6vw,2.6rem)]">
+            <div className="sticky top-[clamp(5rem,7vw,6.5rem)]">
               <ReadingRailIsland
                 deptName={dept.name}
-                deptIcon={meta.icon}
-                accent={meta.color}
+                deptSlug={dept.slug}
                 headings={headings}
                 lessonIds={flatIds}
                 lessonPath={lessonPath}
@@ -453,44 +371,43 @@ export default async function LessonPage({
             </div>
           </aside>
 
-          {/* article */}
-          <article id={ARTICLE_ID} className="min-w-0">
-            <Reveal>
+          <article
+            id={ARTICLE_ID}
+            className="min-w-0 lg:border-l-2 lg:border-ink lg:pl-[clamp(1.8rem,3vw,3rem)]"
+          >
+            <div className="nb-prose">
               <Markdown content={content} />
-            </Reveal>
+            </div>
 
-            {/* key takeaways */}
+            {/* Key takeaways. `nb-note` is the system's callout, and this is
+                the archetypal one: the thing the student underlined twice at
+                the bottom of the page before closing the binder. */}
             {takeaways.length > 0 && (
-              <Reveal>
-                <section className="ac-card mt-10 p-6">
-                  <h2 className="flex items-center gap-2.5 font-display text-xl font-semibold">
-                    <span className="ac-badge flex h-9 w-9 items-center justify-center" style={accentStyle}>
-                      <Lightbulb className="h-5 w-5" aria-hidden />
-                    </span>
-                    Key takeaways
-                  </h2>
-                  <ul className="mt-4 space-y-3">
-                    {takeaways.map((t, i) => (
-                      <li key={i} className="flex gap-3 text-foreground/85">
-                        <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden />
-                        <span className="leading-relaxed">{t}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </section>
-              </Reveal>
+              <section aria-labelledby="takeaways-heading" className="nb-note mt-[clamp(2rem,4vw,3rem)]">
+                <p className="nb-slug">the part worth keeping</p>
+                <h2 id="takeaways-heading" className="mt-1.5 text-[clamp(1.15rem,1rem+0.6vw,1.45rem)]">
+                  Key takeaways
+                </h2>
+                <ul className="mt-3 grid gap-2.5">
+                  {takeaways.map((t, i) => (
+                    <li key={i} className="relative pl-5 leading-relaxed">
+                      <span aria-hidden="true" className="absolute left-0 font-bold text-blue">
+                        -
+                      </span>
+                      {t}
+                    </li>
+                  ))}
+                </ul>
+              </section>
             )}
 
             {/* Continuation FIRST. Measured: the old page put the only "next
                 lesson" link 2,305px below the end of the prose, behind a
                 1,102px quiz, and offered four outbound target="_blank" links
-                ("Go deeper") before it. The reader met the exit before the
-                continuation. This block is server-rendered and unanimated so
-                it is visible the instant the text ends. */}
+                before it. The reader met the exit before the continuation. */}
             <LessonNextStep
               deptName={dept.name}
               deptHref={`/guides/${dept.slug}`}
-              deptIcon={meta.icon}
               moduleTitle={mod.title}
               moduleHref={moduleHref}
               moduleLessonCount={mod.lessons.length}
@@ -501,25 +418,14 @@ export default async function LessonPage({
               relatedLabel={relatedLabel}
               startHref={startHref}
               showStart={idx > 0}
-              accentColor={meta.color}
-              ink={ink}
             />
 
             {/* Provenance: the lesson's sources, its last logged correction,
-                and the report-an-error control — one block instead of a bare
-                "Go deeper" link list. The links are the same `resources` rows;
-                what changed is that the page now says where the lesson came
-                from and how to challenge it, which is the actual answer to
-                "this is AI slop". Deliberately not wrapped in <Reveal>: this is
-                the credibility block, so it must be in the first paint and in
-                the HTML a crawler sees, not faded in on scroll. */}
-            <Provenance
-              kind="lesson"
-              path={lessonPath}
-              sources={resources}
-              accent={meta.color}
-              ink={ink}
-            >
+                and the report-an-error control. The links are the same
+                `resources` rows; what changed is that the page now says where
+                the lesson came from and how to challenge it, which is the
+                actual answer to "this is AI slop". */}
+            <Provenance kind="lesson" path={lessonPath} sources={resources}>
               <SuggestEditIsland
                 contentType="lesson"
                 targetId={les.id}
@@ -530,9 +436,9 @@ export default async function LessonPage({
               />
             </Provenance>
 
-            {/* Into the articles. Lessons are the biggest surface on the
-                site and were sending zero internal links to the pages that
-                actually pull search traffic. */}
+            {/* Into the articles. Lessons are the biggest surface on the site
+                and were sending zero internal links to the pages that actually
+                pull search traffic. */}
             <LessonReadNext lessonId={les.id} />
 
             {/* completion / quiz */}
@@ -553,130 +459,104 @@ export default async function LessonPage({
               lessonIds={flatIds}
             />
 
-            {/* mobile: reading progress + dept progress card */}
-            <MobileProgressCard
-              deptName={dept.name}
-              deptGradient={deptGradient}
-              lessonIds={flatIds}
-            />
+            {/* mobile: what the margin rail carries on a desktop */}
+            <MobileProgressCard deptName={dept.name} lessonIds={flatIds} />
 
-            {/* prev / next */}
-            <RevealGroup className="mt-10 grid gap-4 sm:grid-cols-2">
+            {/* ---- the running footer ----
+                A printed page ends with what came before it and what comes
+                after, set in the footer margin. No cards: two cards here would
+                compete with the completion control above, which is the only
+                thing on this page that records that the lesson was read. */}
+            <nav
+              aria-label="Lesson pagination"
+              className="nb-rule mt-[clamp(2rem,4vw,3rem)] grid gap-y-0 pt-5 sm:grid-cols-2 sm:gap-x-8"
+            >
               {prev ? (
-                <RevealItem>
-                  <Hover className="h-full" lift={-3}>
-                    <Link
-                      href={`/guides/${dept.slug}/${prev.moduleSlug}/${prev.slug}`}
-                      className="ac-card group flex h-full items-center gap-3 p-5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                    >
-                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground transition-colors group-hover:border-primary/50 group-hover:text-primary">
-                        <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" aria-hidden />
-                      </span>
-                      <span className="min-w-0">
-                        <small className="ac-eyebrow block">Previous</small>
-                        <span className="line-clamp-1 font-display font-semibold group-hover:text-primary">
-                          {prev.title}
-                        </span>
-                      </span>
-                    </Link>
-                  </Hover>
-                </RevealItem>
+                <Link
+                  href={`/guides/${dept.slug}/${prev.moduleSlug}/${prev.slug}`}
+                  className="group flex min-w-0 flex-col justify-start py-2 no-underline"
+                  rel="prev"
+                >
+                  <span className="nb-slug">&larr; the lesson before</span>
+                  <span className="mt-1 font-bold leading-snug group-hover:text-blue">
+                    {prev.title}
+                  </span>
+                </Link>
               ) : (
-                <span />
+                <p className="flex min-w-0 flex-col justify-start py-2">
+                  <span className="nb-slug">&larr; the start of the guide</span>
+                  <span className="mt-1 font-bold leading-snug text-graphite">
+                    This is the first lesson in {dept.name}
+                  </span>
+                </p>
               )}
-              {next ? (
-                <RevealItem>
-                  <Hover className="h-full" lift={-3}>
-                    <Link
-                      href={`/guides/${dept.slug}/${next.moduleSlug}/${next.slug}`}
-                      className="ac-card group flex h-full flex-row-reverse items-center gap-3 p-5 text-right focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                    >
-                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground transition-colors group-hover:border-primary/50 group-hover:text-primary">
-                        <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" aria-hidden />
-                      </span>
-                      <span className="min-w-0">
-                        <small className="ac-eyebrow block">Next up</small>
-                        <span className="line-clamp-1 font-display font-semibold group-hover:text-primary">
-                          {next.title}
-                        </span>
-                      </span>
-                    </Link>
-                  </Hover>
-                </RevealItem>
-              ) : (
-                <RevealItem>
-                  <Hover className="h-full" lift={-3}>
-                    <Link
-                      href={`/guides/${dept.slug}`}
-                      className="ac-card group flex h-full flex-row-reverse items-center gap-3 p-5 text-right focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                    >
-                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground transition-colors group-hover:border-primary/50 group-hover:text-primary">
-                        <Trophy className="h-4 w-4" aria-hidden />
-                      </span>
-                      <span className="min-w-0">
-                        <small className="ac-eyebrow block">Finish</small>
-                        <span className="line-clamp-1 font-display font-semibold group-hover:text-primary">
-                          Back to {dept.name}
-                        </span>
-                      </span>
-                    </Link>
-                  </Hover>
-                </RevealItem>
-              )}
-            </RevealGroup>
 
-            {/* full department contents — collapsible, all breakpoints */}
-            <Reveal>
-              <details className="ac-card mt-10 overflow-hidden">
-                <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2.5 p-5 font-display text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
-                  <span className="ac-badge flex h-9 w-9 items-center justify-center" style={accentStyle}>
-                    <ListTree className="h-4 w-4" aria-hidden />
-                  </span>
-                  <span className="min-w-0 flex-1 truncate">
-                    All {flat.length} lessons in {dept.name}
-                  </span>
-                  <ChevronRight
-                    className="h-4 w-4 shrink-0 text-muted-foreground transition-transform [details[open]_&]:rotate-90"
-                    aria-hidden
-                  />
-                </summary>
-                <div className="space-y-4 border-t border-border p-4 sm:columns-2 sm:gap-6 sm:[&>div]:break-inside-avoid">
-                  {dept.modules.map((m, mi) => (
-                    <div key={m.id} className="mb-4">
-                      <div className="ac-eyebrow px-1">
-                        {String(mi + 1).padStart(2, "0")} &middot; {m.title}
-                      </div>
-                      <ul className="mt-1 space-y-0.5">
-                        {m.lessons.map((l) => {
-                          const active = l.id === les.id;
-                          return (
-                            <li key={l.id}>
-                              <Link
-                                href={`/guides/${dept.slug}/${m.slug}/${l.slug}`}
-                                aria-current={active ? "page" : undefined}
-                                className={cn(
-                                  "flex min-h-11 items-center gap-2 rounded-xl px-2.5 py-2 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
-                                  active
-                                    ? "bg-primary/10 font-medium text-primary"
-                                    : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
-                                )}
-                              >
-                                <LessonStatusDot lessonId={l.id} />
-                                <span className="line-clamp-1">{l.title}</span>
-                              </Link>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    </div>
-                  ))}
-                </div>
-              </details>
-            </Reveal>
+              <Link
+                href={next ? `/guides/${dept.slug}/${next.moduleSlug}/${next.slug}` : `/guides/${dept.slug}`}
+                className="group nb-hair flex min-w-0 flex-col justify-start py-2 no-underline sm:border-t-0 sm:text-right"
+                {...(next ? { rel: "next" } : {})}
+              >
+                <span className="nb-slug">
+                  {next ? "the lesson after →" : "back to the department →"}
+                </span>
+                <span className="mt-1 font-bold leading-snug group-hover:text-blue">
+                  {next ? next.title : dept.name}
+                </span>
+              </Link>
+            </nav>
+
+            {/* ---- the whole department, folded away ----
+                Every lesson in the guide, closed by default because a reader
+                mid-lesson did not ask for a 394-line index. Open, it is the
+                contents page: modules ruled off, lessons under them, the one
+                you are on marked in ink and not only in colour. */}
+            <details className="nb-box mt-[clamp(2rem,4vw,3rem)] overflow-hidden">
+              <summary className="nb-slug flex min-h-[3.4rem] cursor-pointer list-none items-center justify-between gap-3 px-[clamp(1rem,2.2vw,1.5rem)] py-3 text-ink">
+                <span className="min-w-0 truncate font-bold">
+                  All {flat.length} lessons in {dept.name}
+                </span>
+                {/* Two words, not a glyph: the control says what it does, and
+                    it still says it in a screen reader and in greyscale. */}
+                <span className="shrink-0 text-blue">
+                  <span className="[details[open]_&]:hidden">open</span>
+                  <span className="hidden [details[open]_&]:inline">close</span>
+                </span>
+              </summary>
+
+              <div className="nb-rule px-[clamp(1rem,2.2vw,1.5rem)] pb-[clamp(1rem,2.2vw,1.5rem)] pt-1 sm:columns-2 sm:gap-x-[clamp(1.4rem,3vw,2.6rem)]">
+                {dept.modules.map((m, mi) => (
+                  <div key={m.id} className="mt-4 break-inside-avoid">
+                    <p className="nb-slug border-b border-dashed border-rule pb-1.5">
+                      {String(mi + 1).padStart(2, "0")} / {m.slug}
+                    </p>
+                    <ul className="mt-1">
+                      {m.lessons.map((l) => {
+                        const active = l.id === les.id;
+                        return (
+                          <li key={l.id}>
+                            <Link
+                              href={`/guides/${dept.slug}/${m.slug}/${l.slug}`}
+                              aria-current={active ? "page" : undefined}
+                              className={
+                                active
+                                  ? "flex min-h-11 items-center gap-2 border-l-[3px] border-blue bg-[rgba(27,54,200,0.07)] py-1.5 pl-2.5 text-[0.92rem] font-bold leading-snug no-underline"
+                                  : "flex min-h-11 items-center gap-2 border-l-[3px] border-transparent py-1.5 pl-2.5 text-[0.92rem] leading-snug text-graphite no-underline hover:border-rule hover:text-ink"
+                              }
+                            >
+                              <LessonStatusDot lessonId={l.id} />
+                              <span className="min-w-0 flex-1">{l.title}</span>
+                            </Link>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            </details>
           </article>
         </div>
       </div>
-    </div>
     </MyProgressProvider>
   );
 }

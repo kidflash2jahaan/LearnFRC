@@ -1,9 +1,3 @@
-"use client";
-
-import * as React from "react";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { Lock } from "lucide-react";
-import { Icon } from "@/lib/icon-map";
 import { cn } from "@/lib/utils";
 import type { BadgeProgress } from "@/lib/streaks";
 
@@ -20,24 +14,40 @@ export type AchievementView = {
    * src/lib/streaks.ts) — nothing new is stored, and a caller that doesn't
    * supply it gets exactly the previous behaviour.
    *
-   * Why it matters: a zero-progress learner currently scrolls past eleven
-   * identical padlocks, which reads as a wall rather than a ladder. "3 / 5"
+   * Why it matters: a zero-progress learner otherwise scrolls past eleven
+   * identical locked cards, which reads as a wall rather than a ladder. "3 / 5"
    * on the nearest badge turns the same grid into something aimable.
    */
   progress?: BadgeProgress | null;
 };
 
+/**
+ * One badge, as a card in the badge drawer.
+ *
+ * THE TOOLTIP IS GONE, and that is the point of the rebuild. The old card was a
+ * Client Component whose only state was a hover popover holding the badge's
+ * description, plus a pulsing ring on every earned badge. A page with eleven of
+ * these ran eleven hover listeners and up to eleven infinite animations to hide
+ * one short sentence behind a gesture that does not exist on a phone. The
+ * binder prints the sentence. No hover, no popover, no client bundle.
+ *
+ * STATE IS MARKED TWICE, never by colour alone: an earned badge has a solid 2px
+ * ink edge and prints the date it was earned; a locked one has a dashed rule
+ * edge and prints either the distance left or the word "locked". Both survive a
+ * photocopy and a colour-blind reader.
+ *
+ * `icon` stays on the type because the database column and the award logic use
+ * it, but nothing is drawn from it: the binder identifies a badge by its name.
+ */
 export function AchievementBadge({
   achievement,
 }: {
   achievement: AchievementView;
 }) {
-  const reduce = useReducedMotion();
-  const [open, setOpen] = React.useState(false);
-  const { earned, name, description, icon, earnedAt, progress } = achievement;
+  const { earned, name, description, earnedAt, progress } = achievement;
 
-  // Only meaningful while locked and actually started — an untouched badge
-  // shows nothing rather than a 0-width bar and a "0 / 25".
+  // Only meaningful while locked and actually started. An untouched badge
+  // shows nothing rather than a zero-width bar and a "0 / 25".
   const meter =
     !earned && progress && progress.target > 0 && progress.current > 0
       ? progress
@@ -46,6 +56,10 @@ export function AchievementBadge({
     ? Math.max(4, Math.min(100, Math.round((meter.current / meter.target) * 100)))
     : 0;
   const remaining = meter ? Math.max(0, meter.target - meter.current) : 0;
+  const unit =
+    meter && remaining === 1 && meter.unit.endsWith("s")
+      ? meter.unit.slice(0, -1)
+      : meter?.unit;
 
   const earnedLabel = earnedAt
     ? new Date(earnedAt).toLocaleDateString(undefined, {
@@ -56,134 +70,48 @@ export function AchievementBadge({
     : null;
 
   return (
-    <div
-      className="relative"
-      onMouseEnter={() => setOpen(true)}
-      onMouseLeave={() => setOpen(false)}
-      onFocus={() => setOpen(true)}
-      onBlur={() => setOpen(false)}
+    <article
+      className={cn(
+        "nb-box-sm flex h-full flex-col p-[clamp(0.85rem,1.9vw,1.15rem)]",
+        !earned && "border-dashed border-[var(--rule)]"
+      )}
     >
-      <motion.button
-        type="button"
-        tabIndex={0}
-        aria-label={`${name}${
-          earned
-            ? " — earned"
-            : meter
-              ? ` — ${meter.current} of ${meter.target} ${meter.unit}`
-              : " — locked"
-        }. ${description}`}
-        whileHover={reduce ? undefined : { y: -4, scale: 1.03 }}
-        whileTap={{ scale: 0.97 }}
-        transition={reduce ? { duration: 0 } : { type: "spring", stiffness: 320, damping: 20 }}
+      <p className="nb-slug">
+        {earned
+          ? earnedLabel
+            ? `earned ${earnedLabel}`
+            : "earned"
+          : meter
+            ? `${remaining} more ${unit}`
+            : "locked"}
+      </p>
+
+      <h3
         className={cn(
-          "group flex w-full cursor-pointer flex-col items-center gap-2 rounded-2xl border p-4 text-center transition-colors duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
-          earned
-            ? "border-primary/25 bg-card hover:border-primary/45 hover:shadow-[var(--shadow-lg)]"
-            : "border-dashed border-border bg-card/60 hover:border-border"
+          "mt-1.5 text-[0.98rem] leading-tight",
+          !earned && "text-graphite"
         )}
       >
-        <span
-          className={cn(
-            "relative flex h-14 w-14 items-center justify-center rounded-2xl transition-all duration-300",
-            earned
-              ? "text-primary-foreground shadow-[var(--shadow-md)]"
-              : "bg-muted text-muted-foreground"
-          )}
-          style={
-            earned
-              ? {
-                  backgroundImage:
-                    "linear-gradient(135deg, var(--color-primary), var(--color-accent))",
-                }
-              : undefined
-          }
-        >
-          <Icon name={icon} className="h-7 w-7" />
-          {earned && !reduce && (
-            <motion.span
-              aria-hidden
-              className="pointer-events-none absolute inset-0 rounded-2xl ring-2 ring-primary/40"
-              initial={{ opacity: 0.6, scale: 1 }}
-              animate={{ opacity: 0, scale: 1.45 }}
-              transition={{
-                duration: 1.8,
-                repeat: Infinity,
-                repeatDelay: 2.5,
-                ease: "easeOut",
-              }}
-            />
-          )}
-          {!earned && (
-            <span className="absolute -bottom-1 -right-1 grid h-5 w-5 place-items-center rounded-full border border-border bg-background text-muted-foreground">
-              <Lock className="h-3 w-3" />
-            </span>
-          )}
-        </span>
-        <span
-          className={cn(
-            "text-xs font-semibold leading-tight",
-            earned ? "text-foreground" : "text-muted-foreground"
-          )}
-        >
-          {name}
-        </span>
+        {name}
+      </h3>
 
-        {/* Locked-but-started: show the distance, not just the padlock. */}
-        {meter && (
-          <span className="w-full" aria-hidden>
-            <span className="block h-1 w-full overflow-hidden rounded-full bg-muted">
-              <span
-                className="block h-full rounded-full bg-[linear-gradient(90deg,var(--primary),var(--accent))]"
-                style={{ width: `${meterPct}%` }}
-              />
-            </span>
-            <span className="mt-1 block font-mono text-[10px] tabular-nums text-muted-foreground">
+      <p className="mt-1.5 text-[0.84rem] leading-snug text-graphite">
+        {description}
+      </p>
+
+      {meter && (
+        <div className="mt-auto pt-3">
+          <p className="nb-slug flex items-baseline justify-between gap-2">
+            <span>progress</span>
+            <span className="font-bold text-ink">
               {meter.current}/{meter.target}
             </span>
+          </p>
+          <span className="nb-meter mt-1.5 block">
+            <span className="nb-meter-bar" style={{ width: `${meterPct}%` }} />
           </span>
-        )}
-      </motion.button>
-
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            role="tooltip"
-            initial={{ opacity: 0, y: 6, scale: 0.96 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 6, scale: 0.96 }}
-            transition={{ duration: 0.16, ease: "easeOut" }}
-            className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 w-52 -translate-x-1/2 rounded-xl border border-primary/25 bg-popover/95 p-3 text-left shadow-[var(--shadow-lg)] backdrop-blur"
-          >
-            <p className="text-sm font-semibold">{name}</p>
-            <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
-              {description}
-            </p>
-            <p
-              className={cn(
-                "mt-1.5 font-mono text-[11px] font-medium",
-                earned ? "text-success" : "text-muted-foreground"
-              )}
-            >
-              {earned
-                ? earnedLabel
-                  ? `// earned ${earnedLabel}`
-                  : "// earned"
-                : meter
-                  ? `// ${remaining} more ${
-                      remaining === 1 && meter.unit.endsWith("s")
-                        ? meter.unit.slice(0, -1)
-                        : meter.unit
-                    } to go`
-                  : "// locked — keep learning"}
-            </p>
-            <span
-              aria-hidden
-              className="absolute left-1/2 top-full h-2 w-2 -translate-x-1/2 -translate-y-1/2 rotate-45 border-b border-r border-primary/25 bg-popover"
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
+        </div>
+      )}
+    </article>
   );
 }

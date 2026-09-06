@@ -1,37 +1,28 @@
-import type { CSSProperties } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { needsUsernameSetup } from "@/lib/onboarding-server";
-import {
-  Pencil,
-  ExternalLink,
-  Trophy,
-  BookOpenCheck,
-  Zap,
-  Lock,
-  Sparkles,
-  ArrowUpRight,
-  Award,
-  UserPlus,
-} from "lucide-react";
 import { getSession } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { getCompletedLessonIds, getReferralCount } from "@/lib/queries";
 import type { Achievement } from "@/lib/types";
-import { AnimatedCounter } from "@/components/animated-counter";
-import {
-  Rise,
-  RiseGroup,
-  RiseItem,
-  Reveal,
-  RevealGroup,
-  RevealItem,
-  Hover,
-  Glow,
-} from "@/components/motion/primitives";
-import { Icon } from "@/lib/icon-map";
-import { cn } from "@/lib/utils";
 import { IdentityCard } from "./_identity-card";
+
+/**
+ * Your own profile, rebuilt as the record page.
+ *
+ * The question this page answers is "what does this account have on file, and
+ * what can I change", so it is built out of the two things a binder uses for
+ * exactly that: a spec sheet and a checklist. The member card carries the
+ * identity, the table carries every figure once, and the badges are a checked
+ * list rather than a wall of tiles, because a list is what you read down when
+ * you want to know what is left.
+ *
+ * It deliberately shares no composition with /dashboard. The dashboard is the
+ * page you work from; this is the page you look yourself up on.
+ *
+ * Behaviour is unchanged: same auth gate, same handle gate, same three queries,
+ * same referral count, same metadata.
+ */
 
 export const metadata = {
   title: "Your profile · LearnFRC",
@@ -48,7 +39,7 @@ const ROLE_LABEL: Record<string, string> = {
 };
 
 function formatJoined(iso: string | null): string {
-  if (!iso) return "—";
+  if (!iso) return "not recorded";
   return new Date(iso).toLocaleDateString("en-US", {
     month: "long",
     year: "numeric",
@@ -98,45 +89,72 @@ export default async function ProfilePage() {
   // How many teammates this member has recruited (shown only when > 0).
   const referralCount = await getReferralCount(user.id);
 
-  // Level ring geometry (r=34 → circumference ≈ 213.6).
-  const RING_C = 213.6;
-  const ringOffset = RING_C - (intoLevel / 100) * RING_C;
-
-  const stats: { icon: typeof Zap; label: string; value: number; color: string }[] = [
-    { icon: Zap, label: "Total XP", value: xp, color: "#2560e6" },
-    { icon: Trophy, label: "Level", value: level, color: "#1aa9d6" },
-    { icon: BookOpenCheck, label: "Lessons done", value: lessonsCompleted, color: "#12b565" },
-    { icon: Award, label: "Badges earned", value: earnedCount, color: "#e0a02a" },
+  // Every figure on this page, printed once. A table, because that is what a
+  // spec sheet is, and because it lets the third column say what a bare number
+  // never can: how the figure was arrived at.
+  const sheet: { label: string; value: string; note: React.ReactNode }[] = [
+    {
+      label: "total xp",
+      value: xp.toLocaleString(),
+      note: "10 XP a lesson, more on a streak",
+    },
+    {
+      label: "level",
+      value: level.toLocaleString(),
+      note: `${toNext} XP to level ${level + 1}`,
+    },
+    {
+      label: "lessons cleared",
+      value: lessonsCompleted.toLocaleString(),
+      note: (
+        <Link href="/guides" className="nb-link">
+          the catalogue
+        </Link>
+      ),
+    },
+    {
+      label: "badges earned",
+      value: `${earnedCount} / ${achievements.length}`,
+      note: "the checklist below",
+    },
+    { label: "role", value: roleLabel, note: "set in settings" },
+    {
+      label: "team",
+      value: profile?.team_number != null ? `#${profile.team_number}` : "not set",
+      note:
+        profile?.team_number != null ? (
+          "printed beside your name on the leaderboard"
+        ) : (
+          <Link href="/settings" className="nb-link">
+            add it in settings
+          </Link>
+        ),
+    },
+    {
+      label: "member since",
+      value: formatJoined(profile?.created_at ?? null),
+      note: "the day the account was made",
+    },
+    {
+      label: "handle",
+      value: `@${handle}`,
+      note: profile?.username ? (
+        <Link href={`/u/${profile.username}`} className="nb-link">
+          learnfrc.com/u/{profile.username}
+        </Link>
+      ) : (
+        "not set"
+      ),
+    },
   ];
 
   return (
-    <div className="relative overflow-x-clip">
-      <Glow
-        blobs={[
-          { size: "560px", pos: { left: "-160px", top: "-200px" }, color: "#8bbcff", opacity: 0.6 },
-          { size: "520px", pos: { right: "-180px", top: "-110px" }, color: "#6ff0ea", opacity: 0.5, delay: 2 },
-          { size: "480px", pos: { left: "34%", top: "540px" }, color: "#c8b6ff", opacity: 0.4, delay: 4 },
-        ]}
-      />
+    <>
+      {/* ===================== THE CARD ===================== */}
+      <section className="nb-wrap pb-[clamp(2rem,4vw,3rem)] pt-[clamp(2.2rem,5vw,4rem)]">
+        <p className="nb-marker">your record</p>
 
-      <div className="mx-auto max-w-6xl px-4 pb-24 pt-28 sm:px-6 lg:px-8">
-        <Rise>
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="ac-chip inline-flex items-center gap-2">
-              <Sparkles className="h-3.5 w-3.5 text-primary" aria-hidden />
-              <span className="ac-eyebrow">Your pit crew profile</span>
-            </span>
-            {referralCount > 0 && (
-              <span className="ac-chip inline-flex items-center gap-1.5 text-sm font-semibold">
-                <UserPlus className="h-3.5 w-3.5 text-primary" aria-hidden />
-                {referralCount} {referralCount === 1 ? "teammate" : "teammates"} recruited
-              </span>
-            )}
-          </div>
-        </Rise>
-
-        {/* ===================== HERO: ID CARD + SEASON PROGRESS ===================== */}
-        <div className="mt-5 grid items-start gap-6 lg:grid-cols-[1.15fr_0.85fr]">
+        <div className="grid items-start gap-[clamp(1.4rem,3.4vw,2.6rem)] min-[1024px]:grid-cols-[minmax(0,1.4fr)_minmax(0,0.78fr)]">
           <IdentityCard
             displayName={displayName}
             handle={handle}
@@ -151,252 +169,159 @@ export default async function ProfilePage() {
             lessonsCompleted={lessonsCompleted}
           />
 
-          <RiseGroup className="flex flex-col gap-6">
-            {/* Level progress ring */}
-            <RiseItem>
-              <div className="ac-card p-6">
-                <p className="ac-eyebrow">Season progress</p>
-                <div className="mt-4 flex items-center gap-5">
-                  <div className="relative shrink-0">
-                    <svg width="96" height="96" viewBox="0 0 82 82" aria-hidden>
-                      <circle
-                        cx="41"
-                        cy="41"
-                        r="34"
-                        fill="none"
-                        stroke="rgba(120,145,190,.24)"
-                        strokeWidth="9"
-                      />
-                      <circle
-                        cx="41"
-                        cy="41"
-                        r="34"
-                        fill="none"
-                        stroke="url(#ac-level-ring)"
-                        strokeWidth="9"
-                        strokeLinecap="round"
-                        strokeDasharray={RING_C}
-                        strokeDashoffset={ringOffset}
-                        transform="rotate(-90 41 41)"
-                        style={{ transition: "stroke-dashoffset 0.7s ease" }}
-                      />
-                      <defs>
-                        <linearGradient id="ac-level-ring" x1="0" y1="0" x2="1" y2="1">
-                          <stop offset="0" stopColor="#2560e6" />
-                          <stop offset="1" stopColor="#1aa9d6" />
-                        </linearGradient>
-                      </defs>
-                    </svg>
-                    <span className="absolute inset-0 flex flex-col items-center justify-center">
-                      <span className="font-display text-xl font-extrabold leading-none text-foreground">
-                        {level}
-                      </span>
-                      <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                        Level
-                      </span>
+          {/* The two things that are actually editable, and the one number that
+              belongs to nobody else on the page. */}
+          <nav
+            aria-labelledby="profile-actions-heading"
+            className="nb-box p-[clamp(1.1rem,2.4vw,1.6rem)]"
+          >
+            <h2 id="profile-actions-heading" className="nb-slug">
+              what you can change
+            </h2>
+
+            <ul className="mt-3">
+              <li className="border-t-2 border-ink pt-3">
+                <Link href="/settings" className="group block">
+                  <span className="block text-[1.02rem] font-bold leading-tight group-hover:underline group-hover:decoration-blue group-hover:decoration-2 group-hover:underline-offset-[5px]">
+                    Edit your profile
+                  </span>
+                  <span className="mt-1 block text-[0.9rem] leading-snug text-graphite">
+                    Name, team number, role, bio and avatar.
+                  </span>
+                </Link>
+              </li>
+
+              {profile?.username && (
+                <li className="mt-4 border-t-2 border-ink pt-3">
+                  <Link href={`/u/${profile.username}`} className="group block">
+                    <span className="block text-[1.02rem] font-bold leading-tight group-hover:underline group-hover:decoration-blue group-hover:decoration-2 group-hover:underline-offset-[5px]">
+                      Your public page
                     </span>
-                  </div>
-                  <div className="min-w-0">
-                    <div
-                      className="font-display text-2xl font-bold tabular-nums text-foreground"
-                      aria-label={`${xp} total XP`}
-                    >
-                      <AnimatedCounter value={xp} suffix=" XP" />
-                    </div>
-                    <p className="mt-1 text-sm leading-snug text-muted-foreground">
-                      <span className="font-semibold text-foreground">{toNext} XP</span> to Level{" "}
-                      {level + 1}
-                    </p>
-                    <div
-                      className="mt-2 h-2 overflow-hidden rounded-full bg-[rgba(120,145,190,.24)]"
-                      role="progressbar"
-                      aria-valuenow={intoLevel}
-                      aria-valuemin={0}
-                      aria-valuemax={100}
-                      aria-label={`${intoLevel} of 100 XP toward level ${level + 1}`}
-                    >
-                      <span
-                        className="block h-full rounded-full transition-[width] duration-700 ease-out"
-                        style={{
-                          width: `${intoLevel}%`,
-                          background: "linear-gradient(90deg, #2560e6, #1aa9d6)",
-                        }}
-                      />
-                    </div>
-                    <p className="mt-1 text-xs tabular-nums text-muted-foreground">
-                      {intoLevel} / 100 this level
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </RiseItem>
+                    <span className="mt-1 block text-[0.9rem] leading-snug text-graphite">
+                      What a teammate sees at the link you share. Your real name
+                      is never on it.
+                    </span>
+                  </Link>
+                </li>
+              )}
+            </ul>
 
-            {/* Quick actions */}
-            <RiseItem>
-              <div className="ac-card p-5">
-                <p className="ac-eyebrow">Quick actions</p>
-                <div className="mt-3 flex flex-col gap-2.5">
-                  <Hover lift={-2} scale={1.01}>
-                    <Link
-                      href="/settings"
-                      className="group flex min-h-[44px] items-center gap-3 rounded-2xl border border-white/70 bg-white/60 p-3 transition-colors hover:bg-white/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                    >
-                      <span
-                        className="ac-badge flex h-10 w-10 shrink-0 items-center justify-center"
-                        style={{ "--a": "#2560e6" } as CSSProperties}
-                      >
-                        <Pencil aria-hidden className="h-[18px] w-[18px]" />
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block font-semibold leading-tight text-foreground">
-                          Edit profile
-                        </span>
-                        <span className="block text-sm text-muted-foreground">
-                          Name, team, bio &amp; more
-                        </span>
-                      </span>
-                      <ArrowUpRight
-                        aria-hidden
-                        className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
-                      />
-                    </Link>
-                  </Hover>
+            {referralCount > 0 && (
+              <p className="nb-hair mt-5 pt-4">
+                <span className="nb-count">
+                  {referralCount}
+                  <small>
+                    {referralCount === 1
+                      ? "teammate you brought in"
+                      : "teammates you brought in"}
+                  </small>
+                </span>
+              </p>
+            )}
+          </nav>
+        </div>
+      </section>
 
-                  {profile?.username && (
-                    <Hover lift={-2} scale={1.01}>
-                      <Link
-                        href={`/u/${profile.username}`}
-                        className="group flex min-h-[44px] items-center gap-3 rounded-2xl border border-white/70 bg-white/60 p-3 transition-colors hover:bg-white/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                      >
-                        <span
-                          className="ac-badge flex h-10 w-10 shrink-0 items-center justify-center"
-                          style={{ "--a": "#1aa9d6" } as CSSProperties}
-                        >
-                          <ExternalLink aria-hidden className="h-[18px] w-[18px]" />
-                        </span>
-                        <span className="min-w-0 flex-1">
-                          <span className="block font-semibold leading-tight text-foreground">
-                            View public profile
-                          </span>
-                          <span className="block text-sm text-muted-foreground">
-                            How your team sees you
-                          </span>
-                        </span>
-                        <ArrowUpRight
-                          aria-hidden
-                          className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
-                        />
-                      </Link>
-                    </Hover>
-                  )}
-                </div>
-              </div>
-            </RiseItem>
-          </RiseGroup>
+      {/* ===================== THE SPEC SHEET ===================== */}
+      <section className="nb-wrap border-t-2 border-ink py-[clamp(2.2rem,4.5vw,3.6rem)]">
+        <h2 className="text-[clamp(1.5rem,1.1rem+1.4vw,2.3rem)]">
+          Everything on file
+        </h2>
+        <p className="nb-sub mt-3">
+          Every figure this account holds, printed once. Nothing here is shared
+          with anyone unless you send them your handle.
+        </p>
+
+        {/* Wrapped, because a table is the one thing on this site that can be
+            wider than the page it is on. */}
+        <div className="nb-scroll mt-[clamp(1.2rem,2.6vw,1.8rem)]">
+          <table className="nb-table min-w-[34rem]">
+            <thead>
+              <tr>
+                <th scope="col">figure</th>
+                <th scope="col">value</th>
+                <th scope="col">where it comes from</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sheet.map((r) => (
+                <tr key={r.label}>
+                  <th scope="row" className="font-normal">
+                    {r.label}
+                  </th>
+                  <td className="font-mono font-bold">{r.value}</td>
+                  <td className="text-[0.94rem] text-graphite">{r.note}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {/* ===================== THE CHECKLIST =====================
+          Badges as a list you read down, not a wall you scan. State is marked
+          twice on every line: the mono box is ticked or empty AND the line says
+          which it is, so it survives a photocopy. */}
+      <section className="nb-wrap border-t-2 border-ink py-[clamp(2.2rem,4.5vw,3.6rem)]">
+        <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-3">
+          <div>
+            <h2 className="text-[clamp(1.5rem,1.1rem+1.4vw,2.3rem)]">Badges</h2>
+            <p className="nb-sub mt-3">
+              {earnedCount > 0
+                ? `${earnedCount} of ${achievements.length} ticked off.`
+                : "None ticked off yet. Every one of them comes out of lessons you were going to read anyway."}
+            </p>
+          </div>
+          <p className="nb-count shrink-0">
+            {earnedCount}
+            <small>of {achievements.length}</small>
+          </p>
         </div>
 
-        {/* ===================== STAT SHELF ===================== */}
-        <RevealGroup className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
-          {stats.map((s) => (
-            <RevealItem key={s.label}>
-              <Hover className="h-full" lift={-4}>
-                <div className="ac-tile h-full p-5" style={{ "--a": s.color } as CSSProperties}>
-                  <span
-                    className="ac-badge inline-flex h-10 w-10 items-center justify-center"
-                    style={{ "--a": s.color } as CSSProperties}
-                  >
-                    <s.icon aria-hidden className="h-5 w-5" />
-                  </span>
-                  <div className="mt-3 font-display text-3xl font-bold tabular-nums tracking-tight text-foreground">
-                    <AnimatedCounter value={s.value} />
-                  </div>
-                  <div className="mt-0.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    {s.label}
-                  </div>
-                </div>
-              </Hover>
-            </RevealItem>
-          ))}
-        </RevealGroup>
-
-        {/* ===================== ACHIEVEMENTS ===================== */}
-        <Reveal className="mt-14">
-          <div className="flex flex-wrap items-end justify-between gap-4">
-            <div>
-              <p className="ac-eyebrow">Every badge, earned in the pit</p>
-              <h2 className="mt-2 font-display text-2xl font-bold tracking-tight">
-                Achievements
-              </h2>
-            </div>
-            <span
-              className="ac-chip shrink-0 text-xs tabular-nums"
-              aria-label={`${earnedCount} of ${achievements.length} earned`}
-            >
-              <AnimatedCounter value={earnedCount} /> / {achievements.length} earned
-            </span>
-          </div>
-        </Reveal>
-
         {achievements.length === 0 ? (
-          <Reveal delay={0.06} className="mt-5">
-            <div className="ac-card p-10 text-center">
-              <span
-                className="ac-badge mx-auto mb-3 flex h-12 w-12 items-center justify-center"
-                style={{ "--a": "#2560e6" } as CSSProperties}
-              >
-                <Trophy aria-hidden className="h-6 w-6" />
-              </span>
-              <p className="text-base text-foreground/70">
-                No achievements available yet — check back after the next build season kicks off.
-              </p>
-            </div>
-          </Reveal>
+          <p className="nb-sub mt-[clamp(1.2rem,2.6vw,1.8rem)]">
+            The badge list is empty right now. It fills back in when the next
+            season's set is published.
+          </p>
         ) : (
-          <RevealGroup className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <ul className="nb-list mt-[clamp(1.2rem,2.6vw,1.8rem)]">
             {achievements.map((a) => (
-              <RevealItem key={a.id}>
-                <Hover className="h-full" lift={a.earned ? -4 : 0} scale={a.earned ? 1.015 : 1}>
-                  <div className={cn("ac-card h-full p-5", !a.earned && "opacity-70")}>
-                    <div className="flex items-start gap-3">
-                      <span
-                        className={cn(
-                          "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl",
-                          a.earned
-                            ? "ac-badge"
-                            : "border border-dashed border-border bg-muted text-muted-foreground"
-                        )}
-                        style={a.earned ? ({ "--a": "#2560e6" } as CSSProperties) : undefined}
-                      >
-                        {a.earned ? (
-                          <Icon name={a.icon} className="h-5 w-5" />
-                        ) : (
-                          <Lock aria-hidden className="h-4 w-4" />
-                        )}
-                      </span>
-                      <div className="min-w-0">
-                        <div className="font-semibold leading-tight text-foreground">
-                          {a.name}
-                        </div>
-                        <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                          {a.description}
-                        </p>
-                      </div>
-                    </div>
-                    {a.earned && (
-                      <div className="mt-3.5">
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
-                          <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-primary" />
-                          Earned
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </Hover>
-              </RevealItem>
+              <li
+                key={a.id}
+                className="grid items-baseline gap-x-[clamp(1rem,3vw,2.2rem)] gap-y-1.5 border-b border-dashed border-rule py-[clamp(0.85rem,1.9vw,1.25rem)] min-[720px]:grid-cols-[minmax(0,13rem)_minmax(0,1fr)]"
+              >
+                <p className="nb-slug">
+                  <span aria-hidden="true">{a.earned ? "[x] " : "[ ] "}</span>
+                  {a.earned
+                    ? a.earnedAt
+                      ? `earned ${new Date(a.earnedAt).toLocaleDateString(undefined, {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })}`
+                      : "earned"
+                    : "not yet"}
+                </p>
+
+                <div className="min-w-0">
+                  <h3
+                    className={
+                      a.earned
+                        ? "text-[1.02rem] leading-tight"
+                        : "text-[1.02rem] leading-tight text-graphite"
+                    }
+                  >
+                    {a.name}
+                  </h3>
+                  <p className="mt-1 text-[0.9rem] leading-snug text-graphite">
+                    {a.description}
+                  </p>
+                </div>
+              </li>
             ))}
-          </RevealGroup>
+          </ul>
         )}
-      </div>
-    </div>
+      </section>
+    </>
   );
 }

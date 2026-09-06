@@ -1,226 +1,188 @@
 import { Skeleton } from "@/components/ui/skeleton";
-import { cn } from "@/lib/utils";
 
 /**
  * Loading UI for /leaderboard.
  *
- * Geometry is copied from page.tsx, not approximated: the hero is the same
- * `max-w-7xl` two-column grid with the same padding, the board sits in the same
- * `max-w-5xl` column, and the tab control / podium / ranked rows reuse the exact
- * container classes from leaderboard-tabs.tsx and podium.tsx. A skeleton that
- * doesn't line up with the real page is worse than none — it turns the content
- * swap into a visible jump.
+ * Geometry is copied from page.tsx rather than approximated: the same
+ * `nb-wrap` masthead grid with the same clamped padding, the same full-bleed
+ * `nb-slab` band, and the same board column. A skeleton that does not line up
+ * with the real page is worse than none, because it turns the content swap into
+ * a visible jump.
  *
- * DELIBERATELY NOT DRAWN: the referral InviteCard that sits at the top of the
- * board column. It renders only for signed-in users with a username, and the
- * fallback cannot know who is asking. Drawing it would invent a ~180px card for
- * every signed-out visitor; omitting it means signed-in visitors see the board
- * header settle downward by that much, below the fold on a laptop. Omission is
- * the smaller error.
+ * DELIBERATELY NOT DRAWN: the referral InviteCard above the board header. It
+ * renders only for a signed-in member with a username, and a fallback cannot
+ * know who is asking. Drawing it would invent a card for every signed-out
+ * visitor; omitting it means a signed-in one sees the board header settle
+ * downward. Omission is the smaller error.
  *
- * Also stops after six ranked rows (the real board carries up to 47) and before
- * the closing CTA. Content growing in below the skeleton is not a jump; only
- * skeleton blocks that land in the wrong place are.
+ * It also stops after six table rows, where the real board carries up to 47.
+ * Content growing in below a skeleton is not a jump.
  */
 export default function LeaderboardLoading() {
   return (
-    <div className="relative overflow-x-clip">
-      {/* ============================ HERO ============================ */}
-      <section className="mx-auto grid max-w-7xl items-center gap-12 px-4 pb-12 pt-28 sm:px-6 lg:grid-cols-2 lg:gap-10 lg:pb-16 lg:pt-32 lg:px-8">
+    <>
+      {/* ===================== MASTHEAD ===================== */}
+      <section className="nb-wrap grid items-start gap-[clamp(1.8rem,4vw,3.4rem)] pb-[clamp(2rem,4vw,3rem)] pt-[clamp(2.2rem,5vw,3.8rem)] lg:grid-cols-[minmax(0,1.35fr)_minmax(0,0.85fr)]">
         <div>
-          {/* ac-chip eyebrow */}
-          <Skeleton className="h-7 w-44 rounded-full" />
+          {/* nb-marker */}
+          <Skeleton className="h-4 w-40" />
 
-          {/* h1 — text-4xl / sm:text-5xl / lg:text-[3.4rem], leading-[1.02] */}
-          <div className="mt-5 space-y-1.5">
-            <Skeleton className="h-9 w-full sm:h-12 lg:h-14" />
-            <Skeleton className="h-9 w-11/12 sm:h-12 lg:h-14" />
-            <Skeleton className="h-9 w-3/5 sm:h-12 lg:h-14" />
+          {/* h1, two lines at desktop and three on a phone */}
+          <div className="mt-3 flex flex-col gap-2">
+            <Skeleton className="h-[2.4rem] w-full sm:h-[3.2rem] lg:h-[4rem]" />
+            <Skeleton className="h-[2.4rem] w-4/5 sm:h-[3.2rem] lg:h-[4rem]" />
+            <Skeleton className="h-[2.4rem] w-3/5 sm:hidden" />
           </div>
 
-          {/* lede — max-w-xl text-lg leading-relaxed */}
-          <div className="mt-5 max-w-xl space-y-3">
+          {/* nb-lede */}
+          <div className="mt-[clamp(1rem,2vw,1.5rem)] flex max-w-[46ch] flex-col gap-2.5">
             <Skeleton className="h-4 w-full" />
             <Skeleton className="h-4 w-full" />
             <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-4/5" />
+            <Skeleton className="h-4 w-3/4" />
           </div>
 
-          {/* ac-btn row (min-height 44px, 16px radius) */}
-          <div className="mt-7 flex flex-wrap items-center gap-3">
-            <Skeleton className="h-11 w-40 rounded-2xl" />
-            <Skeleton className="h-11 w-48 rounded-2xl" />
-          </div>
-
-          {/* stat tiles — two square tiles + the full-width weekly-reset tile */}
-          <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3">
-            <Skeleton className="h-[66px] rounded-[20px]" />
-            <Skeleton className="h-[66px] rounded-[20px]" />
-            <Skeleton className="col-span-2 h-11 rounded-[20px] sm:col-span-1 sm:h-[66px]" />
+          {/* the button row, at the kit's 44px floor */}
+          <div className="mt-[clamp(1.4rem,2.6vw,2rem)] flex flex-wrap gap-3">
+            <Skeleton className="h-11 w-44" />
+            <Skeleton className="h-11 w-48" />
           </div>
         </div>
 
-        {/* SIGNATURE: the champion panel — same glass shell, same inner rhythm */}
-        <div className="ac-glass w-full max-w-md p-6 sm:p-7 lg:justify-self-end">
-          <div className="flex items-center justify-between gap-3">
-            <Skeleton className="h-5 w-44" />
-            <Skeleton className="h-4 w-14" />
-          </div>
-
-          <div className="mt-5 flex items-center gap-4">
-            <Skeleton className="h-16 w-16 shrink-0 rounded-2xl sm:h-[4.5rem] sm:w-[4.5rem]" />
-            <div className="min-w-0 flex-1">
-              <Skeleton className="h-6 w-40 max-w-full" />
-              <Skeleton className="mt-1.5 h-4 w-32 max-w-full" />
-              <Skeleton className="mt-2 h-7 w-28" />
-            </div>
-          </div>
-
-          {/* the two runner-up XP meters */}
-          <div className="mt-5 space-y-3">
-            {Array.from({ length: 2 }).map((_, i) => (
-              <div key={i}>
-                <div className="mb-1 flex items-center justify-between gap-2">
-                  <Skeleton className="h-5 w-36 max-w-full" />
-                  <Skeleton className="h-4 w-16 shrink-0" />
+        {/* The taped standings slip: three ruled lines, the first one heavier. */}
+        <div className="nb-box nb-tilt-2 w-full max-w-[27rem] p-[clamp(1.2rem,2.6vw,1.8rem)] lg:justify-self-end">
+          <Skeleton className="h-4 w-44" />
+          {[0, 1, 2].map((i) => (
+            <div key={i} className={i === 0 ? "mt-4" : "nb-hair mt-3.5 pt-3.5"}>
+              <div className="flex items-center gap-3">
+                <Skeleton className="h-4 w-[1.6rem] shrink-0" />
+                <Skeleton
+                  className={
+                    i === 0
+                      ? "h-12 w-12 shrink-0 rounded-full"
+                      : "h-9 w-9 shrink-0 rounded-full"
+                  }
+                />
+                <div className="min-w-0 flex-1">
+                  <Skeleton className={i === 0 ? "h-5 w-36" : "h-4 w-28"} />
+                  <Skeleton className="mt-1.5 h-3.5 w-24" />
                 </div>
-                <Skeleton className="h-2 w-full rounded-full" />
+                <Skeleton className={i === 0 ? "h-6 w-24" : "h-5 w-16"} />
               </div>
-            ))}
-          </div>
-
-          <div className="mt-5 space-y-2">
-            <Skeleton className="h-3.5 w-full" />
-            <Skeleton className="h-3.5 w-2/3" />
+              <Skeleton className="mt-2 h-[0.45rem] w-full" />
+            </div>
+          ))}
+          <div className="nb-hair mt-4 pt-3.5">
+            <Skeleton className="h-3.5 w-52 max-w-full" />
           </div>
         </div>
       </section>
 
-      {/* =========================== BOARD =========================== */}
-      <div className="mx-auto max-w-5xl px-4 pb-24 sm:px-6 lg:px-8">
-        {/* "The full board" section header */}
-        <div className="mt-14 text-center">
-          <Skeleton className="mx-auto h-4 w-36" />
-          <Skeleton className="mx-auto mt-2 h-9 w-72 max-w-full" />
-          <div className="mt-1 space-y-2">
-            <Skeleton className="mx-auto h-4 w-full max-w-lg" />
-            <Skeleton className="mx-auto h-4 w-2/3 max-w-sm" />
+      {/* ===================== THE TOTALS =====================
+          A real nb-slab, so the one inverted band on the page is already the
+          right colour and the right height before its figures arrive. */}
+      <section className="nb-slab py-[clamp(2rem,4.2vw,3.2rem)]">
+        <div className="nb-wrap grid items-end gap-[clamp(1.3rem,3vw,2.6rem)] min-[900px]:grid-cols-[1.15fr_repeat(2,minmax(0,0.62fr))]">
+          <div>
+            <Skeleton className="h-8 w-4/5 opacity-30 sm:h-10" />
+            <div className="mt-3 flex max-w-[36ch] flex-col gap-2">
+              <Skeleton className="h-3.5 w-full opacity-30" />
+              <Skeleton className="h-3.5 w-3/4 opacity-30" />
+            </div>
           </div>
-        </div>
-
-        {/* Segmented tab control — Weekly / All-Time / By Team */}
-        <div className="ac-glass mx-auto mt-10 flex w-full max-w-md items-center gap-1 rounded-2xl p-1.5">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} className="h-11 flex-1 rounded-xl" />
+          {[0, 1].map((i) => (
+            <div key={i}>
+              <Skeleton className="h-[3.4rem] w-40 max-w-full opacity-30 sm:h-[4rem]" />
+              <Skeleton className="mt-3 h-4 w-28 opacity-30" />
+            </div>
           ))}
         </div>
+      </section>
 
-        {/* the weekly-tab explainer under the control */}
-        <div className="mt-3 space-y-1.5">
-          <Skeleton className="mx-auto h-4 w-full max-w-xl" />
-          <Skeleton className="mx-auto h-4 w-1/2 max-w-[15rem] sm:hidden" />
+      {/* ===================== THE BOARD ===================== */}
+      <section className="nb-wrap pb-[clamp(3rem,6vw,5rem)] pt-[clamp(2.4rem,5vw,4rem)]">
+        <div className="mb-[clamp(1.4rem,3vw,2.2rem)]">
+          <Skeleton className="h-8 w-64 max-w-full sm:h-10" />
+          <div className="mt-3 flex max-w-[56ch] flex-col gap-2.5">
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-11/12" />
+            <Skeleton className="h-4 w-2/3" />
+          </div>
         </div>
 
-        {/* Podium — rank 1 centred and lifted at sm, exactly as RANK_STYLE does */}
-        <section className="mt-12 sm:mt-14">
-          <div className="mx-auto grid max-w-3xl grid-cols-1 items-end gap-4 sm:grid-cols-3 sm:gap-5">
-            <PodiumColumn champion className="order-first sm:order-2 sm:-translate-y-4" />
-            <PodiumColumn className="order-2 sm:order-1" />
-            <PodiumColumn className="order-3" />
-          </div>
-        </section>
+        {/* The tab strip: three dashed underlines. */}
+        <div className="flex flex-wrap items-end gap-x-[clamp(1.1rem,3vw,2.2rem)] gap-y-1">
+          <Skeleton className="h-11 w-24" />
+          <Skeleton className="h-11 w-20" />
+          <Skeleton className="h-11 w-20" />
+        </div>
 
-        {/* Ranked rows (rank 4+) */}
-        <div className="ac-card mt-12 overflow-hidden">
-          <div className="border-b border-border px-5 py-3">
-            <Skeleton className="h-6 w-52 max-w-full" />
-          </div>
+        {/* The selected tab's note. */}
+        <div className="mt-[clamp(1.4rem,3vw,2.2rem)] flex max-w-[56ch] flex-col gap-2.5">
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-4/5" />
+        </div>
 
-          {/* column header — mirrors ROW_COLS widths */}
-          <div className="hidden items-center gap-3 border-b border-border px-4 py-2.5 sm:flex sm:gap-4 sm:px-5">
-            <div className="w-7 shrink-0 sm:w-9">
-              <Skeleton className="h-3.5 w-full" />
-            </div>
-            <div className="w-10 shrink-0" />
-            <div className="min-w-0 flex-1">
-              <Skeleton className="h-3.5 w-16" />
-            </div>
-            <div className="hidden w-[4.5rem] shrink-0 justify-center sm:flex">
-              <Skeleton className="h-3.5 w-10" />
-            </div>
-            <div className="hidden w-20 shrink-0 md:block">
-              <Skeleton className="ml-auto h-3.5 w-14" />
-            </div>
-            <div className="w-16 shrink-0 sm:w-24">
-              <Skeleton className="ml-auto h-3.5 w-8" />
-            </div>
-          </div>
+        {/* Three plinths, rank one centred and raised at sm, exactly as the
+            Podium lays them out. */}
+        <div className="mx-auto mt-[clamp(1.6rem,3.4vw,2.6rem)] grid max-w-[54rem] grid-cols-1 items-end gap-[clamp(0.9rem,2vw,1.4rem)] sm:grid-cols-3">
+          <Plinth first className="order-first nb-tilt-3 sm:order-2 sm:-mt-7" />
+          <Plinth className="order-2 nb-tilt-1 sm:order-1" />
+          <Plinth className="order-3 nb-tilt-4" />
+        </div>
 
-          <div className="divide-y divide-border">
+        {/* Ranks four and down, as the table's own rows. */}
+        <div className="mt-[clamp(2rem,4vw,3rem)]">
+          <Skeleton className="h-4 w-52" />
+          <div className="mt-3 border-t-2 border-ink">
             {Array.from({ length: 6 }).map((_, i) => (
               <div
                 key={i}
-                className="flex items-center gap-3 px-4 py-3.5 sm:gap-4 sm:px-5"
+                className="flex items-center gap-3 border-b border-dashed border-[var(--rule)] py-3"
               >
-                <div className="w-7 shrink-0 sm:w-9">
-                  <Skeleton className="mx-auto h-5 w-5" />
-                </div>
-                <Skeleton className="h-10 w-10 shrink-0 rounded-xl" />
+                <Skeleton className="h-4 w-6 shrink-0" />
+                <Skeleton className="h-9 w-9 shrink-0 rounded-full" />
                 <div className="min-w-0 flex-1">
-                  <Skeleton className="h-5 w-40 max-w-full" />
+                  <Skeleton className="h-4 w-40 max-w-full" />
                   <Skeleton className="mt-1.5 h-3.5 w-28 max-w-full" />
                 </div>
-                <div className="hidden w-[4.5rem] shrink-0 justify-center sm:flex">
-                  <Skeleton className="h-6 w-16 rounded-full" />
-                </div>
-                <div className="hidden w-20 shrink-0 md:block">
-                  <Skeleton className="ml-auto h-4 w-14" />
-                </div>
-                <div className="w-16 shrink-0 sm:w-24">
-                  <Skeleton className="ml-auto h-5 w-12" />
-                </div>
+                <Skeleton className="hidden h-4 w-8 shrink-0 sm:block" />
+                <Skeleton className="hidden h-4 w-8 shrink-0 md:block" />
+                <Skeleton className="h-4 w-16 shrink-0" />
               </div>
             ))}
           </div>
         </div>
-      </div>
-    </div>
+      </section>
+    </>
   );
 }
 
 /**
- * One podium plinth. Padding, avatar sizes and the crown slot are lifted
- * straight from PodiumColumn so the card lands at the same height (~291px, or
- * ~339px for the champion, growing at the sm breakpoint the same way).
+ * One plinth from the podium. Padding, avatar size and the ruled foot are
+ * lifted from the real card so the three land at the same heights they will
+ * settle at, and the champion's extra scale is kept.
  */
-function PodiumColumn({
-  champion = false,
-  className,
+function Plinth({
+  first = false,
+  className = "",
 }: {
-  champion?: boolean;
+  first?: boolean;
   className?: string;
 }) {
   return (
-    <div className={cn("flex w-full flex-col", className)}>
-      <div
-        className={cn(
-          "ac-card px-5 pb-6 pt-7 text-center",
-          champion && "sm:px-6 sm:pb-8 sm:pt-9"
-        )}
-      >
-        {champion && <Skeleton className="mx-auto mb-2 h-6 w-6 rounded-md" />}
-        <Skeleton
-          className={cn(
-            "mx-auto rounded-[0.9rem]",
-            champion ? "h-20 w-20 sm:h-24 sm:w-24" : "h-16 w-16 sm:h-20 sm:w-20"
-          )}
-        />
-        <Skeleton className="mx-auto mt-6 h-6 w-32 max-w-full" />
-        <Skeleton className="mx-auto mt-1.5 h-5 w-24 max-w-full" />
-        <Skeleton className="mx-auto mt-5 h-8 w-24" />
-        <div className="mt-5 border-t border-border pt-3">
-          <Skeleton className="mx-auto h-4 w-28 max-w-full" />
-        </div>
+    <div
+      className={`nb-box flex flex-col items-center px-[clamp(0.9rem,2vw,1.4rem)] pb-[clamp(1rem,2vw,1.4rem)] pt-[clamp(1.4rem,2.6vw,2rem)] ${className}`}
+    >
+      <Skeleton className="h-4 w-24" />
+      <Skeleton
+        className={`mt-3 rounded-full ${first ? "h-[4.5rem] w-[4.5rem]" : "h-16 w-16"}`}
+      />
+      <Skeleton className={`mt-3 ${first ? "h-6 w-32" : "h-5 w-28"}`} />
+      <Skeleton className="mt-1.5 h-3.5 w-24" />
+      <Skeleton className={`mt-4 ${first ? "h-9 w-28" : "h-7 w-24"}`} />
+      <div className="nb-hair mt-4 w-full pt-3">
+        <Skeleton className="mx-auto h-3.5 w-32 max-w-full" />
       </div>
     </div>
   );

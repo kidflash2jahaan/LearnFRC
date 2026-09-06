@@ -5,8 +5,18 @@ export const dynamic = "force-dynamic";
 
 /**
  * The scheduled routine POSTs the combined results of all three checks here and
- * this sends ONE digest email — but only if something actually changed.
+ * this sends ONE digest email, but only if something actually changed.
  * POST ?secret=CRON_SECRET  { progress, names, content }
+ *
+ * The cards below are drawn in the notebook's six values. They used to be
+ * near-black panels with neon red and mint text, which is a second visual
+ * language, and worse, they were being dropped inside a light email shell, so
+ * every one of them arrived as a black block in the middle of a white page.
+ * Now they are card stock ruled in ink, like every other surface on the site.
+ *
+ * A removed value is struck through in pencil grey and its replacement is set
+ * in bold ink, so a change reads correctly in a client that strips colour, and
+ * so nothing depends on telling red from green.
  */
 
 function authed(req: Request): boolean {
@@ -27,9 +37,31 @@ type Digest = {
   content?: { done?: { kind: string; title: string; decision: string; reason: string }[] };
 };
 
+const CARD = "#F5F6F2";
+const INK = "#16181B";
+const GRAPHITE = "#565C60";
+const BLUE = "#1B36C8";
+const MONO = "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
+
 const esc = (s: string | null | undefined) => (s || "").replace(/</g, "&lt;");
+
 const card = (inner: string) =>
-  `<div style="margin:10px 0;padding:10px 12px;background:#070b14;border:1px solid #1d2740;border-radius:10px">${inner}</div>`;
+  `<div style="margin:10px 0;padding:12px 14px;background:${CARD};border:2px solid ${INK};border-radius:10px">${inner}</div>`;
+
+const heading = (text: string) =>
+  `<h3 style="margin:22px 0 6px;padding-bottom:6px;border-bottom:2px solid ${INK};color:${INK};font-size:15px;font-weight:800">${text}</h3>`;
+
+/** A mono slug, the way every identifier is set on the site itself. */
+const slug = (text: string) =>
+  `<span style="font-family:${MONO};font-size:12px;letter-spacing:.04em;color:${GRAPHITE}">${text}</span>`;
+
+const was = (text: string) =>
+  `<span style="color:${GRAPHITE};text-decoration:line-through">${text}</span>`;
+
+const now = (text: string) => `<span style="font-weight:700;color:${INK}">${text}</span>`;
+
+const note = (text: string) =>
+  `<div style="margin-top:6px;color:${GRAPHITE};font-size:13px;line-height:1.5">${text}</div>`;
 
 export async function POST(req: Request) {
   if (!authed(req)) return new NextResponse(null, { status: 401 });
@@ -55,15 +87,28 @@ export async function POST(req: Request) {
     const rows = del
       .map((d) =>
         card(
-          `<div style="font-weight:600;color:#e8edf7">🤖 Removed <span style="color:#ff9b9b">${esc(d.username)}</span> ${d.email ? `<span style="color:#94a2bf;font-size:12px">(${esc(d.email)})</span>` : ""}</div>
-           <div style="margin-top:4px;color:#94a2bf;font-size:13px">${esc(`${d.burstGaps} lessons within seconds of each other, ${d.completions} total — scripted`)}</div>`
+          `${slug("account / removed")}
+           <div style="margin-top:4px;font-weight:700;color:${INK}">${was(esc(d.username))}${
+             d.email ? ` ${slug(`(${esc(d.email)})`)}` : ""
+           }</div>
+           ${note(
+             esc(
+               `${d.burstGaps} lessons within seconds of each other, ${d.completions} total. Scripted.`
+             )
+           )}`
         )
       )
       .join("");
     sections.push(
-      `<h3 style="margin:18px 0 4px;color:#e8edf7;font-size:15px">Leaderboard integrity — ${del.length} bot account${del.length > 1 ? "s" : ""} removed</h3>${rows}${
+      `${heading(
+        `Leaderboard integrity: ${del.length} bot account${del.length > 1 ? "s" : ""} removed`
+      )}${rows}${
         ips.length
-          ? card(`<div style="color:#ffb27a">🚫 IP/device banned (repeat offender): ${ips.map(esc).join(", ")}</div>`)
+          ? card(
+              `${slug("network / banned")}<div style="margin-top:4px;font-weight:700;color:${INK}">${ips
+                .map(esc)
+                .join(", ")}</div>${note("Repeat offender, IP and device.")}`
+            )
           : ""
       }`
     );
@@ -73,36 +118,38 @@ export async function POST(req: Request) {
     const rows = names
       .map((x) =>
         card(
-          `<div style="color:#e8edf7">${
-            x.newUsername
-              ? `username <span style="color:#ff9b9b">${esc(x.oldUsername)}</span> → <span style="color:#8be9c3">${esc(x.newUsername)}</span>`
-              : ""
-          }${x.oldFullName ? `${x.newUsername ? "<br>" : ""}full name <span style="color:#ff9b9b">${esc(x.oldFullName)}</span> cleared` : ""}</div>${
-            x.reason ? `<div style="margin-top:4px;color:#94a2bf;font-size:13px">${esc(x.reason).slice(0, 300)}</div>` : ""
-          }`
+          `${slug("profile / auto-moderated")}
+           <div style="margin-top:4px;color:${INK}">${
+             x.newUsername
+               ? `username ${was(esc(x.oldUsername))} to ${now(esc(x.newUsername))}`
+               : ""
+           }${
+             x.oldFullName
+               ? `${x.newUsername ? "<br>" : ""}full name ${was(esc(x.oldFullName))} cleared`
+               : ""
+           }</div>${x.reason ? note(esc(x.reason).slice(0, 300)) : ""}`
         )
       )
       .join("");
-    sections.push(
-      `<h3 style="margin:18px 0 4px;color:#e8edf7;font-size:15px">Names — ${names.length} auto-moderated</h3>${rows}`
-    );
+    sections.push(`${heading(`Names: ${names.length} auto-moderated`)}${rows}`);
   }
 
   if (content.length) {
     const label = (d: string) =>
-      d === "approved" ? "✅ Approved" : d === "rejected" ? "❌ Rejected" : "✏️ Edited &amp; approved";
+      d === "approved" ? "Approved" : d === "rejected" ? "Rejected" : "Edited, then approved";
     const rows = content
       .map((x) =>
         card(
-          `<div style="font-weight:600;color:#e8edf7">${label(x.decision)} — <span style="color:#c8d3ee">${esc(x.title)}</span> <span style="color:#94a2bf;font-size:12px">(${esc(x.kind)})</span></div>${
-            x.reason ? `<div style="margin-top:4px;color:#94a2bf;font-size:13px">${esc(x.reason).slice(0, 400)}</div>` : ""
-          }`
+          `${slug(`${esc(x.kind)} / ${esc(x.decision)}`)}
+           <div style="margin-top:4px;font-weight:700;color:${INK}">${label(
+             x.decision
+           )}: <span style="color:${BLUE}">${esc(x.title)}</span></div>${
+             x.reason ? note(esc(x.reason).slice(0, 400)) : ""
+           }`
         )
       )
       .join("");
-    sections.push(
-      `<h3 style="margin:18px 0 4px;color:#e8edf7;font-size:15px">Community content — ${content.length} reviewed</h3>${rows}`
-    );
+    sections.push(`${heading(`Community content: ${content.length} reviewed`)}${rows}`);
   }
 
   const adminEmail = (process.env.ADMIN_EMAILS || "").split(",")[0]?.trim();
@@ -110,9 +157,9 @@ export async function POST(req: Request) {
 
   await sendEmail({
     to: adminEmail,
-    subject: `🛡️ LearnFRC checks — ${del.length} removed · ${names.length} names · ${content.length} content`,
+    subject: `LearnFRC checks: ${del.length} removed, ${names.length} names, ${content.length} content`,
     html: adminNotifyHtml({
-      heading: "Scheduled checks — what changed",
+      heading: "Scheduled checks, what changed",
       rows: [
         { label: "Bots removed", value: String(del.length) },
         { label: "Names moderated", value: String(names.length) },

@@ -14,12 +14,12 @@ import {
  * their plan.
  *
  * The answer lives in a cookie rather than on `profiles` because it needs no
- * migration and no write path on a table this route has no business owning —
- * and because it must work for the whole first session, which is where
- * activation is decided (70% of everyone who ever activated did so within ten
- * minutes of signing up). If the lead later wants it queryable, see the
- * findings: a nullable `profiles.start_goal` column reading from the same
- * `START_GOALS` ids is a drop-in upgrade and this action is the only writer.
+ * migration and no write path on a table this route has no business owning, and
+ * because it must work for the whole first session, which is where activation
+ * is decided (70% of everyone who ever activated did so within ten minutes of
+ * signing up). If the lead later wants it queryable, see the findings: a
+ * nullable `profiles.start_goal` column reading from the same `START_GOALS` ids
+ * is a drop-in upgrade and this action is the only writer.
  */
 export async function chooseGoal(formData: FormData): Promise<void> {
   const goal =
@@ -36,6 +36,6 @@ export async function chooseGoal(formData: FormData): Promise<void> {
     });
   }
 
-  // Outside any try/catch — redirect() signals by throwing.
+  // Outside any try/catch: redirect() signals by throwing.
   redirect("/start");
 }

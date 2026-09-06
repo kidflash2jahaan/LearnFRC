@@ -2,38 +2,14 @@
 
 import * as React from "react";
 import { useActionState } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import {
-  Loader2,
-  AlertCircle,
-  CheckCircle2,
-  Save,
-  User as UserIcon,
-  AtSign,
-  Hash,
-  Link2,
-  BadgeCheck,
-  Trash2,
-  AlertTriangle,
-} from "lucide-react";
 import { toast } from "sonner";
 import {
   updateProfile,
   deleteAccount,
   type ProfileState,
 } from "@/app/actions/profile";
-import { Button } from "@/components/ui/button";
-import { Input, Textarea } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Avatar } from "@/components/ui/avatar";
-import { cn } from "@/lib/utils";
 import type { Profile } from "@/lib/types";
-
-const EASE = [0.21, 0.47, 0.32, 0.98] as const;
-
-/** Terminal-style field label. */
-const LABEL_CLS =
-  "font-mono text-[11px] uppercase tracking-wider text-muted-foreground";
 
 const ROLES = [
   { value: "student", label: "Student" },
@@ -43,6 +19,27 @@ const ROLES = [
   { value: "other", label: "Other" },
 ] as const;
 
+const BIO_MAX = 500;
+
+/**
+ * The profile form: the one place a member edits their own record.
+ *
+ * Rebuilt on `nb-field` / `nb-label` / `nb-input` / `nb-hint` directly rather
+ * than through the shared Input and Button wrappers, for the same reason
+ * ReportForm is: this is the binder's own paperwork, and it should be drawn by
+ * the binder's rules instead of inheriting whatever a wrapper decides a
+ * "variant" means.
+ *
+ * Two things are gone on purpose. The staggered entrance, because a settings
+ * form that choreographs itself on every load is motion with nothing to say,
+ * and it delayed the fields the visit exists to reach. And the icons parked
+ * inside each input, because the notebook has no icon language: a label above
+ * the field says what the field is, and a pictogram next to it says it again,
+ * worse.
+ *
+ * Everything that talks to the server is untouched: the same action, the same
+ * field names, the same validation, the same success toast.
+ */
 export function SettingsForm({
   profile,
   email,
@@ -50,18 +47,19 @@ export function SettingsForm({
   profile: Profile | null;
   email?: string | null;
 }) {
-  const reduce = useReducedMotion();
   const [state, formAction, isPending] = useActionState<ProfileState, FormData>(
     updateProfile,
     undefined
   );
 
-  // Live preview values for the avatar header
+  // Preview values for the strip at the top of the form. The inputs stay
+  // uncontrolled so a rejected submit keeps what was typed; these only mirror.
   const [fullName, setFullName] = React.useState(profile?.full_name ?? "");
   const [username, setUsername] = React.useState(profile?.username ?? "");
   const [avatarUrl, setAvatarUrl] = React.useState(profile?.avatar_url ?? "");
+  const [bioLength, setBioLength] = React.useState(profile?.bio?.length ?? 0);
 
-  // Toast on success (fires once per successful submit)
+  // Toast on success, once per successful submit.
   const lastSuccess = React.useRef(false);
   React.useEffect(() => {
     if (state?.success && !lastSuccess.current) {
@@ -73,155 +71,95 @@ export function SettingsForm({
     if (!state?.success) lastSuccess.current = false;
   }, [state?.success]);
 
-  const item = {
-    hidden: { opacity: 0, y: 12 },
-    show: {
-      opacity: 1,
-      y: 0,
-      transition: reduce ? { duration: 0 } : { duration: 0.45, ease: EASE },
-    },
-  };
-  const container = {
-    hidden: {},
-    show: {
-      transition: reduce
-        ? { staggerChildren: 0, delayChildren: 0 }
-        : { staggerChildren: 0.06, delayChildren: 0.04 },
-    },
-  };
-
   return (
     <>
-    <motion.form
-      action={formAction}
-      initial="hidden"
-      animate="show"
-      variants={container}
-      className="space-y-5"
-    >
-      {/* Live avatar preview header */}
-      <motion.div
-        variants={item}
-        className="flex items-center gap-4 rounded-2xl border border-border bg-secondary/40 p-4"
-      >
-        <Avatar
-          name={fullName || username || email}
-          src={avatarUrl || null}
-          seed={username || email || undefined}
-          className="h-16 w-16 ring-2 ring-border shadow-[var(--shadow-md)]"
-        />
-        <div className="min-w-0">
-          <div className="truncate text-base font-semibold">
-            {fullName || username || "Your name"}
-          </div>
-          <div className="truncate text-sm text-muted-foreground">
-            {username ? `@${username}` : email || "Set a username below"}
+      <form action={formAction} className="flex flex-col gap-5">
+        {/* ---- what the rest of the site will see ---------------------- */}
+        <div className="nb-hair flex items-center gap-4 pt-4">
+          <Avatar
+            name={fullName || username || email}
+            src={avatarUrl || null}
+            seed={username || email || undefined}
+            className="h-14 w-14 shrink-0 text-[1.05rem]"
+          />
+          <div className="min-w-0">
+            <p className="nb-slug">how you appear</p>
+            <p className="mt-1 truncate font-semibold">
+              {username ? `@${username}` : "no username yet"}
+            </p>
           </div>
         </div>
-      </motion.div>
 
-      {/* Error alert */}
-      <AnimatePresence initial={false}>
+        {/* Server-side validation failure. A stamped correction, not a red
+            panel: this palette has no red, and the heavy ink bar carries the
+            same weight through a greyscale photocopy. */}
         {state?.error && (
-          <motion.div
-            role="alert"
-            aria-live="assertive"
-            initial={reduce ? { opacity: 0 } : { opacity: 0, height: 0, y: -6 }}
-            animate={
-              reduce ? { opacity: 1 } : { opacity: 1, height: "auto", y: 0 }
-            }
-            exit={reduce ? { opacity: 0 } : { opacity: 0, height: 0, y: -6 }}
-            transition={{ duration: 0.3, ease: EASE }}
-            className="overflow-hidden"
-          >
-            <div className="flex items-start gap-2.5 rounded-xl border border-destructive/30 bg-destructive/10 px-3.5 py-3 text-sm text-destructive">
-              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-              <span className="leading-relaxed">{state.error}</span>
-            </div>
-          </motion.div>
+          <p role="alert" aria-live="assertive" className="nb-error">
+            {state.error}
+          </p>
         )}
-      </AnimatePresence>
 
-      {/* Inline success confirmation */}
-      <AnimatePresence initial={false}>
         {state?.success && (
-          <motion.div
-            role="status"
-            aria-live="polite"
-            initial={reduce ? { opacity: 0 } : { opacity: 0, height: 0, y: -6 }}
-            animate={
-              reduce ? { opacity: 1 } : { opacity: 1, height: "auto", y: 0 }
-            }
-            exit={reduce ? { opacity: 0 } : { opacity: 0, height: 0, y: -6 }}
-            transition={{ duration: 0.3, ease: EASE }}
-            className="overflow-hidden"
-          >
-            <div className="flex items-start gap-2.5 rounded-xl border border-success/30 bg-success/10 px-3.5 py-3 text-sm text-success">
-              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
-              <span className="leading-relaxed">
-                Saved. Your public profile and presence are now up to date.
-              </span>
-            </div>
-          </motion.div>
+          <p role="status" aria-live="polite" className="nb-note">
+            <span className="nb-slug">saved</span>
+            <span className="mt-1 block text-[0.95rem]">
+              Your public profile and presence are up to date.
+            </span>
+          </p>
         )}
-      </AnimatePresence>
 
-      {/* Email (read-only) */}
-      <motion.div variants={item}>
-        <Label htmlFor="email" className={LABEL_CLS}>
-          Email
-        </Label>
-        <Input
-          id="email"
-          type="email"
-          value={email ?? ""}
-          readOnly
-          disabled
-          aria-describedby="email-help"
-        />
-        <p id="email-help" className="mt-1.5 text-xs text-muted-foreground">
-          Your sign-in email. This can&apos;t be changed here.
-        </p>
-      </motion.div>
+        {/* ---- identity ------------------------------------------------- */}
+        <div className="nb-field">
+          <label htmlFor="email" className="nb-label">
+            Email
+          </label>
+          <input
+            id="email"
+            type="email"
+            value={email ?? ""}
+            readOnly
+            disabled
+            aria-describedby="email-help"
+            className="nb-input"
+          />
+          <p id="email-help" className="nb-hint">
+            Your sign-in email. It can&rsquo;t be changed here.
+          </p>
+        </div>
 
-      {/* Full name */}
-      <motion.div variants={item}>
-        <Label htmlFor="full_name" className={LABEL_CLS}>
-          Full name
-        </Label>
-        <Field icon={UserIcon}>
-          <Input
+        <div className="nb-field">
+          <label htmlFor="full_name" className="nb-label">
+            Full name
+          </label>
+          <input
             id="full_name"
             name="full_name"
             type="text"
             autoComplete="name"
             placeholder="Jane Builder"
-            className="pl-10"
             defaultValue={profile?.full_name ?? ""}
             onChange={(e) => setFullName(e.target.value)}
             disabled={isPending}
+            aria-describedby="full-name-help"
+            className="nb-input"
           />
-        </Field>
-        <p className="mt-1.5 text-xs text-muted-foreground">
-          Private — only used on your certificate. Never shown publicly; everyone
-          sees your username.
-        </p>
-      </motion.div>
+          <p id="full-name-help" className="nb-hint">
+            Private. Used only on your certificate, never shown publicly.
+            Everyone else sees your username.
+          </p>
+        </div>
 
-      {/* Username + Team number */}
-      <motion.div variants={item} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div>
-          <Label htmlFor="username" className={LABEL_CLS}>
-            Username
-          </Label>
-          <Field icon={AtSign}>
-            <Input
+        <div className="grid gap-5 sm:grid-cols-2">
+          <div className="nb-field">
+            <label htmlFor="username" className="nb-label">
+              Username
+            </label>
+            <input
               id="username"
               name="username"
               type="text"
               autoComplete="username"
               placeholder="janebuilds"
-              className="pl-10"
               defaultValue={profile?.username ?? ""}
               onChange={(e) =>
                 setUsername(
@@ -230,19 +168,19 @@ export function SettingsForm({
               }
               aria-describedby="username-help"
               disabled={isPending}
+              className="nb-input"
             />
-          </Field>
-          <p id="username-help" className="mt-1.5 text-xs text-muted-foreground">
-            Letters, numbers &amp; underscores. Powers your public page at
-            /u/your-name.
-          </p>
-        </div>
-        <div>
-          <Label htmlFor="team_number" className={LABEL_CLS}>
-            FRC team number
-          </Label>
-          <Field icon={Hash}>
-            <Input
+            <p id="username-help" className="nb-hint">
+              Letters, numbers and underscores. Your public page is at
+              /u/your-name.
+            </p>
+          </div>
+
+          <div className="nb-field">
+            <label htmlFor="team_number" className="nb-label">
+              FRC team number
+            </label>
+            <input
               id="team_number"
               name="team_number"
               type="number"
@@ -250,36 +188,27 @@ export function SettingsForm({
               min={1}
               max={99999}
               placeholder="254"
-              className="pl-10"
               defaultValue={profile?.team_number ?? ""}
               aria-describedby="team-help"
               disabled={isPending}
+              className="nb-input"
             />
-          </Field>
-          <p id="team-help" className="mt-1.5 text-xs text-muted-foreground">
-            Optional. Shown as a badge on your profile.
-          </p>
+            <p id="team-help" className="nb-hint">
+              Optional. It groups you with teammates who entered the same number.
+            </p>
+          </div>
         </div>
-      </motion.div>
 
-      {/* Role */}
-      <motion.div variants={item}>
-        <Label htmlFor="role" className={LABEL_CLS}>
-          Role on your team
-        </Label>
-        <div className="relative">
-          <BadgeCheck className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <div className="nb-field">
+          <label htmlFor="role" className="nb-label">
+            Role on your team
+          </label>
           <select
             id="role"
             name="role"
             defaultValue={profile?.role ?? "student"}
             disabled={isPending}
-            className={cn(
-              "flex h-11 w-full appearance-none rounded-xl border border-input bg-background/60 pl-10 pr-9 text-sm",
-              "transition-colors cursor-pointer",
-              "focus-visible:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/30",
-              "disabled:cursor-not-allowed disabled:opacity-50"
-            )}
+            className="nb-input nb-select"
           >
             {ROLES.map((r) => (
               <option key={r.value} value={r.value}>
@@ -287,95 +216,80 @@ export function SettingsForm({
               </option>
             ))}
           </select>
-          <svg
-            aria-hidden="true"
-            viewBox="0 0 24 24"
-            className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="m6 9 6 6 6-6" />
-          </svg>
         </div>
-      </motion.div>
 
-      {/* Avatar URL */}
-      <motion.div variants={item}>
-        <Label htmlFor="avatar_url" className={LABEL_CLS}>
-          Avatar image URL
-        </Label>
-        <Field icon={Link2}>
-          <Input
+        <div className="nb-field">
+          <label htmlFor="avatar_url" className="nb-label">
+            Avatar image URL
+          </label>
+          <input
             id="avatar_url"
             name="avatar_url"
             type="url"
             inputMode="url"
             placeholder="https://example.com/you.png"
-            className="pl-10"
             defaultValue={profile?.avatar_url ?? ""}
             onChange={(e) => setAvatarUrl(e.target.value)}
             aria-describedby="avatar-help"
             disabled={isPending}
+            className="nb-input"
           />
-        </Field>
-        <p id="avatar-help" className="mt-1.5 text-xs text-muted-foreground">
-          Optional. Leave blank for a colorful generated avatar.
-        </p>
-      </motion.div>
+          <p id="avatar-help" className="nb-hint">
+            Optional. Leave it blank and your initials are used instead.
+          </p>
+        </div>
 
-      {/* Bio */}
-      <motion.div variants={item}>
-        <Label htmlFor="bio" className={LABEL_CLS}>
-          Bio
-        </Label>
-        <Textarea
-          id="bio"
-          name="bio"
-          rows={4}
-          maxLength={500}
-          placeholder="Tell the community about your FRC journey — your role, what you build, what you're learning…"
-          defaultValue={profile?.bio ?? ""}
-          aria-describedby="bio-help"
-          disabled={isPending}
-        />
-        <p id="bio-help" className="mt-1.5 text-xs text-muted-foreground">
-          Up to 500 characters. Appears on your public profile.
-        </p>
-      </motion.div>
+        <div className="nb-field">
+          <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+            <label htmlFor="bio" className="nb-label">
+              Bio
+            </label>
+            <span id="bio-count" className="nb-slug tabular-nums">
+              {bioLength} / {BIO_MAX}
+            </span>
+          </div>
+          <textarea
+            id="bio"
+            name="bio"
+            rows={4}
+            maxLength={BIO_MAX}
+            placeholder="Your role, what you build, what you're learning."
+            defaultValue={profile?.bio ?? ""}
+            onChange={(e) => setBioLength(e.target.value.length)}
+            aria-describedby="bio-count bio-help"
+            disabled={isPending}
+            className="nb-input"
+          />
+          <p id="bio-help" className="nb-hint">
+            Shown on your public profile.
+          </p>
+        </div>
 
-      {/* Submit */}
-      <motion.div variants={item} className="pt-1">
-        <Button
-          type="submit"
-          variant="brand"
-          size="lg"
-          className="w-full sm:w-auto"
-          disabled={isPending}
-          aria-busy={isPending}
-        >
-          {isPending ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Saving…
-            </>
-          ) : (
-            <>
-              <Save className="h-4 w-4" />
-              Save changes
-            </>
-          )}
-        </Button>
-      </motion.div>
-    </motion.form>
+        <div className="pt-1">
+          <button
+            type="submit"
+            disabled={isPending}
+            aria-busy={isPending}
+            className="nb-btn w-full sm:w-auto"
+          >
+            {isPending ? "Saving" : "Save changes"}
+          </button>
+        </div>
+      </form>
 
       <DangerZone />
     </>
   );
 }
 
+/**
+ * Account deletion. Kept behind a typed confirmation because it takes the
+ * profile, the progress, the XP and the bookmarks with it and there is no undo.
+ *
+ * There is no red in this palette, so severity is carried the way `nb-error`
+ * carries it: a heavier ink edge, which survives being photocopied in grey
+ * where a hue would not.
+ */
 function DangerZone() {
   const [confirming, setConfirming] = React.useState(false);
   const [text, setText] = React.useState("");
@@ -390,79 +304,69 @@ function DangerZone() {
   };
 
   return (
-    <div className="mt-8 rounded-2xl border border-destructive/30 bg-destructive/5 p-5">
-      <h2 className="flex items-center gap-2 text-sm font-semibold text-destructive">
-        <AlertTriangle className="h-4 w-4" /> Danger zone
-      </h2>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Permanently delete your account along with your profile, progress, XP,
-        and bookmarks. This cannot be undone.
+    <section
+      aria-labelledby="danger"
+      className="nb-box mt-10 border-[3px] p-[clamp(1.1rem,2.4vw,1.6rem)]"
+    >
+      <p className="nb-slug">account / permanent</p>
+      <h3 id="danger" className="mt-2">
+        Delete this account
+      </h3>
+      <p className="mt-2 max-w-[56ch] text-[0.95rem] leading-relaxed text-graphite">
+        This removes your profile, your progress, your XP and your bookmarks.
+        Certificates you have already downloaded stay on your machine, but
+        nothing here can be restored.
       </p>
+
       {!confirming ? (
-        <Button
+        <button
           type="button"
-          variant="outline"
-          className="mt-4 border-destructive/40 text-destructive hover:bg-destructive/10"
           onClick={() => setConfirming(true)}
+          className="nb-btn-ghost mt-5 border-[3px]"
         >
-          <Trash2 className="h-4 w-4" /> Delete my account
-        </Button>
+          Delete my account
+        </button>
       ) : (
-        <div className="mt-4 space-y-3">
-          <Label htmlFor="confirm-delete">
-            Type <span className="font-mono font-semibold">DELETE</span> to confirm
-          </Label>
-          <Input
-            id="confirm-delete"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder="DELETE"
-            autoComplete="off"
-            disabled={pending}
-          />
-          <div className="flex gap-2">
-            <Button
+        <div className="nb-hair mt-5 flex flex-col gap-4 pt-5">
+          <div className="nb-field max-w-xs">
+            <label htmlFor="confirm-delete" className="nb-label">
+              Type DELETE to confirm
+            </label>
+            <input
+              id="confirm-delete"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder="DELETE"
+              autoComplete="off"
+              autoCapitalize="characters"
+              disabled={pending}
+              className="nb-input font-mono"
+            />
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <button
               type="button"
-              variant="ghost"
+              onClick={onDelete}
+              disabled={pending || text !== "DELETE"}
+              aria-busy={pending}
+              className="nb-btn-ghost border-[3px]"
+            >
+              {pending ? "Deleting" : "Permanently delete"}
+            </button>
+            <button
+              type="button"
               onClick={() => {
                 setConfirming(false);
                 setText("");
               }}
               disabled={pending}
+              className="nb-btn-ghost"
             >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              onClick={onDelete}
-              disabled={pending || text !== "DELETE"}
-              className="bg-destructive text-white hover:bg-destructive/90"
-            >
-              {pending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Trash2 className="h-4 w-4" />
-              )}
-              Permanently delete
-            </Button>
+              Keep my account
+            </button>
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-function Field({
-  icon: IconCmp,
-  children,
-}: {
-  icon: React.ComponentType<{ className?: string }>;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="relative">
-      <IconCmp className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-      {children}
-    </div>
+    </section>
   );
 }

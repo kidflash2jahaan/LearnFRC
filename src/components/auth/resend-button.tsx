@@ -1,11 +1,20 @@
 "use client";
 
 import * as React from "react";
-import { Loader2, Send } from "lucide-react";
 import { toast } from "sonner";
 import { resendConfirmation } from "@/app/actions/auth";
-import { Button } from "@/components/ui/button";
 
+/**
+ * Send the confirmation email again.
+ *
+ * Drawn rather than filled, because on the verify-email page the thing you are
+ * meant to do is open your inbox, not press this. It is the fallback, so it
+ * reads as the second action.
+ *
+ * Once sent it stays disabled with the label changed. The label is the state:
+ * there is no spinner in this system, and a button that says "sent" and cannot
+ * be pressed again says everything a spinner would.
+ */
 export function ResendButton({ email }: { email: string }) {
   const [pending, start] = React.useTransition();
   const [sent, setSent] = React.useState(false);
@@ -16,19 +25,20 @@ export function ResendButton({ email }: { email: string }) {
       if (r?.error) toast.error(r.error);
       else {
         setSent(true);
-        toast.success("Verification email re-sent.");
+        toast.success("Verification email sent again.");
       }
     });
   };
 
   return (
-    <Button variant="outline" onClick={onClick} disabled={pending || sent}>
-      {pending ? (
-        <Loader2 className="h-4 w-4 animate-spin" />
-      ) : (
-        <Send className="h-4 w-4" />
-      )}
-      {sent ? "Email sent" : "Resend email"}
-    </Button>
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={pending || sent}
+      aria-busy={pending}
+      className="nb-btn-ghost"
+    >
+      {pending ? "Sending" : sent ? "Sent again" : "Send it again"}
+    </button>
   );
 }

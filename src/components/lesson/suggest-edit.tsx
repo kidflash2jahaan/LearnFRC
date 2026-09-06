@@ -2,15 +2,25 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { PencilLine, X, Check, Loader2, AlertCircle } from "lucide-react";
 import { submitContentEdit } from "@/app/actions/content-edits";
 import { Button } from "@/components/ui/button";
 
 /**
- * Reader-facing "suggest an edit" control (GitHub-PR-style). Logged-in users
- * open the lesson's raw markdown, edit it, and submit a proposal the admin
- * reviews. Anonymous users are pointed to log in. Renders identically on the
- * server (just the trigger row); the editor panel only mounts on interaction.
+ * "This is wrong" as a control the reader can actually use.
+ *
+ * A signed-in reader opens the page's raw markdown, edits it, and submits a
+ * proposal an admin reviews. Everyone else is pointed at signup. The trigger is
+ * one ruled line, because it lives at the bottom of the colophon and a second
+ * framed box inside a section that is already ruled would be noise; the editor
+ * is an `nb-surface`, the system's floating sheet, which is the only thing on
+ * the site allowed to sit above the page.
+ *
+ * The scrim is a flat ink wash, not a blur. Depth in this system comes from a
+ * misregistered second impression, never from frosted glass.
+ *
+ * The panel renders identically on the server (just the trigger row); the editor
+ * only mounts on interaction, so the markdown body never ships to a reader who
+ * did not ask to edit it.
  */
 export function SuggestEdit({
   contentType = "lesson",
@@ -28,9 +38,9 @@ export function SuggestEdit({
   content: string;
   isLoggedIn: boolean;
   /**
-   * Tightens the trigger row's spacing for use inside the provenance card,
-   * where the surrounding section already supplies the padding. Default keeps
-   * the original standalone spacing.
+   * Tightens the trigger row for use inside the colophon, where the section
+   * already supplies the opening rule. Standalone it opens on the 2px ink rule
+   * that separates one part of the binder from the next.
    */
   dense?: boolean;
 }) {
@@ -40,16 +50,35 @@ export function SuggestEdit({
   const [pending, setPending] = React.useState(false);
   const [done, setDone] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const editorRef = React.useRef<HTMLTextAreaElement>(null);
+  const returnFocusTo = React.useRef<HTMLElement | null>(null);
+
+  const noun = contentType === "article" ? "article" : "lesson";
 
   React.useEffect(() => {
-    // Lock background scroll while the editor is open.
-    if (open) {
-      const prev = document.body.style.overflow;
-      document.body.style.overflow = "hidden";
-      return () => {
-        document.body.style.overflow = prev;
-      };
-    }
+    if (!open) return;
+    // Lock background scroll while the editor is up.
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    // Land the caret in the thing they came here to change.
+    editorRef.current?.focus();
+    // A dialog you cannot dismiss from the keyboard is a trap. Closing is
+    // blocked mid-submit for the same reason the buttons are: the write is
+    // already in flight and cancelling it here would lie about the outcome.
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !pending) setOpen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open, pending]);
+
+  React.useEffect(() => {
+    // Hand focus back where it came from, so closing does not dump a keyboard
+    // reader at the top of the document.
+    if (!open) returnFocusTo.current?.focus();
   }, [open]);
 
   async function submit() {
@@ -70,32 +99,32 @@ export function SuggestEdit({
 
   const trigger = (
     <div
-      className={`flex flex-wrap items-center gap-2 border-t border-border text-sm text-muted-foreground ${
-        dense ? "mt-6 pt-5" : "mt-10 pt-6"
+      className={`flex flex-wrap items-center gap-x-3 gap-y-1 ${
+        dense ? "nb-hair mt-5 pt-4" : "nb-rule mt-[clamp(2rem,4vw,3rem)] pt-4"
       }`}
     >
-      <PencilLine className="h-4 w-4 text-primary" aria-hidden />
-      <span>Spot an error or something out of date?</span>
+      <span className="nb-slug">found something wrong?</span>
       {isLoggedIn ? (
         <button
           type="button"
-          onClick={() => {
+          onClick={(e) => {
+            returnFocusTo.current = e.currentTarget;
             setValue(content);
             setNote("");
             setDone(false);
             setError(null);
             setOpen(true);
           }}
-          className="font-semibold text-primary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:underline"
+          className="nb-slug inline-flex min-h-11 cursor-pointer items-center font-bold text-blue underline decoration-2 underline-offset-4 hover:decoration-blue"
         >
           Suggest an edit
         </button>
       ) : (
         <Link
           href={`/signup?next=${encodeURIComponent(path)}`}
-          className="font-semibold text-primary underline-offset-2 hover:underline"
+          className="nb-slug inline-flex min-h-11 items-center font-bold text-blue underline decoration-2 underline-offset-4"
         >
-          Create a free account to suggest an edit
+          Make a free account to suggest an edit
         </Link>
       )}
     </div>
@@ -106,87 +135,104 @@ export function SuggestEdit({
   return (
     <>
       {trigger}
+      {/* z-50 sits under the page grain at z-90, so the sheet gets the same
+          toner as everything else rather than looking freshly printed. */}
       <div
-        className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 p-4 backdrop-blur-sm"
-        role="dialog"
-        aria-modal="true"
-        aria-label={`Suggest an edit to ${title}`}
+        className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(22,24,27,0.55)] p-4"
         onClick={(e) => {
           if (e.target === e.currentTarget && !pending) setOpen(false);
         }}
       >
-        <div className="ac-card flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden p-0">
-          <div className="flex items-center justify-between gap-3 border-b border-border px-5 py-4">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="suggest-edit-title"
+          className="nb-surface flex max-h-[90dvh] w-full max-w-3xl flex-col overflow-hidden"
+        >
+          <div className="flex items-start justify-between gap-4 border-b-2 border-ink px-[clamp(1rem,3vw,1.4rem)] py-3.5">
             <div className="min-w-0">
-              <h2 className="truncate font-display text-lg font-bold">Suggest an edit</h2>
-              <p className="truncate text-sm text-muted-foreground">{title}</p>
+              <h2 id="suggest-edit-title" className="truncate text-[1.15rem]">
+                Suggest an edit
+              </h2>
+              <p className="nb-slug truncate">{title}</p>
             </div>
             <button
               type="button"
               onClick={() => !pending && setOpen(false)}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              aria-label="Close"
+              disabled={pending}
+              className="nb-slug inline-flex min-h-11 shrink-0 cursor-pointer items-center font-bold text-ink underline decoration-rule decoration-2 underline-offset-4 hover:decoration-blue disabled:cursor-not-allowed disabled:text-graphite"
             >
-              <X className="h-5 w-5" aria-hidden />
+              Close
             </button>
           </div>
 
           {done ? (
-            <div className="flex flex-col items-center gap-3 px-6 py-14 text-center">
-              <span className="flex h-14 w-14 items-center justify-center rounded-full bg-success/15 text-success">
-                <Check className="h-7 w-7" aria-hidden />
-              </span>
-              <h3 className="font-display text-xl font-bold">Thanks — suggestion sent</h3>
-              <p className="max-w-sm text-sm text-muted-foreground">
-                An admin will review your change. If it&rsquo;s accepted, it goes live on the site.
+            <div className="px-[clamp(1.2rem,4vw,2.4rem)] py-[clamp(2.4rem,6vw,4rem)] text-center">
+              <p className="nb-slug">filed</p>
+              <h3 className="mt-1.5 text-[clamp(1.3rem,1.1rem+0.8vw,1.7rem)]">
+                Thanks, that is in the queue
+              </h3>
+              <p className="mx-auto mt-2 max-w-[42ch] text-[0.95rem] leading-relaxed text-graphite">
+                An admin reads every suggestion. If yours is right, the change
+                goes live and the fix gets written up in the corrections log.
               </p>
-              <Button variant="brand" onClick={() => setOpen(false)} className="mt-2">
+              <Button variant="brand" onClick={() => setOpen(false)} className="mt-5">
                 Done
               </Button>
             </div>
           ) : (
             <>
-              <div className="flex-1 overflow-y-auto px-5 py-4">
-                <label className="mb-1.5 block text-sm font-medium text-foreground">
-                  Edit the lesson (Markdown)
-                </label>
-                <textarea
-                  value={value}
-                  onChange={(e) => setValue(e.target.value)}
-                  spellCheck
-                  disabled={pending}
-                  className="ac-input h-[46vh] w-full resize-none font-mono text-[13px] leading-relaxed"
-                />
-                <label className="mb-1.5 mt-4 block text-sm font-medium text-foreground">
-                  What did you change and why? <span className="text-muted-foreground">(optional)</span>
-                </label>
-                <input
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  disabled={pending}
-                  placeholder="e.g. Kraken X60 mounts with #10-32, not M5"
-                  className="ac-input w-full"
-                  maxLength={1000}
-                />
+              <div className="nb-scroll flex-1 overflow-y-auto px-[clamp(1rem,3vw,1.4rem)] py-4">
+                <div className="nb-field">
+                  <label className="nb-label" htmlFor="suggest-edit-body">
+                    The {noun}, in Markdown
+                  </label>
+                  <textarea
+                    id="suggest-edit-body"
+                    ref={editorRef}
+                    value={value}
+                    onChange={(e) => setValue(e.target.value)}
+                    spellCheck
+                    disabled={pending}
+                    aria-invalid={error ? true : undefined}
+                    className="nb-input h-[42dvh] resize-none font-mono text-[0.82rem] leading-relaxed"
+                  />
+                  <p className="nb-hint">
+                    Edit it the way you would edit a shared doc. Only what you
+                    change is up for review.
+                  </p>
+                </div>
+
+                <div className="nb-field mt-5">
+                  <label className="nb-label" htmlFor="suggest-edit-note">
+                    What did you change, and why? Optional.
+                  </label>
+                  <input
+                    id="suggest-edit-note"
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                    disabled={pending}
+                    placeholder="Kraken X60 mounts with #10-32, not M5"
+                    className="nb-input"
+                    maxLength={1000}
+                  />
+                </div>
+
                 {error && (
-                  <div className="mt-3 flex items-start gap-2 rounded-xl border border-destructive/30 bg-destructive/10 px-3.5 py-3 text-sm text-destructive">
-                    <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-                    <span>{error}</span>
-                  </div>
+                  <p role="alert" className="nb-error mt-4">
+                    {error}
+                  </p>
                 )}
               </div>
-              <div className="flex items-center justify-end gap-3 border-t border-border px-5 py-4">
+
+              <div className="flex items-center justify-end gap-3 border-t-2 border-ink px-[clamp(1rem,3vw,1.4rem)] py-3.5">
                 <Button variant="ghost" onClick={() => setOpen(false)} disabled={pending}>
                   Cancel
                 </Button>
-                <Button variant="brand" onClick={submit} disabled={pending}>
-                  {pending ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> Sending…
-                    </>
-                  ) : (
-                    "Submit suggestion"
-                  )}
+                <Button variant="brand" onClick={submit} disabled={pending} aria-busy={pending}>
+                  {/* The word carries the pending state. A spinner would be a
+                      seventh thing on a page made of ink and paper. */}
+                  {pending ? "Sending…" : "Send suggestion"}
                 </Button>
               </div>
             </>

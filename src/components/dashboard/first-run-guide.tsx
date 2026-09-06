@@ -1,37 +1,39 @@
-import type { CSSProperties } from "react";
 import Link from "next/link";
-import { ArrowRight, BookOpen, CheckCircle2, Flame, Sparkles } from "lucide-react";
 
-const GRADIENT: CSSProperties = {
-  background: "linear-gradient(120deg,#2560e6,#1aa9d6)",
-  WebkitBackgroundClip: "text",
-  backgroundClip: "text",
-  color: "transparent",
-};
+/**
+ * The only surface a zero-progress learner meets on the dashboard.
+ *
+ * 45% of accounts never finish a single lesson, and the loss is entirely
+ * upstream of the content: a new learner lands on a page built for someone with
+ * a history and is handed 394 lessons across 11 departments with no default.
+ * This replaces the choice with one action, and sets the come-back-tomorrow
+ * expectation, which are the two things that move day-one retention.
+ *
+ * Numbered because it genuinely is a sequence: read, quiz, return. The rules
+ * above the steps are the ledger rules the whole binder uses, so the three
+ * steps read as an ordered list rather than as three feature cards.
+ *
+ * Server Component. Nothing here has state.
+ */
 
 const STEPS = [
   {
-    icon: BookOpen,
+    n: "step one",
     title: "Finish one lesson",
-    body: "Short and focused — about 5 minutes. That's your first win.",
+    body: "One topic, about five minutes. Nothing is gated, so you can read it on the shop floor.",
   },
   {
-    icon: CheckCircle2,
-    title: "Pass the quiz, earn XP",
-    body: "It only counts when you get the answers right. Real progress.",
+    n: "step two",
+    title: "Pass the quiz",
+    body: "It checks the thing that actually breaks robots, not the vocabulary word you skimmed. Retakes are unlimited.",
   },
   {
-    icon: Flame,
+    n: "step three",
     title: "Come back tomorrow",
-    body: "Do one a day to build a streak (and a bigger XP multiplier).",
+    body: "One a day builds a streak, and a streak multiplies the XP every lesson pays out.",
   },
 ];
 
-/**
- * Shown only to brand-new (zero-progress) learners: replaces the paradox of
- * choice (11 departments, 394 lessons) with one clear first action, and sets
- * the daily-return expectation — the two things that lift day-1 retention.
- */
 export function FirstRunGuide({
   href,
   lessonTitle,
@@ -43,57 +45,41 @@ export function FirstRunGuide({
 }) {
   return (
     <section
-      className="ac-glass relative overflow-hidden p-6 sm:p-8"
-      style={{ "--a": "#2560e6" } as CSSProperties}
+      aria-labelledby="first-run-heading"
+      className="nb-box nb-tilt-3 p-[clamp(1.2rem,2.8vw,2rem)]"
     >
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -right-16 -top-20 h-64 w-64 rounded-full bg-[radial-gradient(circle,rgba(26,169,214,0.22),transparent_70%)] blur-2xl"
-      />
-      <span className="ac-chip inline-flex items-center gap-2">
-        <Sparkles className="h-3.5 w-3.5 text-primary" aria-hidden />
-        <span className="ac-eyebrow">New here? Start in 5 minutes</span>
-      </span>
+      <span className="nb-tape -top-3 left-[14%] rotate-[-3.2deg]" aria-hidden="true" />
 
-      <h2 className="mt-4 text-balance font-display text-2xl font-bold tracking-tight sm:text-3xl">
-        Welcome to <span style={GRADIENT}>LearnFRC</span> 🤖
+      <p className="nb-marker">new here</p>
+
+      <h2 id="first-run-heading" className="max-w-[20ch] text-[clamp(1.4rem,1.1rem+1.2vw,2.1rem)]">
+        The whole loop takes five minutes.
       </h2>
-      <p className="mt-2 max-w-xl text-[15px] leading-relaxed text-foreground/70">
-        The fastest way in is to finish one lesson. Here&apos;s the whole loop —
-        it takes about five minutes.
+
+      <p className="nb-sub mt-3">
+        You do not have to pick a department to start. Read one lesson, answer
+        the quiz at the end of it, and the account starts keeping score.
       </p>
 
-      <ol className="mt-6 grid gap-3 sm:grid-cols-3">
-        {STEPS.map((s, i) => (
-          <li
-            key={s.title}
-            className="rounded-2xl border border-border bg-white/60 p-4"
-          >
-            <div className="flex items-center gap-2">
-              <span
-                className="ac-badge flex h-8 w-8 items-center justify-center rounded-xl text-sm font-bold"
-                style={{ "--a": "#2560e6" } as CSSProperties}
-              >
-                {i + 1}
-              </span>
-              <s.icon className="h-4 w-4 text-primary" aria-hidden />
-            </div>
-            <div className="mt-2.5 font-display text-[15px] font-bold tracking-tight">
-              {s.title}
-            </div>
-            <p className="mt-1 text-[13px] leading-snug text-muted-foreground">
+      <ol className="mt-[clamp(1.3rem,2.6vw,1.9rem)] grid gap-[clamp(0.9rem,2.2vw,1.5rem)] min-[720px]:grid-cols-3">
+        {STEPS.map((s) => (
+          <li key={s.title} className="border-t-2 border-ink pt-3">
+            <p className="nb-slug">{s.n}</p>
+            <h3 className="mt-1.5 text-[1.02rem] leading-tight">{s.title}</h3>
+            <p className="mt-1.5 text-[0.9rem] leading-snug text-graphite">
               {s.body}
             </p>
           </li>
         ))}
       </ol>
 
-      <div className="mt-6 flex flex-col gap-1.5">
-        <Link href={href} className="ac-btn self-start text-sm">
-          Start your first lesson: {lessonTitle}
-          <ArrowRight className="h-4 w-4" aria-hidden />
+      <div className="nb-hair mt-[clamp(1.3rem,2.6vw,1.9rem)] pt-4">
+        <Link href={href} className="nb-btn">
+          Start with this one
         </Link>
-        <span className="text-xs text-muted-foreground">in {deptName}</span>
+        <p className="nb-slug mt-2.5">
+          {lessonTitle} / {deptName}
+        </p>
       </div>
     </section>
   );

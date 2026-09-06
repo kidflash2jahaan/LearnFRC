@@ -1,22 +1,31 @@
-"use client";
-
-import * as React from "react";
-import { motion, useReducedMotion } from "framer-motion";
-import { Icon } from "@/lib/icon-map";
-import { AnimatedCounter } from "@/components/animated-counter";
-
 export type HeroDept = {
   slug: string;
   name: string;
-  color: string;
-  icon: string;
   lessons: number;
+  /**
+   * Accepted and ignored. Departments carry no colour and no icon in this
+   * system: they are identified by their name and their mono slug. Both fields
+   * stay on the type so the home page keeps compiling while it is rebuilt.
+   */
+  color?: string;
+  icon?: string;
 };
 
 /**
- * Signature hero device: "Season telemetry" — a floating glass instrument
- * showing the platform live: total lessons ticking up, and the biggest
- * departments as spring-loaded meter bars that sweep in on load.
+ * The card taped up beside the headline: what is actually in the binder.
+ *
+ * The old panel was a "Season telemetry" glass instrument with a pulsing Live
+ * dot and four gradient meters that swept in on load. None of that was true.
+ * Nothing here is live, the numbers are the catalogue counted at build time,
+ * and a green dot that blinks forever is exactly the idle motion this system
+ * bans. So it is what it says it is: an index card, taped down at both ends and
+ * never straightened, with the counts ruled off one under the next.
+ *
+ * The four biggest departments keep their share meters, because share is the
+ * one thing a raw count does not tell you, and `.nb-meter` prints the number
+ * beside the bar so the bar is never the only way to read it.
+ *
+ * Server Component. It holds no state and nothing in it animates.
  */
 export function HeroPanel({
   lessonCount,
@@ -27,94 +36,69 @@ export function HeroPanel({
   deptCount: number;
   depts: HeroDept[];
 }) {
-  const reduce = useReducedMotion();
-  // Bar width and label are the SAME number (share of the whole catalog) so a
-  // bar never looks "full" while its label says 13%.
+  // Bar width and printed figure are the same number, so a bar can never look
+  // full while the label next to it says 13%.
   const pctOf = (lessons: number) =>
     Math.round((lessons / Math.max(1, lessonCount)) * 100);
 
   return (
-    <motion.div
-      className="ac-glass relative w-full max-w-md p-6 sm:p-7 lg:justify-self-end"
-      initial={{ opacity: 0, y: 26, rotate: -1.2 }}
-      animate={{ opacity: 1, y: 0, rotate: 0 }}
-      transition={reduce ? { duration: 0 } : { type: "spring", stiffness: 140, damping: 18, delay: 0.25 }}
-      whileHover={reduce ? undefined : { y: -6 }}
-    >
-      {/* header row */}
-      <div className="flex items-center justify-between gap-3">
-        <span className="font-display text-[17px] font-bold text-foreground">
-          Season telemetry
-        </span>
-        <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.08em] text-success">
-          <motion.span
-            className="h-2 w-2 rounded-full bg-[#12b565]"
-            animate={reduce ? undefined : { scale: [1, 1.35, 1], opacity: [1, 0.6, 1] }}
-            transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
-            aria-hidden
-          />
-          Live
-        </span>
-      </div>
+    <div className="w-full max-w-md lg:justify-self-end">
+      <div className="nb-box nb-tilt-1 p-[clamp(1.2rem,2.4vw,1.7rem)]">
+        <span className="nb-tape -top-3 left-[22%] rotate-[-3.6deg]" aria-hidden="true" />
+        <span className="nb-tape -bottom-3 right-[16%] rotate-[2.4deg]" aria-hidden="true" />
 
-      {/* headline numbers */}
-      <div className="mt-5 grid grid-cols-2 gap-3">
-        <div className="ac-card rounded-2xl p-4">
-          <div className="font-display text-3xl font-extrabold leading-none text-primary">
-            <AnimatedCounter value={lessonCount} />
-          </div>
-          <div className="mt-1 text-xs font-medium text-muted-foreground">lessons to master</div>
+        <p className="nb-slug border-b border-dashed border-rule pb-3">
+          what is in the binder
+        </p>
+
+        {/* Plain rows rather than a dl: the label reads as one phrase with its
+            figure, so splitting them into dt/dd only buys a `display:contents`
+            that drops both out of the accessibility tree in some browsers. */}
+        <div className="mt-1">
+          <p className="flex items-baseline gap-3 py-2">
+            <b className="min-w-[3.6ch] font-mono text-[clamp(1.7rem,1.1rem+1.9vw,2.5rem)] font-bold leading-none tabular-nums text-blue">
+              {lessonCount.toLocaleString()}
+            </b>
+            <span className="text-[0.95rem]">lessons, written and reviewed</span>
+          </p>
+          <p className="flex items-baseline gap-3 border-t border-[rgba(22,24,27,0.13)] py-2">
+            <b className="min-w-[3.6ch] font-mono text-[clamp(1.7rem,1.1rem+1.9vw,2.5rem)] font-bold leading-none tabular-nums text-blue">
+              {deptCount.toLocaleString()}
+            </b>
+            <span className="text-[0.95rem]">departments, one per team job</span>
+          </p>
         </div>
-        <div className="ac-card rounded-2xl p-4">
-          <div className="font-display text-3xl font-extrabold leading-none text-foreground">
-            <AnimatedCounter value={deptCount} />
+
+        {depts.length > 0 && (
+          <div className="mt-4 border-t border-dashed border-rule pt-4">
+            <p className="nb-slug">biggest departments, share of the catalogue</p>
+            <ul className="mt-3 flex flex-col gap-3">
+              {depts.map((d) => {
+                const pct = pctOf(d.lessons);
+                return (
+                  <li key={d.slug}>
+                    <div className="flex items-baseline justify-between gap-3">
+                      <span className="min-w-0 truncate text-[0.92rem] font-semibold">
+                        {d.name}
+                      </span>
+                      <span className="nb-slug shrink-0 font-bold text-ink">
+                        {pct}%
+                      </span>
+                    </div>
+                    <span className="nb-meter mt-1.5 block h-[0.55rem]">
+                      <span className="nb-meter-bar" style={{ width: `${pct}%` }} />
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
           </div>
-          <div className="mt-1 text-xs font-medium text-muted-foreground">departments</div>
-        </div>
+        )}
       </div>
 
-      {/* department meters */}
-      <div className="mt-5 space-y-3">
-        {depts.map((d, i) => (
-          <div key={d.slug}>
-            <div className="mb-1 flex items-center justify-between gap-2">
-              <span className="inline-flex min-w-0 items-center gap-2 text-sm font-medium text-foreground">
-                <span
-                  className="ac-badge flex h-6 w-6 shrink-0 items-center justify-center rounded-lg"
-                  style={{ "--a": d.color } as React.CSSProperties}
-                >
-                  <Icon name={d.icon} className="h-3.5 w-3.5" aria-hidden />
-                </span>
-                <span className="truncate">{d.name}</span>
-              </span>
-              <span className="shrink-0 text-xs font-semibold tabular-nums text-muted-foreground">
-                {pctOf(d.lessons)}% of lessons
-              </span>
-            </div>
-            <div className="h-2 overflow-hidden rounded-full bg-[rgba(120,145,190,0.18)]">
-              <motion.div
-                className="h-full origin-left rounded-full"
-                style={{
-                  background: `linear-gradient(90deg, ${d.color}, #1aa9d6)`,
-                  width: `${pctOf(d.lessons)}%`,
-                }}
-                initial={{ scaleX: 0 }}
-                animate={{ scaleX: 1 }}
-                transition={
-                  reduce
-                    ? { duration: 0 }
-                    : { type: "spring", stiffness: 90, damping: 20, delay: 0.5 + i * 0.12 }
-                }
-              />
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <p className="mt-5 text-[13px] leading-relaxed text-muted-foreground">
-        Reading is free, no login needed. Sign up to track your mastery across
-        every department, all season long.
+      <p className="nb-pen mt-4 rotate-[-1.2deg] pl-2">
+        built by one high&#8209;school student, working alone
       </p>
-    </motion.div>
+    </div>
   );
 }

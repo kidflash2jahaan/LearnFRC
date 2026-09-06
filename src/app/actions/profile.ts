@@ -31,7 +31,7 @@ export async function updateProfile(
   // the exception. Keyed on the user id (not just the IP) so one account can't
   // spray edits from a rotating address.
   if (!(await rateLimit("update-profile", 20, 3600, user.id)))
-    return { error: "Too many profile updates — try again in a bit." };
+    return { error: "Too many profile updates. Try again in a bit." };
 
   const full_name = String(formData.get("full_name") || "").trim() || null;
   const bio = String(formData.get("bio") || "").trim() || null;
@@ -76,7 +76,7 @@ export async function updateProfile(
   )
     return {
       error:
-        "You've changed your team number a few times today — try again tomorrow.",
+        "You've changed your team number a few times today. Try again tomorrow.",
     };
 
   let username: string | null = null;
@@ -108,9 +108,9 @@ export async function updateProfile(
     return {
       error:
         badField === "username"
-          ? "That username isn't allowed — please choose another."
+          ? "That username isn't allowed. Please choose another."
           : badField === "full_name"
-            ? "That name isn't allowed — please use a different one."
+            ? "That name isn't allowed. Please use a different one."
             : "Please remove the inappropriate language from your bio.",
     };
 
@@ -180,7 +180,7 @@ export async function saveProfileSetup(
     if (username.length < 3)
       return { error: "Username must be at least 3 characters (a–z, 0–9, _)." };
     if (firstProfaneField({ username }))
-      return { error: "That username isn't allowed — please choose another." };
+      return { error: "That username isn't allowed. Please choose another." };
 
     if (username !== currentUsername) {
       const { data: taken } = await admin
@@ -202,7 +202,7 @@ export async function saveProfileSetup(
   if (Object.keys(payload).length === 0)
     return {
       error: wantsUsername
-        ? "Nothing to save — choose a different username, add your team number, or Skip for now."
+        ? "Nothing to save. Choose a different username, add your team number, or Skip for now."
         : "Enter your team number, or choose Skip for now.",
     };
 
@@ -229,7 +229,7 @@ export async function saveProfileSetup(
       ? { error: "That username is already taken." }
       : { error: error.message };
   if (!updated)
-    return { error: "Your profile changed in another tab — reload and retry." };
+    return { error: "Your profile changed in another tab. Reload and retry." };
 
   revalidatePath("/", "layout");
   return { success: true };

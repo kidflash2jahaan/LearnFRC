@@ -1,163 +1,114 @@
-"use client";
-
 import Link from "next/link";
-import { motion, useReducedMotion } from "framer-motion";
-import { Crown } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
-import { AnimatedCounter } from "@/components/animated-counter";
-import { inkFor } from "@/lib/departments";
+import { clampPct } from "@/lib/utils";
 import type { PodiumEntry } from "@/components/leaderboard/podium";
 
-const RANK_ACCENT: Record<number, string> = {
-  2: "#22d3ee",
-  3: "#ff3dcb",
-};
-
 /**
- * Signature hero device: "Current champion" — a floating glass instrument
- * that spotlights rank #1 (crown, avatar, live XP count-up) with ranks #2
- * and #3 trailing underneath as spring-loaded XP-gap meters. This is the
- * page's "podium moment," felt before you ever scroll to the full board.
+ * THE STANDING, TAPED UP.
+ *
+ * The one thing somebody wants from this page before they scroll: who is
+ * actually on top right now. It is drawn as the slip of paper a scorekeeper
+ * pins to the wall between matches, three ruled lines with the gap between
+ * them measured out, not a floating instrument panel.
+ *
+ * WHY A METER AND A NUMBER. The bars are the shape of the race, and they are
+ * the whole reason to put second and third next to first: 12,400 against
+ * 11,900 is a photo finish and 12,400 against 900 is not, and neither reads
+ * from the figures alone at a glance. Every bar prints its own figure beside
+ * it, because a bar on its own is one colour against one colour.
+ *
+ * This is the all-time standing. The board further down shows whichever week
+ * or view you pick, which is a different question and gets a different shape.
+ *
+ * Server Component: no state, no motion, no client bundle.
  */
 export function ChampionPanel({ top3 }: { top3: PodiumEntry[] }) {
-  const reduce = useReducedMotion();
   const champ = top3[0];
-  const rest = top3.slice(1, 3);
   if (!champ) return null;
 
-  const gold = "#ffd23d";
-  const ink = inkFor(gold);
+  // Every bar is measured against the leader, so the leader is always full and
+  // the gap below is real distance rather than a rescaled ranking.
   const max = Math.max(1, champ.xp);
 
-  const champName = (
-    <span className="block truncate font-display text-lg font-bold text-foreground sm:text-xl">
-      {champ.name}
-    </span>
-  );
-
   return (
-    <motion.div
-      className="ac-glass relative w-full max-w-md p-6 sm:p-7 lg:justify-self-end"
-      initial={{ opacity: 0, y: 26, rotate: 1.2 }}
-      animate={{ opacity: 1, y: 0, rotate: 0 }}
-      transition={
-        reduce ? { duration: 0 } : { type: "spring", stiffness: 140, damping: 18, delay: 0.25 }
-      }
-      whileHover={reduce ? undefined : { y: -6 }}
-    >
-      {/* header row */}
-      <div className="flex items-center justify-between gap-3">
-        <span className="font-display text-[17px] font-bold text-foreground">
-          Current champion
-        </span>
-        <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.08em] text-success">
-          <motion.span
-            className="h-2 w-2 rounded-full bg-[#12b565]"
-            animate={reduce ? undefined : { scale: [1, 1.35, 1], opacity: [1, 0.6, 1] }}
-            transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
-            aria-hidden
-          />
-          Live
-        </span>
-      </div>
+    <div className="nb-box nb-tilt-2 relative w-full max-w-[27rem] p-[clamp(1.2rem,2.6vw,1.8rem)] lg:justify-self-end">
+      <span className="nb-tape -top-3 left-[18%] rotate-[-4.2deg]" aria-hidden="true" />
+      <span className="nb-tape -bottom-3 right-[14%] rotate-[2.6deg]" aria-hidden="true" />
 
-      {/* champion row */}
-      <div className="mt-5 flex items-center gap-4">
-        <div className="relative shrink-0">
-          <div
-            className="rounded-2xl p-[2px]"
-            style={{
-              backgroundImage: `linear-gradient(135deg, ${gold}, color-mix(in srgb, ${gold} 30%, transparent))`,
-            }}
-          >
-            <Avatar
-              name={champ.name}
-              src={champ.avatarUrl}
-              seed={champ.username ?? champ.id}
-              className="h-16 w-16 rounded-[1rem] border-2 border-background sm:h-[4.5rem] sm:w-[4.5rem]"
-            />
-          </div>
-          <motion.span
-            aria-hidden
-            className="absolute -right-2 -top-2.5 flex h-8 w-8 items-center justify-center rounded-full border-2 border-background"
-            style={{ background: gold }}
-            initial={{ opacity: 0, scale: 0.5, rotate: -16 }}
-            animate={{ opacity: 1, scale: 1, rotate: 0 }}
-            transition={reduce ? { duration: 0 } : { delay: 0.5, type: "spring", stiffness: 260, damping: 16 }}
-          >
-            <Crown className="h-4 w-4" style={{ color: ink }} />
-          </motion.span>
-        </div>
-        <div className="min-w-0 flex-1">
-          {champ.username ? (
-            <Link
-              href={`/u/${champ.username}`}
-              className="-my-1.5 inline-flex min-h-[44px] max-w-full items-center rounded-md py-1.5 outline-none transition-colors hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+      <p className="nb-marker">standings / all time</p>
+
+      <ol className="mt-1">
+        {top3.slice(0, 3).map((e, i) => {
+          const first = i === 0;
+          const pct = clampPct((e.xp / max) * 100);
+
+          const nameTag = (
+            <span
+              className={`block truncate tracking-[-0.02em] ${
+                first ? "text-[1.18rem] font-extrabold" : "text-[1rem] font-bold"
+              }`}
             >
-              {champName}
-            </Link>
-          ) : (
-            champName
-          )}
-          <p className="mt-0.5 truncate text-sm text-muted-foreground">
-            {champ.teamNumber != null ? `Team ${champ.teamNumber} · ` : ""}
-            <span className="capitalize">{champ.role}</span>
-          </p>
-          <p className="mt-1.5 font-display text-2xl font-extrabold tabular-nums" style={{ color: ink }}>
-            <AnimatedCounter value={champ.xp} />{" "}
-            <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              XP
+              {e.name}
             </span>
-          </p>
-        </div>
-      </div>
+          );
 
-      {/* runner-up meters */}
-      {rest.length > 0 && (
-        <div className="mt-5 space-y-3">
-          {rest.map((e, i) => {
-            const accent = RANK_ACCENT[e.rank] ?? "#22d3ee";
-            return (
-              <div key={e.id}>
-                <div className="mb-1 flex items-center justify-between gap-2">
-                  <span className="inline-flex min-w-0 items-center gap-2 text-sm font-medium text-foreground">
-                    <span
-                      className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full font-display text-[11px] font-bold"
-                      style={{ background: accent, color: inkFor(accent) }}
+          return (
+            <li
+              key={e.id}
+              className={first ? "pt-1" : "nb-hair mt-3.5 pt-3.5"}
+            >
+              <div className="flex items-center gap-3">
+                <span className="nb-slug w-[1.6rem] shrink-0 font-bold text-ink">
+                  {String(e.rank).padStart(2, "0")}
+                </span>
+
+                <Avatar
+                  name={e.name}
+                  src={e.avatarUrl}
+                  seed={e.username ?? e.id}
+                  className={
+                    first
+                      ? "h-12 w-12 text-[0.9rem]"
+                      : "h-9 w-9 text-[0.72rem]"
+                  }
+                />
+
+                <div className="min-w-0 flex-1">
+                  {e.username ? (
+                    <Link
+                      href={`/u/${e.username}`}
+                      className="block min-w-0 hover:text-blue"
                     >
-                      {e.rank}
-                    </span>
-                    <span className="truncate">{e.name}</span>
-                  </span>
-                  <span className="shrink-0 text-xs font-semibold tabular-nums text-muted-foreground">
-                    {e.xp.toLocaleString()} XP
+                      {nameTag}
+                    </Link>
+                  ) : (
+                    nameTag
+                  )}
+                  <span className="nb-slug block truncate">
+                    {e.teamNumber != null ? `team ${e.teamNumber} / ` : ""}
+                    {e.role.toLowerCase()}
                   </span>
                 </div>
-                <div className="h-2 overflow-hidden rounded-full bg-[rgba(120,145,190,0.18)]">
-                  <motion.div
-                    className="h-full origin-left rounded-full"
-                    style={{
-                      background: `linear-gradient(90deg, ${accent}, #1aa9d6)`,
-                      width: `${Math.max(6, Math.round((e.xp / max) * 100))}%`,
-                    }}
-                    initial={{ scaleX: 0 }}
-                    animate={{ scaleX: 1 }}
-                    transition={
-                      reduce
-                        ? { duration: 0 }
-                        : { type: "spring", stiffness: 90, damping: 20, delay: 0.5 + i * 0.12 }
-                    }
-                  />
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
 
-      <p className="mt-5 text-[13px] leading-relaxed text-muted-foreground">
-        Finish a lesson to earn XP and start closing the gap to the top.
+                <span
+                  className={`nb-count shrink-0 ${first ? "text-[1.5rem]" : "text-[1.05rem]"}`}
+                >
+                  {e.xp.toLocaleString()}
+                  <small>xp</small>
+                </span>
+              </div>
+
+              <span className="nb-meter mt-2 block h-[0.45rem]">
+                <span className="nb-meter-bar" style={{ width: `${pct}%` }} />
+              </span>
+            </li>
+          );
+        })}
+      </ol>
+
+      <p className="nb-hair nb-slug mt-4 pt-3.5 leading-relaxed">
+        bars are measured against first place
       </p>
-    </motion.div>
+    </div>
   );
 }

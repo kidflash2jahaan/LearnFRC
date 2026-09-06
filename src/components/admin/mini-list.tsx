@@ -1,141 +1,104 @@
-"use client";
-
-import * as React from "react";
-import type { CSSProperties } from "react";
-import { RevealGroup, RevealItem } from "@/components/motion/primitives";
-import { AnimatedCounter } from "@/components/animated-counter";
 import { clampPct } from "@/lib/utils";
 
 /**
- * MiniList — the compact leaderboard used INSIDE the collapsed dropdown panels
- * on /admin (top lessons, top departments, newest members, recent completions,
- * top recruiters).
+ * The tally inside a drawer: top lessons, top departments, top teams, top
+ * recruiters, article views, achievements, and the activation funnel.
  *
- * Contract notes:
- *  - Layout is Tailwind-only. Nothing here leans on the ac-* kit for position,
- *    display or spacing — the kit is skin, and these lists sit inside a panel
- *    that already carries the card skin.
- *  - Hydration-safe: the tree and the text are identical on server and client.
- *    The bar renders at its FINAL width on first paint (so it is correct with
- *    JS off and never mismatches); `transition-[width]` only animates later
- *    value changes, and `motion-reduce:transition-none` opts out in CSS rather
- *    than by branching in JS.
- *  - Self-contained motion: MiniList brings its OWN RevealGroup, so rows
- *    stagger correctly whether or not the caller is already a reveal group.
+ * A row is a name, a figure and, where the comparison is the point, a gauge.
+ * The gauge is `.nb-meter`, which prints an ink trough with a blue fill and is
+ * never allowed to be the only way to read the number: the figure sits beside
+ * it, always, so the list still works printed in greyscale or read aloud.
+ *
+ * The old version drew each bar as a two-stop gradient from a per-list accent
+ * into the brand blue. There is one accent in this system and gradients are not
+ * part of it, so the accent prop is gone rather than remapped.
+ *
+ * Server Components, both of them. They were client-only to run an entrance
+ * stagger and a spring counter, and this system has neither: a number written
+ * on a page is already written.
  */
 
 export type MiniRow = {
   /** Main text. Truncates; the full string stays available via `title`. */
   label: string;
-  /** Secondary text rendered after the label in muted colour. */
+  /** Secondary text rendered after the label in the mono hand. */
   sub?: string;
   /** Right-aligned number. */
   value: number;
   valueSuffix?: string;
-  /** 0–100. When present, a hairline progress bar is drawn under the row. */
+  /** 0 to 100. When present, a gauge is drawn under the row. */
   pct?: number;
 };
 
-/** Repo arena-blue. Used as the gradient's left stop when no accent is given. */
-const DEFAULT_ACCENT = "#2560e6";
-
-function Row({ row, accent }: { row: MiniRow; accent: string }) {
+function Row({ row }: { row: MiniRow }) {
   const pct = row.pct == null ? null : clampPct(row.pct);
 
   return (
-    <RevealItem className="py-1.5">
-      <div className="flex min-w-0 items-baseline gap-2">
-        <span className="min-w-0 flex-1 truncate text-[13px] leading-snug" title={row.label}>
+    <li className="nb-hair py-2.5 first:border-t-0 first:pt-0">
+      <div className="flex min-w-0 items-baseline justify-between gap-3">
+        <span className="min-w-0 truncate text-[0.95rem] leading-snug" title={row.label}>
           {row.label}
-          {row.sub ? (
-            <span className="ml-1.5 text-[11px] font-medium text-muted-foreground">
-              {row.sub}
-            </span>
-          ) : null}
+          {row.sub ? <span className="nb-slug ml-2">{row.sub}</span> : null}
         </span>
-        <span className="shrink-0 text-[13px] font-semibold tabular-nums leading-snug text-primary">
-          <AnimatedCounter value={row.value} suffix={row.valueSuffix ?? ""} />
+        <span className="shrink-0 font-mono text-[0.95rem] font-bold tabular-nums text-blue">
+          {row.value.toLocaleString()}
+          {row.valueSuffix ?? ""}
         </span>
       </div>
 
       {pct !== null ? (
-        <div
-          aria-hidden
-          className="mt-1 h-[1.5px] w-full overflow-hidden rounded-full bg-border"
-        >
-          <span
-            className="block h-full rounded-full transition-[width] duration-700 ease-out motion-reduce:transition-none"
-            style={
-              {
-                width: `${pct}%`,
-                background: `linear-gradient(90deg, ${accent}, var(--primary))`,
-              } as CSSProperties
-            }
-          />
-        </div>
+        // aria-hidden: the figure above already carries the value, and a
+        // progressbar role on every row of a twelve-row list is noise.
+        <span aria-hidden className="nb-meter mt-2 block h-[0.6rem]">
+          <span className="nb-meter-bar" style={{ width: `${pct}%` }} />
+        </span>
       ) : null}
-    </RevealItem>
+    </li>
   );
 }
 
 export function MiniList({
   rows,
   empty,
-  accent,
 }: {
   rows: MiniRow[];
   empty?: string;
-  accent?: string;
 }): React.JSX.Element {
   if (rows.length === 0) {
-    return (
-      <p className="py-1.5 text-[13px] text-muted-foreground">{empty ?? "Nothing yet."}</p>
-    );
+    return <p className="nb-slug py-2">{empty ?? "Nothing recorded yet."}</p>;
   }
 
-  const a = accent ?? DEFAULT_ACCENT;
-
   return (
-    // Padding lives on the rows (RevealItem), never as a gap — a gap here would
-    // fight the divider rhythm and the reveal offset.
-    <RevealGroup className="flex min-w-0 flex-col divide-y divide-border/50" stagger={0.035}>
+    <ul className="min-w-0">
       {rows.map((row, i) => (
-        <Row key={`${i}-${row.label}`} row={row} accent={a} />
+        <Row key={`${i}-${row.label}`} row={row} />
       ))}
-    </RevealGroup>
+    </ul>
   );
 }
 
 /**
- * Two related MiniLists sharing one dropdown panel: side by side at sm+,
- * stacked at 375px. Each half is a labelled region so screen readers announce
- * which list they are in.
+ * Two related tallies sharing one drawer: side by side from 640px, stacked
+ * below it. Each half is a labelled region, so a screen reader says which list
+ * it is in rather than reading twenty numbers in a row.
  */
 export function MiniListPair({
   left,
   right,
 }: {
-  left: { title: string; rows: MiniRow[]; accent?: string; empty?: string };
-  right: { title: string; rows: MiniRow[]; accent?: string; empty?: string };
+  left: { title: string; rows: MiniRow[]; empty?: string };
+  right: { title: string; rows: MiniRow[]; empty?: string };
 }): React.JSX.Element {
-  const baseId = React.useId();
-
   return (
-    <div className="grid min-w-0 gap-4 sm:grid-cols-2">
-      {[left, right].map((col, i) => {
-        const headingId = `${baseId}-${i}`;
-        return (
-          <section key={headingId} aria-labelledby={headingId} className="min-w-0">
-            <h4
-              id={headingId}
-              className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground"
-            >
-              {col.title}
-            </h4>
-            <MiniList rows={col.rows} accent={col.accent} empty={col.empty} />
-          </section>
-        );
-      })}
+    <div className="grid min-w-0 gap-x-8 gap-y-6 sm:grid-cols-2">
+      {[left, right].map((col) => (
+        <section key={col.title} aria-label={col.title} className="min-w-0">
+          <p className="nb-slug mb-2.5 border-b border-dashed border-rule pb-2">
+            {col.title}
+          </p>
+          <MiniList rows={col.rows} empty={col.empty} />
+        </section>
+      ))}
     </div>
   );
 }

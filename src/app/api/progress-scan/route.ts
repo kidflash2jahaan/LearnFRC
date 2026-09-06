@@ -84,7 +84,7 @@ export async function POST(req: Request) {
       const { data: userRes } = await admin.auth.admin.getUserById(s.userId);
       const email = userRes?.user?.email ?? null;
       const ip = (prof?.signup_ip as string | null) ?? null;
-      const reason = `scripted completions — ${s.burstGaps} lessons finished within ${BURST_GAP_SECONDS}s of each other (${s.completions} total)`;
+      const reason = `scripted completions: ${s.burstGaps} lessons finished within ${BURST_GAP_SECONDS}s of each other (${s.completions} total)`;
 
       if (email) {
         await admin

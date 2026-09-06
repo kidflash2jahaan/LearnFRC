@@ -1,9 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { AlertCircle, CheckCircle2, Loader2, Send } from "lucide-react";
-import { Input, Textarea } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 
 /**
  * Anonymous, no-account report / contact form. POSTs to /api/report-error.
@@ -14,15 +11,19 @@ import { Button } from "@/components/ui/button";
  * account first. Nothing here requires one — the email field is optional and
  * exists only so someone who wants an answer can get one.
  *
- * Deliberately plain: no motion hooks (nothing to desync at hydration), no
+ * Deliberately plain: no motion (nothing to desync at hydration) and no
  * client-side URL sniffing (a value written in after mount would be a hydration
- * mismatch), and all layout on Tailwind utilities — the ac-* classes are skin
- * only.
+ * mismatch). It is now built out of `.nb-field` / `.nb-input` / `.nb-btn`
+ * directly rather than through the shared Input/Button wrappers, so this form
+ * is drawn by the same rules as everything else in the binder and does not
+ * inherit whatever a wrapper decides a "variant" means.
+ *
+ * The submit logic, the focus move on success and the ARIA are unchanged.
  */
 export function ReportForm({
   kind = "contact",
   pageLabel = "Page it's on",
-  pagePlaceholder = "learnfrc.com/guides/… (optional)",
+  pagePlaceholder = "learnfrc.com/guides/…",
   messageLabel = "What's wrong?",
   messagePlaceholder = "Which page, what it says, and what it should say. A link or rule number helps.",
   submitLabel = "Send",
@@ -54,9 +55,11 @@ export function ReportForm({
 
   const MAX = 4000;
   const msgId = `${uid}-message`;
+  const msgCountId = `${uid}-message-count`;
   const pageId = `${uid}-page`;
   const emailId = `${uid}-email`;
   const emailHintId = `${uid}-email-hint`;
+  const errorId = `${uid}-error`;
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -97,54 +100,49 @@ export function ReportForm({
         ref={sentRef}
         tabIndex={-1}
         role="status"
-        className="flex flex-col items-start gap-3 rounded-2xl border border-success/30 bg-success/10 p-5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        className="nb-box nb-tilt-4 p-[clamp(1.1rem,2.4vw,1.6rem)]"
       >
-        <div className="flex items-start gap-3">
-          <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-success" aria-hidden />
-          <div>
-            <p className="font-semibold text-foreground">Sent — thank you.</p>
-            <p className="mt-1 text-sm leading-relaxed text-foreground/75">
-              {kind === "error" ? (
-                <>
-                  It goes straight to the maintainer&rsquo;s inbox. If a fact
-                  turns out to be wrong, the fix gets an entry in the
-                  corrections log whether or not you left an address.
-                </>
-              ) : (
-                <>
-                  It goes straight to the maintainer&rsquo;s inbox. If you left
-                  an email you&rsquo;ll get a reply; if you didn&rsquo;t, the
-                  message still gets read.
-                </>
-              )}
-            </p>
-          </div>
-        </div>
-        <Button
+        <span className="nb-tape -top-3 left-[30%] rotate-[-3.2deg]" aria-hidden="true" />
+        <p className="nb-slug">sent / logged</p>
+        <p className="mt-2 font-semibold">Thank you. It arrived.</p>
+        <p className="mt-2 max-w-[52ch] text-[0.95rem] leading-relaxed text-graphite">
+          {kind === "error" ? (
+            <>
+              It goes straight to the maintainer&rsquo;s inbox. If a fact turns
+              out to be wrong, the fix gets an entry in the corrections log
+              whether or not you left an address.
+            </>
+          ) : (
+            <>
+              It goes straight to the maintainer&rsquo;s inbox. If you left an
+              email you&rsquo;ll get a reply. If you didn&rsquo;t, the message
+              still gets read.
+            </>
+          )}
+        </p>
+        <button
           type="button"
-          variant="ghost"
-          size="sm"
           onClick={() => setSent(false)}
-          className="mt-1"
+          className="nb-btn-ghost nb-btn-sm mt-5"
         >
           Send another
-        </Button>
+        </button>
       </div>
     );
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-4">
-      <div>
+    <form onSubmit={onSubmit} className="flex flex-col gap-4">
+      <div className="nb-field">
         <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-          <label htmlFor={msgId} className="text-sm font-semibold text-foreground">
+          <label htmlFor={msgId} className="nb-label">
             {messageLabel}
           </label>
-          <span className="text-xs tabular-nums text-muted-foreground">
-            {message.length}/{MAX}
+          <span id={msgCountId} className="nb-slug tabular-nums">
+            {message.length} / {MAX}
           </span>
         </div>
-        <Textarea
+        <textarea
           id={msgId}
           name="message"
           required
@@ -155,17 +153,17 @@ export function ReportForm({
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           placeholder={messagePlaceholder}
-          className="mt-1.5"
+          aria-describedby={msgCountId}
+          className="nb-input"
         />
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <div>
-          <label htmlFor={pageId} className="text-sm font-semibold text-foreground">
-            {pageLabel}{" "}
-            <span className="font-normal text-muted-foreground">(optional)</span>
+        <div className="nb-field">
+          <label htmlFor={pageId} className="nb-label">
+            {pageLabel}, optional
           </label>
-          <Input
+          <input
             id={pageId}
             name="page"
             type="text"
@@ -175,14 +173,15 @@ export function ReportForm({
             value={page}
             onChange={(e) => setPage(e.target.value)}
             placeholder={pagePlaceholder}
-            className="mt-1.5"
+            className="nb-input"
           />
         </div>
-        <div>
-          <label htmlFor={emailId} className="text-sm font-semibold text-foreground">
-            Email <span className="font-normal text-muted-foreground">(optional)</span>
+
+        <div className="nb-field">
+          <label htmlFor={emailId} className="nb-label">
+            Email, optional
           </label>
-          <Input
+          <input
             id={emailId}
             name="email"
             type="email"
@@ -194,10 +193,10 @@ export function ReportForm({
             onChange={(e) => setEmail(e.target.value)}
             aria-describedby={emailHintId}
             placeholder="you@example.com"
-            className="mt-1.5"
+            className="nb-input"
           />
-          <p id={emailHintId} className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
-            Only if you want a reply. Leave it blank to stay anonymous — the
+          <p id={emailHintId} className="nb-hint">
+            Only if you want a reply. Leave it blank to stay anonymous, the
             report counts either way.
           </p>
         </div>
@@ -206,26 +205,17 @@ export function ReportForm({
       {/* Announced without stealing focus; empty until something goes wrong. */}
       <div aria-live="polite">
         {error && (
-          <div className="flex items-start gap-2 rounded-xl border border-destructive/30 bg-destructive/10 px-3.5 py-3 text-sm text-destructive">
-            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-            <span>{error}</span>
-          </div>
+          <p id={errorId} className="nb-error">
+            {error}
+          </p>
         )}
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
-        <Button type="submit" variant="brand" disabled={pending}>
-          {pending ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> Sending…
-            </>
-          ) : (
-            <>
-              <Send className="h-4 w-4" aria-hidden /> {submitLabel}
-            </>
-          )}
-        </Button>
-        <span className="text-xs text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <button type="submit" className="nb-btn" disabled={pending} aria-busy={pending}>
+          {pending ? "Sending" : submitLabel}
+        </button>
+        <span className="nb-hint">
           No account needed. Nothing here is published automatically.
         </span>
       </div>

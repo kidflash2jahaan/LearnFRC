@@ -1,13 +1,20 @@
 "use client";
 
 import * as React from "react";
-import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
-/** Multi-color Google "G" mark. */
-function GoogleG({ className }: { className?: string }) {
+/**
+ * The Google mark, kept in its own four colours.
+ *
+ * Everything else on this site is drawn from the six-value palette, and this is
+ * the one deliberate exception: it is somebody else's trademark, not our
+ * chrome, and recolouring a sign-in provider's mark to match a page is both a
+ * brand violation and a recognition problem. It reads as what it is here, a
+ * sticker someone put on the binder.
+ */
+function GoogleMark({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 48 48" className={className} aria-hidden focusable="false">
       <path fill="#4285F4" d="M45.12 24.5c0-1.56-.14-3.06-.4-4.5H24v8.51h11.84c-.51 2.75-2.06 5.08-4.39 6.64v5.52h7.11c4.16-3.83 6.56-9.47 6.56-16.17z" />
@@ -52,14 +59,14 @@ export function GoogleSignInButton({
         setLoading(false);
         toast.error(
           /provider is not enabled|not enabled/i.test(error.message)
-            ? "Google sign-in isn't set up yet — use email for now."
+            ? "Google sign-in isn't set up yet, use email for now."
             : error.message
         );
       }
-      // On success the browser is redirecting to Google, so keep the spinner.
+      // On success the browser is leaving for Google, so the button stays busy.
     } catch {
       setLoading(false);
-      toast.error("Couldn't start Google sign-in — try email.");
+      toast.error("Couldn't start Google sign-in. Use email instead.");
     }
   };
 
@@ -68,18 +75,13 @@ export function GoogleSignInButton({
       type="button"
       onClick={onClick}
       disabled={loading}
-      className={cn(
-        "ac-btn-ghost flex w-full items-center justify-center gap-2.5 text-sm font-semibold",
-        "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-      )}
       aria-busy={loading}
+      className={cn("nb-btn-ghost w-full")}
     >
-      {loading ? (
-        <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-      ) : (
-        <GoogleG className="h-[18px] w-[18px]" />
-      )}
-      Continue with Google
+      {/* The mark is hidden while busy rather than swapped for a spinner: the
+          system has no spinner, and the label already carries the state. */}
+      {!loading && <GoogleMark className="h-[18px] w-[18px]" />}
+      {loading ? "Opening Google" : "Continue with Google"}
     </button>
   );
 }

@@ -3,10 +3,6 @@
 import * as React from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { useRouter } from "next/navigation";
-import { Search, CornerDownLeft, BookOpen, Layers, Loader2 } from "lucide-react";
-import { Icon } from "@/lib/icon-map";
-import { deptMeta, inkFor } from "@/lib/departments";
-import { cn } from "@/lib/utils";
 
 type Dept = {
   slug: string;
@@ -27,9 +23,22 @@ type ResultItem =
   | { type: "dept"; href: string; dept: Dept }
   | { type: "lesson"; href: string; lesson: LessonHit };
 
-const KBD =
-  "inline-flex h-6 min-w-6 items-center justify-center rounded-md border border-[rgba(120,145,190,.28)] bg-white/70 px-1.5 text-xs text-muted-foreground";
-
+/**
+ * The binder's index card, pulled out on ⌘K.
+ *
+ * A department is named by its name and its mono slug, never by a colour chip,
+ * so every row here is type: `dept / cad-design` over the department name, or
+ * the department name over the lesson title. That is also why the coloured icon
+ * tiles are gone; they were the only thing in the old palette telling two rows
+ * apart, and colour is not allowed to be the only signal.
+ *
+ * The highlighted row carries a blue wash AND a solid blue bar down its left
+ * edge (`.nb-menu-item`), so keyboard position survives being read in
+ * greyscale, or by someone who cannot pick the wash out of the card stock.
+ *
+ * Behaviour is unchanged: same shortcut, same `open-search` event, same lazily
+ * fetched index, same filtering, same arrow/enter handling, same ARIA combobox.
+ */
 export function CommandPalette() {
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
@@ -70,12 +79,23 @@ export function CommandPalette() {
     }
   }, [open, loaded]);
 
-  React.useEffect(() => {
-    if (!open) {
+  // Closing clears the box, and typing moves the cursor back to the top of the
+  // list. Both used to be effects that called setState the moment they ran,
+  // which is a cascading render for something that is only ever caused by an
+  // event. They live in the handlers now: `query` and `open` have exactly one
+  // writer each, so there is nothing left to synchronise after the fact.
+  const onOpenChange = React.useCallback((next: boolean) => {
+    setOpen(next);
+    if (!next) {
       setQuery("");
       setActive(0);
     }
-  }, [open]);
+  }, []);
+
+  const onQueryChange = React.useCallback((next: string) => {
+    setQuery(next);
+    setActive(0);
+  }, []);
 
   const results = React.useMemo<ResultItem[]>(() => {
     const q = query.trim().toLowerCase();
@@ -111,8 +131,6 @@ export function CommandPalette() {
     return [...deptHits, ...lessonHits];
   }, [query, depts, lessons]);
 
-  React.useEffect(() => setActive(0), [query]);
-
   const go = React.useCallback(
     (href: string) => {
       setOpen(false);
@@ -136,26 +154,30 @@ export function CommandPalette() {
   };
 
   return (
-    <DialogPrimitive.Root open={open} onOpenChange={setOpen}>
+    <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className="fixed inset-0 z-[60] bg-[#e6eefb]/60 backdrop-blur-md data-[state=open]:animate-in data-[state=open]:fade-in-0" />
+        {/* Flat newsprint wash, not a blur: the page behind reads as the sheet
+            underneath this one on the desk. */}
+        <DialogPrimitive.Overlay className="fixed inset-0 z-[60] bg-[rgba(230,232,227,0.82)]" />
         <DialogPrimitive.Content
           onKeyDown={onKeyDown}
-          className={cn(
-            "ac-glass fixed left-1/2 top-[12vh] z-[61] w-[92vw] max-w-xl -translate-x-1/2 overflow-hidden p-0",
-            "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=open]:slide-in-from-top-2"
-          )}
+          aria-describedby={undefined}
+          className="nb-surface fixed left-1/2 top-[11vh] z-[61] flex max-h-[74vh] w-[92vw] max-w-xl -translate-x-1/2 flex-col overflow-hidden"
         >
-          <DialogPrimitive.Title className="sr-only">Search LearnFRC</DialogPrimitive.Title>
+          <DialogPrimitive.Title className="sr-only">
+            Search LearnFRC
+          </DialogPrimitive.Title>
 
-          {/* search input */}
-          <div className="flex items-center gap-2 border-b border-border px-4">
-            <Search aria-hidden className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <div className="flex items-baseline gap-2 border-b-2 border-ink px-4 py-1">
+            <label htmlFor="cmdk-input" className="nb-slug shrink-0 py-2">
+              search /
+            </label>
             <input
+              id="cmdk-input"
               autoFocus
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search departments, lessons, topics…"
+              onChange={(e) => onQueryChange(e.target.value)}
+              placeholder="department, lesson, topic"
               role="combobox"
               aria-expanded={results.length > 0}
               aria-controls="cmdk-list"
@@ -163,118 +185,70 @@ export function CommandPalette() {
               aria-activedescendant={
                 results[active] ? `cmdk-opt-${active}` : undefined
               }
-              aria-label="Search LearnFRC"
-              className="w-full bg-transparent py-3.5 text-sm text-foreground outline-none placeholder:text-muted-foreground"
+              className="w-full bg-transparent py-3 text-base text-ink outline-none placeholder:text-graphite"
             />
           </div>
 
-          <div id="cmdk-list" role="listbox" aria-label="Search results" className="max-h-[52vh] overflow-y-auto p-2">
+          <div
+            id="cmdk-list"
+            role="listbox"
+            aria-label="Search results"
+            className="min-h-0 flex-1 overflow-y-auto py-1"
+          >
             {!loaded && (
-              <div className="flex items-center justify-center gap-2 px-3 py-8 text-sm text-muted-foreground">
-                <Loader2 aria-hidden className="h-4 w-4 animate-spin" />
-                Indexing…
-              </div>
+              <p className="nb-slug px-4 py-8 text-center">
+                reading the index…
+              </p>
             )}
+
             {loaded && results.length === 0 && (
-              <div className="flex flex-col items-center gap-2 px-3 py-10 text-center text-sm text-muted-foreground">
-                <Search aria-hidden className="h-5 w-5 opacity-60" />
-                No matches for &ldquo;{query}&rdquo;
+              <div className="px-4 py-9 text-center">
+                <p className="nb-slug">no match</p>
+                <p className="mt-2 text-[0.95rem] text-graphite">
+                  Nothing in the binder is filed under &ldquo;{query}&rdquo;.
+                </p>
               </div>
             )}
+
             {results.map((r, i) => {
               const isActive = i === active;
-              const activeCls = isActive
-                ? "border-primary/50 bg-primary/10"
-                : "border-transparent hover:border-border hover:bg-muted/50";
-              if (r.type === "dept") {
-                const m = deptMeta(r.dept.slug);
-                return (
-                  <button
-                    key={`d-${r.dept.slug}`}
-                    id={`cmdk-opt-${i}`}
-                    role="option"
-                    aria-selected={isActive}
-                    onMouseEnter={() => setActive(i)}
-                    onClick={() => go(r.href)}
-                    className={cn(
-                      "flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-colors",
-                      activeCls
-                    )}
-                  >
-                    <span
-                      className="flex h-9 w-9 items-center justify-center rounded-lg border"
-                      style={{
-                        color: inkFor(m.color),
-                        borderColor: `color-mix(in srgb, ${m.color} 40%, var(--border))`,
-                        background: `color-mix(in srgb, ${m.color} 14%, transparent)`,
-                      }}
-                    >
-                      <Icon name={r.dept.icon} className="h-4.5 w-4.5" />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-medium">
-                        {r.dept.name}
-                      </span>
-                      <span className="block truncate text-xs text-muted-foreground">
-                        {r.dept.tagline}
-                      </span>
-                    </span>
-                    {isActive ? (
-                      <CornerDownLeft className="h-3.5 w-3.5 text-primary" />
-                    ) : (
-                      <Layers className="h-3.5 w-3.5 text-muted-foreground" />
-                    )}
-                  </button>
-                );
-              }
+              const [slug, title, sub] =
+                r.type === "dept"
+                  ? [`dept / ${r.dept.slug}`, r.dept.name, r.dept.tagline ?? ""]
+                  : [
+                      `lesson / ${r.lesson.deptSlug}`,
+                      r.lesson.title,
+                      r.lesson.deptName,
+                    ];
               return (
                 <button
-                  key={`l-${r.lesson.deptSlug}-${r.lesson.slug}`}
+                  key={r.href}
                   id={`cmdk-opt-${i}`}
                   role="option"
                   aria-selected={isActive}
                   onMouseEnter={() => setActive(i)}
                   onClick={() => go(r.href)}
-                  className={cn(
-                    "flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-colors",
-                    activeCls
-                  )}
+                  className="nb-menu-item flex-col items-start gap-0.5 py-2.5"
                 >
-                  <span className="flex h-9 w-9 items-center justify-center rounded-lg border border-accent/30 bg-accent/10 text-[#0e7490]">
-                    <BookOpen className="h-4.5 w-4.5" />
+                  <span className="nb-slug">{slug}</span>
+                  <span className="w-full truncate text-[0.95rem] font-semibold">
+                    {title}
                   </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-medium">
-                      {r.lesson.title}
+                  {sub && (
+                    <span className="w-full truncate text-sm text-graphite">
+                      {sub}
                     </span>
-                    <span className="block truncate text-xs text-muted-foreground">
-                      {r.lesson.deptName}
-                    </span>
-                  </span>
-                  {isActive && (
-                    <CornerDownLeft className="h-3.5 w-3.5 text-primary" />
                   )}
                 </button>
               );
             })}
           </div>
 
-          {/* keyboard hint bar */}
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-border px-4 py-2.5 text-xs text-muted-foreground">
-            <span className="inline-flex items-center gap-1">
-              <kbd className={KBD}>↑</kbd>
-              <kbd className={KBD}>↓</kbd> navigate
-            </span>
-            <span className="inline-flex items-center gap-1">
-              <kbd className={KBD}>↵</kbd> open
-            </span>
-            <span className="inline-flex items-center gap-1">
-              <kbd className={KBD}>esc</kbd> close
-            </span>
-            <span className="ml-auto hidden font-medium text-primary sm:inline-flex">
-              LearnFRC
-            </span>
-          </div>
+          <p className="nb-slug flex flex-wrap gap-x-4 gap-y-1 border-t-2 border-ink px-4 py-2.5">
+            <span>up / down to move</span>
+            <span>enter to open</span>
+            <span>esc to close</span>
+          </p>
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>

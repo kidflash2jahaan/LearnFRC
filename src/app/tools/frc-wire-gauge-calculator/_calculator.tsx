@@ -3,18 +3,6 @@
 import * as React from "react";
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import {
-  Cable,
-  Zap,
-  Info,
-  Printer,
-  Save,
-  TriangleAlert,
-  CircleCheck,
-  ChevronDown,
-  Ruler,
-  Thermometer,
-} from "lucide-react";
 
 /* ------------------------------------------------------------------ *
  * VERIFIED DATA — every number below is sourced in tools_verified.json
@@ -73,7 +61,7 @@ interface CircuitType {
 const CIRCUIT_TYPES: readonly CircuitType[] = [
   {
     id: "main",
-    label: "120 A main power path (battery ↔ main breaker ↔ PD board)",
+    label: "120 A main power path (battery / main breaker / PD board)",
     minAwg: 6,
     rule: "R609 — 6 AWG (7 SWG / 16 mm²) or larger",
   },
@@ -91,7 +79,7 @@ const CIRCUIT_TYPES: readonly CircuitType[] = [
   },
   {
     id: "b20",
-    label: "6–20 A breaker / 11–20 A fuse; PD board → VRM-RPM / PCM-PH",
+    label: "6–20 A breaker / 11–20 A fuse; PD board to VRM-RPM / PCM-PH",
     minAwg: 18,
     rule: "R622 Table 8-4 — 18 AWG (19 SWG / 1 mm²)",
   },
@@ -181,19 +169,36 @@ function effectiveResistance(
   return base20C * tempFactor * (1 + uplift);
 }
 
+/**
+ * The three drop bands, as words rather than as hues.
+ *
+ * The old build painted these emerald / amber / red, which is a fourth, fifth
+ * and sixth colour the palette does not own, and it left the state carried by
+ * colour alone. The binder prints in one ink, so the band is a sentence.
+ */
 function percentBand(pct: number): {
   tone: "ok" | "warn" | "bad";
   label: string;
 } {
-  if (pct < 3) return { tone: "ok", label: "Under 3%" };
-  if (pct <= 5) return { tone: "warn", label: "3–5%" };
-  return { tone: "bad", label: "Over 5%" };
+  if (pct < 3) return { tone: "ok", label: "under 3%" };
+  if (pct <= 5) return { tone: "warn", label: "3 to 5%" };
+  return { tone: "bad", label: "over 5%" };
 }
 
 /* ------------------------------------------------------------------ *
  * Component
  * ------------------------------------------------------------------ */
 
+/**
+ * The wiring tag.
+ *
+ * This page answers a yes/no question an inspector will also ask, so the
+ * verdict is the first thing on the sheet, stamped across a full-bleed ink
+ * band where it can be read from across the pit. Everything after it is
+ * working: the run written on one hand-ruled tag, then the whole decision
+ * space as a gauge ladder, because the number a team actually needs is
+ * "which gauge should I have used", not "what did this one gauge do".
+ */
 export default function WireGaugeCalculator({
   authed,
 }: {
@@ -259,6 +264,22 @@ export default function WireGaugeCalculator({
       if (d.percent <= tgt) recommendedGauge = g; // keep the thinnest that passes
     }
 
+    // The whole decision space, one row per gauge. Same maths as the headline
+    // figure, so the row for the selected gauge always agrees with the slab.
+    const ladder = AWG_OPTIONS.map((g) => {
+      const base = RESISTANCE_OHM_PER_1000FT[g];
+      const rr = strandedWarm ? effectiveResistance(base, T, a, upHigh) : base;
+      const d = computeDrop(I, Lft, rr, V);
+      return {
+        gauge: g,
+        base,
+        drop: d.vDrop,
+        percent: d.percent,
+        legal: g <= circuit.minAwg,
+        underTarget: d.percent <= tgt,
+      };
+    });
+
     return {
       I,
       Lft,
@@ -270,6 +291,7 @@ export default function WireGaugeCalculator({
       high,
       compliant,
       recommendedGauge,
+      ladder,
       diameterIn: awgDiameterInch(gauge),
       areaMm2: awgAreaMm2(gauge),
     };
@@ -289,279 +311,338 @@ export default function WireGaugeCalculator({
   ]);
 
   const band = percentBand(derived.high.percent);
-  const bandClasses =
-    band.tone === "ok"
-      ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
-      : band.tone === "warn"
-        ? "bg-amber-500/10 text-amber-700 dark:text-amber-300"
-        : "bg-red-500/10 text-red-700 dark:text-red-300";
-
-  const inputCls =
-    "w-full rounded-xl border border-border bg-white/60 px-3 py-2 text-sm text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
-  const labelCls = "text-sm font-medium text-foreground";
-  const helpCls = "text-xs text-muted-foreground";
+  const rangeMode = strandedWarm;
 
   const handleSave = () => {
     // Persistence wired later; acknowledge for signed-in users.
     window.alert("Saved this wire run to your account (demo).");
   };
 
-  const rangeMode = strandedWarm;
-
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <header className="space-y-3">
-        <span className="ac-chip inline-flex items-center gap-2">
-          <Cable className="h-3.5 w-3.5" aria-hidden />
-          <span className="ac-eyebrow">FRC ELECTRICAL</span>
-        </span>
-        <h1 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">
-          Wire Gauge &amp; Voltage-Drop{" "}
-          <span
-            style={{
-              background: "linear-gradient(120deg,#2560e6,#1aa9d6)",
-              WebkitBackgroundClip: "text",
-              backgroundClip: "text",
-              color: "transparent",
-            }}
-          >
-            Calculator
-          </span>
-        </h1>
-        <p className="max-w-2xl text-sm text-foreground/70">
-          Size a wire run, see the round-trip voltage drop, and check it against the
-          FRC-mandated minimum gauge (R609 / R622 Table 8-4). Provable copper physics
-          in, honest numbers out.
-        </p>
-        <p className={helpCls}>
-          Figures: 2026 REBUILT Game Manual (Version TU22) &amp; AWG/IACS copper
-          constants. Verify against the current official Game Manual before your event.
-        </p>
-      </header>
+    <>
+      {/* ---------------------------------------------------------------- *
+       * 1. The question
+       * ---------------------------------------------------------------- */}
+      <div className="nb-wrap py-[clamp(2.2rem,5vw,3.6rem)]">
+        <div className="grid gap-x-[clamp(1.5rem,4vw,3rem)] gap-y-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+          <div>
+            <p className="nb-marker">tools / frc-wire-gauge-calculator</p>
+            <h1 className="max-w-[19ch]">
+              Is this wire thick enough, and is it{" "}
+              <span className="nb-mark">legal</span>?
+            </h1>
+            <p className="nb-lede mt-5">
+              Round-trip voltage drop from Ohm&rsquo;s law, checked against the
+              minimum gauge the manual sets for your breaker size. Copper physics
+              in, honest numbers out.
+            </p>
+            <p className="nb-slug mt-4 max-w-[62ch]">
+              Figures track the 2026 REBUILT Game Manual (TU22) and the AWG/IACS
+              copper constants. Verify against the current manual before an event.
+            </p>
+          </div>
+          <p className="nb-pen max-w-[17ch] rotate-[1.5deg] lg:pb-2 lg:text-right">
+            the run is doubled, supply and return
+          </p>
+        </div>
+      </div>
 
-      {/* Body grid */}
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
-        {/* LEFT — inputs */}
-        <section className="ac-card rounded-2xl p-5">
-          <h3 className="mb-4 flex items-center gap-2 text-base font-semibold text-foreground">
-            <Zap className="h-4 w-4 text-primary" aria-hidden />
-            The wire run
-          </h3>
+      {/* ---------------------------------------------------------------- *
+       * 2. The verdict, stamped across an ink band
+       *
+       * A pass/fail an inspector will also ask about belongs at the top and
+       * big, not in a results panel below the fold. The wording carries the
+       * state; the band is inverted for weight, never as the only signal.
+       * ---------------------------------------------------------------- */}
+      <section className="nb-slab py-[clamp(2rem,4.4vw,3.2rem)]" aria-live="polite">
+        <div className="nb-wrap grid items-end gap-[clamp(1.3rem,3vw,2.6rem)] lg:grid-cols-[minmax(0,1.05fr)_repeat(3,minmax(0,0.72fr))]">
+          <div>
+            <p className="nb-slug !text-[rgba(245,246,242,0.82)]">
+              verdict / {derived.compliant ? "passes" : "fails"} the gauge rule
+            </p>
+            <h2 className="mt-2 max-w-[15ch] text-[clamp(1.5rem,1.1rem+1.7vw,2.4rem)] text-card">
+              {derived.compliant
+                ? `${gauge} AWG is legal on this circuit.`
+                : `${gauge} AWG is too thin for this circuit.`}
+            </h2>
+            <p className="mt-3 max-w-[34ch] text-[0.95rem] text-[rgba(245,246,242,0.85)]">
+              Minimum here is {circuit.minAwg} AWG. {circuit.rule}.
+            </p>
+          </div>
 
-          <div className="space-y-4">
-            {/* current */}
-            <div className="space-y-1">
-              <label className={labelCls} htmlFor="wg-current">
-                Load current (A)
-              </label>
-              <input
-                id="wg-current"
-                className={inputCls}
-                type="number"
-                inputMode="decimal"
-                min={0}
-                value={current}
-                onChange={(e) => setCurrent(e.target.value)}
-              />
-              <p className={helpCls}>Continuous current the circuit carries.</p>
-            </div>
+          <p className="nb-stamp">
+            <b>
+              {rangeMode
+                ? `${fmt(derived.low.vDrop, 2)}–${fmt(derived.high.vDrop, 2)}`
+                : fmt(derived.low.vDrop, 2)}
+            </b>
+            <span>volts dropped over the run</span>
+          </p>
+          <p className="nb-stamp">
+            <b>
+              {rangeMode
+                ? `${fmt(derived.low.percent, 1)}–${fmt(derived.high.percent, 1)}`
+                : fmt(derived.low.percent, 1)}
+              %
+            </b>
+            <span>of {fmt(derived.V, 0)} V nominal, {band.label}</span>
+          </p>
+          <p className="nb-stamp">
+            <b>
+              {rangeMode
+                ? `${fmt(derived.high.vLoad, 2)}–${fmt(derived.low.vLoad, 2)}`
+                : fmt(derived.low.vLoad, 2)}
+            </b>
+            <span>volts left at the load</span>
+          </p>
+        </div>
+      </section>
 
-            {/* length + unit */}
-            <div className="space-y-1">
-              <label className={labelCls} htmlFor="wg-length">
-                One-way run length
-              </label>
-              <div className="flex gap-2">
+      {/* ---------------------------------------------------------------- *
+       * 3. The run, written on one tag
+       *
+       * Six inputs on a single hand-ruled tag rather than a left-hand form
+       * column: this is one wire, described once, and the conductor facts
+       * that fall out of the gauge belong on the same tag as its footer.
+       * ---------------------------------------------------------------- */}
+      <section className="py-[clamp(2.2rem,5vw,3.6rem)]">
+        <div className="nb-wrap">
+          <p className="nb-marker">the run / six numbers</p>
+          <h2 className="max-w-[20ch] text-[clamp(1.5rem,1.1rem+1.6vw,2.4rem)]">
+            Describe the wire you are about to cut.
+          </h2>
+
+          <div className="nb-box nb-tilt-3 relative mt-[clamp(1.4rem,3vw,2.2rem)] p-[clamp(1.2rem,2.6vw,2rem)]">
+            <span className="nb-tape -top-3 left-[12%] rotate-[-3.4deg]" aria-hidden="true" />
+            <span
+              className="nb-tape -bottom-3 right-[14%] rotate-[2.6deg]"
+              aria-hidden="true"
+            />
+
+            <div className="grid gap-[clamp(1rem,2.2vw,1.5rem)] sm:grid-cols-2 lg:grid-cols-3">
+              <div className="nb-field">
+                <label className="nb-label" htmlFor="wg-current">
+                  Load current (A)
+                </label>
                 <input
-                  id="wg-length"
-                  className={inputCls}
+                  id="wg-current"
+                  className="nb-input"
                   type="number"
                   inputMode="decimal"
                   min={0}
-                  value={length}
-                  onChange={(e) => setLength(e.target.value)}
+                  value={current}
+                  onChange={(e) => setCurrent(e.target.value)}
                 />
-                <select
-                  aria-label="Length unit"
-                  className={`${inputCls} w-28`}
-                  value={lengthUnit}
-                  onChange={(e) => setLengthUnit(e.target.value as LengthUnit)}
-                >
-                  <option value="in">inches</option>
-                  <option value="ft">feet</option>
-                  <option value="m">meters</option>
-                </select>
+                <p className="nb-hint">Continuous current the circuit carries.</p>
               </div>
-              <p className={helpCls}>
-                Distance from the PD board to the device. The tool doubles it internally
-                (supply + return &mdash; the &times;2 factor).
-              </p>
+
+              <div className="nb-field">
+                <label className="nb-label" htmlFor="wg-length">
+                  One-way run length
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    id="wg-length"
+                    className="nb-input"
+                    type="number"
+                    inputMode="decimal"
+                    min={0}
+                    value={length}
+                    onChange={(e) => setLength(e.target.value)}
+                  />
+                  <select
+                    aria-label="Length unit"
+                    className="nb-input nb-select w-[7.5rem] shrink-0"
+                    value={lengthUnit}
+                    onChange={(e) => setLengthUnit(e.target.value as LengthUnit)}
+                  >
+                    <option value="in">inches</option>
+                    <option value="ft">feet</option>
+                    <option value="m">meters</option>
+                  </select>
+                </div>
+                <p className="nb-hint">
+                  PD board to the device. The tool doubles it for supply and return.
+                </p>
+              </div>
+
+              <div className="nb-field">
+                <label className="nb-label" htmlFor="wg-gauge">
+                  Wire gauge (AWG)
+                </label>
+                <select
+                  id="wg-gauge"
+                  className="nb-input nb-select"
+                  value={gauge}
+                  onChange={(e) => setGauge(Number(e.target.value))}
+                >
+                  {AWG_OPTIONS.map((g) => (
+                    <option key={g} value={g}>
+                      {g} AWG
+                    </option>
+                  ))}
+                </select>
+                <p className="nb-hint">Smaller number means thicker wire.</p>
+              </div>
+
+              <div className="nb-field sm:col-span-2">
+                <label className="nb-label" htmlFor="wg-circuit">
+                  Circuit type / protection
+                </label>
+                <select
+                  id="wg-circuit"
+                  className="nb-input nb-select"
+                  value={circuitId}
+                  onChange={(e) => setCircuitId(e.target.value)}
+                >
+                  {CIRCUIT_TYPES.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.label}
+                    </option>
+                  ))}
+                </select>
+                <p className="nb-hint">Sets the minimum-gauge check. {circuit.rule}.</p>
+              </div>
+
+              <div className="nb-field">
+                <label className="nb-label" htmlFor="wg-target">
+                  Voltage-drop target (%)
+                </label>
+                <input
+                  id="wg-target"
+                  className="nb-input"
+                  type="number"
+                  inputMode="decimal"
+                  min={0}
+                  step="0.5"
+                  value={targetPct}
+                  onChange={(e) => setTargetPct(e.target.value)}
+                />
+                <p className="nb-hint">
+                  Drives the ladder below. Common guidance, not an FRC rule.
+                </p>
+              </div>
             </div>
 
-            {/* gauge */}
-            <div className="space-y-1">
-              <label className={labelCls} htmlFor="wg-gauge">
-                Wire gauge (AWG)
-              </label>
-              <select
-                id="wg-gauge"
-                className={inputCls}
-                value={gauge}
-                onChange={(e) => setGauge(Number(e.target.value))}
-              >
-                {AWG_OPTIONS.map((g) => (
-                  <option key={g} value={g}>
-                    {g} AWG
-                  </option>
-                ))}
-              </select>
-              <p className={helpCls}>
-                {gauge} AWG &asymp; {fmt(derived.diameterIn, 4)} in dia /{" "}
-                {fmt(derived.areaMm2, 2)} mm&sup2; &middot;{" "}
-                {fmt(RESISTANCE_OHM_PER_1000FT[gauge], RESISTANCE_OHM_PER_1000FT[gauge] < 1 ? 4 : 3)}{" "}
-                &#8486;/1000 ft (solid Cu, 20&deg;C). Smaller number = thicker.
-              </p>
-            </div>
-
-            {/* circuit type */}
-            <div className="space-y-1">
-              <label className={labelCls} htmlFor="wg-circuit">
-                Circuit type / protection
-              </label>
-              <select
-                id="wg-circuit"
-                className={inputCls}
-                value={circuitId}
-                onChange={(e) => setCircuitId(e.target.value)}
-              >
-                {CIRCUIT_TYPES.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.label}
-                  </option>
-                ))}
-              </select>
-              <p className={helpCls}>
-                Sets the FRC minimum-gauge check. {circuit.rule}.
-              </p>
-            </div>
-
-            {/* stranded/warm */}
-            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border bg-white/60 p-3">
-              <input
-                type="checkbox"
-                className="mt-0.5 h-4 w-4 accent-[#2560e6]"
-                checked={strandedWarm}
-                onChange={(e) => setStrandedWarm(e.target.checked)}
-              />
-              <span className="text-sm">
-                <span className="font-medium text-foreground">
-                  Stranded &amp; warm (realistic range)
+            {/* Tag footer: the mode switch, then what the chosen gauge is. */}
+            <div className="nb-hair mt-[clamp(1.2rem,2.6vw,1.8rem)] grid gap-[clamp(1rem,2.2vw,1.6rem)] pt-[clamp(1.1rem,2.2vw,1.5rem)] lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+              <label className="flex min-h-[2.75rem] cursor-pointer items-start gap-3">
+                <input
+                  type="checkbox"
+                  className="mt-1 size-4 shrink-0"
+                  checked={strandedWarm}
+                  onChange={(e) => setStrandedWarm(e.target.checked)}
+                />
+                <span>
+                  <span className="block text-[0.95rem] font-semibold">
+                    Stranded and warm, the realistic range
+                  </span>
+                  <span className="nb-hint mt-0.5 block">
+                    Real FRC wire is stranded and runs warm. Adds{" "}
+                    {fmt(num(upliftLowPct, 0), 0)} to {fmt(num(upliftHighPct, 0), 0)}%
+                    plus temperature and shows a range. Turn it off for the exact
+                    solid-copper 20&deg;C figure.
+                  </span>
                 </span>
-                <span className={`block ${helpCls}`}>
-                  Real FRC wire is stranded and runs warm. Adds a{" "}
-                  {fmt(num(upliftLowPct, 0), 0)}&ndash;{fmt(num(upliftHighPct, 0), 0)}%
-                  uplift plus temperature, and shows the drop as a range. Turn off for
-                  the exact solid-copper 20&deg;C figure.
-                </span>
-              </span>
-            </label>
-
-            {/* target */}
-            <div className="space-y-1">
-              <label className={labelCls} htmlFor="wg-target">
-                Voltage-drop target (%)
               </label>
-              <input
-                id="wg-target"
-                className={inputCls}
-                type="number"
-                inputMode="decimal"
-                min={0}
-                step="0.5"
-                value={targetPct}
-                onChange={(e) => setTargetPct(e.target.value)}
-              />
-              <p className={helpCls}>
-                Used only for the gauge recommendation. 3% / 5% are common engineering
-                guidance &mdash; not an FRC rule (FRC sets no max drop).
-              </p>
-            </div>
 
-            {/* advanced */}
-            <div className="ac-divider" />
+              <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1.5 self-start">
+                <dt className="nb-slug">conductor</dt>
+                <dd className="nb-slug !text-ink">
+                  {gauge} AWG, {fmt(derived.diameterIn, 4)} in dia,{" "}
+                  {fmt(derived.areaMm2, 2)} mm&sup2;
+                </dd>
+                <dt className="nb-slug">resistance</dt>
+                <dd className="nb-slug !text-ink">
+                  {fmt(derived.rBase, derived.rBase < 1 ? 4 : 3)} &#8486;/1000 ft solid
+                  Cu at 20&deg;C
+                </dd>
+                <dt className="nb-slug">circuit</dt>
+                <dd className="nb-slug !text-ink">
+                  {fmt(derived.low.rCircuit * 1000, 1)}
+                  {rangeMode ? ` to ${fmt(derived.high.rCircuit * 1000, 1)}` : ""} m&#8486;
+                  round trip
+                </dd>
+                <dt className="nb-slug">electrical length</dt>
+                <dd className="nb-slug !text-ink">
+                  {fmt(derived.Lft * ROUND_TRIP_FACTOR, 2)} ft, being{" "}
+                  {fmt(derived.Lft, 2)} ft each way
+                </dd>
+              </dl>
+            </div>
+          </div>
+
+          {/* Advanced constants. Collapsed, because six of the eight teams
+              that open this page never touch them. */}
+          <div className="mt-[clamp(1.2rem,2.6vw,1.8rem)]">
             <button
               type="button"
-              className="flex w-full items-center justify-between text-sm font-medium text-foreground"
+              className="nb-slug flex min-h-[2.75rem] w-full items-center justify-between gap-3 border-b-2 border-ink !text-ink"
               onClick={() => setShowAdvanced((v) => !v)}
               aria-expanded={showAdvanced}
+              aria-controls="wg-advanced"
             >
-              <span className="inline-flex items-center gap-2">
-                <Thermometer className="h-4 w-4 text-primary" aria-hidden />
-                Advanced (temperature, voltage, uplift)
-              </span>
-              <ChevronDown
-                className={`h-4 w-4 transition-transform ${showAdvanced ? "rotate-180" : ""}`}
-                aria-hidden
-              />
+              <span>advanced / temperature, system voltage, stranded uplift</span>
+              <span aria-hidden="true">{showAdvanced ? "hide" : "show"}</span>
             </button>
 
             {showAdvanced && (
-              <div className="grid grid-cols-2 gap-3 rounded-xl border border-border bg-white/40 p-3">
-                <div className="space-y-1">
-                  <label className={labelCls} htmlFor="wg-temp">
+              <div
+                id="wg-advanced"
+                className="grid gap-[clamp(1rem,2.2vw,1.5rem)] pt-[clamp(1.1rem,2.2vw,1.5rem)] sm:grid-cols-2 lg:grid-cols-4"
+              >
+                <div className="nb-field">
+                  <label className="nb-label" htmlFor="wg-temp">
                     Conductor temp (&deg;C)
                   </label>
                   <input
                     id="wg-temp"
-                    className={inputCls}
+                    className="nb-input"
                     type="number"
                     inputMode="decimal"
                     value={tempC}
                     onChange={(e) => setTempC(e.target.value)}
                   />
-                  <p className={helpCls}>Default 20&deg;C table reference.</p>
+                  <p className="nb-hint">20&deg;C is the table reference.</p>
                 </div>
-                <div className="space-y-1">
-                  <label className={labelCls} htmlFor="wg-voltage">
+                <div className="nb-field">
+                  <label className="nb-label" htmlFor="wg-voltage">
                     System voltage (V)
                   </label>
                   <input
                     id="wg-voltage"
-                    className={inputCls}
+                    className="nb-input"
                     type="number"
                     inputMode="decimal"
                     value={systemVoltage}
                     onChange={(e) => setSystemVoltage(e.target.value)}
                   />
-                  <p className={helpCls}>
-                    Nominal 12&nbsp;V &mdash; FRC R601-A. Editable.
-                  </p>
+                  <p className="nb-hint">12 V nominal, R601-A.</p>
                 </div>
-                <div className="space-y-1">
-                  <label className={labelCls} htmlFor="wg-alpha">
-                    Cu &alpha; (/&deg;C)
+                <div className="nb-field">
+                  <label className="nb-label" htmlFor="wg-alpha">
+                    Copper &alpha; (/&deg;C)
                   </label>
                   <input
                     id="wg-alpha"
-                    className={inputCls}
+                    className="nb-input"
                     type="number"
                     inputMode="decimal"
                     step="0.0001"
                     value={alpha}
                     onChange={(e) => setAlpha(e.target.value)}
                   />
-                  <p className={helpCls}>0.00393 &mdash; IEC 60028.</p>
+                  <p className="nb-hint">0.00393, IEC 60028.</p>
                 </div>
-                <div className="space-y-1">
-                  <label className={labelCls} htmlFor="wg-uplift">
-                    Stranded uplift (% low&ndash;high)
+                <div className="nb-field">
+                  <label className="nb-label" htmlFor="wg-uplift">
+                    Stranded uplift (% low to high)
                   </label>
                   <div className="flex gap-2">
                     <input
                       id="wg-uplift"
                       aria-label="Stranded uplift low percent"
-                      className={inputCls}
+                      className="nb-input"
                       type="number"
                       inputMode="decimal"
                       value={upliftLowPct}
@@ -569,346 +650,274 @@ export default function WireGaugeCalculator({
                     />
                     <input
                       aria-label="Stranded uplift high percent"
-                      className={inputCls}
+                      className="nb-input"
                       type="number"
                       inputMode="decimal"
                       value={upliftHighPct}
                       onChange={(e) => setUpliftHighPct(e.target.value)}
                     />
                   </div>
-                  <p className={helpCls}>2&ndash;5% estimate &mdash; verify for your wire.</p>
+                  <p className="nb-hint">2 to 5% estimate, verify for your wire.</p>
                 </div>
               </div>
             )}
           </div>
-        </section>
+        </div>
+      </section>
 
-        {/* RIGHT — live results */}
-        <section className="ac-card rounded-2xl p-5">
-          {/* Primary result */}
-          <div className="ac-tile rounded-2xl p-5">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Voltage drop {rangeMode ? "(range)" : ""}
-            </p>
-            <div className="mt-1 flex items-baseline gap-2">
-              <span
-                className="font-display text-4xl font-bold tabular-nums sm:text-5xl"
-                style={{
-                  background: "linear-gradient(120deg,#2560e6,#1aa9d6)",
-                  WebkitBackgroundClip: "text",
-                  backgroundClip: "text",
-                  color: "transparent",
-                }}
-              >
-                {rangeMode
-                  ? `${fmt(derived.low.vDrop, 2)}–${fmt(derived.high.vDrop, 2)}`
-                  : fmt(derived.low.vDrop, 2)}
-              </span>
-              <span className="text-lg font-semibold text-foreground/70">V</span>
+      {/* ---------------------------------------------------------------- *
+       * 4. The gauge ladder
+       *
+       * The number a team needs is rarely "what did this gauge do", it is
+       * "which gauge should I have used", so print the whole decision space
+       * and mark the row they are standing on.
+       * ---------------------------------------------------------------- */}
+      <section className="nb-rule py-[clamp(2.2rem,5vw,3.6rem)]">
+        <div className="nb-wrap">
+          <div className="grid gap-x-[clamp(1.5rem,4vw,3rem)] gap-y-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+            <div>
+              <p className="nb-marker">every gauge / against this run</p>
+              <h2 className="max-w-[22ch] text-[clamp(1.5rem,1.1rem+1.6vw,2.4rem)]">
+                What each gauge would have done.
+              </h2>
+              <p className="nb-sub mt-4">
+                {fmt(derived.I, 0)} A over {fmt(derived.Lft, 2)} ft one way,{" "}
+                {rangeMode ? "worst case, stranded and warm" : "solid copper at 20°C"}.
+                A row is only usable if it is both legal on this circuit and under
+                your {fmt(num(targetPct, 0), 1)}% target.
+              </p>
             </div>
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              <span
-                className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold tabular-nums ${bandClasses}`}
-              >
-                {rangeMode
-                  ? `${fmt(derived.low.percent, 1)}–${fmt(derived.high.percent, 1)}%`
-                  : `${fmt(derived.low.percent, 1)}%`}{" "}
-                of {fmt(derived.V, 0)} V &middot; {band.label}
-              </span>
-            </div>
-            <p className="mt-2 text-xs text-muted-foreground">
-              {rangeMode
-                ? "Low = solid copper @ 20°C (exact table). High = stranded + warm."
-                : "Solid copper @ 20°C — exact AWG table value."}
-            </p>
+            {derived.recommendedGauge !== null ? (
+              <p className="nb-count shrink-0 lg:pb-1 lg:text-right">
+                {derived.recommendedGauge} AWG
+                <small>thinnest that works</small>
+              </p>
+            ) : (
+              <p className="nb-slug max-w-[24ch] lg:pb-1 lg:text-right">
+                nothing down to 6 AWG holds this target, shorten the run or split the
+                load
+              </p>
+            )}
           </div>
 
-          {/* Secondary outputs */}
-          <div className="mt-4 grid grid-cols-2 gap-3">
-            <Metric
-              label="Voltage at the load"
-              value={
-                rangeMode
-                  ? `${fmt(derived.high.vLoad, 2)}–${fmt(derived.low.vLoad, 2)} V`
-                  : `${fmt(derived.low.vLoad, 2)} V`
-              }
-              hint={`${fmt(derived.V, 0)} V nominal − drop`}
-            />
-            <Metric
-              label="Round-trip resistance"
-              value={
-                rangeMode
-                  ? `${fmt(derived.low.rCircuit * 1000, 1)}–${fmt(derived.high.rCircuit * 1000, 1)} mΩ`
-                  : `${fmt(derived.low.rCircuit * 1000, 1)} mΩ`
-              }
-              hint={`×2 × ${fmt(derived.Lft, 2)} ft × ${fmt(
-                derived.rBase,
-                derived.rBase < 1 ? 4 : 3
-              )} Ω/1000ft`}
-            />
-            <Metric
-              label="Current"
-              value={`${fmt(derived.I, 0)} A`}
-              hint="Load current entered"
-            />
-            <Metric
-              label="Electrical length"
-              value={`${fmt(derived.Lft * ROUND_TRIP_FACTOR, 2)} ft`}
-              hint={`${fmt(derived.Lft, 2)} ft one-way × 2`}
-            />
+          <div className="nb-scroll mt-[clamp(1.4rem,3vw,2.2rem)]">
+            <table className="nb-table min-w-[46rem]">
+              <caption className="sr-only">
+                Voltage drop and legality for every offered wire gauge on the run
+                described above.
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col">gauge</th>
+                  <th scope="col">&#8486;/1000 ft</th>
+                  <th scope="col">volts dropped</th>
+                  <th scope="col">% of {fmt(derived.V, 0)} V</th>
+                  <th scope="col">rule</th>
+                  <th scope="col">verdict</th>
+                </tr>
+              </thead>
+              <tbody>
+                {derived.ladder.map((r) => {
+                  const chosen = r.gauge === gauge;
+                  const pick = r.gauge === derived.recommendedGauge;
+                  return (
+                    <tr
+                      key={r.gauge}
+                      // The selected row is marked by weight, a blue bar and a
+                      // word, so it survives greyscale and colour blindness.
+                      className={chosen ? "bg-[rgba(27,54,200,0.07)] font-semibold" : ""}
+                    >
+                      <th
+                        scope="row"
+                        className={`!border-b-0 !pl-3 !text-[0.86rem] !normal-case ${
+                          chosen ? "!text-ink" : ""
+                        }`}
+                        style={{
+                          borderLeft: `3px solid ${chosen ? "var(--blue)" : "transparent"}`,
+                        }}
+                      >
+                        {r.gauge} AWG
+                      </th>
+                      <td className="nb-slug !text-ink">
+                        {fmt(r.base, r.base < 1 ? 4 : 3)}
+                      </td>
+                      <td className="nb-slug !text-ink">{fmt(r.drop, 2)} V</td>
+                      <td className="nb-slug !text-ink">{fmt(r.percent, 1)}%</td>
+                      <td className="nb-slug">
+                        {r.legal ? "meets the minimum" : `below ${circuit.minAwg} AWG`}
+                      </td>
+                      <td className="nb-slug !text-ink">
+                        {!r.legal
+                          ? "not legal here"
+                          : !r.underTarget
+                            ? "legal, over target"
+                            : pick
+                              ? "use this one"
+                              : "works"}
+                        {chosen ? " · selected" : ""}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
 
-          {/* Compliance verdict */}
-          <div className="mt-4 space-y-3">
-            <div
-              className={`flex items-start gap-3 rounded-xl p-3 ${
-                derived.compliant
-                  ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
-                  : "bg-red-500/10 text-red-700 dark:text-red-300"
-              }`}
-            >
-              {derived.compliant ? (
-                <CircleCheck className="mt-0.5 h-5 w-5 shrink-0" aria-hidden />
-              ) : (
-                <TriangleAlert className="mt-0.5 h-5 w-5 shrink-0" aria-hidden />
-              )}
-              <div className="text-sm">
-                <p className="font-semibold">
-                  {derived.compliant
-                    ? `FRC-legal — ${gauge} AWG meets the minimum for this circuit`
-                    : `TOO THIN — ${gauge} AWG is below the FRC minimum`}
-                </p>
-                <p className="mt-0.5 opacity-90">
-                  Minimum for this circuit: {circuit.minAwg} AWG. {circuit.rule}.
-                </p>
-              </div>
-            </div>
+          <p className="nb-note mt-[clamp(1.4rem,3vw,2.2rem)] max-w-[64ch] text-[0.95rem] leading-relaxed text-graphite">
+            <span className="nb-slug mb-1 block">what &ldquo;legal&rdquo; does not mean</span>
+            Table 8-4 and R609 set the minimum safe size, not the size that keeps
+            voltage where you want it. A gauge can pass inspection and still drop
+            most of a volt on a long drive run, so read the drop column, not just
+            the rule column.
+          </p>
 
-            <div className="flex items-start gap-3 rounded-xl border border-border bg-white/60 p-3">
-              <Ruler className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden />
-              <div className="text-sm text-foreground">
-                <p className="font-semibold">Gauge recommendation</p>
-                <p className="mt-0.5 text-foreground/80">
-                  {derived.recommendedGauge !== null ? (
-                    <>
-                      Thinnest FRC-legal gauge that also holds the worst-case drop under{" "}
-                      {fmt(num(targetPct, 0), 1)}%:{" "}
-                      <span className="font-semibold text-primary">
-                        {derived.recommendedGauge} AWG
-                      </span>
-                      . (Legal floor here is {circuit.minAwg} AWG.)
-                    </>
-                  ) : (
-                    <>
-                      No offered gauge (down to 6 AWG) keeps the worst-case drop under{" "}
-                      {fmt(num(targetPct, 0), 1)}% at {fmt(derived.I, 0)} A over this run
-                      &mdash; shorten the run, split the load, or raise the target.
-                    </>
-                  )}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Actions */}
-          <div className="ac-divider my-4" />
-          <div className="flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              className="ac-btn inline-flex items-center gap-2"
-              onClick={() => window.print()}
-            >
-              <Printer className="h-4 w-4" aria-hidden />
-              Print / Save PDF
+          {/* Actions live at the foot of the working, where you would sign a
+              worksheet, not floating beside the results. */}
+          <div className="mt-[clamp(1.4rem,3vw,2.2rem)] flex flex-wrap items-center gap-3">
+            <button type="button" className="nb-btn" onClick={() => window.print()}>
+              Print this sheet
             </button>
             {authed ? (
-              <button
-                type="button"
-                className="ac-btn-ghost inline-flex items-center gap-2"
-                onClick={handleSave}
-              >
-                <Save className="h-4 w-4" aria-hidden />
+              <button type="button" className="nb-btn-ghost" onClick={handleSave}>
                 Save scenario
               </button>
-            ) : null}
+            ) : (
+              <Link
+                href="/signup?next=/tools/frc-wire-gauge-calculator"
+                className="nb-btn-ghost"
+              >
+                Save this run to an account
+              </Link>
+            )}
           </div>
-
-          {!authed && (
-            <Link
-              href="/signup?next=/tools/frc-wire-gauge-calculator"
-              className="mt-3 flex items-center gap-3 rounded-xl border border-border bg-white/60 p-3 text-sm transition hover:border-primary/40"
-            >
-              <Save className="h-4 w-4 shrink-0 text-primary" aria-hidden />
-              <span className="text-foreground/80">
-                <span className="font-medium text-foreground">
-                  Create a free account
-                </span>{" "}
-                to save this wire run, build a full electrical BOM, and export it for the
-                pit or inspection binder.
-              </span>
-            </Link>
-          )}
-        </section>
-      </div>
-
-      {/* Notes & sources */}
-      <section className="ac-glass rounded-2xl p-5">
-        <button
-          type="button"
-          className="flex w-full items-center justify-between text-left"
-          onClick={() => setNotesOpen((v) => !v)}
-          aria-expanded={notesOpen}
-        >
-          <span className="inline-flex items-center gap-2 text-base font-semibold text-foreground">
-            <Info className="h-4 w-4 text-primary" aria-hidden />
-            Notes &amp; sources
-          </span>
-          <ChevronDown
-            className={`h-4 w-4 transition-transform ${notesOpen ? "rotate-180" : ""}`}
-            aria-hidden
-          />
-        </button>
-
-        {notesOpen && (
-          <div className="mt-4 space-y-4 text-sm text-foreground/80">
-            <div>
-              <p className="mb-1 font-semibold text-foreground">Formulas used</p>
-              <ul className="list-disc space-y-1 pl-5">
-                <li>
-                  AWG diameter (definition): d(in) = 0.005 &times;
-                  92<sup>((36&minus;n)/39)</sup>; area A = (&pi;/4)d&sup2;.
-                </li>
-                <li>
-                  Round-trip resistance: R = 2 &times; L<sub>one-way(ft)</sub> &times;
-                  R<sub>/1000ft</sub> / 1000. The &times;2 is mandatory (supply + return).
-                </li>
-                <li>Voltage drop (Ohm&rsquo;s law): V = I &times; R.</li>
-                <li>Percent drop: V / 12 V nominal &times; 100.</li>
-                <li>
-                  Temperature: R<sub>T</sub> = R<sub>20</sub>(1 + &alpha;(T&minus;20)),
-                  &alpha; = 0.00393/&deg;C copper.
-                </li>
-              </ul>
-            </div>
-
-            <div>
-              <p className="mb-1 font-semibold text-foreground">Disclaimers</p>
-              <ul className="list-disc space-y-1.5 pl-5">
-                <li>
-                  Resistance values are DC resistance for solid annealed copper at 20&deg;C
-                  (100% IACS). Real FRC wire is stranded and runs warm, so actual drop is
-                  typically 2&ndash;8% higher &mdash; the stranded/warm mode accounts for
-                  this.
-                </li>
-                <li>
-                  FRC Table 8-4 / R609 gauges are the minimum legal (fire-safety) sizes,
-                  NOT the size that minimizes voltage drop. A gauge can be fully legal and
-                  still drop significant voltage on a long run &mdash; use the drop number,
-                  not just the PASS flag, for drive circuits.
-                </li>
-                <li>
-                  Percent drop is computed against 12&nbsp;V nominal (R601-A). A resting
-                  pack is ~12.7&ndash;13.1&nbsp;V and sags under load, so live voltage will
-                  differ &mdash; the % is a consistent design reference, not a live
-                  measurement.
-                </li>
-                <li>
-                  The 3% / 5% color bands are common engineering guidance, not FRC rules.
-                  FRC sets no maximum voltage-drop limit; only the minimum wire gauge is
-                  mandated.
-                </li>
-                <li>
-                  Manufacturer-attached or manufacturer-recommended wiring (e.g. leads
-                  pre-attached to a motor controller) is exempt from R622 per the rule&rsquo;s
-                  own note &mdash; the checker applies to team-run wiring.
-                </li>
-                <li>
-                  Gauges and rule numbers are from the 2026 (TU22) manual and match 2025
-                  V11, but FRC can revise wiring rules each season. Always verify against
-                  the current official Game Manual before an event; this tool is not a
-                  substitute for official inspection.
-                </li>
-              </ul>
-            </div>
-
-            <div>
-              <p className="mb-1 font-semibold text-foreground">Sources for every default</p>
-              <ul className="list-disc space-y-1.5 pl-5">
-                <li>
-                  Per-gauge resistance (&#8486;/1000&nbsp;ft, solid Cu, 20&deg;C): 6=0.3951,
-                  8=0.6282, 10=0.9989, 12=1.588, 14=2.525, 16=4.016, 18=6.385, 20=10.15,
-                  22=16.14, 24=25.67 &mdash;{" "}
-                  <SourceLink href="https://hyperphysics.gsu.edu/hbase/Tables/wirega.html">
-                    HyperPhysics AWG table
-                  </SourceLink>
-                  , reproduced from R = &rho;/A.
-                </li>
-                <li>
-                  Copper resistivity &rho; = 1.7241&times;10<sup>&minus;8</sup>&nbsp;&#8486;&middot;m
-                  (100% IACS, 20&deg;C){" "}
-                  <span className="text-xs text-muted-foreground">
-                    (= {COPPER_RESISTIVITY_OHM_M.toExponential(4)})
-                  </span>{" "}
-                  &mdash; IEC 60028 / IACS standard.
-                </li>
-                <li>
-                  Copper &alpha; = 0.00393/&deg;C at 20&deg;C &mdash; IEC 60028 / CRC
-                  Handbook.
-                </li>
-                <li>
-                  Round-trip factor &times;2 &mdash; series-circuit topology identity.
-                </li>
-                <li>
-                  Nominal system voltage 12&nbsp;V; main power path 6 AWG; 120&nbsp;A main
-                  breaker; Table 8-4 minimums (31&ndash;40A&rarr;12, 21&ndash;30A&rarr;14,
-                  6&ndash;20A/11&ndash;20A&nbsp;fuse&rarr;18, &le;5A/&le;10A&nbsp;fuse&rarr;22,
-                  VRM&nbsp;2A/&le;2A&nbsp;fuse&rarr;24 AWG) &mdash;{" "}
-                  <SourceLink href="https://firstfrc.blob.core.windows.net/frc2026/Manual/2026GameManual.pdf">
-                    2026 REBUILT Game Manual (R601-A, R609, R622 Table 8-4)
-                  </SourceLink>
-                  .
-                </li>
-                <li>
-                  Stranded uplift 2&ndash;5% over the solid table &mdash; needs-range
-                  estimate (editable above), not an exact figure.
-                </li>
-              </ul>
-            </div>
-
-            <p className="text-xs text-muted-foreground">
-              This tool estimates wiring only; it is not affiliated with or endorsed by
-              FIRST. Not a substitute for official robot inspection.
-            </p>
-          </div>
-        )}
+        </div>
       </section>
-    </div>
+
+      {/* ---------------------------------------------------------------- *
+       * 5. The back of the sheet
+       * ---------------------------------------------------------------- */}
+      <section className="nb-rule py-[clamp(2.2rem,5vw,3.6rem)]">
+        <div className="nb-wrap">
+          <button
+            type="button"
+            className="flex w-full items-baseline justify-between gap-4 text-left"
+            onClick={() => setNotesOpen((v) => !v)}
+            aria-expanded={notesOpen}
+            aria-controls="wg-notes"
+          >
+            <span>
+              <span className="nb-marker">the back of the sheet</span>
+              <span className="block text-[clamp(1.35rem,1.05rem+1.2vw,2rem)] font-extrabold tracking-[-0.025em]">
+                Every formula and every source.
+              </span>
+            </span>
+            <span className="nb-slug shrink-0 !text-ink" aria-hidden="true">
+              {notesOpen ? "hide" : "show"}
+            </span>
+          </button>
+
+          {notesOpen && (
+            <div
+              id="wg-notes"
+              className="mt-[clamp(1.4rem,3vw,2.2rem)] grid gap-[clamp(1.4rem,3vw,2.6rem)] lg:grid-cols-3"
+            >
+              <div>
+                <p className="nb-slug border-b-2 border-ink pb-2">formulas used</p>
+                <ul className="nb-prose mt-4 !max-w-none text-[0.95rem]">
+                  <li>
+                    AWG diameter, by definition: d(in) = 0.005 &times; 92
+                    <sup>((36&minus;n)/39)</sup>, area A = (&pi;/4)d&sup2;.
+                  </li>
+                  <li>
+                    Round-trip resistance: R = 2 &times; L<sub>one-way (ft)</sub>{" "}
+                    &times; R<sub>/1000ft</sub> / 1000. The &times;2 is not optional.
+                  </li>
+                  <li>Voltage drop, Ohm&rsquo;s law: V = I &times; R.</li>
+                  <li>Percent drop: V / 12 V nominal &times; 100.</li>
+                  <li>
+                    Temperature: R<sub>T</sub> = R<sub>20</sub>(1 + &alpha;(T&minus;20)),
+                    &alpha; = 0.00393/&deg;C for copper.
+                  </li>
+                </ul>
+              </div>
+
+              <div>
+                <p className="nb-slug border-b-2 border-ink pb-2">where it stops being true</p>
+                <ul className="nb-prose mt-4 !max-w-none text-[0.95rem]">
+                  <li>
+                    The table is DC resistance for solid annealed copper at 20&deg;C.
+                    Real wire is stranded and warm, so actual drop runs 2 to 8% higher.
+                    That is what the stranded mode is for.
+                  </li>
+                  <li>
+                    Percent is measured against 12 V nominal. A rested pack sits near
+                    12.7 to 13.1 V and sags under load, so this is a design reference,
+                    not a live reading.
+                  </li>
+                  <li>
+                    The 3% and 5% bands are engineering guidance. FRC sets no maximum
+                    drop, only a minimum gauge.
+                  </li>
+                  <li>
+                    Wiring attached or specified by a manufacturer, like the leads
+                    already on a motor controller, is exempt from R622. This checker
+                    is for wire your team runs.
+                  </li>
+                  <li>
+                    Gauges and rule numbers are 2026 (TU22) and match 2025 V11, but
+                    FRC revises wiring rules. This is not a substitute for inspection.
+                  </li>
+                </ul>
+              </div>
+
+              <div>
+                <p className="nb-slug border-b-2 border-ink pb-2">sources for every default</p>
+                <ul className="nb-prose mt-4 !max-w-none text-[0.95rem]">
+                  <li>
+                    Per-gauge resistance (&#8486;/1000 ft, solid Cu, 20&deg;C): 6=0.3951,
+                    8=0.6282, 10=0.9989, 12=1.588, 14=2.525, 16=4.016, 18=6.385,
+                    20=10.15, 22=16.14, 24=25.67, from the{" "}
+                    <SourceLink href="https://hyperphysics.gsu.edu/hbase/Tables/wirega.html">
+                      HyperPhysics AWG table
+                    </SourceLink>
+                    , reproduced from R = &rho;/A.
+                  </li>
+                  <li>
+                    Copper resistivity &rho; = 1.7241&times;10<sup>&minus;8</sup>{" "}
+                    &#8486;&middot;m at 20&deg;C, 100% IACS (
+                    {COPPER_RESISTIVITY_OHM_M.toExponential(4)}), IEC 60028.
+                  </li>
+                  <li>Copper &alpha; = 0.00393/&deg;C at 20&deg;C, IEC 60028.</li>
+                  <li>Round-trip factor &times;2, a series-circuit identity.</li>
+                  <li>
+                    12 V nominal, 6 AWG main path, 120 A main breaker, and the Table
+                    8-4 minimums (31 to 40 A gives 12, 21 to 30 A gives 14, 6 to 20 A
+                    gives 18, 5 A and under gives 22, VRM 2 A gives 24), from the{" "}
+                    <SourceLink href="https://firstfrc.blob.core.windows.net/frc2026/Manual/2026GameManual.pdf">
+                      2026 REBUILT Game Manual, R601-A, R609, R622
+                    </SourceLink>
+                    .
+                  </li>
+                  <li>
+                    Stranded uplift of 2 to 5% over the solid table is an estimate you
+                    can edit, not an exact figure.
+                  </li>
+                </ul>
+                <p className="nb-slug mt-4">
+                  Not affiliated with or endorsed by FIRST.
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      </section>
+    </>
   );
 }
 
 /* ------------------------------------------------------------------ *
  * Presentational helpers
  * ------------------------------------------------------------------ */
-
-function Metric({
-  label,
-  value,
-  hint,
-}: {
-  label: string;
-  value: string;
-  hint: string;
-}): React.JSX.Element {
-  return (
-    <div className="ac-tile rounded-xl p-3">
-      <p className="text-xs font-medium text-muted-foreground">{label}</p>
-      <p className="mt-0.5 text-base font-semibold tabular-nums text-foreground">
-        {value}
-      </p>
-      <p className="mt-0.5 text-xs text-muted-foreground">{hint}</p>
-    </div>
-  );
-}
 
 function SourceLink({
   href,
@@ -918,12 +927,7 @@ function SourceLink({
   children: React.ReactNode;
 }): React.JSX.Element {
   return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="text-primary underline decoration-primary/40 underline-offset-2 hover:decoration-primary"
-    >
+    <a href={href} target="_blank" rel="noopener noreferrer" className="nb-link">
       {children}
     </a>
   );

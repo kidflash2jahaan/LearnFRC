@@ -1,11 +1,8 @@
-import type { CSSProperties } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { needsUsernameSetup } from "@/lib/onboarding-server";
-import { ArrowRight, LayoutGrid, Sparkles } from "lucide-react";
 import { getSession } from "@/lib/auth";
-import { Glow, Reveal, Rise } from "@/components/motion/primitives";
 import { FirstRunGoalPicker } from "@/components/onboarding/first-run-goal-picker";
 import { FirstRunPlan } from "@/components/onboarding/first-run-plan";
 import {
@@ -16,10 +13,10 @@ import {
 } from "@/lib/recommend";
 
 /**
- * /start — the first-run route.
+ * /start, the first-run route.
  *
  * THE PROBLEM THIS EXISTS FOR: 45% of accounts (156 of 347) have never
- * completed a single lesson, and the loss is not the content or the quiz —
+ * completed a single lesson, and the loss is not the content or the quiz.
  * 95.7% of people who spend a minute on a lesson page finish it, and the
  * completion step of the funnel is 97.7%. Everything is lost upstream, on the
  * choosing. A brand-new account today lands on /dashboard, where it is shown
@@ -29,22 +26,29 @@ import {
  * land directly on a lesson page complete a median of 22.
  *
  * THE SHAPE: one question, then one plan, then one button into one lesson.
- * Nothing else is on this page — no stats, no catalogue, no leaderboard, no
+ * Nothing else is on this page: no stats, no catalogue, no leaderboard, no
  * badges. Every other choice is deferred until after lesson one.
  *
- * HOW LEARNERS GET HERE (all one-shot — nothing redirects into this page
+ * WHY IT IS DRAWN AS ONE NARROW COLUMN: every other page in this section of the
+ * binder is a spread, two columns of different weights with something taped to
+ * one of them. This one is a worksheet clipped to the front cover, so it gets a
+ * single measure and no second thing to look at. The design argument and the
+ * product argument are the same argument here, and any furniture added to make
+ * the page look busier would be furniture competing with the question.
+ *
+ * HOW LEARNERS GET HERE (all one-shot, nothing redirects into this page
  * repeatedly, so it cannot become a wall):
  *   - straight after account creation, from `/auth/callback` (Google, and the
  *     emailed confirmation link) and `/auth/confirm` (token-hash confirmation),
  *     but only when the destination would otherwise have been the generic
- *     dashboard — an invite or any explicit `?next=` still wins. See
+ *     dashboard. An invite or any explicit `?next=` still wins. See
  *     `src/lib/first-run.ts`.
  *   - from the guides index, for the 156 existing accounts that never completed
  *     a lesson and so never saw this page.
  *   - from the plan itself (`/start?change=1`) when someone picked wrong.
  *
  * ALWAYS SKIPPABLE. Every branch below renders at least one way out to somewhere
- * that works — the dashboard, or the full catalogue — and no page in the app
+ * that works, the dashboard or the full catalogue, and no page in the app
  * redirects back to /start, so there is no cycle to be caught in. The two
  * `redirect("/dashboard")` guards exist for the same reason: a version of this
  * page with no action on it is strictly worse than the dashboard it replaces.
@@ -54,7 +58,7 @@ export const metadata: Metadata = {
   title: "Start here · LearnFRC",
   description:
     "Answer one question and we'll turn 394 lessons into the five that get you started.",
-  // Signed-in only, and a thin router — keep it out of the index entirely so it
+  // Signed-in only, and a thin router. Keep it out of the index entirely so it
   // never competes with the guides for crawl budget.
   robots: { index: false, follow: false },
 };
@@ -73,7 +77,7 @@ export default async function StartPage({
   const { change } = await searchParams;
   const goalId = await readStartGoalId();
   // `?change=1` is the only way back to the question once it is answered, so a
-  // wrong tap is never permanent — but the default is always to move forward.
+  // wrong tap is never permanent, but the default is always to move forward.
   const showPicker = !goalId || change === "1";
 
   const displayName =
@@ -87,129 +91,90 @@ export default async function StartPage({
 
   // Defensive: a missing catalogue would leave this page with no action at all,
   // and a dead end here is strictly worse than the dashboard we are replacing.
-  // Both branches are covered — the picker with no answers to offer is just as
+  // Both branches are covered: the picker with no answers to offer is just as
   // dead as a plan with no lessons in it, and this page is now the first thing
   // a brand-new account sees, so neither may ever render empty.
   if (!showPicker && !plan) redirect("/dashboard");
   if (showPicker && goals.length === 0) redirect("/dashboard");
 
   return (
-    <div className="relative overflow-x-clip">
-      <Glow
-        blobs={[
-          {
-            size: "540px",
-            pos: { left: "-170px", top: "-180px" },
-            color: "#8bbcff",
-            opacity: 0.5,
-          },
-          {
-            size: "480px",
-            pos: { right: "-150px", top: "80px" },
-            color: "#6ff0ea",
-            opacity: 0.36,
-            delay: 2.5,
-          },
-        ]}
-      />
-
-      <div className="mx-auto max-w-3xl px-4 pt-28 pb-24 sm:px-6">
+    <section className="nb-wrap pb-[clamp(3rem,6vw,5rem)] pt-[clamp(2.2rem,5vw,4rem)]">
+      {/* One measure for the whole page. Wide enough for the three-column log
+          line the picker draws, narrow enough that the question is never
+          competing with anything to its right. */}
+      <div className="max-w-[58rem]">
         {showPicker ? (
           <>
-            <Rise>
-              <span className="ac-chip inline-flex items-center gap-2">
-                <Sparkles className="h-3.5 w-3.5 text-primary" aria-hidden />
-                <span className="ac-eyebrow">
-                  One question · then you&apos;re in
-                </span>
-              </span>
+            <p className="nb-marker">one question / then you are in</p>
 
-              <h1 className="mt-5 text-balance font-display text-4xl font-extrabold leading-tight tracking-tight sm:text-5xl">
-                What do you do on your team{firstName ? `, ${firstName}` : ""}?
-              </h1>
-              <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-foreground/70">
-                Pick the closest one. We&apos;ll turn 394 lessons across 11
-                departments into the {STARTER_TARGET} that get you moving — and
-                you can change it any time.
-              </p>
-            </Rise>
+            <h1 className="max-w-[16ch]">
+              What do you do on your team{firstName ? `, ${firstName}` : ""}?
+            </h1>
+
+            <p className="nb-lede mt-[clamp(1rem,2vw,1.5rem)]">
+              Pick the closest one. It turns 394 lessons across 11 departments
+              into the {STARTER_TARGET} that get you moving, and you can change
+              it any time.
+            </p>
+
+            <p className="nb-pen mt-4 rotate-[-1.1deg]">
+              one tap, then you are reading
+            </p>
 
             <FirstRunGoalPicker goals={goals} />
 
-            {/* The way out. Deliberately quiet — but present and unambiguous,
+            {/* The way out. Deliberately quiet, but present and unambiguous,
                 because a first-run screen you cannot leave is a trap, and a
-                learner who bounces off one is not coming back for the plan. */}
-            <Reveal className="mt-8">
-              <p className="text-xs text-muted-foreground">
-                Not ready to choose? The first answer is the safe one — it
-                starts with how FRC works and covers everything a new member
-                needs.
+                learner who bounces off one is not coming back for the plan.
+                It is a margin note rather than a third button: two buttons of
+                equal weight beside five answers is a sixth and seventh answer. */}
+            <div className="nb-note mt-[clamp(1.6rem,3.4vw,2.4rem)] max-w-[46rem]">
+              <p className="nb-slug">not ready to choose</p>
+              <p className="mt-1.5 text-[0.95rem] leading-[1.5]">
+                The first answer is the safe one. It starts with how FRC works
+                and covers everything a new member needs.
               </p>
-              <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
-                <Link
-                  href="/guides"
-                  className="inline-flex items-center gap-1 font-semibold text-foreground/70 hover:text-foreground hover:underline"
-                >
-                  <LayoutGrid className="h-3.5 w-3.5" aria-hidden />
+              <p className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-1">
+                <Link href="/guides" className="nb-link text-[0.92rem]">
                   Browse all 11 departments
                 </Link>
-                <Link
-                  href="/dashboard"
-                  className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground hover:underline"
-                >
+                <Link href="/dashboard" className="nb-link text-[0.92rem]">
                   Skip for now
-                  <ArrowRight className="h-3.5 w-3.5" aria-hidden />
                 </Link>
-              </div>
-            </Reveal>
+              </p>
+            </div>
           </>
         ) : (
           plan && (
             <>
-              <Rise>
-                <span className="ac-chip inline-flex items-center gap-2">
-                  <Sparkles className="h-3.5 w-3.5 text-primary" aria-hidden />
-                  <span className="ac-eyebrow">
-                    {plan.goalLabel}
-                  </span>
-                </span>
+              <p className="nb-marker">
+                your route / {plan.pathSlug}
+              </p>
 
-                <h1 className="mt-5 text-balance font-display text-4xl font-extrabold leading-tight tracking-tight sm:text-5xl">
-                  {firstName ? `You're set, ${firstName}.` : "You're set."}
-                </h1>
-                <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-foreground/70">
-                  Everything below follows the{" "}
-                  <span
-                    className="font-semibold"
-                    style={{ color: "var(--primary)" } as CSSProperties}
-                  >
-                    {plan.pathTitle}
-                  </span>{" "}
-                  route. Start at the top and work down — that is the whole
-                  plan.
-                </p>
-              </Rise>
+              <h1 className="max-w-[14ch]">
+                {firstName ? `You're set, ${firstName}.` : "You're set."}
+              </h1>
 
-              <Reveal className="mt-8">
+              <p className="nb-lede mt-[clamp(1rem,2vw,1.5rem)]">
+                Everything below follows the {plan.pathTitle} route. Start at
+                the top and work down, that is the whole plan.
+              </p>
+
+              <div className="mt-[clamp(1.6rem,3.4vw,2.4rem)]">
                 <FirstRunPlan plan={plan} />
-              </Reveal>
+              </div>
 
-              <Reveal className="mt-6">
-                <p className="text-xs text-muted-foreground">
-                  Your dashboard is waiting when you want it — stats, streak,
-                  achievements and the leaderboard all fill in as you go.{" "}
-                  <Link
-                    href="/dashboard"
-                    className="font-semibold text-foreground/70 hover:text-foreground hover:underline"
-                  >
-                    Go to dashboard
-                  </Link>
-                </p>
-              </Reveal>
+              <p className="mt-[clamp(1.2rem,2.6vw,1.8rem)] max-w-[52ch] text-[0.92rem] leading-[1.5] text-graphite">
+                Your dashboard is waiting when you want it. Stats, streak,
+                achievements and the leaderboard all fill in as you go.{" "}
+                <Link href="/dashboard" className="nb-link">
+                  Go to dashboard
+                </Link>
+              </p>
             </>
           )
         )}
       </div>
-    </div>
+    </section>
   );
 }

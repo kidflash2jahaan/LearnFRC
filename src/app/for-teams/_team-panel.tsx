@@ -1,8 +1,3 @@
-"use client";
-
-import { motion, useReducedMotion } from "framer-motion";
-import { AnimatedCounter } from "@/components/animated-counter";
-
 export type RosterMember = {
   initials: string;
   name: string;
@@ -11,70 +6,83 @@ export type RosterMember = {
 };
 
 /**
- * Hero visual: an illustrative team roster "assembling" into a glass panel
- * — sets up the onboarding-rail signature below the fold. Sample data only;
- * clearly labeled so it never reads as a real team's private info.
+ * The roster, drawn as the sign-in sheet taped to the pit wall.
+ *
+ * A roster is a table: rows of people, columns of the same fact about each of
+ * them. The old file animated it in as a floating glass panel with a spring and
+ * a stagger, which is a lot of motion for a list of four names. Here it is
+ * ruled paper with a mono head, tabular figures, and two strips of tape holding
+ * it down.
+ *
+ * The data is illustrative and says so twice: once in the head, where a reader
+ * scanning the columns will see it, and once under the rule, where a reader who
+ * actually read the names will. Nothing on this page shows a real member.
+ *
+ * Server Component.
  */
-export function TeamPanel({ roster }: { roster: RosterMember[] }) {
-  const reduce = useReducedMotion();
-
+export function RosterSheet({ roster }: { roster: RosterMember[] }) {
   return (
-    <motion.div
-      className="ac-glass relative w-full max-w-md p-6 sm:p-7 lg:justify-self-end"
-      initial={{ opacity: 0, y: 26, rotate: 1.2 }}
-      animate={{ opacity: 1, y: 0, rotate: 0 }}
-      transition={reduce ? { duration: 0 } : { type: "spring", stiffness: 140, damping: 18, delay: 0.25 }}
-      whileHover={reduce ? undefined : { y: -6 }}
-    >
-      <div className="mb-4 flex items-center gap-2">
-        <span className="font-display text-[17px] font-bold text-foreground">
-          Your team · roster
-        </span>
-        <span className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-muted px-2 py-0.5 text-xs font-bold uppercase tracking-[0.08em] text-muted-foreground">
-          Example
-        </span>
+    <div className="nb-box nb-tilt-2 p-[clamp(1.1rem,2.4vw,1.6rem)]">
+      <span
+        className="nb-tape -top-3 left-[19%] rotate-[-3.8deg]"
+        aria-hidden="true"
+      />
+      <span
+        className="nb-tape -bottom-3 right-[15%] rotate-[2.6deg]"
+        aria-hidden="true"
+      />
+
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-dashed border-rule pb-3">
+        <p className="nb-slug text-ink">team 0000 / roster</p>
+        <p className="nb-slug">example, not a real team</p>
       </div>
 
-      <motion.ul
-        className="space-y-2.5"
-        initial="hidden"
-        animate="show"
-        variants={{ hidden: {}, show: { transition: { staggerChildren: reduce ? 0 : 0.1, delayChildren: 0.35 } } }}
-      >
-        {roster.map((r) => (
-          <motion.li
-            key={r.initials}
-            className="ac-card flex items-center gap-3 p-3"
-            variants={{
-              hidden: { opacity: 0, y: 14 },
-              show: { opacity: 1, y: 0, transition: reduce ? { duration: 0 } : { duration: 0.4 } },
-            }}
-          >
-            <span
-              aria-hidden
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-sm font-bold text-primary"
-            >
-              {r.initials}
-            </span>
-            <div className="min-w-0 flex-1">
-              <div className="truncate text-sm font-semibold text-foreground">{r.name}</div>
-              <div className="text-xs text-muted-foreground">{r.role}</div>
-            </div>
-            <span className="shrink-0 tabular-nums text-xs font-semibold text-foreground/70">
-              <AnimatedCounter value={r.xp} /> XP
-            </span>
-          </motion.li>
-        ))}
-      </motion.ul>
+      {/* Four short rows will not overflow, but the head row can at 320px once
+          the browser text size is turned up, and a table is exactly the thing
+          the system says to put in an nb-scroll rather than let widen a page. */}
+      <div className="nb-scroll mt-1">
+        <table className="nb-table">
+          <caption className="sr-only">
+            An example team roster, showing what members can see of each
+            other&apos;s progress.
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col">member</th>
+              <th scope="col">department</th>
+              <th scope="col" className="text-right">
+                xp
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {roster.map((member) => (
+              <tr key={member.initials}>
+                <td>
+                  <span className="flex items-center gap-2.5">
+                    <span
+                      className="nb-avatar size-8 shrink-0 text-[0.7rem]"
+                      aria-hidden="true"
+                    >
+                      {member.initials}
+                    </span>
+                    <span className="font-semibold">{member.name}</span>
+                  </span>
+                </td>
+                <td className="text-graphite">{member.role}</td>
+                <td className="nb-slug text-right font-bold text-ink">
+                  {member.xp.toLocaleString()}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
-      <hr className="ac-divider my-4" />
-      <p className="text-center text-[13px] leading-relaxed text-muted-foreground">
-        One team number groups everyone — rookies, veterans, and mentors —
-        into a shared roster you can all see.
+      <p className="nb-hint mt-4">
+        One team number groups rookies, veterans and mentors into a roster you
+        can all see. Nobody has to be invited and nobody has to approve anyone.
       </p>
-      <p className="mt-2 text-center text-[11px] text-muted-foreground/80">
-        Illustrative example — not a real team or actual member data.
-      </p>
-    </motion.div>
+    </div>
   );
 }

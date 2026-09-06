@@ -1,15 +1,18 @@
-"use client";
-
-import type { CSSProperties } from "react";
-import { motion, useReducedMotion } from "framer-motion";
-import { ShieldCheck, Sparkles, Trophy, Hash } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
-import { AnimatedCounter } from "@/components/animated-counter";
 
 /**
- * Signature hero device: "Your identity" — a floating glass readout that
- * mirrors the homepage's telemetry panel, but tuned to one person: avatar,
- * role, XP and team number, live-pulsing to say "this is you, right now."
+ * The member record: the masthead strip at the top of the settings sheet.
+ *
+ * It answers "whose record am I editing" before the first field, and it prints
+ * the three facts a member actually looks settings up to check: their team
+ * number, their XP, and how long they have been here. Everything on it is
+ * read-only, which is why it is a ruled record and not another form.
+ *
+ * What it replaces was a floating glass panel with a pulsing "Live" dot and
+ * three numbers that counted up on mount. None of those numbers change while
+ * you look at them, so the animation was saying something untrue.
+ *
+ * Server Component. It renders static text, so it ships no JavaScript.
  */
 export function IdentityCard({
   displayName,
@@ -32,103 +35,65 @@ export function IdentityCard({
   teamNumber: number | null;
   joined: string | null;
 }) {
-  const reduce = useReducedMotion();
+  // `set` marks a fact that has a real value. A figure is printed in ballpoint
+  // like every other count in the binder; an absent one is printed in pencil,
+  // because "none on file" is not a number and should not read as one.
+  const facts: { label: string; value: string; set: boolean }[] = [
+    {
+      label: "frc team",
+      value: teamNumber ? String(teamNumber) : "none on file",
+      set: teamNumber !== null,
+    },
+    { label: "xp earned", value: xp.toLocaleString("en-US"), set: true },
+    { label: "member since", value: joined ?? "not recorded", set: joined !== null },
+  ];
 
   return (
-    <motion.div
-      className="ac-glass relative w-full max-w-md p-6 sm:p-7 lg:justify-self-end"
-      initial={{ opacity: 0, y: 26, rotate: 1.2 }}
-      animate={{ opacity: 1, y: 0, rotate: 0 }}
-      transition={
-        reduce ? { duration: 0 } : { type: "spring", stiffness: 140, damping: 18, delay: 0.25 }
-      }
-      whileHover={reduce ? undefined : { y: -6 }}
-    >
-      <div className="flex items-center justify-between gap-3">
-        <span className="font-display text-[17px] font-bold text-foreground">
-          Your identity
-        </span>
-        <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.08em] text-success">
-          <motion.span
-            className="h-2 w-2 rounded-full bg-[#12b565]"
-            animate={reduce ? undefined : { scale: [1, 1.35, 1], opacity: [1, 0.6, 1] }}
-            transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
-            aria-hidden
+    // The two panels divide on the kit's 2px ink rule, which turns horizontal
+    // under 860px. The column split has to break ABOVE that width or the rule
+    // would be drawn on the wrong axis in the gap between the two breakpoints.
+    <div className="nb-box grid overflow-hidden lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
+      <div className="nb-panel">
+        <p className="nb-slug">account / this is you</p>
+        <div className="mt-4 flex items-center gap-4">
+          <Avatar
+            name={displayName}
+            src={avatarUrl}
+            seed={seed}
+            className="h-16 w-16 shrink-0 text-[1.15rem]"
           />
-          Live
-        </span>
-      </div>
-
-      <div className="mt-5 flex items-center gap-4">
-        <Avatar
-          name={displayName}
-          src={avatarUrl}
-          seed={seed}
-          className="h-20 w-20 shrink-0 ring-2 ring-white/70 shadow-[var(--shadow-md)]"
-        />
-        <div className="min-w-0">
-          <div className="truncate font-display text-xl font-bold leading-tight text-foreground">
-            {displayName}
+          <div className="min-w-0">
+            <p className="truncate text-[clamp(1.15rem,1rem+0.7vw,1.5rem)] font-extrabold leading-tight tracking-[-0.025em]">
+              {displayName}
+            </p>
+            <p className="nb-slug mt-1 truncate">{handle}</p>
           </div>
-          <div className="mt-0.5 truncate text-sm text-muted-foreground">{handle}</div>
-          <div className="mt-2 flex flex-wrap items-center gap-1.5">
-            <span className="ac-chip inline-flex items-center gap-1 text-xs font-semibold text-primary">
-              <ShieldCheck className="h-3 w-3" aria-hidden />
-              {roleLabel}
-            </span>
-            {isAdmin && (
-              <span
-                className="ac-chip inline-flex items-center gap-1 text-xs font-semibold"
-                style={{ color: "#7c3aed" }}
-              >
-                <Sparkles className="h-3 w-3" aria-hidden />
-                Admin
-              </span>
-            )}
-          </div>
+        </div>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <span className="nb-tag">{roleLabel}</span>
+          {isAdmin && <span className="nb-tag" data-on="">admin</span>}
         </div>
       </div>
 
-      <div className="ac-divider my-5" />
-
-      <div className="grid grid-cols-2 gap-3">
-        <div className="ac-card rounded-2xl p-4 text-center">
-          <span
-            className="ac-badge mx-auto mb-2 flex h-9 w-9 items-center justify-center"
-            style={{ "--a": "#2560e6" } as CSSProperties}
+      <dl className="nb-panel justify-center gap-0">
+        {facts.map((f, i) => (
+          <div
+            key={f.label}
+            className={`flex items-baseline justify-between gap-4 py-2.5 ${
+              i > 0 ? "border-t border-dashed border-rule" : ""
+            }`}
           >
-            <Trophy className="h-4 w-4" aria-hidden />
-          </span>
-          <div className="font-display text-2xl font-extrabold leading-none text-foreground">
-            <AnimatedCounter value={xp} />
+            <dt className="nb-slug">{f.label}</dt>
+            <dd
+              className={
+                f.set ? "nb-count text-[1.15rem]" : "nb-slug text-right"
+              }
+            >
+              {f.value}
+            </dd>
           </div>
-          <div className="mt-1 text-xs text-muted-foreground">XP earned</div>
-        </div>
-        <div className="ac-card rounded-2xl p-4 text-center">
-          <span
-            className="ac-badge mx-auto mb-2 flex h-9 w-9 items-center justify-center"
-            style={{ "--a": "#1aa9d6" } as CSSProperties}
-          >
-            <Hash className="h-4 w-4" aria-hidden />
-          </span>
-          <div className="font-display text-2xl font-extrabold leading-none text-foreground">
-            {teamNumber ? (
-              <AnimatedCounter value={teamNumber} />
-            ) : (
-              <span className="text-muted-foreground">—</span>
-            )}
-          </div>
-          <div className="mt-1 text-xs text-muted-foreground">
-            {teamNumber ? "your team" : "no team yet"}
-          </div>
-        </div>
-      </div>
-
-      <p className="mt-5 text-[13px] leading-relaxed text-muted-foreground">
-        {joined
-          ? `Member since ${joined} — edit the details below.`
-          : "Edit your details below to complete your profile."}
-      </p>
-    </motion.div>
+        ))}
+      </dl>
+    </div>
   );
 }

@@ -1,95 +1,90 @@
+import type { CSSProperties } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 /**
- * Glossary term skeleton.
+ * A term while the catalogue is still being read.
  *
- * Mirrors page.tsx:
- *   root    → <div className="relative overflow-x-clip text-foreground">
- *   header  → mx-auto max-w-3xl px-4 pb-8 pt-28 sm:px-6 lg:px-8
- *   "in a match" and "where you'll see this" stay max-w-3xl; the related-terms
- *   strip widens to max-w-6xl with a 2/4-column grid, which is reproduced below.
+ * It holds the finished sheet's shape: the filing line, the taped card that is
+ * the whole point of the page, the margin note under it, the ruled log of
+ * lessons, and the uneven wall of neighbouring cards.
+ *
+ * The spans and the count are the page's own, so the wall lands on the same
+ * twelve columns and nothing shifts sideways when the real cards arrive.
  */
+const RELATED_SPANS = [7, 5, 5, 7];
+
 export default function GlossaryTermLoading() {
   return (
-    <div className="relative overflow-x-clip text-foreground">
-      {/* ============================ HERO ============================ */}
-      <header className="mx-auto max-w-3xl px-4 pb-8 pt-28 sm:px-6 lg:px-8">
-        {/* breadcrumb: Home › Glossary › Term */}
-        <div className="flex flex-wrap items-center gap-1.5">
-          <Skeleton className="h-5 w-12 rounded" />
-          <Skeleton className="h-3.5 w-3.5 rounded" />
-          <Skeleton className="h-5 w-20 rounded" />
-          <Skeleton className="h-3.5 w-3.5 rounded" />
-          <Skeleton className="h-5 w-28 rounded" />
+    <>
+      {/* ===================== THE CARD ===================== */}
+      <section className="nb-wrap pb-[clamp(1.8rem,3.5vw,2.6rem)] pt-[clamp(1.8rem,4vw,3rem)]">
+        <div className="flex flex-wrap items-center gap-2">
+          <Skeleton className="h-3.5 w-12" />
+          <Skeleton className="h-3.5 w-2" />
+          <Skeleton className="h-3.5 w-16" />
+          <Skeleton className="h-3.5 w-2" />
+          <Skeleton className="h-3.5 w-24" />
         </div>
 
-        {/* badge + category + abbreviation */}
-        <div className="mt-6 flex flex-wrap items-center gap-2.5">
-          <Skeleton className="h-10 w-10 shrink-0 rounded-[14px]" />
-          <Skeleton className="h-4 w-28 rounded" />
-          <Skeleton className="h-6 w-16 rounded-lg" />
-        </div>
-
-        {/* h1 — text-4xl / sm:text-5xl, leading-[1.05] */}
-        <Skeleton className="mt-4 h-11 w-[62%] rounded-xl sm:h-12" />
-
-        {/* definition — mt-5 max-w-2xl text-lg */}
-        <div className="mt-5 max-w-2xl space-y-2.5">
-          <Skeleton className="h-5 w-full rounded" />
-          <Skeleton className="h-5 w-[94%] rounded" />
-          <Skeleton className="h-5 w-[70%] rounded" />
-        </div>
-
-        {/* "also called" row */}
-        <div className="mt-4 flex flex-wrap items-center gap-2">
-          <Skeleton className="h-5 w-24 rounded" />
-          <Skeleton className="h-6 w-20 rounded-full" />
-          <Skeleton className="h-6 w-24 rounded-full" />
-        </div>
-
-        {/* CTA row */}
-        <div className="mt-7 flex flex-wrap items-center gap-3">
-          <Skeleton className="h-11 w-52 rounded-2xl" />
-          <Skeleton className="h-11 w-40 rounded-2xl" />
-        </div>
-      </header>
-
-      {/* ========================== IN A MATCH ========================== */}
-      <section className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
-        <Skeleton className="h-56 rounded-[20px]" />
+        <Skeleton className="mt-[clamp(1.2rem,2.4vw,1.8rem)] h-[19rem] max-w-[46rem] rounded-hand" />
       </section>
 
-      {/* the ac-divider */}
-      <div className="mx-auto max-w-3xl px-4 pt-10 sm:px-6 lg:px-8">
-        <Skeleton className="h-px w-full rounded-none" />
-      </div>
+      {/* ===================== IN A MATCH ===================== */}
+      <section className="nb-wrap pb-[clamp(1.8rem,3.5vw,2.6rem)]">
+        <Skeleton className="h-[9.5rem] max-w-[52rem] rounded-hand-sm" />
+      </section>
 
-      {/* ==================== WHERE YOU'LL SEE THIS ==================== */}
-      <section className="mx-auto max-w-3xl px-4 pt-10 sm:px-6 lg:px-8">
-        <Skeleton className="h-4 w-44 rounded" />
-        <Skeleton className="mt-2 h-8 w-72 max-w-full rounded-lg" />
-        <div className="mt-6 space-y-3">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-[88px] rounded-[20px]" />
-          ))}
+      {/* ===================== THE LESSONS ===================== */}
+      <section className="nb-wrap pb-[clamp(2.2rem,4.5vw,3.4rem)]">
+        <div className="nb-rule pt-[clamp(1.6rem,3.2vw,2.4rem)]">
+          <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-2">
+            <div>
+              <Skeleton className="h-[clamp(1.5rem,2.5vw,2.3rem)] w-[min(20rem,80%)]" />
+              <Skeleton className="mt-3 h-4 w-[min(26rem,92%)]" />
+            </div>
+            <Skeleton className="h-6 w-24 shrink-0" />
+          </div>
+
+          <div className="nb-list mt-[clamp(1rem,2vw,1.4rem)]">
+            {Array.from({ length: 3 }, (_, i) => (
+              <div
+                key={i}
+                className="grid gap-[clamp(1rem,3vw,2.4rem)] border-b border-dashed border-rule py-[clamp(1.05rem,2.2vw,1.6rem)] min-[769px]:grid-cols-[minmax(0,15rem)_minmax(0,1fr)_auto]"
+              >
+                <div className="flex flex-col gap-1.5">
+                  <Skeleton className="h-3.5 w-32" />
+                  <Skeleton className="h-3.5 w-24" />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Skeleton className="h-[1.4rem] w-[min(28rem,90%)]" />
+                  <Skeleton className="h-3.5 w-full" />
+                  <Skeleton className="h-3.5 w-[58%]" />
+                </div>
+                <Skeleton className="hidden h-3.5 w-10 min-[769px]:block" />
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* ======================== RELATED TERMS ======================== */}
-      <section className="mx-auto max-w-6xl px-4 pt-14 sm:px-6 lg:px-8">
-        <Skeleton className="h-4 w-36 rounded" />
-        <Skeleton className="mt-2 h-8 w-64 max-w-full rounded-lg" />
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-40 rounded-[20px]" />
-          ))}
+      {/* ===================== THE CARDS NEXT TO IT ===================== */}
+      <section className="nb-wrap pb-[clamp(3rem,6vw,5rem)]">
+        <div className="nb-rule pt-[clamp(1.6rem,3.2vw,2.4rem)]">
+          <Skeleton className="mb-[clamp(1.2rem,2.6vw,1.9rem)] h-[clamp(1.5rem,2.5vw,2.3rem)] w-[min(16rem,66%)]" />
+
+          <div className="grid grid-cols-1 gap-[clamp(0.85rem,1.7vw,1.35rem)] min-[640px]:grid-cols-2 min-[1080px]:grid-cols-12">
+            {RELATED_SPANS.map((span, i) => (
+              <div
+                key={i}
+                className="min-[1080px]:[grid-column:var(--span)]"
+                style={{ "--span": `span ${span}` } as CSSProperties}
+              >
+                <Skeleton className="h-[12.5rem] w-full rounded-hand" />
+              </div>
+            ))}
+          </div>
         </div>
       </section>
-
-      {/* closing CTA */}
-      <section className="mx-auto max-w-6xl px-4 pb-20 pt-14 sm:px-6 lg:px-8">
-        <Skeleton className="h-64 rounded-[28px]" />
-      </section>
-    </div>
+    </>
   );
 }

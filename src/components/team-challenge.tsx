@@ -1,18 +1,22 @@
-import type { CSSProperties } from "react";
-import { Rocket } from "lucide-react";
 import { ShareButton } from "@/components/share-button";
 import { cn } from "@/lib/utils";
 
 /**
- * Compact, one-row "Challenge your team" prompt shown at moments of pride —
- * right after a lesson is passed and on an earned certificate. Reuses the
- * ShareButton (native share, clipboard fallback with "Copied!") so it carries
- * the same share/copy affordance as the dashboard invite card, but small and
- * unobtrusive rather than a full panel.
+ * "Challenge your team" — the small referral ask, shown at the two moments
+ * somebody is actually pleased with themselves: the instant a lesson is passed,
+ * and on an earned certificate.
  *
- * No client hooks of its own — safe to render from server (certificate) or
- * client (lesson-complete) components; ShareButton is the only client boundary.
- * The link is derived from a server-provided `username`, so SSR is stable.
+ * It is drawn as `nb-note`, the binder's aside: a dashed frame with an ink bar
+ * down the left. That is deliberate and it is the whole design decision here.
+ * The old version was a full tinted panel with a badge and a headline, which on
+ * a certificate page put a marketing card next to the thing the person came to
+ * look at. An aside is the correct weight for a suggestion: it sits beside the
+ * moment rather than interrupting it, and it reads as pencilled into the margin
+ * rather than as an ad.
+ *
+ * No client hooks of its own, so it renders from a server page (certificate) or
+ * a client one (lesson-complete) either way. ShareButton is the only boundary,
+ * and the link comes from a server-provided username, so SSR is stable.
  */
 export function TeamChallenge({
   username,
@@ -21,7 +25,7 @@ export function TeamChallenge({
 }: {
   username: string;
   className?: string;
-  /** Share surface for attribution — appended as &via=. Without it a signup
+  /** Share surface for attribution, appended as &via=. Without it a signup
       earned here lands in the referral bucket with no surface, which is how
       every referral before today ended up unattributed. */
   via?: "certificate" | "lesson-milestone";
@@ -31,33 +35,26 @@ export function TeamChallenge({
   return (
     <div
       className={cn(
-        "ac-tile flex flex-col gap-3 p-3.5 text-left sm:flex-row sm:items-center sm:justify-between sm:p-4",
+        "nb-note flex flex-col gap-3 text-left sm:flex-row sm:items-center sm:justify-between sm:gap-5",
         className
       )}
-      style={{ "--a": "#2560e6" } as CSSProperties}
     >
-      <div className="flex min-w-0 items-center gap-3">
-        <span
-          className="ac-badge flex h-10 w-10 shrink-0 items-center justify-center"
-          style={{ "--a": "#2560e6" } as CSSProperties}
-        >
-          <Rocket className="h-5 w-5" aria-hidden />
-        </span>
-        <div className="min-w-0">
-          <p className="text-[15px] font-semibold text-foreground">
-            Challenge your team
-          </p>
-          <p className="text-sm leading-snug text-foreground/70">
-            They learn free — you both get +25 XP and the bragging rights.
-          </p>
-        </div>
+      <div className="min-w-0">
+        <p className="nb-slug">note / challenge your team</p>
+        <p className="mt-1.5 text-[0.95rem] leading-snug">
+          They learn free, you both get{" "}
+          <span className="font-bold">+25 XP</span>, and one of you gets the
+          bragging rights.
+        </p>
       </div>
-      <ShareButton
-        variant="brand"
-        label="Invite your team"
-        text="I'm learning every part of FRC, free, on LearnFRC — think you can keep up? Join me:"
-        url={link}
-      />
+      <div className="shrink-0">
+        <ShareButton
+          variant="outline"
+          label="Send it"
+          text="I'm learning every part of FRC, free, on LearnFRC. Think you can keep up? Join me:"
+          url={link}
+        />
+      </div>
     </div>
   );
 }

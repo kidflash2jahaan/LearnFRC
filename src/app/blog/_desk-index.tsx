@@ -1,131 +1,65 @@
-"use client";
-
-import * as React from "react";
-import { motion, useReducedMotion } from "framer-motion";
-import { Icon } from "@/lib/icon-map";
-import { AnimatedCounter } from "@/components/animated-counter";
+import Link from "next/link";
 
 export type DeskCount = {
+  /** What the desk is called, e.g. "In the Pit". */
   label: string;
-  color: string;
-  icon: string;
+  /** Anchor id of that desk's group in the log further down the page. */
+  slug: string;
+  /** How many articles are filed on it. */
   count: number;
 };
 
 /**
- * Signature hero device: "The desk index" — a floating glass card catalog
- * showing the reader how the library is filed, with spring-loaded bars per
- * editorial desk that sweep in on load. Mirrors the homepage's telemetry
- * panel language but for the article library.
+ * The divider tabs.
+ *
+ * A binder's front matter is a card of dividers, and that is the only thing
+ * this is: one line per desk, in filing order, each line jumping to that
+ * desk's group in the log below. The ordinal on the left is the filing order,
+ * which is also the reading order; the count on the right is mono so the
+ * column of figures lines up down the card.
+ *
+ * Deliberately not a chart, a meter or a set of tiles. On an index page the
+ * reader wants to reach a shelf, not to compare shelf sizes.
+ *
+ * Server Component. Nothing here holds state and nothing animates except the
+ * one hover the system owns.
  */
-export function DeskIndex({
-  guideCount,
-  totalMins,
-  deskCount,
-  desks,
-}: {
-  guideCount: number;
-  totalMins: number;
-  deskCount: number;
-  desks: DeskCount[];
-}) {
-  const reduce = useReducedMotion();
-  const max = Math.max(1, ...desks.map((d) => d.count));
+export function DeskIndex({ desks }: { desks: DeskCount[] }) {
+  if (desks.length === 0) return null;
 
   return (
-    <motion.div
-      className="ac-glass relative w-full max-w-md p-6 sm:p-7 lg:justify-self-end"
-      initial={{ opacity: 0, y: 26, rotate: 1.2 }}
-      animate={{ opacity: 1, y: 0, rotate: 0 }}
-      transition={reduce ? { duration: 0 } : { type: "spring", stiffness: 140, damping: 18, delay: 0.25 }}
-      whileHover={reduce ? undefined : { y: -6 }}
-    >
-      {/* header row */}
-      <div className="flex items-center justify-between gap-3">
-        <span className="font-display text-[17px] font-bold text-foreground">
-          The desk index
-        </span>
-        <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.08em] text-success">
-          <motion.span
-            className="h-2 w-2 rounded-full bg-[#12b565]"
-            animate={reduce ? undefined : { scale: [1, 1.35, 1], opacity: [1, 0.6, 1] }}
-            transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
-            aria-hidden
-          />
-          In print
-        </span>
-      </div>
+    <nav aria-label="Jump to a desk" className="w-full max-w-md lg:justify-self-end">
+      <div className="nb-box nb-tilt-2 p-[clamp(1.1rem,2.2vw,1.6rem)]">
+        <span className="nb-tape -top-3 left-[18%] rotate-[-4.2deg]" aria-hidden="true" />
 
-      {/* headline numbers */}
-      <div className="mt-5 grid grid-cols-3 gap-2.5">
-        <div className="ac-card rounded-2xl p-3.5">
-          <div className="font-display text-2xl font-extrabold leading-none text-primary">
-            <AnimatedCounter value={guideCount} />
-          </div>
-          <div className="mt-1 text-[11px] font-medium leading-tight text-muted-foreground">
-            articles
-          </div>
-        </div>
-        <div className="ac-card rounded-2xl p-3.5">
-          <div className="font-display text-2xl font-extrabold leading-none text-foreground">
-            <AnimatedCounter value={totalMins} />
-          </div>
-          <div className="mt-1 text-[11px] font-medium leading-tight text-muted-foreground">
-            min reading
-          </div>
-        </div>
-        <div className="ac-card rounded-2xl p-3.5">
-          <div className="font-display text-2xl font-extrabold leading-none text-foreground">
-            <AnimatedCounter value={deskCount} />
-          </div>
-          <div className="mt-1 text-[11px] font-medium leading-tight text-muted-foreground">
-            desks
-          </div>
-        </div>
-      </div>
+        <p className="nb-slug border-b border-dashed border-rule pb-3">
+          dividers / {desks.length} desks
+        </p>
 
-      {/* desk breakdown meters */}
-      <div className="mt-5 space-y-3">
-        {desks.map((d, i) => (
-          <div key={d.label}>
-            <div className="mb-1 flex items-center justify-between gap-2">
-              <span className="inline-flex min-w-0 items-center gap-2 text-sm font-medium text-foreground">
-                <span
-                  className="ac-badge flex h-6 w-6 shrink-0 items-center justify-center rounded-lg"
-                  style={{ "--a": d.color } as React.CSSProperties}
-                >
-                  <Icon name={d.icon} className="h-3.5 w-3.5" aria-hidden />
+        <ul className="mt-1">
+          {desks.map((d, i) => (
+            <li key={d.slug} className="border-b border-dashed border-rule last:border-b-0">
+              {/* The whole line is the target, and it slides right under the
+                  cursor the same way a row in the log does, so reaching a desk
+                  from here and reaching one from the log read as one gesture. */}
+              <Link
+                href={`#${d.slug}`}
+                className="group flex items-baseline gap-3 py-2.5 transition-transform duration-150 ease-[var(--step)] hover:translate-x-1.5 focus-visible:translate-x-1.5"
+              >
+                <span className="nb-slug w-[2.2ch] shrink-0 tabular-nums">
+                  {String(i + 1).padStart(2, "0")}
                 </span>
-                <span className="truncate">{d.label}</span>
-              </span>
-              <span className="shrink-0 text-xs font-semibold tabular-nums text-muted-foreground">
-                {d.count}
-              </span>
-            </div>
-            <div className="h-2 overflow-hidden rounded-full bg-[rgba(120,145,190,0.18)]">
-              <motion.div
-                className="h-full origin-left rounded-full"
-                style={{
-                  background: `linear-gradient(90deg, ${d.color}, #1aa9d6)`,
-                  width: `${Math.round((d.count / max) * 100)}%`,
-                }}
-                initial={{ scaleX: 0 }}
-                animate={{ scaleX: 1 }}
-                transition={
-                  reduce
-                    ? { duration: 0 }
-                    : { type: "spring", stiffness: 90, damping: 20, delay: 0.5 + i * 0.1 }
-                }
-              />
-            </div>
-          </div>
-        ))}
+                <span className="min-w-0 flex-1 text-[0.97rem] font-semibold leading-tight group-hover:underline group-hover:decoration-blue group-hover:decoration-2 group-hover:underline-offset-4">
+                  {d.label}
+                </span>
+                <span className="nb-slug shrink-0 font-bold tabular-nums text-ink">
+                  {d.count}
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
       </div>
-
-      <p className="mt-5 text-[13px] leading-relaxed text-muted-foreground">
-        Every article is free to read, no login needed. Join the list below and
-        new filings land in your inbox.
-      </p>
-    </motion.div>
+    </nav>
   );
 }

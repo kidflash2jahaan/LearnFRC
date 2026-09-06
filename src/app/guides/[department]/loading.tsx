@@ -1,110 +1,121 @@
 import { Skeleton } from "@/components/ui/skeleton";
+import { TITLE_BLOCK_CELL } from "./_mastery-panel";
 
 /**
- * Department hub skeleton.
+ * The department sheet, before the catalogue read resolves.
  *
- * Mirrors page.tsx:
- *   hero     → mx-auto max-w-6xl px-4 pb-8 pt-28 sm:px-6 lg:px-8 lg:pt-32
- *   hero row → mt-6 grid items-center gap-10 lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-14
- *   stats    → mt-10 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4
- *   body     → mx-auto grid max-w-6xl grid-cols-1 gap-10 px-4 py-8 sm:px-6
- *              lg:grid-cols-3 lg:gap-12 lg:px-8 lg:py-12   (main = lg:col-span-2)
+ * It holds the finished page's shape so nothing shifts when the real content
+ * lands: breadcrumb, masthead, the four-cell title block on the same rules,
+ * the module log and the margin sheet, then the sign-off band.
+ *
+ * The title block is drawn for real, borders and all, rather than as one grey
+ * slab. It is the strongest shape on the page, so a placeholder that keeps it
+ * is the difference between a page loading and a page missing.
  */
 export default function DepartmentLoading() {
   return (
-    <div className="relative overflow-x-clip">
-      {/* ============================ HERO ============================ */}
-      <section className="mx-auto max-w-6xl px-4 pb-8 pt-28 sm:px-6 lg:px-8 lg:pt-32">
-        {/* "All departments" back link (-my-2 + min-h-11 → ~28px box) */}
-        <Skeleton className="h-7 w-40 rounded-full" />
+    <>
+      {/* ===================== MASTHEAD ===================== */}
+      <section className="nb-wrap pb-[clamp(1.6rem,3vw,2.4rem)] pt-[clamp(1.6rem,3.5vw,2.6rem)]">
+        <Skeleton className="h-4 w-56" />
 
-        <div className="mt-6 grid items-center gap-10 lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-14">
-          <div>
-            {/* department badge + "Department curriculum" chip */}
-            <div className="flex items-center gap-3">
-              <Skeleton className="h-14 w-14 shrink-0 rounded-[14px]" />
-              <Skeleton className="h-7 w-56 rounded-full" />
-            </div>
+        {/* h1 at the display clamp */}
+        <Skeleton className="mt-[clamp(1rem,2vw,1.5rem)] h-[clamp(2.4rem,4.6vw,4.3rem)] w-[min(30rem,88%)]" />
 
-            {/* h1 — text-4xl / sm:text-5xl / lg:text-[3.3rem] */}
-            <Skeleton className="mt-5 h-10 w-[70%] rounded-xl sm:h-12 lg:h-14" />
-
-            {/* tagline — mt-4 max-w-2xl text-xl */}
-            <div className="mt-4 max-w-2xl space-y-2.5">
-              <Skeleton className="h-6 w-[92%] rounded" />
-              <Skeleton className="h-6 w-[54%] rounded" />
-            </div>
-
-            {/* description — mt-3 max-w-2xl text-lg */}
-            <div className="mt-3 max-w-2xl space-y-2.5">
-              <Skeleton className="h-5 w-full rounded" />
-              <Skeleton className="h-5 w-[95%] rounded" />
-              <Skeleton className="h-5 w-[68%] rounded" />
-            </div>
-
-            {/* modules / lessons / hours chips */}
-            <div className="mt-6 flex flex-wrap items-center gap-2.5">
-              <Skeleton className="h-8 w-32 rounded-full" />
-              <Skeleton className="h-8 w-32 rounded-full" />
-              <Skeleton className="h-8 w-28 rounded-full" />
-            </div>
-
-            {/* hero CTA row */}
-            <div className="mt-6 flex flex-wrap items-center gap-3">
-              <Skeleton className="h-11 w-48 rounded-2xl" />
-              <Skeleton className="h-11 w-40 rounded-2xl" />
-            </div>
-          </div>
-
-          {/* mastery ring panel — ac-glass w-full max-w-sm lg:justify-self-end */}
-          <Skeleton className="h-[352px] w-full max-w-sm rounded-[28px] lg:justify-self-end" />
+        {/* tagline, at the 46ch lede measure */}
+        <div className="mt-5 flex max-w-[46ch] flex-col gap-2.5">
+          <Skeleton className="h-4 w-[92%]" />
+          <Skeleton className="h-4 w-[54%]" />
         </div>
 
-        {/* journey stat strip — four ac-card tiles */}
-        <div className="mt-10 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-[72px] rounded-[20px]" />
+        {/* description, at the 62ch body measure */}
+        <div className="mt-4 flex max-w-[62ch] flex-col gap-2.5">
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-[94%]" />
+          <Skeleton className="h-4 w-[66%]" />
+        </div>
+
+        <div className="mt-[clamp(1.4rem,2.6vw,2rem)] flex flex-wrap gap-3">
+          <Skeleton className="h-11 w-44" />
+          <Skeleton className="h-11 w-52" />
+        </div>
+      </section>
+
+      {/* ===================== TITLE BLOCK ===================== */}
+      <section className="nb-wrap pb-[clamp(2rem,4vw,3rem)]">
+        <div className="nb-box grid grid-cols-1 min-[861px]:grid-cols-4">
+          <span className="nb-tape -top-3 left-[8%] rotate-[-3.4deg]" aria-hidden="true" />
+          {Array.from({ length: 4 }, (_, i) => (
+            <div key={i} className={TITLE_BLOCK_CELL}>
+              <Skeleton className="h-3.5 w-24" />
+              <Skeleton className="h-7 w-16 min-[861px]:mt-1.5" />
+            </div>
           ))}
         </div>
       </section>
 
-      {/* ========================= THE CURRICULUM ======================== */}
-      <div className="mx-auto grid max-w-6xl grid-cols-1 gap-10 px-4 py-8 sm:px-6 lg:grid-cols-3 lg:gap-12 lg:px-8 lg:py-12">
-        {/* main: the module path */}
-        <div className="min-w-0 lg:col-span-2">
-          <div className="mb-6 flex items-end justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <Skeleton className="h-10 w-10 shrink-0 rounded-xl" />
-              <div>
-                <Skeleton className="h-4 w-32 rounded" />
-                <Skeleton className="mt-1.5 h-7 w-52 rounded-lg" />
+      {/* ===================== THE PATH, AND THE MARGIN ===================== */}
+      <div className="nb-wrap grid gap-[clamp(2rem,4vw,3.2rem)] pb-[clamp(2.6rem,5vw,4rem)] lg:grid-cols-[minmax(0,1fr)_minmax(0,19rem)]">
+        <div className="min-w-0">
+          <div className="mb-[clamp(1.2rem,2.4vw,1.8rem)]">
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="mt-3 h-[clamp(1.6rem,1.6vw,2.4rem)] w-[min(19rem,70%)]" />
+          </div>
+
+          {/* module rows, opening on the same 2px ink rules */}
+          {Array.from({ length: 6 }, (_, i) => (
+            <div
+              key={i}
+              className="nb-rule flex items-center gap-[clamp(0.7rem,2vw,1.15rem)] py-[clamp(0.9rem,2vw,1.3rem)]"
+            >
+              <Skeleton className="size-11 shrink-0" />
+              <div className="min-w-0 flex-1">
+                <Skeleton className="h-5 w-[min(18rem,72%)]" />
+                <Skeleton className="mt-2 h-3.5 w-40" />
               </div>
+              <Skeleton className="hidden h-3 w-24 shrink-0 sm:block" />
+              <Skeleton className="size-8 shrink-0" />
             </div>
-            <Skeleton className="hidden h-5 w-40 rounded sm:block" />
-          </div>
-
-          {/* collapsed module accordion rows — rounded-[20px] p-5, space-y-4 */}
-          <div className="space-y-4">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <Skeleton key={i} className="h-[88px] rounded-[20px]" />
-            ))}
-          </div>
-
-          {/* "know something this department is missing?" row */}
-          <div className="mt-6 flex flex-wrap items-center gap-2 border-t border-border pt-6">
-            <Skeleton className="h-5 w-72 max-w-full rounded" />
-          </div>
+          ))}
         </div>
 
-        {/* sidebar: the field guide — ac-card stack, space-y-5 */}
-        <aside className="lg:sticky lg:top-24 lg:self-start">
-          <div className="space-y-5">
-            <Skeleton className="h-64 rounded-[20px]" />
-            <Skeleton className="h-44 rounded-[20px]" />
-            <Skeleton className="h-52 rounded-[20px]" />
+        {/* Not sticky, for the same reason the real margin is not: the sheet
+            runs taller than the viewport and would pin its own tail out of
+            reach. */}
+        <aside>
+          <div className="nb-box nb-tilt-2 p-[clamp(1.1rem,2.2vw,1.5rem)]">
+            <span className="nb-tape -top-3 right-6 rotate-[2.8deg]" aria-hidden="true" />
+            {Array.from({ length: 3 }, (_, i) => (
+              <div
+                key={i}
+                className="nb-hair mt-5 pt-5 [&:first-of-type]:mt-0 [&:first-of-type]:border-t-0 [&:first-of-type]:pt-0"
+              >
+                <Skeleton className="h-5 w-40" />
+                <div className="mt-3 flex flex-col gap-2">
+                  <Skeleton className="h-3.5 w-full" />
+                  <Skeleton className="h-3.5 w-[88%]" />
+                  <Skeleton className="h-3.5 w-[72%]" />
+                </div>
+              </div>
+            ))}
           </div>
         </aside>
       </div>
-    </div>
+
+      {/* ===================== THE SIGN-OFF ===================== */}
+      <section className="nb-wrap pb-[clamp(3rem,6vw,5rem)]">
+        <div className="nb-rule pt-[clamp(1.8rem,3.5vw,2.6rem)]">
+          <Skeleton className="h-[clamp(1.6rem,1.6vw,2.4rem)] w-[min(24rem,80%)]" />
+          <div className="mt-3 flex max-w-[56ch] flex-col gap-2.5">
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-[70%]" />
+          </div>
+          <div className="mt-[clamp(1.4rem,2.6vw,2rem)] flex flex-wrap gap-3">
+            <Skeleton className="h-11 w-44" />
+            <Skeleton className="h-11 w-56" />
+          </div>
+        </div>
+      </section>
+    </>
   );
 }

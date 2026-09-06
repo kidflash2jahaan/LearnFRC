@@ -28,7 +28,7 @@ export async function submitContentEdit(input: {
   if (proposed.length > 100_000) return { error: "That edit is too large to submit." };
 
   if (!(await rateLimit("suggest-edit", 8, 3600, user.id)))
-    return { error: "You've submitted several edits recently — try again in a bit." };
+    return { error: "You've submitted several edits recently. Try again in a bit." };
 
   // Snapshot the current content so the admin sees a true diff.
   const { data: current } = await supabase
@@ -38,7 +38,7 @@ export async function submitContentEdit(input: {
     .maybeSingle();
   if (!current) return { error: `${contentType === "article" ? "Article" : "Lesson"} not found.` };
   if (proposed === ((current.content as string) ?? "").trim())
-    return { error: "This is identical to the current version — nothing to submit." };
+    return { error: "This is identical to the current version, so there is nothing to submit." };
 
   const { error } = await supabase.from("content_edits").insert({
     content_type: contentType,

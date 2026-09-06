@@ -1,7 +1,6 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
-import { Hash } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   GLOSSARY_AUTOLINK_CLASS,
@@ -10,16 +9,22 @@ import {
 } from "@/lib/glossary-link";
 
 /* ================================================================== */
-/*  Arena Clay markdown renderer                                       */
-/*  Light "liquid glass + clay" prose. Baloo headings, blue links,    */
-/*  ink body, clean lists/tables, a soft glass "note" callout.        */
-/*  The remark/rehype pipeline is untouched — only presentation.      */
-/*  Code blocks intentionally STAY dark so the syntax highlighting     */
-/*  (.hljs neon tokens) keeps its contrast.                            */
-/*                                                                      */
-/*  Headings also get a deterministic slug id (see extractHeadings)    */
-/*  so a page can build a live "contents" rail (scroll-spy + deep-link) */
-/*  from the same raw markdown without re-parsing React output.        */
+/*  The notebook markdown renderer                                     */
+/*                                                                     */
+/*  Every element the parser can emit is styled once, in `.nb-prose` in */
+/*  globals.css: the 68ch measure, the vertical rhythm, headings on     */
+/*  their 2px ink rules, blue hyphen bullets, mono list markers, the    */
+/*  dashed table rules, inline code chips and the code listing panel.   */
+/*  So this file went from ~200 lines of per-element utility classes to */
+/*  a set of overrides for the three things CSS cannot know:            */
+/*                                                                     */
+/*    - which heading gets which slug id (order matters, see below);    */
+/*    - whether a link is ours, someone else's, or one we auto-inserted;*/
+/*    - that a table has to sit inside its own scroller.               */
+/*                                                                     */
+/*  The remark/rehype pipeline is untouched, and so is every id, so a   */
+/*  contents rail built from `extractHeadings` still deep-links to the  */
+/*  same anchors it did before.                                        */
 /* ================================================================== */
 
 export type TocHeading = { id: string; text: string; level: 2 | 3 };
@@ -74,15 +79,23 @@ export function extractHeadings(content: string): TocHeading[] {
   return out;
 }
 
+/**
+ * The section mark, in the margin of the heading.
+ *
+ * A typographic `#` rather than an icon: this is a binder, and the one thing
+ * that is allowed to sit beside a heading is a mark someone could have written
+ * there. Invisible until the heading is hovered or something inside it takes
+ * focus, so 30 headings do not print 30 marks down the page.
+ */
 function HeadingAnchor({ id, text }: { id?: string; text?: string }) {
   if (!id) return null;
   return (
     <a
       href={`#${id}`}
-      aria-label={`Link to "${text ?? ""}" section`}
-      className="ml-2 inline-block align-middle text-primary/0 transition-colors group-hover:text-primary/50 group-focus-within:text-primary/50 focus-visible:text-primary/50"
+      aria-label={`Link to the "${text ?? ""}" section`}
+      className="ml-2 font-mono text-[0.6em] align-middle text-transparent no-underline group-hover:text-blue group-focus-within:text-blue focus-visible:text-blue"
     >
-      <Hash className="inline h-[0.65em] w-[0.65em]" aria-hidden />
+      #
     </a>
   );
 }
@@ -121,19 +134,18 @@ export function Markdown({
   }
 
   return (
-    <div className={cn("text-base leading-relaxed", className)}>
+    <div className={cn("nb-prose", className)}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={rehypePlugins}
         components={{
+          // An h1 inside body copy is a document-structure mistake, not a
+          // heading level: the page already owns the h1, so it renders as h2
+          // and takes the next id in sequence like any other section head.
           h1: ({ node: _node, children, ...p }) => {
             const h = nextHeading();
             return (
-              <h2
-                id={h?.id}
-                className="group mt-12 mb-4 scroll-mt-24 font-display text-3xl font-bold tracking-tight text-foreground"
-                {...p}
-              >
+              <h2 id={h?.id} className="group" {...p}>
                 {children}
                 <HeadingAnchor id={h?.id} text={h?.text} />
               </h2>
@@ -142,11 +154,7 @@ export function Markdown({
           h2: ({ node: _node, children, ...p }) => {
             const h = nextHeading();
             return (
-              <h2
-                id={h?.id}
-                className="group mt-12 mb-4 scroll-mt-24 font-display text-2xl font-bold tracking-tight text-foreground"
-                {...p}
-              >
+              <h2 id={h?.id} className="group" {...p}>
                 {children}
                 <HeadingAnchor id={h?.id} text={h?.text} />
               </h2>
@@ -155,129 +163,67 @@ export function Markdown({
           h3: ({ node: _node, children, ...p }) => {
             const h = nextHeading();
             return (
-              <h3
-                id={h?.id}
-                className="group mt-8 mb-3 scroll-mt-24 font-display text-xl font-semibold tracking-tight text-foreground"
-                {...p}
-              >
+              <h3 id={h?.id} className="group" {...p}>
                 {children}
                 <HeadingAnchor id={h?.id} text={h?.text} />
               </h3>
             );
           },
-          h4: ({ node: _node, ...p }) => (
-            <h4
-              className="mt-6 mb-2 scroll-mt-24 font-display text-lg font-semibold text-foreground"
-              {...p}
-            />
-          ),
-          p: ({ node: _node, ...p }) => (
-            <p className="my-4 text-[1.05rem] leading-7 text-foreground/90" {...p} />
-          ),
           a: ({ node: _node, href, className: nodeClass, ...p }) => {
             // Internal links (same-origin paths/anchors) must stay internal —
             // rendering them target=_blank made crawlers count our own lesson
             // cross-links as outbound external links. External links keep the
             // new-tab + noopener treatment.
             const h = href ?? "";
-            const external = /^https?:\/\//i.test(h) && !h.startsWith("https://learnfrc.com");
-            // Glossary auto-links are ours, not the author's — they get a
-            // quieter treatment so a paragraph never looks like link spam.
+            const external =
+              /^https?:\/\//i.test(h) && !h.startsWith("https://learnfrc.com");
+            // Glossary auto-links are ours, not the author's. They get a dotted
+            // underline instead of the solid blue one, so a paragraph the
+            // plugin has been through never reads as link spam, and so the
+            // author's own links stay the loudest thing in the sentence.
             const auto =
               typeof nodeClass === "string" &&
               nodeClass.split(/\s+/).includes(GLOSSARY_AUTOLINK_CLASS);
-            const base =
-              "break-words font-medium text-primary underline decoration-primary/30 underline-offset-2 transition-colors hover:text-accent hover:decoration-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary";
             const cls = auto
               ? cn(
-                  base,
-                  "font-normal text-inherit no-underline border-b border-dotted border-primary/45 hover:text-primary hover:border-primary/80",
+                  "text-ink decoration-dotted decoration-[rgba(27,54,200,0.55)] decoration-1 underline-offset-[3px] hover:text-blue hover:decoration-blue",
                   nodeClass
                 )
-              : cn(base, nodeClass);
+              : nodeClass;
             return external ? (
               <a className={cls} href={h} target="_blank" rel="noopener noreferrer" {...p} />
             ) : (
-              <a className={cls} href={h.replace(/^https:\/\/learnfrc\.com/, "") || "#"} {...p} />
+              <a
+                className={cls}
+                href={h.replace(/^https:\/\/learnfrc\.com/, "") || "#"}
+                {...p}
+              />
             );
           },
-          ul: ({ node: _node, ...p }) => (
-            <ul
-              className="my-4 list-disc space-y-2 pl-6 text-foreground/90 marker:text-primary"
-              {...p}
-            />
+          // A wide table is the one thing in a lesson that can push the page
+          // sideways, so it always gets its own scroller.
+          table: ({ node: _node, ...p }) => (
+            <div className="nb-scroll">
+              <table {...p} />
+            </div>
           ),
-          ol: ({ node: _node, ...p }) => (
-            <ol
-              className="my-4 list-decimal space-y-2 pl-6 text-foreground/90 marker:font-semibold marker:text-primary"
-              {...p}
-            />
-          ),
-          li: ({ node: _node, ...p }) => <li className="pl-1 leading-7" {...p} />,
-          strong: ({ node: _node, ...p }) => (
-            <strong className="font-semibold text-foreground" {...p} />
-          ),
-          em: ({ node: _node, ...p }) => <em className="italic text-foreground/90" {...p} />,
-          // Soft glass "note" callout — replaces the old cyan neon quote.
-          blockquote: ({ node: _node, ...p }) => (
-            <blockquote
-              className="ac-glass my-6 rounded-2xl border-l-4 border-primary py-1 pl-5 pr-5 text-foreground/90 [&>p]:my-3 [&>p:first-child]:mt-0 [&>p:last-child]:mb-0 [&_strong]:text-primary"
-              {...p}
-            />
-          ),
-          hr: () => <hr className="ac-divider my-10" />,
-          code: ({ className, children, ...rest }) => {
-            const isBlock = /language-/.test(className || "");
-            if (isBlock) {
-              // Fenced block: keep the dark-panel highlighting untouched.
-              return (
-                <code className={cn("hljs font-mono text-[0.85rem]", className)} {...rest}>
-                  {children}
-                </code>
-              );
-            }
-            // Inline code: light clay chip.
-            return (
-              <code
-                className="break-words rounded-md border border-primary/15 bg-primary/[0.07] px-1.5 py-0.5 font-mono text-[0.82em] text-primary"
-                {...rest}
-              >
+          // `.hljs` is what the token colours in globals.css hang off. The
+          // panel around it is styled by `.nb-prose pre`.
+          code: ({ className: codeClass, children, ...rest }) => {
+            const isBlock = /language-/.test(codeClass || "");
+            return isBlock ? (
+              <code className={cn("hljs", codeClass)} {...rest}>
+                {children}
+              </code>
+            ) : (
+              <code className={codeClass} {...rest}>
                 {children}
               </code>
             );
           },
-          // Fenced code blocks live in a clean dark clay panel (no fake
-          // terminal chrome) so the neon syntax tokens keep their contrast.
-          pre: ({ node: _node, children, ...p }) => (
-            <figure className="my-6 overflow-hidden rounded-2xl border border-white/10 bg-[#0b1220] shadow-[var(--shadow-md)] transition-shadow hover:shadow-[var(--shadow-lg)]">
-              <pre
-                className="overflow-x-auto p-4 leading-6 text-white/90"
-                {...p}
-              >
-                {children}
-              </pre>
-            </figure>
-          ),
-          table: ({ node: _node, ...p }) => (
-            <div className="ac-card my-6 overflow-x-auto rounded-2xl p-0">
-              <table className="w-full border-collapse text-sm" {...p} />
-            </div>
-          ),
-          th: ({ node: _node, ...p }) => (
-            <th
-              className="border-b border-border bg-primary/[0.06] px-4 py-2.5 text-left font-mono text-xs font-semibold uppercase tracking-wide text-primary"
-              {...p}
-            />
-          ),
-          td: ({ node: _node, ...p }) => (
-            <td
-              className="border-b border-border px-4 py-2.5 align-top text-foreground/90"
-              {...p}
-            />
-          ),
-          img: ({ node: _node, ...p }) => (
+          img: ({ node: _node, alt, ...p }) => (
             // eslint-disable-next-line @next/next/no-img-element
-            <img className="my-6 rounded-2xl border border-border shadow-[var(--shadow-md)]" alt="" {...p} />
+            <img className="border-2 border-ink" alt={alt ?? ""} {...p} />
           ),
         }}
       >

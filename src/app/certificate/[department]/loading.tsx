@@ -4,111 +4,82 @@ import { Skeleton } from "@/components/ui/skeleton";
  * Loading UI for /certificate/[department].
  *
  * THE STATE THIS MATCHES, AND WHY. The route renders two mutually exclusive
- * layouts: a locked "in progress" card in a `max-w-2xl` column, and the earned,
- * printable certificate in a `max-w-4xl` one. A single skeleton cannot be both,
- * so it is built for the earned state — because the only link to this route in
- * the whole app is the "Get certificate" CTA in `guides/[department]/_progress-islands.tsx`,
- * which renders exclusively when `complete === true`. A visitor who has not
- * finished the department has no in-app way to arrive here.
+ * pages: a "not signed off yet" spread, and the earned certificate. A single
+ * skeleton cannot be both, so it is drawn for the earned one, because the only
+ * link into this route anywhere in the app is the "Get certificate" CTA on the
+ * department page, which renders exclusively when the department is complete.
+ * Someone who has not finished has no in-app way to arrive here.
  *
- * Everything below is copied from the earned branch of page.tsx: the same
- * `max-w-4xl px-4 pb-12 pt-28 sm:px-6` column (note: no `lg:px-8` on this
- * route), the same chrome row, the same `rounded-[28px]` certificate with its
- * `p-6 sm:p-10` shell and `px-2 py-4 sm:px-8 sm:py-6` inner block, and the
- * 160px seal.
+ * Geometry is copied from the earned branch of page.tsx rather than
+ * approximated: the same `nb-wrap` column and top padding, the same chrome row,
+ * and the same `max-w-[56rem]` certificate card with its clamped padding. A
+ * skeleton that does not line up turns the content swap into a visible jump.
  *
- * Stops after the three-up stat strip. Below that the page has a TeamChallenge
- * panel gated on `profile.username` and a tip line — far below the fold, and not
- * worth guessing at.
+ * It stops after the certificate. Below that sit the TeamChallenge note (gated
+ * on a username the fallback cannot know) and one line of tip copy, both far
+ * down the page. Content growing in below a skeleton is not a jump; skeleton
+ * blocks landing in the wrong place are.
  */
 export default function CertificateLoading() {
   return (
-    <div className="relative overflow-x-clip">
-      <div className="mx-auto max-w-4xl px-4 pb-12 pt-28 sm:px-6">
-        {/* Page chrome — back link, share, print (all min-h-[44px]) */}
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-2">
-          <Skeleton className="h-11 w-44 rounded-2xl" />
-          <div className="flex items-center gap-2">
-            <Skeleton className="h-11 w-28 rounded-2xl" />
-            <Skeleton className="h-11 w-44 rounded-2xl" />
-          </div>
+    <section className="nb-wrap pb-[clamp(3rem,6vw,5rem)] pt-[clamp(1.6rem,4vw,2.8rem)]">
+      {/* Chrome: back link, share, print. */}
+      <div className="mb-[clamp(1.2rem,2.6vw,1.8rem)] flex flex-wrap items-center justify-between gap-3">
+        <Skeleton className="h-11 w-48" />
+        <div className="flex flex-wrap items-center gap-2.5">
+          <Skeleton className="h-11 w-28" />
+          <Skeleton className="h-11 w-48" />
+        </div>
+      </div>
+
+      {/* The certificate. A real nb-box, so the card's own rules are already
+          correct while its contents are still arriving. */}
+      <div className="nb-box relative mx-auto max-w-[56rem] px-[clamp(1.3rem,4vw,3.4rem)] py-[clamp(2rem,4.5vw,3.2rem)]">
+        {/* The stamp, pressed into the corner from sm up. */}
+        <div className="mb-[clamp(1.4rem,3vw,2rem)] flex justify-center sm:absolute sm:right-[clamp(1.4rem,4vw,3.2rem)] sm:top-[clamp(1.6rem,4vw,2.8rem)] sm:mb-0 sm:block">
+          <Skeleton className="h-[7.4rem] w-[9.5rem] rotate-[-4.5deg]" />
         </div>
 
-        {/* "Credential earned" chip */}
-        <div className="mb-5 flex justify-center">
-          <Skeleton className="h-8 w-48 rounded-full" />
+        {/* Logotype. */}
+        <Skeleton className="mx-auto h-7 w-40" />
+
+        {/* "certificate of completion" */}
+        <Skeleton className="mx-auto mt-[clamp(1.6rem,3.4vw,2.4rem)] h-4 w-56 max-w-full" />
+
+        {/* "This certifies that" */}
+        <Skeleton className="mx-auto mt-[clamp(1.4rem,3vw,2.2rem)] h-5 w-40" />
+
+        {/* The recipient's name, set at h1 scale. */}
+        <Skeleton className="mx-auto mt-2 h-[2.6rem] w-[18rem] max-w-full sm:h-[3.6rem] sm:w-[26rem]" />
+
+        {/* The department, ruled off on both sides. */}
+        <div className="mx-auto mt-[clamp(1.3rem,2.8vw,1.9rem)] flex max-w-[34rem] items-center gap-4">
+          <span aria-hidden="true" className="h-0.5 flex-1 bg-[var(--rule)]" />
+          <Skeleton className="h-5 w-48 shrink-0" />
+          <span aria-hidden="true" className="h-0.5 flex-1 bg-[var(--rule)]" />
         </div>
 
-        {/* ============ THE CERTIFICATE (printable artifact) ============ */}
-        <div className="rounded-[28px] border border-border bg-card p-6 shadow-[0_28px_70px_-28px_rgba(37,96,230,0.4)] sm:p-10">
-          <div className="px-2 py-4 text-center sm:px-8 sm:py-6">
-            {/* Wordmark */}
-            <div className="flex items-center justify-center gap-2.5">
-              <Skeleton className="h-9 w-9 rounded-xl" />
-              <Skeleton className="h-6 w-28" />
-            </div>
-
-            {/* "Certificate of Completion" */}
-            <Skeleton className="mx-auto mt-6 h-4 w-56 max-w-full" />
-
-            {/* The signature seal (h-40 w-40) */}
-            <Skeleton className="mx-auto mt-6 h-40 w-40 rounded-full" />
-
-            {/* "This certifies that" */}
-            <Skeleton className="mx-auto mt-6 h-5 w-36" />
-
-            {/* the recipient's name — text-3xl sm:text-5xl, one line */}
-            <Skeleton className="mx-auto mt-1.5 h-9 w-64 max-w-full sm:h-14 sm:w-96" />
-
-            {/* engraved divider carrying the department name */}
-            <div className="mx-auto mt-6 flex max-w-md items-center gap-3">
-              <Skeleton className="h-px flex-1" />
-              <Skeleton className="h-5 w-40 shrink-0" />
-              <Skeleton className="h-px flex-1" />
-            </div>
-
-            {/* citation paragraph — 2 lines at sm, 4 on a phone */}
-            <div className="mx-auto mt-4 max-w-lg space-y-2">
-              <Skeleton className="h-4 w-full" />
-              <Skeleton className="h-4 w-full sm:w-3/4 sm:mx-auto" />
-              <Skeleton className="h-4 w-full sm:hidden" />
-              <Skeleton className="mx-auto h-4 w-2/3 sm:hidden" />
-            </div>
-
-            {/* Signature row — date / team / founder */}
-            <div className="mt-9 flex flex-col items-stretch gap-5 border-t border-border pt-6 text-center sm:flex-row sm:items-end sm:justify-between sm:text-left">
-              <div>
-                <Skeleton className="mx-auto h-5 w-36 sm:mx-0" />
-                <Skeleton className="mx-auto mt-1 h-3.5 w-28 sm:mx-0" />
-              </div>
-              <div className="sm:text-center">
-                <Skeleton className="mx-auto h-5 w-28" />
-                <Skeleton className="mx-auto mt-1 h-3.5 w-20" />
-              </div>
-              <div className="sm:text-right">
-                <Skeleton className="mx-auto h-5 w-40 sm:ml-auto sm:mr-0" />
-                <Skeleton className="mx-auto mt-1 h-3.5 w-32 sm:ml-auto sm:mr-0" />
-              </div>
-            </div>
-
-            {/* Credential id */}
-            <div className="mt-5 flex items-center justify-center gap-2">
-              <Skeleton className="h-6 w-6 rounded-md" />
-              <Skeleton className="h-4 w-32" />
-            </div>
-          </div>
+        {/* The citation: two lines wide, four on a phone. */}
+        <div className="mx-auto mt-[clamp(1rem,2.2vw,1.5rem)] flex max-w-[52ch] flex-col items-center gap-2">
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-full sm:w-4/5" />
+          <Skeleton className="h-4 w-full sm:hidden" />
+          <Skeleton className="h-4 w-2/3 sm:hidden" />
         </div>
 
-        {/* Stat strip — lessons / modules / percent */}
-        <div className="mt-6 grid grid-cols-3 gap-3 sm:gap-4">
+        {/* Signature row: date, team, founder. */}
+        <div className="nb-rule mx-auto mt-[clamp(1.8rem,3.6vw,2.6rem)] grid max-w-[44rem] gap-x-8 gap-y-5 pt-[clamp(1.1rem,2.4vw,1.6rem)] sm:grid-cols-3">
           {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="ac-card h-full p-4 text-center">
-              <Skeleton className="mx-auto h-7 w-16 sm:h-8" />
-              <Skeleton className="mx-auto mt-1.5 h-4 w-24 max-w-full" />
+            <div key={i}>
+              <Skeleton className="h-5 w-36 max-w-full" />
+              <Skeleton className="mt-1 h-3.5 w-28 max-w-full" />
             </div>
           ))}
         </div>
+
+        {/* Credential id. */}
+        <Skeleton className="mx-auto mt-[clamp(1.2rem,2.4vw,1.7rem)] h-4 w-36" />
       </div>
-    </div>
+    </section>
   );
 }

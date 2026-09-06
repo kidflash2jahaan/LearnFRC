@@ -1,240 +1,136 @@
-"use client";
-
-import * as React from "react";
-import {
-  motion,
-  useReducedMotion,
-  useMotionValue,
-  useTransform,
-  animate,
-} from "framer-motion";
-import { Flame, Target, Zap } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 /**
- * Signature hero device: "Progress at a glance" — a glass instrument panel
- * with three telemetry gauges (streak / level / XP-to-next) that spring-fill
- * on load, like a robot dashboard reading out the learner's season.
+ * The tally block at the top of the dashboard: the title block of a shop
+ * drawing, printed once, in figures.
+ *
+ * WHAT IT REPLACED, and why none of it came back. This file used to draw three
+ * animated SVG dials that spring-filled on load, inside a glass panel that
+ * lifted under the cursor. Three problems with that on this page:
+ *
+ *  - A dial is an estimate. "Level 7, 40 XP to level 8" is a fact, and a
+ *    learner reads the fact faster than they read an arc they have to judge by
+ *    eye. The binder writes numbers down.
+ *  - Six of those numbers used to live further down the page as six identical
+ *    cards, which is the shape a reader skims past. Ruled into one block they
+ *    read as a tally, which is what they are.
+ *  - It was a Client Component holding framer-motion, a motion value, two
+ *    animations and a `useEffect`, for a page a learner opens several times a
+ *    day. Numbers on paper do not count themselves up while you look at them.
+ *
+ * Server Component. Nothing here reads a clock or a browser API, so the markup
+ * the server sends is the final markup.
  */
 
-type GaugeProps = {
-  /** 0–100 fill percentage of the arc */
-  pct: number;
-  /** the big number shown in the gauge center */
+type Reading = {
+  /** The figure, already a real number from real data. */
   value: number;
-  /** tiny label above the number */
+  /** What it counts, in the mono caption under the rule. */
   label: string;
-  /** small caption under the number */
-  caption: string;
-  suffix?: string;
-  /** arc gradient stops */
-  from: string;
-  to: string;
-  glyph: "level" | "streak" | "xp";
-  size: number;
-  stroke: number;
-  /** stagger delay in seconds */
-  delay: number;
+  /** Optional second line, e.g. the streak's XP multiplier. */
+  note?: string;
 };
 
-const GLYPHS = { level: Target, streak: Flame, xp: Zap } as const;
-
-function Gauge({
-  pct,
-  value,
-  label,
-  caption,
-  suffix = "",
-  from,
-  to,
-  glyph,
-  size,
-  stroke,
-  delay,
-}: GaugeProps) {
-  const reduce = useReducedMotion();
-  const r = (size - stroke) / 2;
-  const c = 2 * Math.PI * r;
-  // three-quarter dial, gap sits at the bottom once rotated
-  const sweep = 0.75;
-  const arcLen = c * sweep;
-  const target = Math.max(0, Math.min(100, pct)) / 100;
-
-  const progress = useMotionValue(reduce ? target : 0);
-  const dashOffset = useTransform(progress, (p) => arcLen - arcLen * p);
-  const [num, setNum] = React.useState(reduce ? value : 0);
-  const uid = React.useId();
-
-  React.useEffect(() => {
-    if (reduce) {
-      progress.set(target);
-      setNum(value);
-      return;
-    }
-    const arc = animate(progress, target, {
-      duration: 1.1,
-      delay,
-      ease: [0.34, 1.2, 0.64, 1],
-    });
-    const count = animate(0, value, {
-      duration: 1.1,
-      delay,
-      ease: [0.33, 1, 0.68, 1],
-      onUpdate: (v) => setNum(Math.round(v)),
-    });
-    return () => {
-      arc.stop();
-      count.stop();
-    };
-  }, [progress, target, value, delay, reduce]);
-
-  const Glyph = GLYPHS[glyph];
-
-  return (
-    <div className="flex flex-col items-center">
-      <div className="relative" style={{ width: size, height: size }} aria-hidden>
-        <svg
-          width={size}
-          height={size}
-          viewBox={`0 0 ${size} ${size}`}
-          style={{ transform: "rotate(135deg)" }}
-        >
-          <defs>
-            <linearGradient id={`gauge-${uid}`} x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0" stopColor={from} />
-              <stop offset="1" stopColor={to} />
-            </linearGradient>
-          </defs>
-          <circle
-            cx={size / 2}
-            cy={size / 2}
-            r={r}
-            fill="none"
-            stroke="rgba(120,145,190,0.24)"
-            strokeWidth={stroke}
-            strokeLinecap="round"
-            strokeDasharray={`${arcLen} ${c}`}
-          />
-          <motion.circle
-            cx={size / 2}
-            cy={size / 2}
-            r={r}
-            fill="none"
-            stroke={`url(#gauge-${uid})`}
-            strokeWidth={stroke}
-            strokeLinecap="round"
-            strokeDasharray={`${arcLen} ${c}`}
-            style={{ strokeDashoffset: dashOffset }}
-          />
-        </svg>
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-          <Glyph aria-hidden className="mb-0.5 h-4 w-4" style={{ color: from }} />
-          <span className="font-display text-2xl font-extrabold leading-none tabular-nums text-foreground sm:text-3xl">
-            {num.toLocaleString()}
-            {suffix}
-          </span>
-        </div>
-      </div>
-      <div className="mt-1.5 text-center">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
-          {label}
-        </p>
-        <p className="mt-0.5 text-[13px] text-muted-foreground">{caption}</p>
-      </div>
-    </div>
-  );
-}
-
-export function InstrumentPanel({
+export function ProgressLedger({
   level,
   levelPct,
-  xpToNext,
-  xp,
   xpIntoLevel,
+  xpToNext,
+  nextLevel,
+  xp,
   streak,
   xpMultiplier,
-  nextLevel,
+  lessonsCompleted,
+  departmentsInProgress,
+  departmentsCompleted,
+  achievementsEarned,
+  achievementsTotal,
+  className,
 }: {
   level: number;
+  /** 0-100 through the current level. */
   levelPct: number;
-  xpToNext: number;
-  xp: number;
   xpIntoLevel: number;
-  streak: number;
-  xpMultiplier: string;
+  xpToNext: number;
   nextLevel: number;
+  xp: number;
+  streak: number;
+  /** e.g. "1.4", printed as the streak's XP multiplier. */
+  xpMultiplier: string;
+  lessonsCompleted: number;
+  departmentsInProgress: number;
+  departmentsCompleted: number;
+  achievementsEarned: number;
+  achievementsTotal: number;
+  className?: string;
 }) {
-  const reduce = useReducedMotion();
-  // streak arc saturates at a 7-day week for a satisfying full loop
-  const streakPct = Math.min(100, (streak / 7) * 100);
-  const xpArcPct = (xpIntoLevel / (xpIntoLevel + xpToNext || 1)) * 100;
+  const readings: Reading[] = [
+    { value: lessonsCompleted, label: "lessons cleared" },
+    { value: departmentsInProgress, label: "departments open" },
+    { value: departmentsCompleted, label: "departments signed off" },
+    {
+      value: achievementsEarned,
+      label: "badges earned",
+      note: `of ${achievementsTotal}`,
+    },
+    {
+      value: streak,
+      label: streak === 1 ? "day running" : "days running",
+      // The multiplier is the only reason the streak is worth printing, so it
+      // is printed with it rather than hidden in a tooltip.
+      note: streak > 1 ? `${xpMultiplier}x xp` : undefined,
+    },
+    { value: xp, label: "xp banked" },
+  ];
 
   return (
-    <motion.div
-      className="ac-glass relative w-full p-6 sm:p-7"
-      initial={{ opacity: 0, y: 26, rotate: 1.1 }}
-      animate={{ opacity: 1, y: 0, rotate: 0 }}
-      transition={
-        reduce ? { duration: 0 } : { type: "spring", stiffness: 140, damping: 18, delay: 0.2 }
-      }
-      whileHover={reduce ? undefined : { y: -6 }}
+    // The grid splits at 861px because that is the pixel where `.nb-panel`
+    // turns its dividing rule from vertical to horizontal. Split anywhere else
+    // and the rule ends up on the wrong edge of the cell.
+    <section
+      aria-labelledby="ledger-heading"
+      className={cn("nb-box grid grid-cols-1 min-[861px]:grid-cols-[minmax(0,0.82fr)_minmax(0,1.5fr)]", className)}
     >
-      <div className="flex items-center justify-between gap-3">
-        <span className="font-display text-[17px] font-bold text-foreground">
-          Progress at a glance
+      {/* ---- Level, and the distance to the next one ---- */}
+      <div className="nb-panel p-[clamp(1.05rem,2.4vw,1.7rem)]">
+        <h2 id="ledger-heading" className="nb-slug">
+          level
+        </h2>
+
+        <p className="mt-1 font-mono text-[clamp(2.6rem,1.9rem+2.4vw,3.6rem)] font-bold leading-none tabular-nums text-blue">
+          {level}
+        </p>
+
+        <span className="nb-meter mt-4 block">
+          <span className="nb-meter-bar" style={{ width: `${levelPct}%` }} />
         </span>
-        <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.08em] text-success">
-          <motion.span
-            className="h-2 w-2 rounded-full bg-[#12b565]"
-            animate={reduce ? undefined : { scale: [1, 1.35, 1], opacity: [1, 0.6, 1] }}
-            transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
-            aria-hidden
-          />
-          Live
-        </span>
+
+        {/* The figure is printed beside the trough, always. A bar alone is one
+            colour against one colour, so a reader who cannot judge that ratio
+            by eye gets nothing out of it. */}
+        <p className="nb-slug mt-2">
+          {xpIntoLevel} / 100 xp
+        </p>
+        <p className="mt-2 text-[0.92rem] leading-snug text-graphite">
+          <b className="font-bold text-ink">{xpToNext} XP</b> to level{" "}
+          {nextLevel}.
+        </p>
       </div>
 
-      <div className="mt-5 grid grid-cols-3 items-start gap-2 sm:gap-4">
-        <Gauge
-          glyph="streak"
-          label="Streak"
-          value={streak}
-          caption={streak > 0 ? `${xpMultiplier}× XP` : "start today"}
-          pct={streakPct}
-          from="#ff8a3d"
-          to="#f5a623"
-          size={92}
-          stroke={9}
-          delay={0.38}
-        />
-        <Gauge
-          glyph="level"
-          label="Level"
-          value={level}
-          caption={`${levelPct}% to L${nextLevel}`}
-          pct={levelPct}
-          from="#2560e6"
-          to="#1aa9d6"
-          size={132}
-          stroke={12}
-          delay={0.2}
-        />
-        <Gauge
-          glyph="xp"
-          label="To next"
-          value={xpToNext}
-          caption={`${xp.toLocaleString()} XP total`}
-          pct={xpArcPct}
-          from="#7c5cff"
-          to="#b16bff"
-          size={92}
-          stroke={9}
-          delay={0.5}
-        />
-      </div>
+      {/* ---- Everything else this account has on file ---- */}
+      <div className="nb-panel p-[clamp(1.05rem,2.4vw,1.7rem)]">
+        <p className="nb-slug">the tally</p>
 
-      <p className="mt-5 text-[13px] leading-relaxed text-muted-foreground">
-        Every lesson banks XP — streaks multiply it. Keep the ring moving.
-      </p>
-    </motion.div>
+        <dl className="mt-3 grid grid-cols-2 gap-x-[clamp(0.9rem,2.4vw,2rem)] gap-y-[clamp(0.8rem,1.8vw,1.15rem)] min-[520px]:grid-cols-3">
+          {readings.map((r) => (
+            <div key={r.label} className="border-t-2 border-ink pt-2">
+              <dd className="nb-count">{r.value.toLocaleString()}</dd>
+              <dt className="nb-slug mt-1">{r.label}</dt>
+              {r.note && <p className="nb-slug">{r.note}</p>}
+            </div>
+          ))}
+        </dl>
+      </div>
+    </section>
   );
 }

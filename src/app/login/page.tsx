@@ -1,9 +1,7 @@
 import { AuthForm } from "@/components/auth/auth-form";
 import { HardRedirect } from "@/components/auth/hard-redirect";
-import { deptMeta } from "@/lib/departments";
 import { getSession } from "@/lib/auth";
-import { Glow } from "@/components/motion/primitives";
-import { AuthScene, type OrbitDept, type Stat } from "./_auth-scene";
+import { SignInSheet, SignInAside } from "./_auth-scene";
 
 export const metadata = {
   title: "Log in",
@@ -11,22 +9,19 @@ export const metadata = {
   robots: { index: false, follow: true },
 };
 
-/** Department slugs whose glossy tiles ring the auth card. */
-const ORBIT_SLUGS = [
-  "mechanical-build",
-  "programming-software",
-  "cad-design",
-  "electrical-wiring",
-  "scouting-strategy",
-  "drive-team",
-] as const;
-
-const STATS: Stat[] = [
-  { value: 11, suffix: "", label: "departments" },
-  { value: 394, suffix: "", label: "lessons" },
-  { value: 100, suffix: "%", label: "free, forever" },
-];
-
+/**
+ * SIGN IN — the shop door with a sheet clipped to it.
+ *
+ * This is the most repeated task on the site, so the page is a headline band
+ * and then an asymmetric split: the sheet on the left at a fixed 27rem, wide
+ * enough for the two fields and no wider, and the margin on the right carrying
+ * what the account is for. The form is the first thing in the reading order
+ * and the first thing in the tab order.
+ *
+ * BEHAVIOUR IS UNCHANGED: same `next` sanitising, same session check, and the
+ * same HardRedirect rather than an RSC redirect() when a session already
+ * exists, because a soft navigation would leave the navbar showing "Log in".
+ */
 export default async function LoginPage({
   searchParams,
 }: {
@@ -35,37 +30,33 @@ export default async function LoginPage({
   const { next, notice, email } = await searchParams;
   const safeNext = next && next.startsWith("/") ? next : undefined;
   const { user } = await getSession();
-  // Already signed in (incl. right after the sign-in action sets cookies and
-  // Next refreshes this route): HARD redirect so every layout picks up the
-  // session — an RSC redirect() here would only soft-navigate. See HardRedirect.
+  // Already signed in (including right after the sign-in action sets cookies
+  // and Next refreshes this route): HARD redirect so every layout picks up the
+  // session. An RSC redirect() here would only soft-navigate.
   if (user) return <HardRedirect to={safeNext ?? "/dashboard"} />;
   const noticeExists = notice === "exists" ? "exists" : undefined;
 
-  const orbit: OrbitDept[] = ORBIT_SLUGS.map((slug) => {
-    const m = deptMeta(slug);
-    return { slug, color: m.color, icon: m.icon };
-  });
-
   return (
-    <div className="relative overflow-x-clip">
-      <Glow
-        blobs={[
-          { size: "620px", pos: { left: "-180px", top: "-200px" }, color: "#8bbcff", opacity: 0.65 },
-          { size: "560px", pos: { right: "-160px", top: "-120px" }, color: "#6ff0ea", opacity: 0.55, delay: 2 },
-          { size: "520px", pos: { left: "40%", bottom: "-220px" }, color: "#c8b6ff", opacity: 0.45, delay: 4 },
-        ]}
-      />
+    <div className="nb-wrap py-[clamp(2.4rem,5vw,4.2rem)]">
+      <p className="nb-marker">returning</p>
+      <h1 className="max-w-[16ch]">Sign in and pick the binder back up.</h1>
+      <p className="nb-lede mt-[clamp(0.9rem,2vw,1.3rem)]">
+        Your progress, your certificates and your team are attached to the
+        account, not the browser. Sign in on any machine in the shop and they
+        follow you.
+      </p>
 
-      {/* Global navbar provides branding + navigation — no page-level header. */}
-      <div className="mx-auto flex min-h-[100svh] max-w-2xl flex-col px-4 pb-16 pt-28 sm:px-6">
-        <AuthScene orbit={orbit} stats={STATS}>
+      <div className="mt-[clamp(1.8rem,4vw,3rem)] grid items-start gap-[clamp(1.8rem,4vw,3.4rem)] lg:grid-cols-[minmax(0,27rem)_minmax(0,1fr)]">
+        <SignInSheet>
           <AuthForm
             mode="login"
             next={safeNext}
             notice={noticeExists}
             defaultEmail={email}
           />
-        </AuthScene>
+        </SignInSheet>
+
+        <SignInAside />
       </div>
     </div>
   );

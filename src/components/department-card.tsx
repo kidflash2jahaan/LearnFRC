@@ -1,17 +1,21 @@
-"use client";
-
 import Link from "next/link";
-import type { CSSProperties } from "react";
-import { ArrowUpRight, BookOpen, Layers } from "lucide-react";
-import { Icon } from "@/lib/icon-map";
-import { deptMeta, inkFor } from "@/lib/departments";
-import { Progress } from "@/components/ui/progress";
-import { Hover } from "@/components/motion/primitives";
+import { cn } from "@/lib/utils";
+
+/** Four angles, so no two cards next to each other were straightened the same. */
+const TILT = ["nb-tilt-1", "nb-tilt-2", "nb-tilt-3", "nb-tilt-4"] as const;
 
 /**
- * A single department tile — a "pit stall" on the map. Pure presentation +
- * its own hover spring; scroll-entrance staggering is owned by the caller
- * (wrap in <RevealItem>), never duplicated here.
+ * One department, as an index card taped to the wall.
+ *
+ * The old tile identified a department by a coloured icon badge and a coloured
+ * progress bar. In this system a department is identified by its name and its
+ * mono slug, full stop: there are no per-department hues, so the card leads
+ * with `dept / electrical-wiring` and lets the name do the rest. The count in
+ * the footer is the one figure that matters on a wall of eleven of these, so it
+ * gets the blue and the mono numerals.
+ *
+ * No motion of its own. `.nb-lift` is CSS, so this is a Server Component: it
+ * was previously a client component solely to run a hover spring.
  */
 export function DepartmentCard({
   slug,
@@ -28,87 +32,77 @@ export function DepartmentCard({
   moduleCount?: number;
   lessonCount?: number;
   progressPct?: number;
+  /** Only decides which of the four tilts this card gets. */
   index?: number;
 }) {
-  const m = deptMeta(slug);
-  const ink = inkFor(m.color);
-  const idx = typeof index === "number" ? String(index).padStart(2, "0") : null;
   const hasLessons = typeof lessonCount === "number" && lessonCount > 0;
   const hasModules = typeof moduleCount === "number" && moduleCount > 0;
   const hasProgress = typeof progressPct === "number";
+  const tilt = TILT[(index ?? 0) % TILT.length];
 
   return (
-    <Hover className="h-full" lift={-6}>
-      <Link
-        href={`/guides/${slug}`}
-        className="ac-tile group flex h-full flex-col p-5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-        style={{ "--a": m.color } as CSSProperties}
-      >
-        <div className="flex items-start justify-between gap-2">
-          <span
-            className="ac-badge flex h-12 w-12 items-center justify-center"
-            style={{ "--a": m.color } as CSSProperties}
-          >
-            <Icon name={m.icon} className="h-6 w-6" aria-hidden />
+    <Link
+      href={`/guides/${slug}`}
+      className={cn(
+        "nb-box nb-lift group flex h-full flex-col p-[clamp(1rem,1.9vw,1.45rem)]",
+        tilt
+      )}
+    >
+      <span className="nb-tape -top-3 left-4" aria-hidden="true" />
+
+      {/* The slug line carries both identifiers, so the footer can stay two
+          things wide: the figure that matters, and the way in. */}
+      <p className="nb-slug flex items-baseline justify-between gap-3">
+        <span className="min-w-0 truncate">dept / {slug}</span>
+        {hasModules && (
+          <span className="shrink-0">
+            {moduleCount} {moduleCount === 1 ? "module" : "modules"}
           </span>
-          {idx && (
-            <span className="rounded-full bg-white/60 px-2 py-0.5 text-[11px] font-bold tabular-nums text-foreground/60">
-              Stall {idx}
-            </span>
-          )}
-        </div>
-
-        <h3 className="mt-4 font-display text-xl font-bold leading-tight text-foreground">
-          {name}
-        </h3>
-
-        {(hasLessons || hasModules) && (
-          <div className="mt-1.5 text-xs font-bold uppercase tracking-wide" style={{ color: ink }}>
-            {hasLessons && `${lessonCount} lessons`}
-            {hasLessons && hasModules && " · "}
-            {hasModules && `${moduleCount} modules`}
-          </div>
         )}
+      </p>
 
-        <p className="mt-2 line-clamp-2 flex-1 text-[15px] leading-relaxed text-foreground/70">
+      <h3 className="mt-2">{name}</h3>
+
+      {tagline && (
+        <p className="mt-2 text-[0.92rem] leading-snug text-graphite">
           {tagline}
         </p>
+      )}
 
-        {hasProgress && (
-          <div className="mt-4">
-            <div className="mb-1.5 flex items-center justify-between text-[11px] font-semibold text-foreground/70">
-              <span>Progress</span>
-              <span>{progressPct}%</span>
-            </div>
-            <Progress
-              value={progressPct}
-              className="h-2 bg-white/50"
-              barClassName="bg-[color-mix(in_srgb,var(--a)_78%,#141f2c)]"
-            />
+      {hasProgress && (
+        <div className="mt-4">
+          <div className="nb-slug mb-1.5 flex items-baseline justify-between gap-2">
+            <span>progress</span>
+            <span className="font-bold text-ink">{progressPct}%</span>
           </div>
-        )}
-
-        <div className="mt-4 flex items-center justify-between border-t border-white/50 pt-3">
-          <span className="inline-flex items-center gap-3 text-xs font-medium text-foreground/70">
-            {hasModules && (
-              <span className="inline-flex items-center gap-1">
-                <Layers className="h-3.5 w-3.5" aria-hidden /> {moduleCount}
-              </span>
-            )}
-            {hasLessons && (
-              <span className="inline-flex items-center gap-1">
-                <BookOpen className="h-3.5 w-3.5" aria-hidden /> {lessonCount}
-              </span>
-            )}
-            {!hasModules && !hasLessons && (
-              <span className="font-semibold text-foreground/80">Open guide</span>
-            )}
-          </span>
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/70 text-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5">
-            <ArrowUpRight className="h-4 w-4" aria-hidden />
+          <span className="nb-meter block">
+            <span
+              className="nb-meter-bar"
+              style={{ width: `${Math.min(100, Math.max(0, progressPct))}%` }}
+            />
           </span>
         </div>
-      </Link>
-    </Hover>
+      )}
+
+      <div className="nb-hair mt-auto flex items-baseline justify-between gap-3 pt-4">
+        {hasLessons ? (
+          <span className="nb-count">
+            {lessonCount}
+            <small>{lessonCount === 1 ? "lesson" : "lessons"}</small>
+          </span>
+        ) : hasModules ? (
+          <span className="nb-count">
+            {moduleCount}
+            <small>{moduleCount === 1 ? "module" : "modules"}</small>
+          </span>
+        ) : (
+          <span className="nb-slug">not counted yet</span>
+        )}
+
+        <span className="nb-slug border-b-2 border-b-transparent text-ink group-hover:border-b-blue group-hover:text-blue">
+          open
+        </span>
+      </div>
+    </Link>
   );
 }

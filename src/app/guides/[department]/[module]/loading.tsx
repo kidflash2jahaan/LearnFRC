@@ -1,96 +1,107 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
 /**
- * Module hub skeleton.
+ * Module hub, before the paper arrives.
  *
- * Mirrors page.tsx:
- *   hero    → mx-auto max-w-5xl px-4 pb-6 pt-28 sm:px-6 lg:px-8 lg:pt-32
- *   lessons → mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8, list is space-y-3
- * Note this route is max-w-5xl, narrower than the department hub above it and
- * the lesson page below it — copying max-w-6xl here would shift the whole page.
+ * The point of this file is that nothing moves when the real page lands, so it
+ * draws the same three shapes the hub actually opens with and in the same
+ * order: the trail and masthead typed straight on the paper, the ruled figure
+ * strip under it, then the lessons log.
+ *
+ * Two things are deliberately NOT drawn. The taped jargon card, the wrong-turn
+ * note and the module table below the fold all render conditionally on real
+ * data (about a third of modules have no glossary hits and no twins), so
+ * guessing them here would shift the page for every module that has none. And
+ * the lessons log gets six rows because six is the median across the 101 hubs;
+ * a row is short, so being one or two out costs a fraction of a line rather
+ * than a card's worth of height.
+ *
+ * `aria-hidden` comes from `Skeleton` itself, so this whole tree is invisible
+ * to a screen reader, which is right: it announces nothing because there is
+ * nothing yet to announce.
  */
 export default function ModuleLoading() {
   return (
-    <div className="relative overflow-x-clip">
-      {/* ============================ HERO ============================ */}
-      <section className="mx-auto max-w-5xl px-4 pb-6 pt-28 sm:px-6 lg:px-8 lg:pt-32">
-        {/* breadcrumb: Guides › Dept › Module (-my-2 + min-h-11 → ~28px) */}
-        <div className="-my-2 flex flex-wrap items-center gap-1.5 py-2">
-          <Skeleton className="h-5 w-14 rounded" />
-          <Skeleton className="h-3.5 w-3.5 rounded" />
-          <Skeleton className="h-5 w-28 rounded" />
-          <Skeleton className="h-3.5 w-3.5 rounded" />
-          <Skeleton className="h-5 w-40 rounded" />
+    <>
+      {/* ---------------- tab divider ---------------- */}
+      <section className="nb-wrap pb-[clamp(1.6rem,3vw,2.4rem)] pt-[clamp(1.8rem,4vw,3rem)]">
+        {/* trail: guides / department / module */}
+        <div className="-my-2 flex flex-wrap items-center gap-x-2 py-2">
+          <Skeleton className="h-4 w-14" />
+          <Skeleton className="h-4 w-1.5" />
+          <Skeleton className="h-4 w-28" />
+          <Skeleton className="h-4 w-1.5" />
+          <Skeleton className="h-4 w-36" />
         </div>
 
-        <div className="mt-6">
-          {/* dept pill + "Module N of M" chip */}
-          <div className="flex flex-wrap items-center gap-2.5">
-            <Skeleton className="h-9 w-44 rounded-full" />
-            <Skeleton className="h-7 w-40 rounded-full" />
-          </div>
-
-          {/* h1 — text-3xl / sm:text-4xl / lg:text-[2.9rem] */}
-          <Skeleton className="mt-5 h-9 w-[82%] rounded-xl sm:h-11 lg:h-12" />
-
-          {/* overview — mt-4 max-w-2xl text-lg */}
-          <div className="mt-4 max-w-2xl space-y-2.5">
-            <Skeleton className="h-5 w-full rounded" />
-            <Skeleton className="h-5 w-[94%] rounded" />
-            <Skeleton className="h-5 w-[62%] rounded" />
-          </div>
-
-          {/* "how this module fits" — mt-3 max-w-2xl */}
-          <div className="mt-3 max-w-2xl space-y-2.5">
-            <Skeleton className="h-4 w-[97%] rounded" />
-            <Skeleton className="h-4 w-[70%] rounded" />
-          </div>
-
-          {/* lessons / minutes / dept-total chips */}
-          <div className="mt-6 flex flex-wrap items-center gap-2.5">
-            <Skeleton className="h-8 w-28 rounded-full" />
-            <Skeleton className="h-8 w-28 rounded-full" />
-            <Skeleton className="h-8 w-48 rounded-full" />
-          </div>
-
-          {/* CTA row */}
-          <div className="mt-7 flex flex-wrap items-center gap-3">
-            <Skeleton className="h-11 w-48 rounded-2xl" />
-            <Skeleton className="h-11 w-44 rounded-2xl" />
-          </div>
+        {/* nb-marker: the blue stroke plus "module N of M" */}
+        <div className="mt-[clamp(1.1rem,2.4vw,1.7rem)] flex items-center gap-2.5">
+          <Skeleton className="h-0.5 w-[34px]" />
+          <Skeleton className="h-4 w-40" />
         </div>
-      </section>
 
-      {/* ========================== THE LESSONS ========================== */}
-      <section className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="mb-5 flex items-end justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <Skeleton className="h-10 w-10 shrink-0 rounded-xl" />
-            <div>
-              <Skeleton className="h-4 w-28 rounded" />
-              <Skeleton className="mt-1.5 h-7 w-32 rounded-lg" />
+        {/* h1, clamp(2.45rem … 4.35rem) at leading .98 */}
+        <Skeleton className="mt-3 h-[clamp(2.4rem,4.5vw,4.3rem)] w-[min(100%,26ch)]" />
+        <Skeleton className="mt-2 h-[clamp(2.4rem,4.5vw,4.3rem)] w-[min(100%,16ch)]" />
+
+        {/* overview lede, capped at 46ch like nb-lede */}
+        <div className="mt-[clamp(0.9rem,1.8vw,1.3rem)] max-w-[46ch]">
+          <Skeleton className="h-5 w-full" />
+          <Skeleton className="mt-2 h-5 w-[92%]" />
+          <Skeleton className="mt-2 h-5 w-[58%]" />
+        </div>
+
+        {/* the orientation paragraph, narrower and quieter */}
+        <div className="mt-4 max-w-[58ch]">
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="mt-2 h-4 w-[96%]" />
+          <Skeleton className="mt-2 h-4 w-[64%]" />
+        </div>
+
+        {/* the ruled figure strip */}
+        <div className="nb-rule mt-[clamp(1.5rem,3vw,2.2rem)] grid grid-cols-2 gap-x-[clamp(1rem,3vw,2.5rem)] gap-y-4 pt-4 sm:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i}>
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="mt-2 h-6 w-14" />
             </div>
-          </div>
-        </div>
-
-        {/* lesson rows — ac-card p-5, badge + title + summary + read time */}
-        <div className="space-y-3">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-[124px] rounded-[20px]" />
           ))}
         </div>
 
-        {/* prev / next module */}
-        <div className="mt-10 grid gap-4 sm:grid-cols-2">
-          <Skeleton className="h-[88px] rounded-[20px]" />
-          <Skeleton className="h-[88px] rounded-[20px]" />
+        {/* the two buttons, at the nb-btn 44px floor */}
+        <div className="mt-[clamp(1.4rem,2.8vw,2rem)] flex flex-wrap gap-3">
+          <Skeleton className="h-11 w-44" />
+          <Skeleton className="h-11 w-40" />
         </div>
       </section>
 
-      {/* related modules / articles strips below the fold */}
-      <section className="mx-auto max-w-5xl px-4 pb-16 pt-4 sm:px-6 lg:px-8">
-        <Skeleton className="h-56 rounded-[20px]" />
+      {/* ---------------- the lessons log ---------------- */}
+      <section className="nb-wrap pb-[clamp(2rem,4vw,3rem)]">
+        <div className="flex items-center gap-2.5">
+          <Skeleton className="h-0.5 w-[34px]" />
+          <Skeleton className="h-4 w-52" />
+        </div>
+        <Skeleton className="mt-2.5 h-[clamp(1.8rem,3vw,3.1rem)] w-[min(100%,24ch)]" />
+
+        <div className="nb-list mt-[clamp(1.2rem,2.4vw,1.8rem)]">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div
+              key={i}
+              className="grid gap-x-[clamp(1rem,3vw,2.4rem)] gap-y-2 border-b border-dashed border-rule py-[clamp(1.05rem,2.2vw,1.6rem)] md:grid-cols-[minmax(0,15rem)_minmax(0,1fr)_auto]"
+            >
+              <Skeleton className="h-4 w-40" />
+              <div className="min-w-0">
+                <Skeleton className="h-5 w-[min(100%,34ch)]" />
+                <Skeleton className="mt-2 h-4 w-[min(100%,52ch)]" />
+              </div>
+              <Skeleton className="hidden h-4 w-14 sm:block" />
+            </div>
+          ))}
+        </div>
+
+        {/* where the tab hands over: one box, two panels */}
+        <Skeleton className="mt-[clamp(1.8rem,3.5vw,2.8rem)] h-[9.5rem] sm:h-[7.5rem]" />
       </section>
-    </div>
+    </>
   );
 }

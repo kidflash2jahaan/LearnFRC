@@ -1,22 +1,8 @@
 import type { Metadata } from "next";
-import type { CSSProperties } from "react";
 import Link from "next/link";
-import { ArrowRight, Compass, Route, Layers, Target, MapPin, Flag } from "lucide-react";
 import { PATHS } from "@/lib/paths-data";
-import { Icon } from "@/lib/icon-map";
 import { JsonLd } from "@/components/json-ld";
-import { deptMeta, deptInk } from "@/lib/departments";
-import { AnimatedCounter } from "@/components/animated-counter";
-import {
-  RiseGroup,
-  RiseItem,
-  Reveal,
-  RevealGroup,
-  RevealItem,
-  Hover,
-  Glow,
-} from "@/components/motion/primitives";
-import { RoutePreview } from "./_route-preview";
+import { RouteSlip } from "./_route-preview";
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com";
 
@@ -36,43 +22,47 @@ export const metadata: Metadata = {
   },
 };
 
-const BRAND_GRADIENT: CSSProperties = {
-  background: "linear-gradient(120deg, #2560e6, #1aa9d6)",
-  WebkitBackgroundClip: "text",
-  backgroundClip: "text",
-  color: "transparent",
-};
+/**
+ * Hand angle per slip, in the order they go on the page.
+ *
+ * These are an order of magnitude smaller than the angles on an index card,
+ * and deliberately so: a slip is the full 1280px of the gutter, where a single
+ * degree of rotation is 22px of vertical drift and stops reading as "nobody
+ * straightened it" and starts reading as a broken grid. No two are the same.
+ */
+const SLIP_TILT = ["-0.3deg", "0.22deg", "-0.16deg", "0.26deg", "-0.24deg"];
 
+/**
+ * /paths is the divider at the front of the routes section of the binder.
+ *
+ * A person arrives here for one reason: they know roughly what job they want on
+ * the team, and they do not know which of eleven department tabs to open first.
+ * So the page answers that and nothing else. The masthead says what a route is
+ * and how it differs from a department, then every route is printed full width
+ * as a slip with its whole itinerary showing, so the choice is made by reading
+ * the stops rather than by clicking through five pages to compare them.
+ *
+ * Server Component. Every route is static data; nothing here is per-user.
+ */
 export default function PathsPage() {
-  const totalSteps = PATHS.reduce((s, p) => s + p.steps.length, 0);
+  const totalStops = PATHS.reduce((sum, p) => sum + p.steps.length, 0);
   const deptsTouched = new Set(
     PATHS.flatMap((p) => p.steps.map((s) => s.deptSlug)),
   ).size;
+  const first = PATHS[0];
 
-  const stats = [
-    { icon: Route, v: PATHS.length, label: "curated routes" },
-    { icon: Layers, v: totalSteps, label: "guided stops" },
-    { icon: Target, v: deptsTouched, label: "departments" },
+  // What the card in the masthead prints. Written out here so the card markup
+  // below stays a shape and not a pile of interleaved arithmetic.
+  const tally: { n: number; label: string }[] = [
+    { n: PATHS.length, label: "routes, one per job people ask about" },
+    { n: totalStops, label: "stops, in the order they stop being confusing" },
+    { n: deptsTouched, label: "departments the routes pass through" },
   ];
 
-  const featured = PATHS[0];
-  const featuredStations = featured
-    ? featured.steps.map((step) => {
-        const m = deptMeta(step.deptSlug);
-        return {
-          deptSlug: step.deptSlug,
-          label: step.label,
-          color: m.color,
-          icon: m.icon,
-          ink: deptInk(step.deptSlug),
-        };
-      })
-    : [];
-
   return (
-    <div className="relative overflow-x-clip">
-      {/* The hub is a list of the individual path Courses — each detail page
-          carries the full Course markup. */}
+    <>
+      {/* The hub lists the individual path Courses; each detail page carries
+          the full Course markup for itself. */}
       <JsonLd
         data={{
           "@context": "https://schema.org",
@@ -105,257 +95,163 @@ export default function PathsPage() {
           ],
         }}
       />
-      <Glow
-        blobs={[
-          { size: "620px", pos: { left: "-160px", top: "-200px" }, color: "#8bbcff", opacity: 0.6 },
-          { size: "560px", pos: { right: "-180px", top: "60px" }, color: "#6ff0ea", opacity: 0.5, delay: 2 },
-          { size: "480px", pos: { left: "28%", top: "560px" }, color: "#c8b6ff", opacity: 0.4, delay: 4 },
-        ]}
-      />
 
-      {/* ============================ HERO ============================ */}
-      <section className="mx-auto grid max-w-6xl items-center gap-10 px-4 pb-16 pt-28 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:gap-12 lg:pb-20 lg:pt-32 lg:px-8">
-        <RiseGroup>
-          <RiseItem>
-            <span className="ac-chip inline-flex items-center gap-2">
-              <Compass className="h-3.5 w-3.5 text-primary" aria-hidden />
-              <span className="ac-eyebrow">Pick a journey, not a page</span>
-            </span>
-          </RiseItem>
-          <RiseItem>
-            <h1 className="mt-5 text-balance font-display text-4xl font-extrabold leading-[1.05] sm:text-5xl lg:text-[3.3rem]">
-              Learn FRC as a <span style={BRAND_GRADIENT}>guided journey</span>
-            </h1>
-          </RiseItem>
-          <RiseItem>
-            <p className="mt-5 max-w-xl text-pretty text-lg leading-relaxed text-foreground/70">
-              Not sure where to start? Each learning path is a mapped route —
-              department by department — that threads the right guides
-              together, from your first day in the pit to a robot-ready
-              season.
-            </p>
-          </RiseItem>
-          <RiseItem>
-            <div className="mt-7 flex flex-wrap items-center gap-3">
-              <Link href={`/paths/${featured?.slug ?? ""}`} className="ac-btn text-sm">
-                Start the first route <ArrowRight className="h-4 w-4" aria-hidden />
+      {/* ===================== MASTHEAD ===================== */}
+      <section className="nb-wrap grid items-start gap-[clamp(1.6rem,4vw,3.4rem)] pb-[clamp(2.4rem,5vw,4rem)] pt-[clamp(2.2rem,5vw,4rem)] min-[900px]:grid-cols-[minmax(0,1.5fr)_minmax(0,0.82fr)]">
+        <div>
+          <p className="nb-marker">
+            {PATHS.length} routes / {totalStops} stops
+          </p>
+
+          <h1 className="max-w-[19ch]">
+            Every route is a <span className="nb-mark">reading order</span> for
+            one job.
+          </h1>
+
+          <p className="nb-lede mt-[clamp(1rem,2vw,1.5rem)]">
+            The catalogue is filed by department, because that is how a team is
+            organised. A route cuts across it: five or six stops, in the order
+            that stops them being confusing.
+          </p>
+
+          <div className="mt-[clamp(1.4rem,2.6vw,2rem)] flex flex-wrap gap-3">
+            {first && (
+              <Link href={`/paths/${first.slug}`} className="nb-btn">
+                Start the first route
               </Link>
-              <Link href="/guides" className="ac-btn-ghost text-sm">
-                Browse departments
-              </Link>
-            </div>
-          </RiseItem>
-          <RiseItem>
-            <div className="mt-7 flex flex-wrap gap-3">
-              {stats.map((s) => (
-                <span key={s.label} className="ac-chip inline-flex items-center gap-2">
-                  <s.icon className="h-3.5 w-3.5 text-primary" aria-hidden />
-                  <span className="font-semibold tabular-nums text-foreground">
-                    <AnimatedCounter value={s.v} />
-                  </span>
-                  <span className="text-muted-foreground">{s.label}</span>
-                </span>
-              ))}
-            </div>
-          </RiseItem>
-        </RiseGroup>
-
-        {/* SIGNATURE: mapped route preview of the featured path */}
-        {featured && (
-          <RoutePreview
-            title={featured.title}
-            description={featured.description}
-            slug={featured.slug}
-            color={featured.color}
-            icon={featured.icon}
-            stations={featuredStations}
-            outcomeCount={featured.outcomes.length}
-          />
-        )}
-      </section>
-
-      {/* ===== ROUTE CARDS ===== */}
-      <section className="mx-auto max-w-6xl px-4 pb-24 sm:px-6 lg:px-8">
-        <Reveal>
-          <div className="flex flex-wrap items-end justify-between gap-4">
-            <div>
-              <p className="ac-eyebrow inline-flex items-center gap-1.5">
-                <Route className="h-3.5 w-3.5" aria-hidden />
-                Every route, mapped
-              </p>
-              <h2 className="mt-2 text-balance font-display text-3xl font-bold tracking-tight sm:text-4xl">
-                Choose your route
-              </h2>
-            </div>
-            <p className="hidden max-w-xs text-sm text-muted-foreground sm:block">
-              Each stop links straight into a live department guide — travel
-              at your own pace.
-            </p>
-          </div>
-        </Reveal>
-
-        <RevealGroup className="mt-10 grid gap-6 md:grid-cols-2">
-          {PATHS.map((p, idx) => (
-            <RevealItem key={p.slug}>
-              <Hover className="h-full" lift={-6}>
-                <article className="ac-card group relative flex h-full flex-col overflow-hidden p-6 sm:p-7">
-                  {/* soft colored corner wash */}
-                  <div
-                    aria-hidden
-                    className="pointer-events-none absolute -right-14 -top-14 h-40 w-40 rounded-full opacity-25 blur-2xl transition-opacity duration-300 group-hover:opacity-45"
-                    style={{ background: p.color }}
-                  />
-
-                  {/* top row */}
-                  <div className="flex items-center justify-between">
-                    <span
-                      className="ac-badge flex h-14 w-14 items-center justify-center"
-                      style={{ "--a": p.color } as CSSProperties}
-                    >
-                      <Icon name={p.icon} className="h-7 w-7" />
-                    </span>
-                    <span
-                      aria-hidden
-                      className="rounded-full bg-white/60 px-2.5 py-1 text-xs font-semibold uppercase tabular-nums tracking-[0.16em] text-muted-foreground ring-1 ring-white/70"
-                    >
-                      Route {String(idx + 1).padStart(2, "0")}
-                    </span>
-                  </div>
-
-                  <h3 className="mt-5 font-display text-xl font-bold tracking-tight text-foreground">
-                    {p.title}
-                  </h3>
-                  <p className="mt-2 text-[15px] leading-relaxed text-foreground/70">
-                    {p.description}
-                  </p>
-
-                  {/* the route: vertical spine of stops */}
-                  <div className="relative mt-6 flex-1">
-                    <span
-                      aria-hidden
-                      className="absolute left-[15px] top-4 bottom-8 w-0.5 rounded-full"
-                      style={{
-                        background:
-                          "linear-gradient(to bottom, rgba(37,96,230,0.45), rgba(26,169,214,0.45))",
-                      }}
-                    />
-                    <ol className="space-y-2.5">
-                      <li className="flex items-center gap-3">
-                        <span className="relative z-10 flex h-8 w-8 flex-none items-center justify-center rounded-lg bg-primary/12 text-primary ring-1 ring-primary/20">
-                          <MapPin className="h-4 w-4" aria-hidden />
-                        </span>
-                        <span className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-                          Start
-                        </span>
-                      </li>
-                      {p.steps.map((step, i) => {
-                        const m = deptMeta(step.deptSlug);
-                        return (
-                          <li key={i} className="flex items-center gap-3">
-                            <span
-                              className="relative z-10 flex h-8 w-8 flex-none items-center justify-center rounded-lg ring-1 ring-white/70 transition-transform duration-200 group-hover:scale-110"
-                              style={
-                                {
-                                  background: `color-mix(in srgb, ${m.color} 20%, #fff)`,
-                                  color: deptInk(step.deptSlug),
-                                  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.85)",
-                                } as CSSProperties
-                              }
-                            >
-                              <Icon name={m.icon} className="h-4 w-4" />
-                            </span>
-                            <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
-                              {step.label}
-                            </span>
-                            <span
-                              aria-hidden
-                              className="flex-none text-xs font-semibold tabular-nums text-muted-foreground"
-                            >
-                              {String(i + 1).padStart(2, "0")}
-                            </span>
-                          </li>
-                        );
-                      })}
-                      <li className="flex items-center gap-3">
-                        <span className="relative z-10 flex h-8 w-8 flex-none items-center justify-center rounded-lg bg-primary/12 text-primary ring-1 ring-primary/20">
-                          <Flag className="h-4 w-4" aria-hidden />
-                        </span>
-                        <span className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-                          Season-ready
-                        </span>
-                      </li>
-                    </ol>
-                  </div>
-
-                  {/* meta footer */}
-                  <div className="mt-6 flex items-center justify-between border-t border-border/70 pt-4">
-                    <span className="inline-flex items-center gap-3 text-xs text-muted-foreground">
-                      <span className="inline-flex items-center gap-1.5">
-                        <Layers className="h-3.5 w-3.5" aria-hidden />{" "}
-                        <span className="tabular-nums">
-                          <AnimatedCounter value={p.steps.length} />
-                        </span>{" "}
-                        stops
-                      </span>
-                      <span className="inline-flex items-center gap-1.5">
-                        <Target className="h-3.5 w-3.5" aria-hidden />{" "}
-                        <span className="tabular-nums">
-                          <AnimatedCounter value={p.outcomes.length} />
-                        </span>{" "}
-                        outcomes
-                      </span>
-                    </span>
-                    <Link
-                      href={`/paths/${p.slug}`}
-                      className="relative z-10 inline-flex items-center gap-1.5 rounded-xl px-1 text-sm font-semibold text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
-                    >
-                      <span
-                        className="absolute inset-0"
-                        aria-label={`View ${p.title} route`}
-                      />
-                      View route
-                      <ArrowRight
-                        className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1"
-                        aria-hidden
-                      />
-                    </Link>
-                  </div>
-                </article>
-              </Hover>
-            </RevealItem>
-          ))}
-        </RevealGroup>
-
-        {/* closing note */}
-        <Reveal>
-          <div className="ac-glass relative mt-14 flex flex-col items-start gap-4 overflow-hidden p-7 sm:flex-row sm:items-center sm:justify-between">
-            <div
-              aria-hidden
-              className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-[radial-gradient(circle,rgba(26,169,214,0.22),transparent_70%)] blur-2xl"
-            />
-            <div className="flex items-center gap-4">
-              <span
-                className="ac-badge flex h-12 w-12 flex-none items-center justify-center"
-                style={{ "--a": "#2560e6" } as CSSProperties}
-              >
-                <Compass className="h-6 w-6" aria-hidden />
-              </span>
-              <div>
-                <p className="font-display text-lg font-bold text-foreground">
-                  No route fits your goal?
-                </p>
-                <p className="mt-1 text-sm text-foreground/70">
-                  Every department stands on its own — dive straight into a
-                  guide and chart your own route through the season.
-                </p>
-              </div>
-            </div>
-            <Link href="/guides" className="ac-btn flex-none text-sm">
-              Explore all guides <ArrowRight className="h-4 w-4" aria-hidden />
+            )}
+            <Link href="/guides" className="nb-btn-ghost">
+              Browse all departments
             </Link>
           </div>
-        </Reveal>
+        </div>
+
+        {/* The taped tally. It exists to answer "what is a route" in figures
+            rather than in another paragraph, which is the one question that
+            keeps people on this page instead of moving through it. */}
+        <div>
+          <div className="nb-box nb-tilt-1 mt-1 p-[clamp(1.2rem,2.4vw,1.7rem)]">
+            <span
+              className="nb-tape -top-3 left-[22%] rotate-[-3.6deg]"
+              aria-hidden="true"
+            />
+            <span
+              className="nb-tape -bottom-3 right-[16%] rotate-[2.4deg]"
+              aria-hidden="true"
+            />
+
+            <p className="nb-slug border-b border-dashed border-rule pb-3">
+              what is in this section
+            </p>
+
+            <dl className="mt-1">
+              {tally.map((row, i) => (
+                <div
+                  key={row.label}
+                  className={
+                    i === 0
+                      ? "flex items-baseline gap-3 py-2.5"
+                      : "nb-hair flex items-baseline gap-3 py-2.5"
+                  }
+                >
+                  <dt className="nb-count min-w-[2.6ch] text-[clamp(1.7rem,1.1rem+1.9vw,2.4rem)]">
+                    {row.n}
+                  </dt>
+                  <dd className="text-[0.95rem] font-medium leading-snug">
+                    {row.label}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+
+          <p className="nb-pen mt-4 max-w-[24ch] rotate-[-1.2deg]">
+            the first one is for anyone in their first season
+          </p>
+        </div>
       </section>
-    </div>
+
+      {/* ===================== THE SLIPS ===================== */}
+      <section className="nb-wrap nb-rule py-[clamp(2.4rem,5vw,4rem)]">
+        <div className="mb-[clamp(1.6rem,3.4vw,2.6rem)] flex flex-wrap items-end justify-between gap-x-8 gap-y-4">
+          <div>
+            <h2 className="max-w-[20ch]">
+              All {PATHS.length} routes, with every stop showing.
+            </h2>
+            <p className="nb-sub mt-3">
+              Each stop is a whole department guide, so a route is a reading
+              order and not a separate set of lessons. Nothing on it is locked,
+              and you can leave a route at any stop and stay in that department.
+            </p>
+          </div>
+          <p className="nb-pen max-w-[19ch] rotate-[1.4deg] min-[900px]:text-right">
+            pick by the stops, not by the title
+          </p>
+        </div>
+
+        <div className="grid gap-[clamp(1.1rem,2.4vw,1.8rem)]">
+          {PATHS.map((p, i) => (
+            <RouteSlip
+              key={p.slug}
+              index={i}
+              slug={p.slug}
+              title={p.title}
+              description={p.description}
+              stops={p.steps.map((s) => ({
+                deptSlug: s.deptSlug,
+                label: s.label,
+              }))}
+              outcomeCount={p.outcomes.length}
+              tilt={SLIP_TILT[i % SLIP_TILT.length]}
+            />
+          ))}
+        </div>
+      </section>
+
+      {/* ===================== THE TWO WAYS OUT =====================
+          Not a third restatement of the same button. Someone still reading at
+          this point has already decided none of the five slips is them, and
+          there are exactly two reasons for that: they want one department
+          rather than a route, or they are setting this up for other people. */}
+      <section className="nb-wrap pb-[clamp(3rem,6vw,5rem)]">
+        <div className="nb-rule pt-[clamp(1.8rem,3.5vw,2.6rem)]">
+          <div className="nb-box grid overflow-hidden min-[860px]:grid-cols-2">
+            <div className="nb-panel">
+              <p className="nb-slug">none of them is your job</p>
+              <h2 className="mt-2 text-[clamp(1.25rem,1rem+0.9vw,1.7rem)]">
+                Open the department instead.
+              </h2>
+              <p className="mt-3 text-[0.96rem] text-graphite">
+                All eleven stand on their own, with their modules already in the
+                order a rookie should read them. A route only decides which tabs
+                you open and when.
+              </p>
+              <p className="mt-auto pt-5">
+                <Link href="/guides" className="nb-btn-ghost">
+                  Browse all departments
+                </Link>
+              </p>
+            </div>
+
+            <div className="nb-panel">
+              <p className="nb-slug">running this for other people</p>
+              <h2 className="mt-2 text-[clamp(1.25rem,1rem+0.9vw,1.7rem)]">
+                Point a whole team down one.
+              </h2>
+              <p className="mt-3 text-[0.96rem] text-graphite">
+                Everyone who signs up with the same FRC team number is grouped
+                together, so you can hand new members a route and then see who
+                actually finished it.
+              </p>
+              <p className="mt-auto pt-5">
+                <Link href="/for-teams" className="nb-btn-ghost">
+                  How teams use this
+                </Link>
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </>
   );
 }

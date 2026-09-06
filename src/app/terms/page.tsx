@@ -1,34 +1,7 @@
 import type { Metadata } from "next";
-import type { CSSProperties, ReactNode } from "react";
+import type { ReactNode } from "react";
 import Link from "next/link";
-import {
-  ScrollText,
-  UserCheck,
-  KeyRound,
-  ShieldAlert,
-  BookOpen,
-  FileText,
-  Award,
-  Scale,
-  LogOut,
-  RefreshCw,
-  Mail,
-  ExternalLink,
-  Handshake,
-  ArrowRight,
-} from "lucide-react";
-import type { LucideIcon } from "lucide-react";
-import { AnimatedCounter } from "@/components/animated-counter";
-import {
-  RiseGroup,
-  RiseItem,
-  Reveal,
-  RevealGroup,
-  RevealItem,
-  Hover,
-  Glow,
-} from "@/components/motion/primitives";
-import { ContentsRail, type RailItem } from "./_contents-rail";
+import { ClauseIndex, type Clause } from "./_contents-rail";
 
 export const metadata: Metadata = {
   title: "Terms of Service",
@@ -42,391 +15,262 @@ const UPDATED = "June 20, 2026";
 // maintainer is a minor). /contact is an anonymous form that reaches the same
 // inbox and actually works.
 const CONTACT_PATH = "/contact";
+const MANUAL = "https://www.firstinspires.org/robotics/frc/game-and-season";
 
-const LINK =
-  "font-medium text-primary underline decoration-primary/40 underline-offset-2 transition-colors hover:text-accent hover:decoration-accent break-words";
-const strong = "font-semibold text-foreground";
+/* ---------- the clauses. Substance preserved, dashes rewritten. ---------- */
 
-const BRAND_GRADIENT: CSSProperties = {
-  background: "linear-gradient(120deg, #2560e6, #1aa9d6)",
-  WebkitBackgroundClip: "text",
-  backgroundClip: "text",
-  color: "transparent",
-};
-
-/* ---------- small text primitives (local to this page) ---------- */
-
-function P({ children }: { children: ReactNode }) {
-  return <p className="mt-3 text-[16px] leading-[1.7] text-foreground/80 first:mt-0">{children}</p>;
-}
-
-function Bullets({ items }: { items: ReactNode[] }) {
-  return (
-    <ul className="mt-3 list-disc space-y-2 pl-5 text-[16px] leading-[1.7] text-foreground/80 marker:text-primary/60">
-      {items.map((it, i) => (
-        <li key={i}>{it}</li>
-      ))}
-    </ul>
-  );
-}
-
-/* ---------- rule registry — content preserved verbatim ---------- */
-
-type Rule = { id: string; icon: LucideIcon; a: string; title: string; body: ReactNode };
+type Rule = Clause & { body: ReactNode };
 
 const RULES: Rule[] = [
   {
     id: "eligibility",
-    icon: UserCheck,
-    a: "#2560e6",
     title: "Who can use LearnFRC",
     body: (
-      <P>
-        You should be at least 13 years old to create an account. If you&apos;re under 18, you
-        should have a parent or guardian&apos;s permission. By signing up you confirm the
-        information you provide is accurate.
-      </P>
+      <p>
+        You should be at least 13 years old to create an account. If you are
+        under 18, you should have a parent or guardian&rsquo;s permission. By
+        signing up you confirm the information you provide is accurate.
+      </p>
     ),
   },
   {
     id: "account",
-    icon: KeyRound,
-    a: "#1aa9d6",
     title: "Your account",
     body: (
-      <Bullets
-        items={[
-          "Keep your password secure; you're responsible for activity on your account.",
-          "Choose a username and display name that aren't offensive or impersonating.",
-          "Verify your email address to activate your account.",
-        ]}
-      />
+      <ul>
+        <li>
+          Keep your password secure. You are responsible for activity on your
+          account.
+        </li>
+        <li>
+          Choose a username and display name that aren&rsquo;t offensive and
+          don&rsquo;t impersonate anyone.
+        </li>
+        <li>Verify your email address to activate your account.</li>
+      </ul>
     ),
   },
   {
     id: "acceptable-use",
-    icon: ShieldAlert,
-    a: "#7c5cff",
     title: "Acceptable use",
     body: (
       <>
-        <P>You agree not to:</P>
-        <Bullets
-          items={[
-            "Abuse, scrape, overload, or attempt to break the service or its security.",
-            "Cheat or manipulate XP, quizzes, or the leaderboard.",
-            "Harass others or post unlawful, harmful, or infringing content.",
-            "Use LearnFRC for anything illegal.",
-          ]}
-        />
-        <P>We may suspend or remove accounts that violate these terms.</P>
+        <p>You agree not to:</p>
+        <ul>
+          <li>
+            Abuse, scrape, overload, or attempt to break the service or its
+            security.
+          </li>
+          <li>Cheat or manipulate XP, quizzes, or the leaderboard.</li>
+          <li>Harass others or post unlawful, harmful, or infringing content.</li>
+          <li>Use LearnFRC for anything illegal.</li>
+        </ul>
+        <p>We may suspend or remove accounts that violate these terms.</p>
       </>
     ),
   },
   {
     id: "educational-content",
-    icon: BookOpen,
-    a: "#0f9d8f",
     title: "Educational content",
     body: (
-      <P>
-        Our lessons and quizzes are researched from public sources and provided for educational
-        purposes. We work hard to keep them accurate, but for official competition decisions you
-        should always confirm details against the current{" "}
-        <a
-          className={LINK}
-          href="https://www.firstinspires.org/robotics/frc/game-and-season"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
+      <p>
+        Our lessons and quizzes are researched from public sources and provided
+        for educational purposes. We work hard to keep them accurate, but for
+        official competition decisions you should always confirm details against
+        the current{" "}
+        <a href={MANUAL} target="_blank" rel="noopener noreferrer">
           FRC Game Manual
-          <ExternalLink className="mb-0.5 ml-0.5 inline h-3.5 w-3.5" aria-hidden="true" focusable="false" />
         </a>{" "}
-        and official documentation. Content is provided &quot;as is&quot; without warranties.
-      </P>
+        and official documentation. Content is provided &ldquo;as is&rdquo;
+        without warranties.
+      </p>
     ),
   },
   {
     id: "your-content",
-    icon: FileText,
-    a: "#2560e6",
     title: "Your content",
     body: (
-      <P>
-        Content you submit (such as your profile details or feedback) remains yours, but you
-        grant LearnFRC a license to store and display it as needed to operate the service (for
-        example, showing your public profile).
-      </P>
+      <p>
+        Content you submit, such as your profile details or feedback, remains
+        yours. You grant LearnFRC a license to store and display it as needed to
+        operate the service, for example showing your public profile.
+      </p>
     ),
   },
   {
     id: "trademarks",
-    icon: Award,
-    a: "#c2740f",
     title: "Trademarks",
     body: (
-      <P>
+      <p>
         LearnFRC is an independent project and is{" "}
-        <strong className={strong}>not affiliated with or endorsed by FIRST®</strong>. FIRST®,
-        FRC®, and related marks belong to FIRST. References are for identification and
+        <strong>not affiliated with or endorsed by FIRST®</strong>. FIRST®, FRC®,
+        and related marks belong to FIRST. References are for identification and
         educational purposes only.
-      </P>
+      </p>
     ),
   },
   {
     id: "liability",
-    icon: Scale,
-    a: "#7c5cff",
     title: "Limitation of liability",
     body: (
-      <P>
-        To the maximum extent permitted by law, LearnFRC and its maintainers are not liable for
-        any indirect or consequential damages arising from your use of the service. The service
-        is provided without warranty of any kind.
-      </P>
+      <p>
+        To the maximum extent permitted by law, LearnFRC and its maintainers are
+        not liable for any indirect or consequential damages arising from your
+        use of the service. The service is provided without warranty of any kind.
+      </p>
     ),
   },
   {
     id: "termination",
-    icon: LogOut,
-    a: "#1aa9d6",
     title: "Termination",
     body: (
-      <P>
-        You may delete your account at any time by contacting us. We may suspend or terminate
-        access if these terms are violated.
-      </P>
+      <p>
+        You may delete your account at any time, either in{" "}
+        <Link href="/settings">settings</Link> or by asking us. We may suspend or
+        terminate access if these terms are violated.
+      </p>
     ),
   },
   {
     id: "changes",
-    icon: RefreshCw,
-    a: "#2560e6",
     title: "Changes",
     body: (
-      <P>
-        We may update these terms; the date above reflects the latest version. Continued use
-        after changes means you accept them.
-      </P>
+      <p>
+        We may update these terms. The date above reflects the latest version.
+        Continued use after changes means you accept them.
+      </p>
     ),
   },
   {
     id: "contact",
-    icon: Mail,
-    a: "#0f9d8f",
     title: "Contact",
     body: (
-      <P>
+      <p>
         Questions about these terms? Send them through our{" "}
-        <Link className={LINK} href={CONTACT_PATH}>
-          contact form
-        </Link>
-        — no account needed. See also our{" "}
-        <Link className={LINK} href="/privacy">
-          Privacy Policy
-        </Link>
-        .
-      </P>
+        <Link href={CONTACT_PATH}>contact form</Link>, no account needed. See
+        also our <Link href="/privacy">Privacy Policy</Link>.
+      </p>
     ),
   },
 ];
 
-const RAIL_ITEMS: RailItem[] = RULES.map((r) => ({ id: r.id, title: r.title }));
+const CLAUSES: Clause[] = RULES.map(({ id, title }) => ({ id, title }));
 
+/**
+ * The terms, as the rules page at the front of the binder.
+ *
+ * LAYOUT: a contract, not a feature grid. Ten clauses run as one continuous
+ * ledger with the ordinal hanging in the margin, opened by a single ink rule
+ * and separated by dashed hairlines, so the whole document reads as one
+ * agreement instead of ten equally-weighted boxes. The contents sit on the
+ * first page, taped down, the way a printed rulebook prints them, which is why
+ * nothing here needs to track your scroll position.
+ *
+ * Deliberately different from /privacy, which is the other long legal page:
+ * that one leads with a table because its reader arrives with a question about
+ * their own data. This one's reader arrives asking what they just agreed to, so
+ * it leads with the agreement and then numbers it.
+ *
+ * Server Component throughout. This page ships no client JavaScript.
+ */
 export default function TermsPage() {
   return (
-    <div className="relative overflow-x-clip">
-      <Glow
-        blobs={[
-          { size: "560px", pos: { left: "-170px", top: "-160px" }, color: "#8bbcff", opacity: 0.5 },
-          { size: "520px", pos: { right: "-180px", top: "60px" }, color: "#6ff0ea", opacity: 0.4, delay: 2 },
-          { size: "480px", pos: { left: "20%", top: "760px" }, color: "#c8b6ff", opacity: 0.35, delay: 4 },
-        ]}
-      />
+    <div className="nb-wrap max-w-[52rem] pb-[clamp(3rem,6vw,4.5rem)] pt-[clamp(2.2rem,5vw,3.8rem)]">
+      <header>
+        <p className="nb-marker">terms / the rules of the room</p>
+        <h1 className="text-[clamp(2.2rem,1.2rem+3.4vw,3.4rem)]">
+          Ten rules, and none of them are{" "}
+          <span className="nb-mark">a surprise</span>.
+        </h1>
+        <p className="nb-lede mt-5">
+          LearnFRC is a free, independent place to learn the FIRST Robotics
+          Competition. These are the terms for using it, written to be read
+          rather than skipped.
+        </p>
+        <p className="nb-slug mt-5">
+          revised {UPDATED} / {RULES.length} clauses / about a four minute read
+        </p>
+      </header>
 
-      <div className="mx-auto max-w-6xl px-4 pt-28 pb-24 sm:px-6 lg:px-8">
-        {/* ============================ HERO ============================ */}
-        <header className="max-w-2xl">
-          <RiseGroup>
-            <RiseItem>
-              <span className="ac-chip inline-flex items-center gap-2">
-                <ScrollText className="h-3.5 w-3.5 text-primary" aria-hidden />
-                <span className="ac-eyebrow">The house rules</span>
-              </span>
-            </RiseItem>
-            <RiseItem>
-              <h1 className="mt-4 text-balance font-display text-4xl font-extrabold leading-[1.05] tracking-tight sm:text-5xl">
-                Terms of <span style={BRAND_GRADIENT}>Service.</span>
-              </h1>
-            </RiseItem>
-            <RiseItem>
-              <p className="mt-4 max-w-xl text-pretty text-lg leading-relaxed text-foreground/70">
-                LearnFRC is a free, independent place to learn the FIRST Robotics Competition.
-                These are the plain-language terms for using it — read them like you&apos;d read
-                the game manual before a match.
-              </p>
-            </RiseItem>
-            <RiseItem>
-              <div className="mt-6 flex flex-wrap items-center gap-3">
-                <a href="#eligibility" className="ac-btn text-sm">
-                  Read the rules <ArrowRight className="h-4 w-4" aria-hidden />
-                </a>
-                <span className="ac-chip inline-flex items-center gap-2 text-xs font-medium text-foreground/75">
-                  <RefreshCw className="h-3.5 w-3.5 text-primary" aria-hidden />
-                  Last updated {UPDATED}
-                </span>
-                <Link
-                  href="/privacy"
-                  className="ac-chip inline-flex min-h-11 items-center gap-2 text-xs font-medium text-foreground/75 transition-colors hover:text-primary"
-                >
-                  <FileText className="h-3.5 w-3.5 text-primary" aria-hidden />
-                  Privacy Policy
-                </Link>
-              </div>
-            </RiseItem>
-            <RiseItem>
-              <div className="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground">
-                <span>
-                  <b className="font-semibold text-foreground">
-                    <AnimatedCounter value={RULES.length} />
-                  </b>{" "}
-                  short rules
-                </span>
-                <span>
-                  <b className="font-semibold text-foreground">
-                    <AnimatedCounter value={4} />
-                  </b>
-                  -minute read
-                </span>
-                <span>
-                  <b className="font-semibold text-foreground">$0</b> — always
-                </span>
-              </div>
-            </RiseItem>
-          </RiseGroup>
-        </header>
+      {/* ---- the agreement itself ----------------------------------------
+          The one sentence with legal weight goes above the contents, not
+          buried at clause nine. A note frame rather than a card, because it is
+          an aside on the page, not another section of it. */}
+      <p className="nb-note mt-[clamp(1.8rem,4vw,2.8rem)] max-w-[38rem]">
+        <span className="nb-slug">what you are agreeing to</span>
+        <span className="mt-2 block text-[0.99rem] leading-relaxed">
+          By creating an account or using the service you accept these terms. If
+          you don&rsquo;t accept them, don&rsquo;t use the service. Reading the
+          lessons needs no account, so nothing on this page applies to you until
+          you make one.
+        </span>
+      </p>
 
-        {/* intro callout */}
-        <Reveal>
-          <div className="ac-glass relative mt-10 flex items-start gap-4 overflow-hidden p-6 sm:p-8">
-            <div
-              aria-hidden
-              className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-[radial-gradient(circle,rgba(26,169,214,0.22),transparent_70%)] blur-2xl"
-            />
-            <span
-              className="ac-badge grid h-12 w-12 shrink-0 place-items-center"
-              style={{ "--a": "#2560e6" } as CSSProperties}
-            >
-              <Handshake className="h-6 w-6" strokeWidth={2.1} aria-hidden />
-            </span>
-            <p className="relative text-[16px] leading-relaxed text-foreground/85">
-              Welcome to LearnFRC. By creating an account or using the service you agree to these
-              terms. If you don&apos;t agree, that&apos;s okay — just don&apos;t use the service.
-              We&apos;ll keep this short and gracious.
-            </p>
-          </div>
-        </Reveal>
-
-        {/* ==================== RAIL + RULEBOOK BODY ==================== */}
-        <div className="mt-10 gap-10 lg:grid lg:grid-cols-[15rem_1fr]">
-          {/* signature: sticky rulebook navigator (scroll-spy + progress ring) */}
-          <div className="hidden lg:block">
-            <div className="sticky top-28">
-              <div className="ac-card p-5">
-                <ContentsRail items={RAIL_ITEMS} contactHref={CONTACT_PATH} />
-              </div>
-            </div>
-          </div>
-
-          {/* mobile jump menu — native disclosure, no JS required */}
-          <details className="ac-card group mb-6 p-4 lg:hidden">
-            <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 text-sm font-semibold text-foreground marker:content-none [&::-webkit-details-marker]:hidden">
-              <span className="inline-flex items-center gap-2">
-                <ScrollText className="h-4 w-4 text-primary" aria-hidden />
-                Jump to a section
-              </span>
-              <ArrowRight className="h-4 w-4 text-primary transition-transform group-open:rotate-90" aria-hidden />
-            </summary>
-            <ol className="mt-3 space-y-1 border-t border-border pt-3">
-              {RAIL_ITEMS.map((it, i) => (
-                <li key={it.id}>
-                  <a
-                    href={`#${it.id}`}
-                    className="flex min-h-11 items-center gap-3 rounded-xl px-2 text-sm text-foreground/75 transition-colors hover:bg-primary/5 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                  >
-                    <span className="grid h-6 w-6 shrink-0 place-items-center rounded-lg bg-primary/10 text-[11px] font-bold text-primary">
-                      {i + 1}
-                    </span>
-                    {it.title}
-                  </a>
-                </li>
-              ))}
-            </ol>
-          </details>
-
-          {/* numbered rulebook sections */}
-          <RevealGroup className="space-y-5">
-            {RULES.map((rule, i) => {
-              const RuleIcon = rule.icon;
-              return (
-                <RevealItem key={rule.id}>
-                  <Hover lift={-3} scale={1.005}>
-                    <section id={rule.id} className="ac-card group scroll-mt-28 p-6 sm:p-8">
-                      <div className="flex items-center gap-4">
-                        <span
-                          className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-primary/10 font-display text-[15px] font-extrabold tabular-nums text-primary"
-                          aria-hidden
-                        >
-                          {i + 1}
-                        </span>
-                        <span
-                          className="ac-badge inline-flex h-11 w-11 shrink-0 items-center justify-center transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6"
-                          style={{ "--a": rule.a } as CSSProperties}
-                          aria-hidden
-                        >
-                          <RuleIcon className="h-5 w-5" strokeWidth={2.2} />
-                        </span>
-                        <h2 className="font-display text-xl font-bold tracking-tight sm:text-2xl">
-                          {rule.title}
-                        </h2>
-                      </div>
-                      <div className="mt-4">{rule.body}</div>
-                    </section>
-                  </Hover>
-                </RevealItem>
-              );
-            })}
-
-            {/* closing contact CTA */}
-            <RevealItem>
-              <div className="ac-card flex flex-col items-start gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-center gap-3">
-                  <span
-                    className="ac-badge grid h-11 w-11 shrink-0 place-items-center"
-                    style={{ "--a": "#0f9d8f" } as CSSProperties}
-                  >
-                    <Mail className="h-5 w-5" aria-hidden />
-                  </span>
-                  <p className="text-[15px] text-foreground/80">
-                    Still have a question about the rules? We&apos;re one message away.
-                  </p>
-                </div>
-                <Link href={CONTACT_PATH} className="ac-btn text-sm">
-                  <Mail className="h-4 w-4" aria-hidden />
-                  Contact us
-                </Link>
-              </div>
-            </RevealItem>
-          </RevealGroup>
-        </div>
-
-        <Reveal>
-          <p className="mx-auto mt-10 max-w-3xl text-center text-sm leading-relaxed text-muted-foreground">
-            LearnFRC is an independent educational project and is not affiliated with or endorsed
-            by FIRST®. FIRST® and FRC® are trademarks of FIRST.
-          </p>
-        </Reveal>
+      <div className="mt-[clamp(1.6rem,3.4vw,2.4rem)]">
+        <ClauseIndex clauses={CLAUSES} contactHref={CONTACT_PATH} />
       </div>
+
+      {/* ---- the ledger of clauses ---------------------------------------
+          Grid, not a list marker: the ordinal sits in its own column so every
+          clause body starts on the same left edge no matter how long the
+          number gets, which is what makes a numbered contract scannable. It
+          collapses to a single column under 640px, where a 3rem gutter would
+          cost a fifth of the line length. */}
+      <section
+        aria-label="The clauses"
+        className="mt-[clamp(2.4rem,5vw,3.6rem)] border-t-2 border-ink"
+      >
+        {RULES.map((rule, i) => (
+          <section
+            key={rule.id}
+            id={rule.id}
+            className="grid gap-x-[clamp(1rem,3vw,2.2rem)] border-b border-dashed border-rule py-[clamp(1.4rem,3vw,2.2rem)] sm:grid-cols-[3.5rem_minmax(0,38rem)]"
+          >
+            <p
+              className="nb-slug font-bold tabular-nums text-blue sm:text-[0.95rem]"
+              aria-hidden="true"
+            >
+              {String(i + 1).padStart(2, "0")}
+            </p>
+            <div className="mt-1 sm:mt-0">
+              <h2 className="text-[clamp(1.25rem,1.05rem+0.8vw,1.6rem)]">
+                {rule.title}
+              </h2>
+              <div className="nb-prose mt-3">{rule.body}</div>
+            </div>
+          </section>
+        ))}
+      </section>
+
+      {/* ---- the way out -------------------------------------------------- */}
+      <section
+        aria-labelledby="ask"
+        className="mt-[clamp(2.4rem,5vw,3.6rem)] flex flex-wrap items-end justify-between gap-x-8 gap-y-6 border-t-2 border-ink pt-[clamp(1.4rem,3vw,2.2rem)]"
+      >
+        <div>
+          <h2 id="ask" className="text-[clamp(1.4rem,1.1rem+1.1vw,1.9rem)]">
+            Still not sure what a clause means?
+          </h2>
+          <p className="nb-sub mt-3">
+            One form, one person reading it. You don&rsquo;t need an account and
+            you don&rsquo;t need to leave an email address unless you want an
+            answer back.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-3">
+          <Link href={CONTACT_PATH} className="nb-btn">
+            Ask about the terms
+          </Link>
+          <Link href="/privacy" className="nb-btn-ghost">
+            Read the privacy policy
+          </Link>
+        </div>
+      </section>
+
+      <p className="nb-hint mt-[clamp(2rem,4vw,3rem)] max-w-[68ch]">
+        LearnFRC is an independent educational project and is not affiliated with
+        or endorsed by FIRST®. FIRST® and FRC® are trademarks of FIRST.
+      </p>
     </div>
   );
 }

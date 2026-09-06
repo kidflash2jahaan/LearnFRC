@@ -1,77 +1,64 @@
-import type { CSSProperties } from "react";
 import Link from "next/link";
-import { ArrowRight, BookOpen, Wrench } from "lucide-react";
-
-const GRADIENT_TEXT: CSSProperties = {
-  background: "linear-gradient(120deg,#2560e6,#1aa9d6)",
-  WebkitBackgroundClip: "text",
-  backgroundClip: "text",
-  color: "transparent",
-};
 
 export type RelatedLink = { href: string; label: string };
 
 /**
- * Shared footer for every /tools page: a strong "create a free account" CTA
- * (the tools are the top of the funnel for search visitors) plus keyword-rich
- * internal links to related lessons/articles/tools — both convert tool users
- * into learners and feed internal-link equity for SEO.
+ * The foot of every /tools page.
+ *
+ * This is the last thing on a worksheet, so it is drawn as the bottom of the
+ * sheet rather than as another card: one 2px ink rule, then two columns of
+ * plain type. The old version was a centred glass panel with a glow behind it,
+ * which competed with the calculator directly above it for attention; a tool
+ * page should end quietly and point somewhere useful.
+ *
+ * Two jobs, kept apart on purpose: the account pitch on the left (the tools are
+ * the top of the funnel for search traffic), and the keyword-bearing internal
+ * links on the right, which is what actually feeds link equity to the lessons.
  */
 export function ToolCTA({ related }: { related: RelatedLink[] }) {
   return (
-    <section className="mt-14">
-      <div
-        className="ac-glass relative overflow-hidden p-8 text-center sm:px-14 sm:py-10"
-        style={{ "--a": "#2560e6" } as CSSProperties}
-      >
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -right-16 -top-20 h-64 w-64 rounded-full bg-[radial-gradient(circle,rgba(26,169,214,0.22),transparent_70%)] blur-2xl"
-        />
-        <span className="ac-badge mx-auto mb-4 flex h-11 w-11 items-center justify-center">
-          <Wrench aria-hidden className="h-5 w-5" />
-        </span>
-        <h2 className="text-balance font-display text-2xl font-bold tracking-tight sm:text-3xl">
-          This tool is free — so is the rest of{" "}
-          <span style={GRADIENT_TEXT}>LearnFRC</span>
-        </h2>
-        <p className="mx-auto mt-3 max-w-md text-base leading-relaxed text-foreground/70">
-          394 lessons across all 11 departments, plus every tool here. Create a
-          free account to save your work, export it, and track your progress.
-        </p>
-        <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-          <Link href="/signup" className="ac-btn text-sm">
-            Create your free account{" "}
-            <ArrowRight aria-hidden className="h-4 w-4" />
-          </Link>
-          <Link href="/guides" className="ac-btn-ghost text-sm">
-            Browse the guides
-          </Link>
-        </div>
-      </div>
-
-      {related.length > 0 && (
-        <div className="mt-8">
-          <p className="ac-eyebrow flex items-center gap-1.5">
-            <BookOpen aria-hidden className="h-3.5 w-3.5" /> Keep learning
+    <section className="nb-rule mt-[clamp(2.5rem,6vw,4rem)] pt-[clamp(1.8rem,4vw,2.8rem)] pb-[clamp(2rem,5vw,3.4rem)]">
+      <div className="nb-wrap grid gap-[clamp(1.6rem,4vw,3rem)] lg:grid-cols-[minmax(0,1fr)_minmax(0,0.72fr)]">
+        <div>
+          <p className="nb-marker">free / no account needed to use</p>
+          <h2 className="max-w-[18ch] text-[clamp(1.5rem,1.1rem+1.5vw,2.2rem)]">
+            Every tool here is free, and so is the rest of the binder.
+          </h2>
+          <p className="nb-sub mt-4">
+            394 lessons across all 11 departments, plus every calculator on this
+            site. An account is only for saving your work and tracking what
+            you have finished.
           </p>
-          <div className="mt-3 grid gap-3 sm:grid-cols-3">
-            {related.map((r) => (
-              <Link
-                key={r.href}
-                href={r.href}
-                className="ac-card group flex items-center justify-between gap-2 rounded-2xl p-4 text-sm font-semibold transition-colors hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-              >
-                {r.label}
-                <ArrowRight
-                  aria-hidden
-                  className="h-3.5 w-3.5 shrink-0 text-primary transition-transform group-hover:translate-x-0.5"
-                />
-              </Link>
-            ))}
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Link href="/signup" className="nb-btn">
+              Create a free account
+            </Link>
+            <Link href="/guides" className="nb-btn-ghost">
+              Browse the guides
+            </Link>
           </div>
         </div>
-      )}
+
+        {related.length > 0 && (
+          <div className="lg:pl-[clamp(1rem,2vw,2rem)]">
+            <p className="nb-slug border-b-2 border-ink pb-2">keep reading</p>
+            <ul className="m-0 list-none p-0">
+              {related.map((r) => (
+                <li key={r.href} className="nb-hair first:border-t-0">
+                  <Link
+                    href={r.href}
+                    className="group flex min-h-[2.75rem] items-center gap-3 py-3 text-[0.98rem] font-medium leading-snug no-underline"
+                  >
+                    <span className="border-b-2 border-b-transparent group-hover:border-b-blue group-hover:text-blue">
+                      {r.label}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
     </section>
   );
 }

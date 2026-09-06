@@ -1,16 +1,25 @@
 "use client";
 
 import * as React from "react";
-import type { CSSProperties } from "react";
 import Link from "next/link";
-import { RotateCcw, Home } from "lucide-react";
 
+/**
+ * The route-level error boundary: a correction stamped into the binder.
+ *
+ * `unstable_retry` rather than `reset`, per this fork's error.js reference:
+ * `reset` only clears the boundary's state and re-renders the same children,
+ * while `unstable_retry` re-fetches them, which is what a reader pressing "Try
+ * again" after a failed server render actually wants.
+ *
+ * The digest is printed. It is the one string that lets a report be matched to
+ * a server log, and hiding it in the console helps nobody standing in a pit.
+ */
 export default function Error({
   error,
-  reset,
+  unstable_retry,
 }: {
   error: Error & { digest?: string };
-  reset: () => void;
+  unstable_retry: () => void;
 }) {
   React.useEffect(() => {
     console.error(error);
@@ -32,51 +41,33 @@ export default function Error({
   }, [error]);
 
   return (
-    <div className="relative flex min-h-[80svh] flex-col items-center justify-center px-4 text-center">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -top-10 left-1/2 -z-10 h-72 w-72 -translate-x-1/2 rounded-full blur-3xl"
-        style={{
-          background:
-            "radial-gradient(circle, rgba(37,96,230,0.18), transparent 70%)",
-        }}
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute bottom-0 right-8 -z-10 h-64 w-64 rounded-full blur-3xl"
-        style={{
-          background:
-            "radial-gradient(circle, rgba(26,169,214,0.16), transparent 70%)",
-        }}
-      />
+    <div className="nb-wrap flex min-h-[70svh] items-center py-[clamp(2.5rem,6vw,4.5rem)]">
+      <div className="nb-box nb-tilt-3 w-full max-w-lg p-[clamp(1.4rem,3vw,2.2rem)]">
+        <span className="nb-tape -top-3 left-[26%] rotate-[-3deg]" aria-hidden="true" />
 
-      <div className="ac-glass max-w-md px-8 py-10">
-        <p className="ac-eyebrow">Something broke</p>
-        <div
-          className="mt-2 font-display text-6xl font-bold"
-          style={
-            {
-              background: "linear-gradient(120deg,#2560e6,#1aa9d6)",
-              WebkitBackgroundClip: "text",
-              backgroundClip: "text",
-              color: "transparent",
-            } as CSSProperties
-          }
-        >
-          Oops
-        </div>
-        <h1 className="mt-4 font-display text-2xl font-bold tracking-tight text-foreground">
-          Something went wrong
+        <p className="nb-marker">error / this page did not render</p>
+
+        <h1 className="text-[clamp(1.8rem,1.2rem+2vw,2.6rem)]">
+          Something on this page threw.
         </h1>
-        <p className="mt-3 text-base leading-relaxed text-foreground/70">
-          An unexpected error occurred. You can try again, or head back home.
+
+        <p className="nb-sub mt-4">
+          The rest of the site is fine. Try the page again, and if it keeps
+          failing, the code below is what identifies it in the server log.
         </p>
-        <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
-          <button type="button" className="ac-btn text-sm" onClick={reset}>
-            <RotateCcw className="h-4 w-4" aria-hidden /> Try again
+
+        {error.digest && (
+          <p className="nb-slug mt-5 border-t border-dashed border-rule pt-4">
+            digest / <span className="font-bold text-ink">{error.digest}</span>
+          </p>
+        )}
+
+        <div className="mt-6 flex flex-wrap gap-3">
+          <button type="button" className="nb-btn" onClick={() => unstable_retry()}>
+            Try again
           </button>
-          <Link href="/" className="ac-btn-ghost text-sm">
-            <Home className="h-4 w-4" aria-hidden /> Home
+          <Link href="/" className="nb-btn-ghost">
+            Back to the front page
           </Link>
         </div>
       </div>

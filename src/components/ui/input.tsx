@@ -1,35 +1,29 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
-/** Arena Clay 2 inputs — light rounded skins; same exported API. */
+/**
+ * Text controls are the same hand-ruled edge as everything else, at the small
+ * radius. The kit handles focus, disabled and `aria-invalid`, so nothing here
+ * repeats them. Font is inherited on purpose: the value a person types is body
+ * copy, and only the label and the hint around it are mono.
+ *
+ * Pair these with `nb-field` + `nb-label` at the call site. A placeholder is
+ * never a label.
+ */
 
-export const Input = React.forwardRef<
-  HTMLInputElement,
-  React.InputHTMLAttributes<HTMLInputElement>
->(({ className, type, ...props }, ref) => (
-  <input
-    ref={ref}
-    type={type}
-    className={cn(
-      "ac-input w-full text-[15px] text-foreground placeholder:text-muted-foreground/70 disabled:cursor-not-allowed disabled:opacity-55",
-      className
-    )}
-    {...props}
-  />
-));
-Input.displayName = "Input";
+export function Input({
+  className,
+  type,
+  ref,
+  ...props
+}: React.InputHTMLAttributes<HTMLInputElement> & { ref?: React.Ref<HTMLInputElement> }) {
+  return <input ref={ref} type={type} className={cn("nb-input", className)} {...props} />;
+}
 
-export const Textarea = React.forwardRef<
-  HTMLTextAreaElement,
-  React.TextareaHTMLAttributes<HTMLTextAreaElement>
->(({ className, ...props }, ref) => (
-  <textarea
-    ref={ref}
-    className={cn(
-      "ac-input min-h-28 w-full resize-y text-[15px] text-foreground placeholder:text-muted-foreground/70 disabled:cursor-not-allowed disabled:opacity-55",
-      className
-    )}
-    {...props}
-  />
-));
-Textarea.displayName = "Textarea";
+export function Textarea({
+  className,
+  ref,
+  ...props
+}: React.TextareaHTMLAttributes<HTMLTextAreaElement> & { ref?: React.Ref<HTMLTextAreaElement> }) {
+  return <textarea ref={ref} className={cn("nb-input", className)} {...props} />;
+}

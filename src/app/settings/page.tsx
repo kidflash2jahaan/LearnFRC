@@ -1,19 +1,10 @@
-import type { CSSProperties } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { needsUsernameSetup } from "@/lib/onboarding-server";
-import {
-  UserRound,
-  ExternalLink,
-  ShieldCheck,
-  Gauge,
-  SlidersHorizontal,
-} from "lucide-react";
 import { getSession } from "@/lib/auth";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import { SettingsForm } from "@/components/settings/settings-form";
 import { PerfModeCard } from "@/components/perf-mode";
-import { RiseGroup, RiseItem, Reveal, Glow } from "@/components/motion/primitives";
 import { IdentityCard } from "./_identity-card";
 
 export const metadata = {
@@ -31,19 +22,23 @@ const ROLE_LABELS: Record<string, string> = {
   other: "Team member",
 };
 
-const BRAND_GRADIENT: CSSProperties = {
-  background: "linear-gradient(120deg, #2560e6, #1aa9d6)",
-  WebkitBackgroundClip: "text",
-  backgroundClip: "text",
-  color: "transparent",
-};
-
-const JUMP_LINKS = [
-  { href: "#profile", label: "Profile", icon: UserRound },
-  { href: "#performance", label: "Performance", icon: Gauge },
-  { href: "#account", label: "Account", icon: ShieldCheck },
-];
-
+/**
+ * Settings, as the member's own page in the team binder.
+ *
+ * LAYOUT: this is the one surface in my set where somebody arrived with a job
+ * to do, so it is built to get out of the way. No marketing headline, no
+ * pitch, no split hero: a record strip that says whose sheet this is, then the
+ * form, ruled straight onto the paper rather than boxed. The form IS the page,
+ * and a card drawn around the thing the page exists for only adds an edge to
+ * look past.
+ *
+ * The jump-link row that used to sit under the headline is gone. Three
+ * sections on one narrow column is a scroll, not a navigation problem, and a
+ * strip of chips above the first field is furniture the task never needed.
+ *
+ * Server Component. The form and the motion toggle are the client leaves,
+ * because both hold state; nothing else here does.
+ */
 export default async function SettingsPage() {
   const { user, profile, isAdmin } = await getSession();
   if (!user) redirect("/login?next=/settings");
@@ -61,67 +56,20 @@ export default async function SettingsPage() {
     : null;
 
   return (
-    <div className="relative overflow-x-clip">
-      <Glow
-        blobs={[
-          { size: "560px", pos: { left: "-160px", top: "-200px" }, color: "#8bbcff", opacity: 0.6 },
-          { size: "520px", pos: { right: "-180px", top: "-120px" }, color: "#6ff0ea", opacity: 0.5, delay: 2 },
-          { size: "480px", pos: { left: "34%", top: "520px" }, color: "#c8b6ff", opacity: 0.4, delay: 4 },
-        ]}
-      />
+    <div className="nb-wrap max-w-[54rem] pb-[clamp(3rem,6vw,4.5rem)] pt-[clamp(2rem,4.5vw,3.2rem)]">
+      <header>
+        <p className="nb-marker">settings / your own record</p>
+        <h1 className="text-[clamp(1.9rem,1.3rem+2vw,2.8rem)]">
+          Your details, and{" "}
+          <span className="nb-mark">who can see them</span>.
+        </h1>
+        <p className="nb-lede mt-4">
+          Everything here is yours to change. Saving updates your public profile,
+          the leaderboard and your team&rsquo;s roster at the same time.
+        </p>
+      </header>
 
-      {/* ============================ HERO ============================ */}
-      <section className="mx-auto grid max-w-6xl items-center gap-10 px-4 pb-10 pt-28 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:gap-12 lg:pb-14">
-        <RiseGroup>
-          <RiseItem>
-            <span className="ac-chip inline-flex items-center gap-2">
-              <SlidersHorizontal className="h-3.5 w-3.5 text-primary" aria-hidden />
-              <span className="ac-eyebrow">Your control panel</span>
-            </span>
-          </RiseItem>
-          <RiseItem>
-            <h1 className="mt-4 text-balance font-display text-4xl font-extrabold leading-[1.04] sm:text-5xl">
-              Tune how you show up on{" "}
-              <span style={BRAND_GRADIENT}>LearnFRC.</span>
-            </h1>
-          </RiseItem>
-          <RiseItem>
-            <p className="mt-4 max-w-xl text-pretty text-lg leading-relaxed text-foreground/70">
-              One calm control panel for your profile, privacy, and presence —
-              from the leaderboard to your team&apos;s pit crew. Small
-              details, gracious first impressions.
-            </p>
-          </RiseItem>
-          <RiseItem>
-            <div className="mt-7 flex flex-wrap items-center gap-3">
-              <Link href="/profile" className="ac-btn text-sm">
-                <UserRound className="h-4 w-4" aria-hidden />
-                View your profile
-              </Link>
-              {profile?.username && (
-                <Link href={`/u/${profile.username}`} className="ac-btn-ghost text-sm">
-                  <ExternalLink className="h-4 w-4" aria-hidden />
-                  See public profile
-                </Link>
-              )}
-            </div>
-          </RiseItem>
-          <RiseItem>
-            <nav aria-label="Settings sections" className="mt-6 flex flex-wrap gap-2">
-              {JUMP_LINKS.map((s) => (
-                <Link
-                  key={s.href}
-                  href={s.href}
-                  className="ac-chip group inline-flex min-h-11 items-center gap-1.5 text-sm font-medium text-foreground/80 transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                >
-                  <s.icon className="h-3.5 w-3.5 text-primary" aria-hidden />
-                  {s.label}
-                </Link>
-              ))}
-            </nav>
-          </RiseItem>
-        </RiseGroup>
-
+      <div className="mt-[clamp(1.6rem,3.4vw,2.4rem)]">
         <IdentityCard
           displayName={displayName}
           handle={profile?.username ? `@${profile.username}` : user.email ?? ""}
@@ -133,95 +81,66 @@ export default async function SettingsPage() {
           teamNumber={profile?.team_number ?? null}
           joined={joined}
         />
+      </div>
+
+      <div className="mt-5 flex flex-wrap gap-3">
+        <Link href="/profile" className="nb-btn-ghost nb-btn-sm">
+          Your profile
+        </Link>
+        {profile?.username && (
+          <Link
+            href={`/u/${profile.username}`}
+            className="nb-btn-ghost nb-btn-sm"
+          >
+            Public page, as others see it
+          </Link>
+        )}
+      </div>
+
+      {/* ---- the form -------------------------------------------------- */}
+      <section
+        id="profile"
+        aria-labelledby="profile-h"
+        className="mt-[clamp(2.4rem,5vw,3.4rem)] border-t-2 border-ink pt-[clamp(1.4rem,3vw,2.2rem)]"
+      >
+        <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
+          <h2 id="profile-h" className="text-[clamp(1.4rem,1.1rem+1.1vw,1.9rem)]">
+            Profile
+          </h2>
+          <p className="nb-slug">your full name is never shown publicly</p>
+        </div>
+        <div className="mt-6">
+          <SettingsForm profile={profile} email={user.email} />
+        </div>
       </section>
 
-      {/* ========================= CONTROL PANELS ===================== */}
-      <div className="mx-auto max-w-3xl px-4 pb-24 sm:px-6">
-        {/* Profile */}
-        <section id="profile" className="scroll-mt-24">
-          <Reveal delay={0.05}>
-            <div className="ac-card p-6 sm:p-7">
-              <div className="flex items-center gap-3">
-                <span
-                  className="ac-badge flex h-12 w-12 shrink-0 items-center justify-center"
-                  style={{ "--a": "#2560e6" } as CSSProperties}
-                >
-                  <UserRound className="h-6 w-6" aria-hidden strokeWidth={2.25} />
-                </span>
-                <div>
-                  <h2 className="font-display text-xl font-bold tracking-tight">
-                    Profile
-                  </h2>
-                  <p className="mt-0.5 text-sm leading-relaxed text-muted-foreground">
-                    These details power your public profile and the leaderboard.
-                  </p>
-                </div>
-              </div>
-              <div className="ac-divider my-6" />
-              <SettingsForm profile={profile} email={user.email} />
-            </div>
-          </Reveal>
-        </section>
-
-        {/* Performance */}
-        <section id="performance" className="mt-6 scroll-mt-24">
-          <Reveal delay={0.05}>
-            <div className="ac-card p-6 sm:p-7">
-              <div className="flex items-center gap-3">
-                <span
-                  className="ac-badge flex h-12 w-12 shrink-0 items-center justify-center"
-                  style={{ "--a": "#7c5cff" } as CSSProperties}
-                >
-                  <Gauge className="h-6 w-6" aria-hidden strokeWidth={2.25} />
-                </span>
-                <div>
-                  <h2 className="font-display text-xl font-bold tracking-tight">
-                    Performance
-                  </h2>
-                  <p className="mt-0.5 text-sm leading-relaxed text-muted-foreground">
-                    Dial motion up or down for a smoother ride on any device.
-                  </p>
-                </div>
-              </div>
-              <div className="ac-divider my-6" />
-              <PerfModeCard />
-            </div>
-          </Reveal>
-        </section>
-
-        {/* Account / sign out */}
-        <section id="account" className="mt-6 scroll-mt-24">
-          <Reveal delay={0.05}>
-            <div className="ac-card p-6 sm:p-7">
-              <div className="flex items-center gap-3">
-                <span
-                  className="ac-badge flex h-12 w-12 shrink-0 items-center justify-center"
-                  style={{ "--a": "#1aa9d6" } as CSSProperties}
-                >
-                  <ShieldCheck className="h-6 w-6" aria-hidden strokeWidth={2.25} />
-                </span>
-                <div>
-                  <h2 className="font-display text-xl font-bold tracking-tight">
-                    Account
-                  </h2>
-                  <p className="mt-0.5 text-sm leading-relaxed text-muted-foreground">
-                    You&apos;re signed in as{" "}
-                    <span className="font-medium text-foreground">{user.email}</span>.
-                  </p>
-                </div>
-              </div>
-              <div className="ac-divider my-6" />
-              <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
-                <p className="text-sm leading-relaxed text-muted-foreground">
-                  Sign out of LearnFRC on this device. You can always jump back
-                  in before the next build season.
-                </p>
-                <SignOutButton className="shrink-0" />
-              </div>
-            </div>
-          </Reveal>
-        </section>
+      {/* ---- motion -----------------------------------------------------
+          PerfModeCard draws its own hand-ruled card and carries its own
+          heading, so this section adds neither. A second heading above it
+          would name the same control twice. */}
+      <div id="performance" className="mt-[clamp(2.4rem,5vw,3.4rem)]">
+        <PerfModeCard />
       </div>
+
+      {/* ---- session ----------------------------------------------------- */}
+      <section
+        id="account"
+        aria-labelledby="account-h"
+        className="mt-[clamp(2.4rem,5vw,3.4rem)] border-t-2 border-ink pt-[clamp(1.4rem,3vw,2.2rem)]"
+      >
+        <h2 id="account-h" className="text-[clamp(1.4rem,1.1rem+1.1vw,1.9rem)]">
+          Session
+        </h2>
+        <div className="mt-4 flex flex-wrap items-end justify-between gap-x-8 gap-y-4">
+          <p className="max-w-[52ch] text-[0.99rem] leading-relaxed text-graphite">
+            Signed in as{" "}
+            <span className="nb-slug font-bold text-ink">{user.email}</span>.
+            Signing out clears this device only. Your progress, XP and
+            certificates stay exactly where they are.
+          </p>
+          <SignOutButton className="shrink-0" />
+        </div>
+      </section>
     </div>
   );
 }

@@ -3,34 +3,34 @@
 import * as React from "react";
 import Link from "next/link";
 import { useActionState } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import {
-  Eye,
-  EyeOff,
-  Loader2,
-  AlertCircle,
-  ArrowRight,
-  Mail,
-  Lock,
-  User as UserIcon,
-  AtSign,
-  Hash,
-} from "lucide-react";
 import { signIn, signUp, type AuthState } from "@/app/actions/auth";
 import { GoogleSignInButton } from "@/components/auth/google-button";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { cn } from "@/lib/utils";
-
-const EASE = [0.21, 0.47, 0.32, 0.98] as const;
-
-/** Standard field label. */
-const LABEL_CLS =
-  "text-sm font-medium text-foreground";
 
 type Mode = "login" | "signup";
 
+/**
+ * The sign-in sheet, and the roster line you fill in to get on it.
+ *
+ * One component, two jobs, because the fields and the wiring are the same and
+ * only the count differs: two lines to sign in, five to sign up.
+ *
+ * WHAT THE REBUILD CHANGED, AND WHY
+ * ---------------------------------
+ * There are no icons in the fields any more. A magnifier-shaped hint inside an
+ * input is decoration that costs 40px of the field it sits in, and this system
+ * writes what a control is above it in Space Mono instead. Every control is a
+ * real `nb-field`: label, control, hint, in that order, with the hint present
+ * in the markup rather than hidden in a placeholder.
+ *
+ * The show/hide password control moved out of the input and up into the label
+ * row. Inside the field it was a 44px-wide button with `tabIndex={-1}`, i.e.
+ * unreachable by keyboard, sitting on top of the text it reveals. In the label
+ * row it is a plain mono toggle with a real focus stop and a real target.
+ *
+ * Nothing about the submission changed: same two server actions, same
+ * `useActionState`, same hidden `next` / `ref` / `via`, same full page load on
+ * success.
+ */
 export function AuthForm({
   mode,
   next,
@@ -47,7 +47,6 @@ export function AuthForm({
   notice?: "exists";
   defaultEmail?: string;
 }) {
-  const reduce = useReducedMotion();
   const isSignup = mode === "signup";
   const action = isSignup ? signUp : signIn;
 
@@ -56,9 +55,9 @@ export function AuthForm({
     undefined
   );
 
-  // On success the action returns redirectTo and we do a FULL page load —
-  // a soft client transition would leave the navbar showing "Log in" until
-  // the user manually refreshed.
+  // On success the action returns redirectTo and we do a FULL page load. A soft
+  // client transition would leave the navbar showing "Log in" until the reader
+  // manually refreshed.
   const redirecting = !!state?.redirectTo;
   React.useEffect(() => {
     if (state?.redirectTo) window.location.assign(state.redirectTo);
@@ -72,326 +71,204 @@ export function AuthForm({
     ? `/login${nextValue ? `?next=${encodeURIComponent(nextValue)}` : ""}`
     : `/signup${nextValue ? `?next=${encodeURIComponent(nextValue)}` : ""}`;
 
-  // Stagger child fields in
-  const fields = isSignup
-    ? ["full_name", "email", "username", "team_number", "password"]
-    : ["email", "password"];
-
-  const container = {
-    hidden: {},
-    show: {
-      transition: reduce
-        ? { staggerChildren: 0, delayChildren: 0 }
-        : { staggerChildren: 0.06, delayChildren: 0.04 },
-    },
-  };
-  const item = {
-    hidden: { opacity: 0, y: 12 },
-    show: {
-      opacity: 1,
-      y: 0,
-      transition: reduce ? { duration: 0 } : { duration: 0.45, ease: EASE },
-    },
-  };
-
   return (
-    <motion.form
-      action={formAction}
-      initial="hidden"
-      animate="show"
-      variants={container}
-      className="space-y-4"
-      noValidate
-    >
+    <form action={formAction} className="flex flex-col gap-4" noValidate>
       <input type="hidden" name="next" value={nextValue} />
-      {isSignup && referrer && (
-        <input type="hidden" name="ref" value={referrer} />
-      )}
-      {/* Which share surface produced the referral — only meaningful when a
+      {isSignup && referrer && <input type="hidden" name="ref" value={referrer} />}
+      {/* Which share surface produced the referral. Only meaningful when a
           referrer is present, and the server allow-lists the value. */}
-      {isSignup && referrer && via && (
-        <input type="hidden" name="via" value={via} />
-      )}
+      {isSignup && referrer && via && <input type="hidden" name="via" value={via} />}
 
-      {/* Notice: arrived here because their email already has an account */}
       {notice === "exists" && (
-        <motion.div variants={item}>
-          <div className="flex items-start gap-2.5 rounded-xl border border-primary/25 bg-primary/10 px-3.5 py-3 text-sm text-foreground">
-            <Mail className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
-            <span className="leading-relaxed">
-              You already have an account with that email — just log in below.
-            </span>
-          </div>
-        </motion.div>
-      )}
-
-      {/* Error alert */}
-      <AnimatePresence initial={false}>
-        {state?.error && (
-          <motion.div
-            role="alert"
-            aria-live="assertive"
-            initial={
-              reduce ? { opacity: 0 } : { opacity: 0, height: 0, y: -6 }
-            }
-            animate={
-              reduce ? { opacity: 1 } : { opacity: 1, height: "auto", y: 0 }
-            }
-            exit={reduce ? { opacity: 0 } : { opacity: 0, height: 0, y: -6 }}
-            transition={{ duration: 0.3, ease: EASE }}
-            className="overflow-hidden"
-          >
-            <div className="flex items-start gap-2.5 rounded-xl border border-destructive/30 bg-destructive/10 px-3.5 py-3 text-sm text-destructive">
-              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-              <span className="leading-relaxed">{state.error}</span>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Google — one-tap sign in, then the email form below */}
-      <motion.div variants={item} className="space-y-3">
-        <GoogleSignInButton
-          next={nextValue}
-          referrer={isSignup ? referrer : undefined}
-          via={isSignup ? via : undefined}
-        />
-        <div className="flex items-center gap-3 text-xs font-medium text-muted-foreground">
-          <span className="h-px flex-1 bg-border" />
-          or continue with email
-          <span className="h-px flex-1 bg-border" />
-        </div>
-      </motion.div>
-
-      {isSignup && (
-        <motion.div variants={item}>
-          <Label htmlFor="full_name" className={LABEL_CLS}>
-            Full name
-          </Label>
-          <Field icon={UserIcon}>
-            <Input
-              id="full_name"
-              name="full_name"
-              type="text"
-              autoComplete="name"
-              placeholder="Jane Builder"
-              className="pl-10"
-              disabled={busy}
-            />
-          </Field>
-          <p className="mt-1.5 text-xs text-muted-foreground">
-            Private — only used on your certificate. Never shown publicly;
-            everyone sees your username.
+        <div className="nb-note" role="status">
+          <p className="nb-slug">already on the roster</p>
+          <p className="mt-1.5 text-[0.95rem] leading-snug">
+            That email already has an account. Sign in below and you&rsquo;re
+            straight back where you were.
           </p>
-        </motion.div>
+        </div>
       )}
 
-      <motion.div variants={item}>
-        <Label htmlFor={isSignup ? "email" : "identifier"} className={LABEL_CLS}>
-          {isSignup ? "Email" : "Email or username"}
-        </Label>
-        <Field icon={isSignup ? Mail : AtSign}>
-          <Input
-            id={isSignup ? "email" : "identifier"}
-            name={isSignup ? "email" : "identifier"}
-            type={isSignup ? "email" : "text"}
-            inputMode={isSignup ? "email" : undefined}
-            autoComplete={isSignup ? "email" : "username"}
-            required
-            defaultValue={!isSignup ? defaultEmail : undefined}
-            placeholder={isSignup ? "you@team.org" : "you@team.org or janebuilds"}
-            className="pl-10"
-            disabled={busy}
-          />
-        </Field>
-      </motion.div>
+      {state?.error && (
+        <p className="nb-error" role="alert" aria-live="assertive">
+          {state.error}
+        </p>
+      )}
+
+      <GoogleSignInButton
+        next={nextValue}
+        referrer={isSignup ? referrer : undefined}
+        via={isSignup ? via : undefined}
+      />
+
+      {/* A ruled break, the way a form on paper separates two ways of filling
+          it in. The word sits in the rule rather than floating above it. */}
+      <p className="flex items-center gap-3" aria-hidden="true">
+        <span className="h-px flex-1 border-t border-dashed border-rule" />
+        <span className="nb-slug">or write it in</span>
+        <span className="h-px flex-1 border-t border-dashed border-rule" />
+      </p>
 
       {isSignup && (
-        <motion.div variants={item} className="grid grid-cols-2 gap-3">
-          <div>
-            <Label htmlFor="username" className={LABEL_CLS}>
+        <div className="nb-field">
+          <label htmlFor="full_name" className="nb-label">
+            Full name
+          </label>
+          <input
+            id="full_name"
+            name="full_name"
+            type="text"
+            autoComplete="name"
+            disabled={busy}
+            className="nb-input"
+          />
+          <p className="nb-hint">
+            Private. It goes on your certificate and nowhere else, everyone on
+            the site sees your username.
+          </p>
+        </div>
+      )}
+
+      <div className="nb-field">
+        <label htmlFor={isSignup ? "email" : "identifier"} className="nb-label">
+          {isSignup ? "Email" : "Email or username"}
+        </label>
+        <input
+          id={isSignup ? "email" : "identifier"}
+          name={isSignup ? "email" : "identifier"}
+          type={isSignup ? "email" : "text"}
+          inputMode={isSignup ? "email" : undefined}
+          autoComplete={isSignup ? "email" : "username"}
+          required
+          defaultValue={!isSignup ? defaultEmail : undefined}
+          disabled={busy}
+          className="nb-input"
+        />
+        {!isSignup && (
+          <p className="nb-hint">Either one works, whichever you remember.</p>
+        )}
+      </div>
+
+      {isSignup && (
+        <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_9rem]">
+          <div className="nb-field">
+            <label htmlFor="username" className="nb-label">
               Username
-            </Label>
-            <Field icon={AtSign}>
-              <Input
-                id="username"
-                name="username"
-                type="text"
-                // "nickname" (not "username") so browsers don't autofill the
-                // saved login email here — a public handle, never the email.
-                autoComplete="nickname"
-                required
-                minLength={3}
-                pattern="[A-Za-z0-9_]+"
-                placeholder="janebuilds"
-                className="pl-10"
-                disabled={busy}
-              />
-            </Field>
-            <p className="mt-1.5 text-xs text-muted-foreground">
-              Public — pick a handle, not your email.
+            </label>
+            <input
+              id="username"
+              name="username"
+              type="text"
+              // "nickname" (not "username") so browsers don't autofill the
+              // saved login email here. This is a public handle, never an email.
+              autoComplete="nickname"
+              required
+              minLength={3}
+              pattern="[A-Za-z0-9_]+"
+              disabled={busy}
+              className="nb-input"
+            />
+            <p className="nb-hint">
+              Public. Letters, numbers and underscores.
             </p>
           </div>
-          <div>
-            <Label htmlFor="team_number" className={LABEL_CLS}>
-              Team #{" "}
-              <span className="font-normal text-muted-foreground">
-                (optional)
-              </span>
-            </Label>
-            <Field icon={Hash}>
-              <Input
-                id="team_number"
-                name="team_number"
-                type="number"
-                inputMode="numeric"
-                min={1}
-                placeholder="254"
-                className="pl-10"
-                disabled={busy}
-              />
-            </Field>
+          <div className="nb-field">
+            <label htmlFor="team_number" className="nb-label">
+              Team #, optional
+            </label>
+            <input
+              id="team_number"
+              name="team_number"
+              type="number"
+              inputMode="numeric"
+              min={1}
+              disabled={busy}
+              className="nb-input"
+            />
+            <p className="nb-hint">Like 254.</p>
           </div>
-        </motion.div>
+        </div>
       )}
 
-      <motion.div variants={item}>
-        <div className="flex items-center justify-between gap-2">
-          <Label htmlFor="password" className={LABEL_CLS}>
+      <div className="nb-field">
+        <div className="flex items-baseline justify-between gap-3">
+          <label htmlFor="password" className="nb-label">
             Password
-          </Label>
-          {!isSignup && (
-            <Link
-              href="/forgot-password"
-              className="text-xs font-medium text-primary underline-offset-4 transition-colors hover:underline focus-visible:outline-none focus-visible:underline"
-            >
-              Forgot password?
-            </Link>
-          )}
-        </div>
-        <Field icon={Lock}>
-          <Input
-            id="password"
-            name="password"
-            type={showPassword ? "text" : "password"}
-            autoComplete={isSignup ? "new-password" : "current-password"}
-            required
-            minLength={isSignup ? 8 : undefined}
-            placeholder={isSignup ? "At least 8 characters" : "••••••••"}
-            className="pl-10 pr-11"
-            disabled={busy}
-          />
+          </label>
+          {/* A real button in the flow, not a decoration parked inside the
+              field: it takes focus, it has a 44px target, and it says which
+              state it is in rather than leaving that to an eye glyph. */}
           <button
             type="button"
             onClick={() => setShowPassword((s) => !s)}
             disabled={busy}
-            className={cn(
-              "absolute inset-y-0 right-0 flex w-11 items-center justify-center rounded-r-xl text-muted-foreground",
-              "transition-colors hover:text-foreground cursor-pointer",
-              "focus-visible:outline-none focus-visible:text-foreground disabled:opacity-50"
-            )}
-            aria-label={showPassword ? "Hide password" : "Show password"}
             aria-pressed={showPassword}
-            tabIndex={-1}
+            aria-controls="password"
+            className="nb-navlink"
           >
-            {showPassword ? (
-              <EyeOff className="h-4 w-4" />
-            ) : (
-              <Eye className="h-4 w-4" />
-            )}
+            {showPassword ? "hide it" : "show it"}
           </button>
-        </Field>
-        {isSignup && (
-          <p className="mt-1.5 text-xs text-muted-foreground">
-            Use 8+ characters with a mix of letters and numbers.
+        </div>
+        <input
+          id="password"
+          name="password"
+          type={showPassword ? "text" : "password"}
+          autoComplete={isSignup ? "new-password" : "current-password"}
+          required
+          minLength={isSignup ? 8 : undefined}
+          disabled={busy}
+          className="nb-input"
+        />
+        {isSignup ? (
+          <p className="nb-hint">At least 8 characters, letters and numbers.</p>
+        ) : (
+          <p className="nb-hint">
+            Can&rsquo;t place it?{" "}
+            <Link href="/forgot-password" className="nb-link">
+              Get a reset link
+            </Link>
+            .
           </p>
         )}
-      </motion.div>
+      </div>
 
-      <motion.div variants={item} className="pt-1">
-        <Button
-          type="submit"
-          variant="brand"
-          size="lg"
-          className="w-full"
-          disabled={busy}
-          aria-busy={isPending}
-        >
-          {isPending ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              {isSignup ? "Creating account…" : "Signing in…"}
-            </>
-          ) : (
-            <>
-              {isSignup ? "Create account" : "Sign in"}
-              <ArrowRight className="h-4 w-4" />
-            </>
-          )}
-        </Button>
-      </motion.div>
+      <button
+        type="submit"
+        className="nb-btn mt-1 w-full"
+        disabled={busy}
+        aria-busy={isPending}
+      >
+        {isPending
+          ? isSignup
+            ? "Creating your account"
+            : "Signing you in"
+          : isSignup
+            ? "Create my account"
+            : "Sign in"}
+      </button>
 
       {/* Disclosure at the point of collection. Accounts are enrolled in
           learning-reminder email by default (email_opt_in defaults true), and
-          until now nothing on this form said so — a real person reported
-          receiving mail he never knowingly opted into. Saying it plainly here
-          is the honest fix; the unsubscribe link in every email and the toggle
-          in Settings are the escape hatches. */}
+          until this line existed nothing on the form said so. A real person
+          reported receiving mail he never knowingly opted into. */}
       {isSignup && (
-        <motion.p
-          variants={item}
-          className="text-center text-xs leading-relaxed text-muted-foreground"
-        >
-          We&apos;ll email you occasional learning reminders — your next lesson,
-          or a streak about to end. Every one has a one-click unsubscribe, and
-          you can turn them off any time in{" "}
-          <span className="font-medium text-foreground">Settings</span>. See our{" "}
-          <Link
-            href="/privacy"
-            className="font-medium text-primary underline-offset-4 transition-colors hover:underline"
-          >
+        <p className="nb-hint">
+          We&rsquo;ll email you the occasional reminder, your next lesson or a
+          streak about to lapse. Every one has a one-click unsubscribe and you
+          can switch them off in Settings. Here&rsquo;s the{" "}
+          <Link href="/privacy" className="nb-link">
             privacy policy
           </Link>
           .
-        </motion.p>
+        </p>
       )}
 
-      <motion.p
-        variants={item}
-        className="pt-1 text-center text-sm text-muted-foreground"
-      >
-        {isSignup ? "Already have an account?" : "New to LearnFRC?"}{" "}
-        <Link
-          href={switchHref}
-          className="font-medium text-primary underline-offset-4 transition-colors hover:text-primary hover:underline focus-visible:outline-none focus-visible:underline"
-        >
-          {isSignup ? "Log in" : "Create one free"}
+      <p className="nb-hair pt-4 text-[0.95rem] text-graphite">
+        {isSignup ? "Already on the roster? " : "First time here? "}
+        <Link href={switchHref} className="nb-link">
+          {isSignup ? "Sign in instead" : "Create a free account"}
         </Link>
-      </motion.p>
-
-      {/* Hidden fields placeholder for stagger key stability */}
-      <span className="sr-only" aria-hidden>
-        {fields.length}
-      </span>
-    </motion.form>
-  );
-}
-
-/** Input wrapper that positions a leading icon and any trailing controls. */
-function Field({
-  icon: Icon,
-  children,
-}: {
-  icon: React.ComponentType<{ className?: string }>;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="relative">
-      <Icon
-        className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-        aria-hidden
-      />
-      {children}
-    </div>
+      </p>
+    </form>
   );
 }

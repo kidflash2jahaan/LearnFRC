@@ -1,23 +1,9 @@
 import type { Metadata } from "next";
 import type { CSSProperties } from "react";
-import { Library, MessageSquarePlus, ArrowUpRight } from "lucide-react";
 import { getDepartmentSources } from "@/lib/queries";
-import { deptMeta, inkFor } from "@/lib/departments";
-import { Icon } from "@/lib/icon-map";
 import { FeedbackForm } from "@/components/feedback-form";
-import { AnimatedCounter } from "@/components/animated-counter";
-import {
-  RiseGroup,
-  RiseItem,
-  Reveal,
-  RevealGroup,
-  RevealItem,
-  Hover,
-  Glow,
-} from "@/components/motion/primitives";
-import type { Resource } from "@/lib/types";
-import { ToolboxPanel } from "./_toolbox-panel";
-import { ShelfRail } from "./_shelf-rail";
+import { ShelfBin, hostLabel } from "./_toolbox-panel";
+import { ShelfRail, type RailItem } from "./_shelf-rail";
 
 export const metadata: Metadata = {
   title: "FRC Resources — Tools, Docs & Links",
@@ -26,81 +12,82 @@ export const metadata: Metadata = {
   alternates: { canonical: "/resources" },
 };
 
-const BRAND_GRADIENT: CSSProperties = {
-  background: "linear-gradient(120deg, #2560e6, #1aa9d6)",
-  WebkitBackgroundClip: "text",
-  backgroundClip: "text",
-  color: "transparent",
+type Shelf = {
+  category: string;
+  /** One line saying what job this shelf is for. Printed under the heading. */
+  blurb: string;
+  links: { title: string; url: string }[];
 };
 
-const CATEGORY_META: Record<
-  string,
-  { icon: string; a: string; blurb: string }
-> = {
-  "Official FIRST": {
-    icon: "Trophy",
-    a: "#2560e6",
-    blurb: "The manual, season materials, and game tools straight from FIRST.",
-  },
-  "Software & Programming": {
-    icon: "Code2",
-    a: "#1aa9d6",
-    blurb: "WPILib and the vision, path, and trajectory tools your code leans on.",
-  },
-  "CAD & Design": {
-    icon: "PenTool",
-    a: "#7c5cff",
-    blurb: "Model the robot before you cut metal — free CAD built for FRC.",
-  },
-  "Hardware & Vendors": {
-    icon: "Cog",
-    a: "#0f9d8f",
-    blurb: "Where the motors, gearboxes, and structure come from.",
-  },
-  "Community & Data": {
-    icon: "LineChart",
-    a: "#2560e6",
-    blurb: "Forums and match data — the collective brain of the FRC world.",
-  },
-};
-
-const CURATED: { category: string; links: Resource[] }[] = [
+/**
+ * The toolbox, unchanged in content from the version before the rebuild.
+ *
+ * What is gone is the per-shelf colour and icon that used to sit beside each
+ * heading. A shelf is identified by its name and its mono slug in this system,
+ * the same way a department is, so five accent hues would have been five
+ * meanings the palette does not have.
+ */
+const CURATED: Shelf[] = [
   {
     category: "Official FIRST",
+    blurb: "The manual, season materials, and game tools straight from FIRST.",
     links: [
-      { title: "FIRST Robotics Competition", url: "https://www.firstinspires.org/robotics/frc" },
-      { title: "FRC Game & Season Materials", url: "https://www.firstinspires.org/resource-library/frc/competition-manual-qa-system" },
-      { title: "FRC Driver Station & Game Tools", url: "https://docs.wpilib.org/en/stable/docs/zero-to-robot/step-2/frc-game-tools.html" },
+      {
+        title: "FIRST Robotics Competition",
+        url: "https://www.firstinspires.org/robotics/frc",
+      },
+      {
+        title: "FRC Game & Season Materials",
+        url: "https://www.firstinspires.org/resource-library/frc/competition-manual-qa-system",
+      },
+      {
+        title: "FRC Driver Station & Game Tools",
+        url: "https://docs.wpilib.org/en/stable/docs/zero-to-robot/step-2/frc-game-tools.html",
+      },
     ],
   },
   {
     category: "Software & Programming",
+    blurb:
+      "WPILib and the vision, path, and trajectory tools your code leans on.",
     links: [
       { title: "WPILib Documentation", url: "https://docs.wpilib.org" },
       { title: "PathPlanner", url: "https://pathplanner.dev" },
       { title: "Choreo (trajectory tool)", url: "https://choreo.autos" },
       { title: "PhotonVision", url: "https://docs.photonvision.org" },
-      { title: "Limelight Documentation", url: "https://docs.limelightvision.io" },
+      {
+        title: "Limelight Documentation",
+        url: "https://docs.limelightvision.io",
+      },
     ],
   },
   {
     category: "CAD & Design",
+    blurb: "Model the robot before you cut metal. Free CAD, built for FRC.",
     links: [
       { title: "Onshape", url: "https://www.onshape.com" },
-      { title: "Onshape for FRC (FeatureScript/MKCad)", url: "https://www.mkcad.com" },
+      {
+        title: "Onshape for FRC (FeatureScript/MKCad)",
+        url: "https://www.mkcad.com",
+      },
     ],
   },
   {
     category: "Hardware & Vendors",
+    blurb: "Where the motors, gearboxes, and structure come from.",
     links: [
       { title: "REV Robotics", url: "https://www.revrobotics.com" },
-      { title: "CTR Electronics (Phoenix)", url: "https://store.ctr-electronics.com" },
+      {
+        title: "CTR Electronics (Phoenix)",
+        url: "https://store.ctr-electronics.com",
+      },
       { title: "AndyMark", url: "https://www.andymark.com" },
       { title: "WestCoast Products (WCP)", url: "https://wcproducts.com" },
     ],
   },
   {
     category: "Community & Data",
+    blurb: "Forums and match data, the collective brain of the FRC world.",
     links: [
       { title: "Chief Delphi (forums)", url: "https://www.chiefdelphi.com" },
       { title: "The Blue Alliance", url: "https://www.thebluealliance.com" },
@@ -109,360 +96,328 @@ const CURATED: { category: string; links: Resource[] }[] = [
   },
 ];
 
-/** Slug-safe anchor id for a category name. */
+/**
+ * Hand angle per bin, in shelf order.
+ *
+ * Much smaller than the angle on an index card: a bin runs the full width of
+ * the content column, where one degree is fourteen pixels of vertical drift and
+ * stops reading as "nobody straightened it". No two are the same.
+ */
+const BIN_TILT = ["-0.35deg", "0.28deg", "-0.2deg", "0.32deg", "-0.26deg"];
+
+/**
+ * How many citations to print per department.
+ *
+ * The catalogue cites 168 sources across 11 departments. Printed in full that
+ * is a 179-row table, roughly 7,700px of it, and it buries everything under it
+ * for a list nobody scrolls to the end of. Six per department answers the
+ * question this section exists for ("is this written from anything real, and
+ * what") in a block you can take in at a glance, and every group prints its
+ * true total beside the name so the trim is stated rather than hidden.
+ */
+const SOURCES_PER_DEPT = 6;
+
+/** Mono identifier for a shelf, e.g. `software-programming`. */
+function shelfSlug(category: string): string {
+  return category
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+}
+
+/** Anchor id, so the rail and the bins agree on the jump target. */
 function shelfId(category: string): string {
-  return "shelf-" + category.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+  return `shelf-${shelfSlug(category)}`;
 }
 
-/** Strip protocol/www for a compact host label under each link. */
-function hostLabel(url: string): string {
-  try {
-    return new URL(url).hostname.replace(/^www\./, "");
-  } catch {
-    return url;
-  }
-}
-
+/**
+ * /resources is the pocket at the back of the binder, the one holding other
+ * people's manuals.
+ *
+ * Nobody reads this page. They arrive with a name they half-remember, find it,
+ * and leave, so every decision here serves scan-and-go: the contents list is
+ * the first thing in the masthead rather than a paragraph about curation, every
+ * link prints the host it goes to because the domain is how you recognise a doc
+ * you already trust, and an index rail follows you down the shelves.
+ *
+ * The second half is the works-cited page. It is set as a real table, because
+ * that is what a bibliography is, and because the question it answers is a
+ * lookup ("what are the electrical guides built on") rather than a read.
+ *
+ * Server Component. Same single cached catalogue fetch as before.
+ */
 export default async function ResourcesPage() {
   const departments = await getDepartmentSources();
 
-  const totalLinks = CURATED.reduce((s, g) => s + g.links.length, 0);
-  const withSources = (departments ?? []).filter(
-    (d) => ((d.sources as Resource[]) ?? []).length > 0,
-  );
-  const totalSources = withSources.reduce(
-    (s, d) => s + ((d.sources as Resource[]) ?? []).length,
-    0,
-  );
+  const totalLinks = CURATED.reduce((sum, s) => sum + s.links.length, 0);
+  const withSources = (departments ?? []).filter((d) => d.sources.length > 0);
+  const totalSources = withSources.reduce((sum, d) => sum + d.sources.length, 0);
 
-  const railItems = CURATED.map((g) => {
-    const cm = CATEGORY_META[g.category] ?? { icon: "BookOpen", a: "#2560e6", blurb: "" };
-    return {
-      id: shelfId(g.category),
-      label: g.category,
-      count: g.links.length,
-      icon: cm.icon,
-      color: cm.a,
-    };
-  });
+  const railItems: RailItem[] = CURATED.map((shelf) => ({
+    id: shelfId(shelf.category),
+    label: shelf.category,
+    count: shelf.links.length,
+  }));
 
   return (
-    <div className="relative overflow-x-clip">
-      <Glow
-        blobs={[
-          { size: "620px", pos: { left: "-170px", top: "-200px" }, color: "#8bbcff", opacity: 0.6 },
-          { size: "560px", pos: { right: "-190px", top: "-100px" }, color: "#6ff0ea", opacity: 0.5, delay: 2 },
-          { size: "520px", pos: { left: "32%", top: "760px" }, color: "#c8b6ff", opacity: 0.4, delay: 4 },
-        ]}
-      />
+    <>
+      {/* ===================== MASTHEAD =====================
+          Two columns, and the right one is the contents list rather than a card
+          of figures. On a reference page the table of contents IS the value, so
+          it goes above the fold and doubles as the first set of jump links. */}
+      <section className="nb-wrap grid items-start gap-[clamp(1.6rem,4vw,3.4rem)] pb-[clamp(2.2rem,4.5vw,3.4rem)] pt-[clamp(2.2rem,5vw,4rem)] min-[900px]:grid-cols-[minmax(0,1.4fr)_minmax(0,0.9fr)]">
+        <div>
+          <p className="nb-marker">
+            reference / {totalLinks} links / {CURATED.length} shelves
+          </p>
 
-      <div className="mx-auto max-w-6xl px-4 pt-28 pb-24 sm:px-6 lg:px-8">
-        {/* ============================ HERO ============================ */}
-        <section className="grid items-center gap-10 lg:grid-cols-[1.1fr_0.9fr]">
-          <RiseGroup>
-            <RiseItem>
-              <span className="ac-chip inline-flex items-center gap-2">
-                <Library className="h-3.5 w-3.5 text-primary" aria-hidden />
-                <span className="ac-eyebrow">The FRC toolbox</span>
-              </span>
-            </RiseItem>
-            <RiseItem>
-              <h1 className="mt-5 text-balance font-display text-4xl font-extrabold leading-[1.04] sm:text-5xl lg:text-[3.3rem]">
-                Every FRC <span style={BRAND_GRADIENT}>resource</span> worth
-                keeping
-              </h1>
-            </RiseItem>
-            <RiseItem>
-              <p className="mt-4 max-w-xl text-pretty text-lg leading-relaxed text-foreground/70">
-                A curated toolbox for build season — the docs, software,
-                vendors, and community hubs every team reaches for, organized
-                on shelves so you always know where to look. Plus the
-                authoritative sources behind every LearnFRC guide.
-              </p>
-            </RiseItem>
-            <RiseItem>
-              <div className="mt-7 flex flex-wrap items-center gap-3">
-                <a href="#toolbox" className="ac-btn text-sm">
-                  <Library className="h-4 w-4" aria-hidden />
-                  Open the toolbox
-                </a>
-                <a href="#suggest" className="ac-btn-ghost text-sm">
-                  <MessageSquarePlus className="h-4 w-4" aria-hidden />
-                  Suggest a resource
-                </a>
-              </div>
-            </RiseItem>
-            <RiseItem>
-              <div className="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground">
-                <span>
-                  <b className="font-semibold text-foreground">
-                    <AnimatedCounter value={totalLinks} />
-                  </b>{" "}
-                  curated links
-                </span>
-                <span>
-                  <b className="font-semibold text-foreground">
-                    <AnimatedCounter value={CURATED.length} />
-                  </b>{" "}
-                  shelves
-                </span>
-                <span>
-                  <b className="font-semibold text-foreground">
-                    <AnimatedCounter value={totalSources} suffix="+" />
-                  </b>{" "}
-                  guide sources
-                </span>
-              </div>
-            </RiseItem>
-          </RiseGroup>
+          <h1 className="max-w-[17ch]">
+            Everything a build season makes you{" "}
+            <span className="nb-mark">look up</span>.
+          </h1>
 
-          <ToolboxPanel
-            shelves={railItems}
-            totalLinks={totalLinks}
-            totalSources={totalSources}
-          />
-        </section>
+          <p className="nb-lede mt-[clamp(1rem,2vw,1.5rem)]">
+            The official docs, the software your code depends on, the vendors
+            you order from, and the two forums where the answers actually are.
+          </p>
 
-        {/* ============================ TOOLBOX ========================= */}
-        <section id="toolbox" className="mt-24 scroll-mt-28">
-          <Reveal>
-            <p className="ac-eyebrow">Everything on a shelf</p>
-            <h2 className="mt-2 font-display text-2xl font-bold tracking-tight sm:text-3xl">
-              The curated toolbox
-            </h2>
-            <p className="mt-3 max-w-2xl text-foreground/70">
-              Grouped the way a well-run pit is — each shelf holds the tools
-              for one job, so the link you need is always where you expect
-              it.
-            </p>
-          </Reveal>
-
-          <div className="mt-10 grid gap-8 lg:grid-cols-[220px_1fr]">
-            {/* Sticky index rail (desktop) */}
-            <aside className="hidden lg:block">
-              <div className="sticky top-28">
-                <p className="mb-3 px-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                  Shelves
-                </p>
-                <ShelfRail items={railItems} />
-              </div>
-            </aside>
-
-            {/* The shelves */}
-            <div className="min-w-0 space-y-6">
-              {CURATED.map((group, gi) => {
-                const cm =
-                  CATEGORY_META[group.category] ?? {
-                    icon: "BookOpen",
-                    a: "#2560e6",
-                    blurb: "",
-                  };
-                const ink = inkFor(cm.a);
-                return (
-                  <Reveal key={group.category} delay={gi * 0.05}>
-                    <section
-                      id={shelfId(group.category)}
-                      className="ac-card scroll-mt-28 overflow-hidden p-0"
-                    >
-                      {/* Shelf header */}
-                      <div
-                        className="flex items-center gap-3 border-b border-border px-5 py-4"
-                        style={{
-                          background: `linear-gradient(180deg, color-mix(in srgb, ${cm.a} 10%, transparent), transparent)`,
-                        }}
-                      >
-                        <span
-                          className="ac-badge flex h-10 w-10 shrink-0 items-center justify-center"
-                          style={{ "--a": cm.a } as CSSProperties}
-                        >
-                          <Icon name={cm.icon} className="h-5 w-5" />
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <h3 className="font-display text-lg font-bold leading-tight text-foreground">
-                            {group.category}
-                          </h3>
-                          {cm.blurb ? (
-                            <p className="mt-0.5 truncate text-sm text-muted-foreground">
-                              {cm.blurb}
-                            </p>
-                          ) : null}
-                        </div>
-                        <span
-                          className="shrink-0 rounded-full px-2.5 py-1 font-mono text-[11px] font-semibold tabular-nums"
-                          style={{
-                            color: ink,
-                            background: `color-mix(in srgb, ${cm.a} 14%, transparent)`,
-                          }}
-                        >
-                          {group.links.length}
-                        </span>
-                      </div>
-
-                      {/* Shelf contents */}
-                      <ul className="divide-y divide-border">
-                        {group.links.map((l) => (
-                          <li key={l.url}>
-                            <a
-                              href={l.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="group flex min-h-[52px] items-center gap-4 px-5 py-3.5 transition-colors hover:bg-secondary/50 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring"
-                            >
-                              <span
-                                aria-hidden="true"
-                                className="h-9 w-1 shrink-0 rounded-full transition-all duration-300 group-hover:h-10"
-                                style={{ background: cm.a }}
-                              />
-                              <span className="min-w-0 flex-1">
-                                <span className="block truncate font-medium text-foreground transition-colors group-hover:text-primary">
-                                  {l.title}
-                                  <span className="sr-only">
-                                    {" "}
-                                    (opens in a new tab)
-                                  </span>
-                                </span>
-                                <span className="block truncate font-mono text-xs text-muted-foreground">
-                                  {hostLabel(l.url)}
-                                </span>
-                              </span>
-                              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-secondary text-primary transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5">
-                                <ArrowUpRight className="h-4 w-4" aria-hidden />
-                              </span>
-                            </a>
-                          </li>
-                        ))}
-                      </ul>
-                    </section>
-                  </Reveal>
-                );
-              })}
-            </div>
+          <div className="mt-[clamp(1.4rem,2.6vw,2rem)] flex flex-wrap gap-3">
+            <a href="#toolbox" className="nb-btn">
+              Open the toolbox
+            </a>
+            <a href="#sources" className="nb-btn-ghost">
+              What the lessons cite
+            </a>
           </div>
-        </section>
+        </div>
 
-        {/* ====================== SOURCES BY DEPARTMENT ================= */}
-        <section className="mt-24">
-          <Reveal>
-            <p className="ac-eyebrow">Grounded in real sources</p>
-            <h2 className="mt-2 font-display text-2xl font-bold tracking-tight sm:text-3xl">
-              Sources behind the guides
+        <div>
+          <nav aria-label="Shelves in this page">
+            <p className="nb-slug border-b-2 border-ink pb-2">on the shelves</p>
+            <ul>
+              {CURATED.map((shelf, i) => (
+                <li
+                  key={shelf.category}
+                  className="border-b border-dashed border-rule"
+                >
+                  <a
+                    href={`#${shelfId(shelf.category)}`}
+                    className="group flex min-h-11 items-baseline gap-3 py-2.5"
+                  >
+                    <span className="nb-slug shrink-0 font-bold text-blue">
+                      {String(i + 1).padStart(2, "0")}
+                    </span>
+                    <span className="min-w-0 flex-1 font-semibold leading-snug decoration-blue decoration-2 underline-offset-4 group-hover:text-blue group-hover:underline">
+                      {shelf.category}
+                    </span>
+                    <span className="nb-slug shrink-0">
+                      {shelf.links.length}
+                    </span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </nav>
+
+          <p className="nb-pen mt-4 max-w-[24ch] rotate-[-1.1deg]">
+            the wpilib docs answer most of it
+          </p>
+        </div>
+      </section>
+
+      {/* ===================== THE TOOLBOX =====================
+          A sticky index rail beside the bins. The rail is the one place on this
+          page that needs the client, because which shelf you are looking at is
+          a fact about the scroll position. */}
+      <section
+        id="toolbox"
+        className="nb-wrap nb-rule py-[clamp(2.4rem,5vw,4rem)]"
+        aria-labelledby="toolbox-heading"
+      >
+        <div className="mb-[clamp(1.6rem,3.4vw,2.4rem)] max-w-[46rem]">
+          <h2 id="toolbox-heading" className="max-w-[20ch]">
+            Five shelves, filed the way a pit is.
+          </h2>
+          <p className="nb-sub mt-3">
+            Each shelf holds the links for one job, so the one you want is where
+            you would reach for it. Every link leaves this site and opens in a
+            new tab.
+          </p>
+        </div>
+
+        <div className="grid items-start gap-[clamp(1.4rem,3vw,2.4rem)] min-[1000px]:grid-cols-[15rem_minmax(0,1fr)]">
+          {/* The rail is a convenience, not the only route to a shelf: the
+              contents list in the masthead reaches every one of them, so this
+              is safe to drop below 1000px where a sticky column would eat half
+              the screen. */}
+          <div className="sticky top-[5.5rem] hidden min-[1000px]:block">
+            <ShelfRail items={railItems} />
+          </div>
+
+          <div className="grid min-w-0 gap-[clamp(1.1rem,2.4vw,1.7rem)]">
+            {CURATED.map((shelf, i) => (
+              <ShelfBin
+                key={shelf.category}
+                id={shelfId(shelf.category)}
+                index={i}
+                slug={shelfSlug(shelf.category)}
+                category={shelf.category}
+                blurb={shelf.blurb}
+                links={shelf.links}
+                tilt={BIN_TILT[i % BIN_TILT.length]}
+              />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ===================== THE WORKS CITED =====================
+          Set as a table, because a bibliography is one. Nothing else in this
+          section of the binder is tabular, so the change of form is doing work:
+          it says these are references to check rather than tools to open. */}
+      <section
+        id="sources"
+        className="nb-wrap nb-rule py-[clamp(2.4rem,5vw,4rem)]"
+        aria-labelledby="sources-heading"
+      >
+        <div className="mb-[clamp(1.4rem,3vw,2.2rem)] flex flex-wrap items-end justify-between gap-x-10 gap-y-4">
+          <div>
+            <h2 id="sources-heading" className="max-w-[19ch]">
+              What the lessons are built on.
             </h2>
-            <p className="mb-6 mt-3 max-w-2xl text-foreground/70">
-              Every LearnFRC guide is built on authoritative references — the
-              same docs and manuals mentors point rookies to. Here they are,
-              department by department.
+            <p className="nb-sub mt-3">
+              Every guide here is written from published references rather than
+              from memory. These are them, department by department, so you can
+              go and check the original. Long lists are trimmed to the first{" "}
+              {SOURCES_PER_DEPT}, and the figure beside each department is the
+              full count.
             </p>
-            <div className="mb-8 flex flex-wrap gap-3">
-              <div className="ac-card rounded-2xl px-5 py-3">
-                <span className="font-display text-2xl font-bold text-foreground">
-                  <AnimatedCounter value={totalSources} suffix="+" />
-                </span>{" "}
-                <span className="text-sm font-semibold text-muted-foreground">
-                  cited sources
-                </span>
-              </div>
-              <div className="ac-card rounded-2xl px-5 py-3">
-                <span className="font-display text-2xl font-bold text-foreground">
-                  <AnimatedCounter value={withSources.length} />
-                </span>{" "}
-                <span className="text-sm font-semibold text-muted-foreground">
-                  departments
-                </span>
-              </div>
-            </div>
-          </Reveal>
+          </div>
 
-          {withSources.length === 0 ? (
-            <Reveal>
-              <div className="ac-card p-6 text-foreground/70">
-                Sources are being compiled — check back soon as each
-                department&apos;s guides are published.
-              </div>
-            </Reveal>
-          ) : (
-            <RevealGroup className="grid gap-4 sm:grid-cols-2">
-              {withSources.map((d) => {
-                const m = deptMeta(d.slug as string);
-                const ink = inkFor(m.color);
-                const sources = ((d.sources as Resource[]) ?? []).slice(0, 6);
-                return (
-                  <RevealItem key={d.slug as string}>
-                    <Hover className="h-full" lift={-4}>
-                      <div
-                        className="ac-tile h-full p-5"
-                        style={{ "--a": m.color } as CSSProperties}
-                      >
-                        <div className="mb-4 flex items-center gap-3">
-                          <span
-                            className="ac-badge flex h-10 w-10 shrink-0 items-center justify-center"
-                            style={{ "--a": m.color } as CSSProperties}
-                          >
-                            <Icon name={m.icon} className="h-5 w-5" />
-                          </span>
-                          <h3 className="font-display text-base font-bold text-foreground">
-                            {d.name as string}
-                          </h3>
-                        </div>
-                        <ul className="space-y-2">
-                          {sources.map((s, i) => (
-                            <li key={i}>
-                              <a
-                                href={s.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="group inline-flex items-start gap-2 py-0.5 text-sm text-foreground/80 transition-colors hover:text-[var(--ink)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                                style={{ "--ink": ink } as CSSProperties}
-                              >
-                                <ArrowUpRight
-                                  className="mt-0.5 h-3.5 w-3.5 shrink-0 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
-                                  style={{ color: ink }}
-                                  aria-hidden
-                                />
-                                <span>
-                                  {s.title}
-                                  <span className="sr-only">
-                                    {" "}
-                                    (opens in a new tab)
-                                  </span>
-                                </span>
-                              </a>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    </Hover>
-                  </RevealItem>
-                );
-              })}
-            </RevealGroup>
+          {withSources.length > 0 && (
+            <div className="flex flex-wrap gap-x-8 gap-y-2">
+              <p className="nb-count">
+                {totalSources}
+                <small>cited sources</small>
+              </p>
+              <p className="nb-count">
+                {withSources.length}
+                <small>departments</small>
+              </p>
+            </div>
           )}
-        </section>
+        </div>
 
-        {/* ============================ SUGGEST ========================= */}
-        <Reveal className="mt-24">
-          <div id="suggest" className="ac-glass scroll-mt-28 p-6 sm:p-8">
-            <div className="mb-4 flex items-center gap-3">
-              <span
-                className="ac-badge flex h-11 w-11 items-center justify-center"
-                style={{ "--a": "#2560e6" } as CSSProperties}
-              >
-                <MessageSquarePlus className="h-5 w-5" aria-hidden />
-              </span>
-              <h2 className="font-display text-xl font-bold sm:text-2xl">
-                Suggest a topic or resource
-              </h2>
-            </div>
-            <p className="mb-6 max-w-xl text-foreground/70">
-              Missing something you&apos;d find useful? Tell us what to add —
-              in the spirit of gracious professionalism, your suggestion goes
-              straight to the team.
+        {withSources.length === 0 ? (
+          <div className="nb-note max-w-[46rem]">
+            <p className="nb-slug">nothing filed yet</p>
+            <p className="mt-1.5 text-[0.95rem]">
+              The citation list fills in as each department&apos;s guides are
+              published. The toolbox above is complete either way.
             </p>
-            <div className="max-w-xl">
+          </div>
+        ) : (
+          <div className="nb-scroll">
+            <table className="nb-table min-w-[34rem]">
+              <caption className="sr-only">
+                Sources cited by the LearnFRC guides, grouped by department
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col">source</th>
+                  <th scope="col">host</th>
+                </tr>
+              </thead>
+
+              {withSources.map((dept) => (
+                <tbody key={dept.slug}>
+                  <tr>
+                    {/* A grouping header row, so a screen reader announces the
+                        department once for the block instead of repeating it
+                        into every line, and so the eye gets the same. */}
+                    <th
+                      scope="colgroup"
+                      colSpan={2}
+                      className="whitespace-normal pt-8 font-sans text-[1.05rem] font-extrabold tracking-[-0.02em] text-ink"
+                    >
+                      {dept.name}
+                      <span className="nb-slug ml-3 font-normal">
+                        dept / {dept.slug}
+                      </span>
+                      <span className="nb-slug ml-3 font-normal">
+                        {dept.sources.length > SOURCES_PER_DEPT
+                          ? `first ${SOURCES_PER_DEPT} of ${dept.sources.length}`
+                          : `${dept.sources.length} cited`}
+                      </span>
+                    </th>
+                  </tr>
+
+                  {dept.sources.slice(0, SOURCES_PER_DEPT).map((source, i) => (
+                    <tr key={`${dept.slug}-${i}`}>
+                      {/* The cell padding is zeroed and the height carried by
+                          the link instead. Otherwise the 44px touch target and
+                          the table's own vertical padding stack into a 66px
+                          row, and a bibliography that airy stops being
+                          scannable at the length these run to. */}
+                      <td className="py-0 align-middle">
+                        <a
+                          href={source.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex min-h-11 items-center font-medium decoration-blue decoration-2 underline-offset-4 hover:text-blue hover:underline"
+                        >
+                          {source.title}
+                          <span className="sr-only"> (opens in a new tab)</span>
+                        </a>
+                      </td>
+                      <td className="nb-slug whitespace-nowrap py-0 align-middle">
+                        {hostLabel(source.url)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              ))}
+            </table>
+          </div>
+        )}
+      </section>
+
+      {/* ===================== THE SUGGESTION SLIP =====================
+          Small, off to the left, and taped down. It is the only thing on the
+          page asking the reader for something rather than handing them
+          something, so it gets the smallest surface here. */}
+      <section className="nb-wrap nb-rule py-[clamp(2.6rem,5vw,4.2rem)]">
+        <div className="grid items-start gap-[clamp(1.2rem,3vw,2.6rem)] min-[900px]:grid-cols-[minmax(0,38rem)_minmax(0,1fr)]">
+          <div
+            id="suggest"
+            className="nb-box nb-tilt p-[clamp(1.2rem,2.6vw,1.9rem)]"
+            style={{ "--tilt": "-0.5deg" } as CSSProperties}
+          >
+            <span
+              className="nb-tape -top-3 left-[18%] rotate-[-3.2deg]"
+              aria-hidden="true"
+            />
+
+            <p className="nb-slug">suggestion slip</p>
+            <h2 className="mt-2 text-[clamp(1.3rem,1.05rem+1vw,1.85rem)]">
+              Missing something worth linking.
+            </h2>
+            <p className="mt-3 max-w-[50ch] text-[0.96rem] leading-[1.5] text-graphite">
+              If a doc, a tool or a forum thread belongs on one of these
+              shelves, say so. Naming the shelf is what turns a suggestion into
+              a to-do.
+            </p>
+
+            <div className="mt-[clamp(1.2rem,2.6vw,1.7rem)]">
               <FeedbackForm page="/resources" />
             </div>
           </div>
-        </Reveal>
-      </div>
-    </div>
+
+          <p className="nb-pen max-w-[22ch] rotate-[1.3deg] min-[900px]:mt-8">
+            a link that saved you an hour is worth sending
+          </p>
+        </div>
+      </section>
+    </>
   );
 }

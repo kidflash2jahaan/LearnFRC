@@ -134,7 +134,7 @@ export async function setLessonComplete(
       (await rateLimit("lesson-complete", 12, 60, user.id)) &&
       (await rateLimit("lesson-complete-hourly", 120, 3600, user.id));
     if (!withinLimit)
-      return { error: "You're completing lessons unusually fast — take a breather and try again in a minute." };
+      return { error: "You're completing lessons unusually fast. Take a breather and try again in a minute." };
 
     const { error } = await supabase
       .from("lesson_progress")

@@ -1,159 +1,107 @@
-"use client";
-
 import type { CSSProperties } from "react";
 import Link from "next/link";
-import { motion, useReducedMotion } from "framer-motion";
-import { ArrowRight, MapPin, Flag } from "lucide-react";
-import { Icon } from "@/lib/icon-map";
-import { AnimatedCounter } from "@/components/animated-counter";
 
-export type RouteStation = {
-  deptSlug: string;
-  label: string;
-  color: string;
-  icon: string;
-  ink: string;
-};
+export type RouteStop = { deptSlug: string; label: string };
 
 /**
- * Signature hero device: "the route" — a floating glass instrument that
- * plots the featured learning path as a mapped journey: a draw-in spine
- * connecting a start flag, every department stop, and a season-ready
- * finish. Mirrors the homepage's telemetry-panel feel without repeating it.
+ * One route, printed as a slip in the binder.
+ *
+ * A route is a list of places you go in order, so it is drawn the way the
+ * binder draws one: a full-width hand-ruled slip split down a 2px ink rule,
+ * with the pitch on the left and the actual itinerary on the right. Nothing
+ * animates except the one hover the system owns.
+ *
+ * The whole slip is a single link, like the department cards on the wall, so
+ * the target is the size of the card and a keyboard never has to walk past
+ * nested links inside it. The module keeps its old filename because that is a
+ * fixed path in this rebuild, not because it is still a preview of anything.
+ *
+ * Server Component. No state, no client bundle.
  */
-export function RoutePreview({
+export function RouteSlip({
+  index,
+  slug,
   title,
   description,
-  slug,
-  color,
-  icon,
-  stations,
+  stops,
   outcomeCount,
+  tilt,
 }: {
+  index: number;
+  slug: string;
   title: string;
   description: string;
-  slug: string;
-  color: string;
-  icon: string;
-  stations: RouteStation[];
+  stops: RouteStop[];
   outcomeCount: number;
+  /** Hand angle for this slip. Full-width paper needs a much smaller angle
+      than an index card: a degree across 1280px is 22px of vertical drift. */
+  tilt: string;
 }) {
-  const reduce = useReducedMotion();
+  const n = String(index + 1).padStart(2, "0");
 
   return (
-    <motion.div
-      className="ac-glass relative w-full max-w-md p-6 sm:p-7 lg:justify-self-end"
-      initial={{ opacity: 0, y: 26, rotate: -1.2 }}
-      animate={{ opacity: 1, y: 0, rotate: 0 }}
-      transition={
-        reduce ? { duration: 0 } : { type: "spring", stiffness: 140, damping: 18, delay: 0.25 }
-      }
-      whileHover={reduce ? undefined : { y: -6 }}
+    <Link
+      href={`/paths/${slug}`}
+      aria-label={`Open the ${title} route`}
+      className="nb-box nb-tilt nb-lift group block overflow-hidden"
+      style={{ "--tilt": tilt } as CSSProperties}
     >
-      <div className="flex items-center gap-2.5">
-        <span
-          className="ac-badge flex h-11 w-11 flex-none items-center justify-center"
-          style={{ "--a": color } as CSSProperties}
-        >
-          <Icon name={icon} className="h-[22px] w-[22px]" />
-        </span>
-        <span className="min-w-0">
-          <span className="block text-[11px] font-bold uppercase tracking-[0.14em] text-primary">
-            Featured route
-          </span>
-          <span className="block truncate font-display text-[17px] font-bold text-foreground">
+      {/* 860px, not a Tailwind breakpoint: that is where `.nb-panel` turns its
+          dividing rule from vertical to horizontal, and the columns have to
+          split on the same pixel or the rule ends up on the wrong edge. */}
+      <div className="grid min-[860px]:grid-cols-[1.3fr_1fr]">
+        <div className="nb-panel">
+          <p className="nb-slug">
+            route {n} / {slug}
+          </p>
+
+          <h3 className="mt-2 text-[clamp(1.3rem,1rem+1.1vw,1.85rem)] leading-[1.02]">
             {title}
-          </span>
-        </span>
-      </div>
+          </h3>
 
-      <p className="mt-4 text-sm leading-relaxed text-foreground/70">{description}</p>
+          <p className="mt-3 max-w-[52ch] text-[0.97rem] leading-[1.5] text-graphite">
+            {description}
+          </p>
 
-      {/* the route: draw-in spine + stations */}
-      <div className="relative mt-6">
-        <motion.span
-          aria-hidden
-          className="absolute left-[15px] top-2 w-0.5 origin-top rounded-full"
-          style={{
-            height: "calc(100% - 16px)",
-            background: "linear-gradient(to bottom, #2560e6, #1aa9d6)",
-          }}
-          initial={{ scaleY: 0 }}
-          animate={{ scaleY: 1 }}
-          transition={
-            reduce ? { duration: 0 } : { duration: 1, ease: [0.21, 0.47, 0.32, 0.98], delay: 0.4 }
-          }
-        />
-        <ol className="relative space-y-3">
-          <li className="flex items-center gap-3">
-            <span className="relative z-10 flex h-8 w-8 flex-none items-center justify-center rounded-lg bg-primary/12 text-primary ring-1 ring-primary/20">
-              <MapPin className="h-4 w-4" aria-hidden />
+          <div className="nb-hair mt-auto flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2 pt-4">
+            <span className="flex flex-wrap items-baseline gap-x-5 gap-y-1">
+              <span className="nb-count">
+                {stops.length}
+                <small>stops</small>
+              </span>
+              <span className="nb-count">
+                {outcomeCount}
+                <small>skills</small>
+              </span>
             </span>
-            <span className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-              Start
+            <span className="nb-slug border-b-2 border-transparent font-bold text-ink group-hover:border-blue group-hover:text-blue">
+              open the route
             </span>
-          </li>
-          {stations.map((s, i) => (
-            <motion.li
-              key={s.deptSlug + i}
-              className="flex items-center gap-3"
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={
-                reduce
-                  ? { duration: 0 }
-                  : { type: "spring", stiffness: 260, damping: 26, delay: 0.55 + i * 0.08 }
-              }
-            >
-              <span
-                className="relative z-10 flex h-8 w-8 flex-none items-center justify-center rounded-lg ring-1 ring-white/70"
-                style={
-                  {
-                    background: `color-mix(in srgb, ${s.color} 20%, #fff)`,
-                    color: s.ink,
-                    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.85)",
-                  } as CSSProperties
-                }
+          </div>
+        </div>
+
+        <div className="nb-panel">
+          <p className="nb-slug">where it goes</p>
+          <ol className="mt-2.5">
+            {stops.map((stop, i) => (
+              <li
+                key={stop.deptSlug + i}
+                className="flex items-baseline gap-3 border-b border-dashed border-rule py-2 last:border-b-0 last:pb-0"
               >
-                <Icon name={s.icon} className="h-4 w-4" />
-              </span>
-              <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
-                {s.label}
-              </span>
-              <span
-                aria-hidden
-                className="flex-none text-xs font-semibold tabular-nums text-muted-foreground"
-              >
-                {String(i + 1).padStart(2, "0")}
-              </span>
-            </motion.li>
-          ))}
-          <li className="flex items-center gap-3">
-            <span className="relative z-10 flex h-8 w-8 flex-none items-center justify-center rounded-lg bg-primary/12 text-primary ring-1 ring-primary/20">
-              <Flag className="h-4 w-4" aria-hidden />
-            </span>
-            <span className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-              Season-ready
-            </span>
-          </li>
-        </ol>
+                <span className="nb-slug shrink-0 font-bold text-blue">
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-[0.92rem] font-semibold leading-snug">
+                    {stop.label}
+                  </span>
+                  <span className="nb-slug block">dept / {stop.deptSlug}</span>
+                </span>
+              </li>
+            ))}
+          </ol>
+        </div>
       </div>
-
-      <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-border/70 pt-4">
-        <span className="text-xs text-muted-foreground">
-          <span className="font-semibold tabular-nums text-foreground">
-            <AnimatedCounter value={stations.length} />
-          </span>{" "}
-          stops ·{" "}
-          <span className="font-semibold tabular-nums text-foreground">
-            <AnimatedCounter value={outcomeCount} />
-          </span>{" "}
-          outcomes
-        </span>
-        <Link href={`/paths/${slug}`} className="ac-btn text-xs">
-          Start route <ArrowRight className="h-3.5 w-3.5" aria-hidden />
-        </Link>
-      </div>
-    </motion.div>
+    </Link>
   );
 }
