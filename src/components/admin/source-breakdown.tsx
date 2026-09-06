@@ -57,11 +57,14 @@ export function SourceBreakdown({
   userAllTime,
   visitorWeek,
   visitorAllTime,
+  visitorTotal,
 }: {
   userWeek: Series;
   userAllTime: Series;
   visitorWeek: Series;
   visitorAllTime: Series;
+  /** Real unique visitors; the visitor rows overlap and cannot be summed. */
+  visitorTotal?: number;
 }) {
   const [metric, setMetric] = React.useState<Metric>("visitors");
   const [range, setRange] = React.useState<Range>("7d");
@@ -112,7 +115,11 @@ export function SourceBreakdown({
             : `No ${noun} attributed to a source yet.`}
         </p>
       ) : (
-        <SourceChart data={data} noun={noun} />
+        <SourceChart
+          data={data}
+          noun={noun}
+          authoritativeTotal={noun === "visitors" ? visitorTotal : undefined}
+        />
       )}
     </div>
   );

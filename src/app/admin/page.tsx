@@ -572,6 +572,7 @@ export default async function AdminPage() {
               userAllTime={stats.sources}
               visitorWeek={stats.visitorSources7d}
               visitorAllTime={stats.visitorSources}
+              visitorTotal={stats.uniqueVisitors}
             />
             {/* The two halves of this control do NOT cover the same span, and
                 the toggle says "All-time" for both. Users come from

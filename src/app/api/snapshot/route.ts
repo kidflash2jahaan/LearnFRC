@@ -28,6 +28,25 @@ export const maxDuration = 60;
 const VERCEL_API = "https://api.vercel.com/v1/query/web-analytics";
 
 type MonthRow = { timestamp: string; visitors: number; pageviews: number };
+type DimRow = Record<string, string | number>;
+
+/**
+ * The dimensions worth keeping. Every one was probed against this project;
+ * anything absent here is absent because the API rejects it (referrerUrl,
+ * hostname, httpStatus) or the plan refuses it (every utm* field, 402).
+ */
+const DIMENSIONS = [
+  "referrerHostname",
+  "country",
+  "deviceType",
+  "browserName",
+  "osName",
+  "route",
+  "requestPath",
+] as const;
+
+/** Hard cap from the API: `limit` should be <= 100. */
+const DIM_LIMIT = 100;
 
 /** First day of the month, UTC, as YYYY-MM-DD. */
 function monthKey(iso: string): string {
@@ -39,6 +58,40 @@ function isClosed(monthStart: string, now: Date): boolean {
   const next = new Date(monthStart + "T00:00:00Z");
   next.setUTCMonth(next.getUTCMonth() + 1);
   return now >= next;
+}
+
+function creds() {
+  const token = process.env.VERCEL_ANALYTICS_TOKEN;
+  const projectId = process.env.VERCEL_PROJECT_ID;
+  const teamId = process.env.VERCEL_TEAM_ID;
+  return token && projectId ? { token, projectId, teamId } : null;
+}
+
+/** One month, exact bounds. `until` is INCLUSIVE, so it is the month's last day. */
+function monthBounds(monthStart: string) {
+  const end = new Date(monthStart + "T00:00:00Z");
+  end.setUTCMonth(end.getUTCMonth() + 1);
+  end.setUTCDate(0); // last day of the month we started in
+  return { since: monthStart, until: end.toISOString().slice(0, 10) };
+}
+
+async function vercelQuery(
+  kind: "count" | "aggregate",
+  params: Record<string, string>
+): Promise<Record<string, unknown> | null> {
+  const c = creds();
+  if (!c) return null;
+  const qs = new URLSearchParams({
+    projectId: c.projectId,
+    ...(c.teamId ? { teamId: c.teamId } : {}),
+    ...params,
+  });
+  const res = await fetch(`${VERCEL_API}/visits/${kind}?${qs}`, {
+    headers: { Authorization: `Bearer ${c.token}` },
+    cache: "no-store",
+  });
+  if (!res.ok) return null;
+  return (await res.json()) as Record<string, unknown>;
 }
 
 async function vercelMonths(): Promise<MonthRow[] | null> {
@@ -125,6 +178,83 @@ export async function GET(req: Request) {
     }
   }
 
+  // ---- 1b. bank each month's breakdowns -----------------------------------
+  // Rows are stored verbatim. A period total is NEVER derived by summing the
+  // visitors column across a dimension: one person who arrives via Google and
+  // again directly appears in both rows, which measured 3,464 against a real
+  // 3,025 for August. The authoritative total lives in traffic_months.
+  let dimRows = 0;
+  const checks: { month: string; dimension: string; delta: number }[] = [];
+
+  if (months) {
+    const { data: doneRows } = await supabase
+      .from("traffic_breakdowns")
+      .select("month, dimension")
+      .eq("is_final", true);
+    const done = new Set(
+      (doneRows ?? []).map((r) => `${r.month}|${r.dimension}`)
+    );
+
+    for (const m of months) {
+      const key = monthKey(String(m.timestamp));
+      if (m.pageviews === 0) continue;
+      const closed = isClosed(key, now);
+      const { since, until } = monthBounds(key);
+
+      const totalJson = await vercelQuery("count", { since, until });
+      const periodViews =
+        ((totalJson?.data as { pageviews?: number })?.pageviews ?? 0) | 0;
+
+      for (const dim of DIMENSIONS) {
+        if (done.has(`${key}|${dim}`)) continue;
+        const json = await vercelQuery("aggregate", {
+          since,
+          until,
+          by: dim,
+          limit: String(DIM_LIMIT),
+        });
+        const rows = (json?.data as DimRow[]) ?? [];
+        if (rows.length === 0) continue;
+
+        let summed = 0;
+        for (const r of rows) {
+          const value = String(r[dim] ?? "");
+          summed += Number(r.pageviews) || 0;
+          const { error } = await supabase.from("traffic_breakdowns").upsert(
+            {
+              month: key,
+              dimension: dim,
+              // Empty hostname is Vercel's direct traffic. Name it, so the
+              // row is not mistaken for a missing value later.
+              value: value === "" ? "(direct)" : value,
+              visitors: Number(r.visitors) || 0,
+              pageviews: Number(r.pageviews) || 0,
+              is_final: closed,
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: "month,dimension,value" }
+          );
+          if (!error) dimRows++;
+        }
+
+        // Keep the shortfall visible rather than letting it pass as data.
+        await supabase.from("traffic_month_checks").upsert(
+          {
+            month: key,
+            dimension: dim,
+            period_pageviews: periodViews,
+            summed_pageviews: summed,
+            delta: summed - periodViews,
+            checked_at: new Date().toISOString(),
+          },
+          { onConflict: "month,dimension" }
+        );
+        if (summed !== periodViews)
+          checks.push({ month: key, dimension: dim, delta: summed - periodViews });
+      }
+    }
+  }
+
   // ---- 2. the all-time total, summed from banked rows ---------------------
   const { data: ledger } = await supabase
     .from("traffic_months")
@@ -152,14 +282,26 @@ export async function GET(req: Request) {
     .select("team_number")
     .not("team_number", "is", null);
 
+  const { data: xpRows } = await supabase.from("profiles").select("xp");
+  const totalXp = (xpRows ?? []).reduce((a, r) => a + (r.xp ?? 0), 0);
+
   const database = {
     accounts: await count("profiles"),
+    accountsWithTeam: (teamRows ?? []).length,
+    distinctFrcTeams: new Set((teamRows ?? []).map((t) => t.team_number)).size,
     lessonCompletions: await count("lesson_progress", ["completed_at", ""]),
     lessonsPublished: await count("lessons"),
+    modules: await count("modules"),
     departments: await count("departments"),
     articles: await count("articles"),
     achievementsEarned: await count("user_achievements"),
-    distinctFrcTeams: new Set((teamRows ?? []).map((t) => t.team_number)).size,
+    bookmarks: await count("bookmarks"),
+    subscribers: await count("subscribers"),
+    feedback: await count("feedback"),
+    contentEdits: await count("content_edits"),
+    contentSubmissions: await count("content_submissions"),
+    guestProgressRows: await count("guest_progress"),
+    totalXp,
   };
 
   const traffic = {
@@ -177,6 +319,8 @@ export async function GET(req: Request) {
     ok: true,
     capturedOn: today,
     banked,
+    breakdownRows: dimRows,
+    reconciliationGaps: checks.length,
     skippedFinal: skipped,
     monthsOnRecord: (ledger ?? []).length,
     allTime,

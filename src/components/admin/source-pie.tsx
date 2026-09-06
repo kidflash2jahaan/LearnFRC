@@ -54,15 +54,30 @@ export function SourceChart({
   data,
   /** What is being counted, printed under the total. */
   noun,
+  /**
+   * The real total, when the rows CANNOT be summed to get one.
+   *
+   * Signups have exactly one source each, so adding those rows is right. A
+   * visitor does not: someone who arrives direct on Monday and from Google on
+   * Friday is one visitor but appears in both rows. Adding them gave 10,637
+   * against a true 8,937, a 19% overcount presented as a headline figure.
+   *
+   * Row shares still divide by the row sum, which is the correct denominator
+   * for "share of attributed traffic". Only the headline changes.
+   */
+  authoritativeTotal,
 }: {
   data: { name: string; count: number }[];
   noun: string;
+  authoritativeTotal?: number;
 }) {
-  const total = data.reduce((s, d) => s + d.count, 0) || 1;
+  const rowSum = data.reduce((s, d) => s + d.count, 0) || 1;
+  const total = authoritativeTotal ?? rowSum;
+  const overlaps = authoritativeTotal != null && rowSum > authoritativeTotal;
 
   const segs = data.map((d, i) => ({
     ...d,
-    pct: (d.count / total) * 100,
+    pct: (d.count / rowSum) * 100,
     fill: FILLS[i % FILLS.length],
   }));
 
@@ -79,7 +94,7 @@ export function SourceChart({
           {
             name: `${hidden.length} more`,
             count: hiddenCount,
-            pct: (hiddenCount / total) * 100,
+            pct: (hiddenCount / rowSum) * 100,
             fill: TAIL_FILL,
           },
         ]
@@ -93,6 +108,14 @@ export function SourceChart({
         </b>
         <span className="nb-slug">{noun} attributed</span>
       </p>
+
+      {overlaps ? (
+        <p className="mt-1 text-[0.78rem] leading-snug text-graphite">
+          Rows below add up to more than this. One person can arrive from two
+          sources in the same period and is counted under each, so the shares
+          are honest but their sum is not a headcount.
+        </p>
+      ) : null}
 
       {/* The band. Decoration for the legend below, so it is hidden from the
           accessibility tree rather than given a label that would read out the
