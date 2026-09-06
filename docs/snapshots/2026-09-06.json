@@ -1,0 +1,43 @@
+{
+  "capturedAt": "2026-09-06T22:47:58.216Z",
+  "window": {
+    "since": "2025-09-06",
+    "until": "2026-09-06"
+  },
+  "traffic": {
+    "visitors": 8936,
+    "pageviews": 43985
+  },
+  "byMonth": [
+    {
+      "timestamp": "2026-06-01T00:00:00.000Z",
+      "visitors": 688,
+      "pageviews": 4526
+    },
+    {
+      "timestamp": "2026-07-01T00:00:00.000Z",
+      "visitors": 4471,
+      "pageviews": 20924
+    },
+    {
+      "timestamp": "2026-08-01T00:00:00.000Z",
+      "visitors": 3025,
+      "pageviews": 13368
+    },
+    {
+      "timestamp": "2026-09-01T00:00:00.000Z",
+      "visitors": 752,
+      "pageviews": 5167
+    }
+  ],
+  "database": {
+    "accounts": 491,
+    "lessonsPublished": 394,
+    "departments": 11,
+    "articles": 103,
+    "lessonCompletions": 5700,
+    "achievementsEarned": 738,
+    "bookmarks": 25,
+    "distinctFrcTeams": 174
+  }
+}
