@@ -173,7 +173,7 @@ export const GLOSSARY: GlossaryTerm[] = [
     category: "General",
     definition:
       "A team in its first year of FRC competition; rookies have access to special grants and awards.",
-    link: "https://www.firstinspires.org/robotics/frc/team-resources",
+    link: "https://www.firstinspires.org/resource-library",
     inMatch:
       "Rookie status is a real, time-limited asset. Your first year carries the Rookie All-Star and Highest Rookie Seed awards, rookie grants, and veteran teams who will genuinely stop what they are doing to help you in the pit. It also means nobody expects you to win — so spend the year on a drivetrain that survives every match and a team that comes back next season.",
     lessonCues: ["rookie", "new team", "registration"],
@@ -320,7 +320,7 @@ export const GLOSSARY: GlossaryTerm[] = [
     category: "Competition & Game",
     definition:
       "A regional model where teams earn points across multiple events to qualify for their District Championship.",
-    link: "https://www.firstinspires.org/resource-library/frc/the-first-district-model",
+    link: "https://www.firstinspires.org/robotics/frc",
     inMatch:
       "The district model spreads the risk: you play two events, earn points for qualification finish, playoff result, and awards, and the sum decides whether you advance to your District Championship. Practically, that makes event one a legitimate place to learn — a rough first weekend is recoverable, and plenty of teams deliberately treat it as a debugging event.",
     alsoCalled: ["District event", "District points"],
@@ -333,7 +333,7 @@ export const GLOSSARY: GlossaryTerm[] = [
     category: "Competition & Game",
     definition:
       "The season-ending world championship (held in Houston) for teams that qualify through events and awards.",
-    link: "https://www.firstinspires.org/robotics/frc/championship",
+    link: "https://www.firstinspires.org/first-championship",
     inMatch:
       "Championship is the same game at a different level: every robot in your division already won something. The real differences are logistical — getting the robot there, a much larger pit to navigate, fields running on a tighter schedule — plus the fact that a season of regional scouting data is largely useless against teams you have never seen play.",
     alsoCalled: ["Champs", "World Championship", "Einstein"],
@@ -494,7 +494,7 @@ export const GLOSSARY: GlossaryTerm[] = [
     category: "Electrical",
     definition:
       "REV's power distribution board that feeds and protects the robot's circuits; the successor to the CTRE PDP.",
-    link: "https://docs.revrobotics.com/rev-11-1850",
+    link: "https://docs.revrobotics.com/ion-control/pdh/overview",
     internalLink: "/blog/frc-pdh-power-distribution-hub",
     inMatch:
       "The PDH is where every wire on the robot comes from. You meet it while wiring — matching breaker sizes to wire gauge, keeping high-current mechanisms on the 40-amp channels — and again at competition, where its per-channel current logging tells you which mechanism actually caused the brownout. Its switchable channel is also the usual home for the radio power module.",
@@ -803,7 +803,7 @@ export const GLOSSARY: GlossaryTerm[] = [
     category: "Awards",
     definition:
       "FRC's most prestigious award (formerly the Chairman's Award), honoring the team that best embodies FIRST's mission and impact.",
-    link: "https://www.firstinspires.org/resource-library/frc/awards",
+    link: "https://www.firstinspires.org/robotics/frc/awards",
     internalLink: "/blog/how-to-win-the-impact-award",
     inMatch:
       "The Impact Award is judged on evidence, not enthusiasm. Concretely that means a documented multi-year record of starting teams, running events, and measurable community reach, plus an executive summary, a documentation form, and a presentation your students deliver without notes. It is also the only award that advances a team to Championship on merit rather than on robot performance.",
@@ -817,7 +817,7 @@ export const GLOSSARY: GlossaryTerm[] = [
     category: "Awards",
     definition:
       "Recognizes an outstanding mentor who exemplifies excellence in communication and teaching within FRC.",
-    link: "https://www.firstinspires.org/resource-library/frc/awards",
+    link: "https://www.firstinspires.org/robotics/frc/awards",
     inMatch:
       "WFFA is nominated by students, in an essay, about one specific mentor — and the essays that win are full of concrete moments rather than adjectives. Practically, that means somebody on your team has to start noticing in October what a mentor actually does, because a good nomination cannot be reconstructed from memory in the week it is due.",
     alsoCalled: ["Woodie Flowers Finalist Award", "WFFA"],
@@ -829,7 +829,7 @@ export const GLOSSARY: GlossaryTerm[] = [
     category: "Awards",
     definition:
       "Honors exceptional student leaders for their contributions and leadership within their team and community.",
-    link: "https://www.firstinspires.org/resource-library/frc/awards",
+    link: "https://www.firstinspires.org/robotics/frc/awards",
     inMatch:
       "Dean's List is a nomination your mentors submit for up to two sophomores or juniors, with a deadline weeks before your first event. Students who win it are usually the ones who took over something outright — a subsystem, the scouting system, the safety program — and can talk about it in a judged interview without a mentor in the room.",
     lessonCues: ["Dean's List", "Deans List", "student leadership"],
@@ -840,7 +840,7 @@ export const GLOSSARY: GlossaryTerm[] = [
     category: "Awards",
     definition:
       "The top award for a first-year team, recognizing a strong start that embodies FIRST's values.",
-    link: "https://www.firstinspires.org/resource-library/frc/awards",
+    link: "https://www.firstinspires.org/robotics/frc/awards",
     inMatch:
       "Rookie All-Star is the highest award a first-year team can win, and it advances the team — so it is worth understanding in September rather than March. Judges look for a rookie that already behaves like a programme: outreach started, sponsors thanked properly, safety taken seriously, and a robot the students can clearly explain because they built it themselves.",
     lessonCues: ["Rookie All-Star", "Rookie All Star"],

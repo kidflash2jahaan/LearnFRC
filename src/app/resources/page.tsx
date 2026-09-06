@@ -67,8 +67,13 @@ const CURATED: Shelf[] = [
     links: [
       { title: "Onshape", url: "https://www.onshape.com" },
       {
-        title: "Onshape for FRC (FeatureScript/MKCad)",
-        url: "https://www.mkcad.com",
+        // MKCad was the FRC Onshape parts library for years and the name is
+        // still what mentors say out loud, but mkcad.com lapsed and now
+        // resolves to a domain-resale page. FRCDesign.org is the successor
+        // and carries the same library, so the link points there and the
+        // old name stays in the label for anyone searching for it.
+        title: "FRCDesign.org, the Onshape FRC parts library (formerly MKCad)",
+        url: "https://frcdesign.org",
       },
     ],
   },
