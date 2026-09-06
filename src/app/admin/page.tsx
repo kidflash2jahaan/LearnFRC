@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { getAdminStats, getPendingEdits, getPendingSubmissions } from "@/lib/admin";
+import { getAnalyticsAvailability } from "@/lib/vercel-analytics";
 import { getRetentionStats } from "@/lib/retention";
 import { getFunnelStats } from "@/lib/funnel";
 import { getFeedback } from "@/lib/feedback";
@@ -153,8 +154,12 @@ export default async function AdminPage() {
   // and got a ~100% activation rate out of rows that, by construction, exist
   // only for people who had already completed a lesson. A reader who can see
   // "since Jul 22" cannot make that mistake twice.
-  const viewsSince = utcDay(stats.analytics.viewsSince);
-  const visitorsSince = utcDay(stats.analytics.visitorsSince);
+  // Year included on purpose: the Vercel window opens 366 days back, so a
+  // bare "Sep 6" reads as TODAY and makes a year of page views look like one
+  // day's traffic. That is the exact misreading this block exists to stop.
+  const analyticsAvailability = getAnalyticsAvailability();
+  const viewsSince = utcDay(stats.analytics.viewsSince, true);
+  const visitorsSince = utcDay(stats.analytics.visitorsSince, true);
   const coverageParts: string[] = [];
   if (viewsSince) coverageParts.push(`Page views measured since ${viewsSince}`);
   if (visitorsSince)
@@ -388,6 +393,17 @@ export default async function AdminPage() {
           </div>
         </div>
       </section>
+
+      {!analyticsAvailability.configured ? (
+        <div className="nb-wrap mt-6">
+          <div className="nb-note max-w-[70ch]">
+            <p className="nb-slug">traffic panels are not measuring</p>
+            <p className="mt-2 text-[0.88rem] leading-relaxed text-graphite">
+              {analyticsAvailability.message}
+            </p>
+          </div>
+        </div>
+      ) : null}
 
       {coverageNote ? (
         <div className="nb-wrap mt-6">

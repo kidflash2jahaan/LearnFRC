@@ -43,7 +43,8 @@ function useDeptCounts(lessonIds: string[]) {
  * Records the `lesson_opened` funnel milestone.
  *
  * This is the step nothing in the database has ever been able to answer:
- * page_views carries no user id, so "did this account ever open a lesson?" was
+ * pageview data carries no user id, in the retired page_views table or in
+ * Vercel, so "did this account ever open a lesson?" was
  * unanswerable and the funnel had to assume everyone who OPENED one also
  * finished it. That assumption is what hid the 45% who never complete anything.
  *

@@ -78,18 +78,16 @@ function classify(l: Landing): string | null {
 /**
  * Write the first-touch acquisition cookie if it is not already there.
  *
- * Idempotent, and SYNCHRONOUS, which is the property that matters.
- * <PageViewBeacon/> calls this immediately before it reports, so a new
- * visitor's very first pageview, the one that carries the acquisition source,
- * already has lf_src in the jar. document.cookie is applied to the cookie store
- * synchronously, so a sendBeacon or fetch later in the same task includes it.
+ * Idempotent, and SYNCHRONOUS, which is the property that matters:
+ * document.cookie is applied to the cookie store immediately, so any request
+ * made later in the same task already carries lf_src.
  *
- * Before this function existed the cookie was only written from
- * <SourceCapture/>'s effect. React flushes sibling passive effects in mount
- * order and the beacon was mounted first, so the first request of every new
- * visitor went out with no cookie and was stored with source NULL. That threw
- * away the acquisition source for roughly 12% of visitors, permanently for the
- * ~800 who only ever viewed one page.
+ * It exists as a standalone function because the old pageview beacon called it
+ * directly, right before reporting, rather than depending on <SourceCapture/>'s
+ * effect having run first. That beacon is gone (traffic is Vercel's job now),
+ * so <SourceCapture/> below is the only caller today. It stays a separate
+ * function anyway: the next thing that needs the cookie in the jar before it
+ * fires can call it without re-learning why mount order used to matter.
  */
 export function ensureSourceCookie(): void {
   if (typeof document === "undefined") return;
@@ -111,14 +109,12 @@ export function ensureSourceCookie(): void {
  *
  * On a visitor's first landing, with no cookie yet, it works out where they
  * came from, a referral link, a UTM tag, or the referring domain, and stores
- * that in a 90 day cookie. The signup action reads the cookie and saves it as
- * the account's source, and /api/page-view reads it off the request to
- * attribute traffic. Both feed the admin breakdown.
- *
- * The work lives in ensureSourceCookie() so the pageview beacon can call it
- * directly instead of depending on this component's effect having run first.
- * Keeping the component mounted still covers the routes where the beacon bails
- * out early, like /admin.
+ * that in a 90 day cookie. The signup action (src/app/actions/auth.ts) reads
+ * the cookie off the request and stores it on the new profile row, which is
+ * where the admin panel's signup-source breakdown and referral credit come
+ * from. Still load-bearing, and independent of traffic measurement: it never
+ * read or wrote the pageview table, so moving traffic to Vercel does not touch
+ * it. Deleting this component silently destroys referral attribution.
  */
 export function SourceCapture() {
   React.useEffect(() => {

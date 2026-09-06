@@ -7,7 +7,6 @@ import { Footer } from "@/components/footer";
 import { ScrollProgress } from "@/components/scroll-progress";
 import { JsonLd } from "@/components/json-ld";
 import { PresenceBeacon } from "@/components/presence-beacon";
-import { PageViewBeacon } from "@/components/page-view-beacon";
 import { SourceCapture } from "@/components/source-capture";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
@@ -195,13 +194,12 @@ export default function RootLayout({
         <Analytics />
         <SpeedInsights />
         <PresenceBeacon />
-        {/* SourceCapture must stay ahead of PageViewBeacon: React flushes
-            sibling passive effects in mount order, and the beacon's request is
-            what carries the lf_src cookie to /api/page-view. The beacon also
-            calls ensureSourceCookie() itself, so correctness no longer *depends*
-            on this order, but keeping it makes the dependency legible. */}
+        {/* First-touch acquisition cookie (lf_src). Still load-bearing: the
+            signup action reads the cookie off the request and stores it on the
+            profile, which is where referral credit comes from. It never touched
+            the pageview beacon's table, so it is unaffected by traffic moving
+            to Vercel. <Analytics/> above is what counts pageviews now. */}
         <SourceCapture />
-        <PageViewBeacon />
       </body>
     </html>
   );

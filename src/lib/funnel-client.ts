@@ -7,8 +7,9 @@ import { getVisitorId } from "@/lib/guest-progress";
  * src/lib/funnel.ts is `server-only`; this is the piece the client is allowed to
  * hold. It exists because the two steps the funnel was built to answer —
  * "opened a lesson" and "attempted a quiz" — leave NO trace in the schema.
- * Nothing in page_views carries a user id, and quiz grading is pure client
- * state, so until this file had a caller those rows were a floor (= everyone who
+ * No pageview data carries a user id, not in the retired page_views table and
+ * not in Vercel, and quiz grading is pure client state, so until this file had
+ * a caller those rows were a floor (= everyone who
  * finished a lesson) rather than a measurement, and the 45% who never complete
  * anything were invisible between signup and completion.
  *
@@ -94,8 +95,9 @@ export function sendFunnelEvent(step: ClientFunnelStep): void {
   };
 
   try {
-    // keepalive fetch FIRST, unlike page-view-beacon.tsx, which leads with
-    // sendBeacon. Both survive an unload, but sendBeacon reports only "queued"
+    // keepalive fetch FIRST, rather than leading with sendBeacon the way the
+    // site's other beacons do. Both survive an unload, but sendBeacon reports
+    // only "queued"
     // and can never tell us the server said no. These fire on mount and on
     // click rather than during unload, so the ordering costs nothing and buys
     // the visibility the paragraph above depends on.

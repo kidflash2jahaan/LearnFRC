@@ -6,7 +6,8 @@
  *
  *   1. `localStorage["lf_guest_lessons"]` — instant, offline, survives reloads.
  *   2. `guest_progress` on the server, keyed to the anonymous visitor id
- *      (`lf_vid`, the same id the pageview beacon uses). Written by
+ *      (`lf_vid`, created here on first use, also the subject key the funnel
+ *      events use for logged-out readers). Written by
  *      POST /api/guest-progress, read back by GET /api/guest-progress.
  *
  * The SERVER copy is the one that migrates into a real account at signup

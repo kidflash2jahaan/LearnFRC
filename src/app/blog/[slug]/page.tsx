@@ -9,7 +9,6 @@ import { Provenance, extractLinkedReferences } from "@/components/lesson/provena
 import { JsonLd } from "@/components/json-ld";
 import { parseFaqs } from "@/lib/faq";
 import { ShareButton } from "@/components/share-button";
-import { ArticleViewBeacon } from "@/components/article-view-beacon";
 import { ArticleSignupHook } from "@/components/blog/article-signup-hook";
 import { ArticleNextStep } from "@/components/blog/article-next-step";
 import { Reveal } from "@/components/motion/primitives";
@@ -103,7 +102,6 @@ export default async function ArticlePage({
 
   return (
     <article>
-      <ArticleViewBeacon slug={a.slug} />
       <JsonLd data={jsonLd} />
       <JsonLd
         data={{

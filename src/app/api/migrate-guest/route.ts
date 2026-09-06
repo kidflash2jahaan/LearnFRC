@@ -143,11 +143,12 @@ export async function POST(req: Request) {
 
   // THREAT MODEL for this unbound visitorId, reviewed 2026-08-10 and accepted.
   // Nothing cryptographically ties this id to the caller: it is a client side
-  // crypto.randomUUID() kept in localStorage, see page-view-beacon.tsx, so in
+  // crypto.randomUUID() kept in localStorage, see src/lib/guest-progress.ts,
+  // so in
   // principle a signed-in user could post somebody else's id and claim their
   // guest completions. Three things make that unreachable in practice.
   //   1. Visitor ids cannot be enumerated. RLS returns [] to anon and to
-  //      ordinary authenticated reads of both page_views and guest_progress, so
+  //      ordinary authenticated reads of guest_progress, so
   //      the id never leaves the owner's browser.
   //   2. Guessing is infeasible: a v4 UUID against the 30 per hour limit below.
   //   3. The payoff is a handful of free lesson completions, which any visitor

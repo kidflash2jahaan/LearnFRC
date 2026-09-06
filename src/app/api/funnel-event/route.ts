@@ -8,10 +8,9 @@ export const dynamic = "force-dynamic";
 /**
  * Marks one activation-funnel milestone.
  *
- * Deliberately shaped exactly like /api/page-view: anonymous body, per IP rate
- * limit, service role insert, 204 whatever happens. That endpoint is already
- * proven in production, and adding a second, different analytics shape is how
- * instrumentation rots.
+ * The house shape for a write-only beacon endpoint: anonymous body, per IP
+ * rate limit, service role insert, 204 whatever happens. Adding a second,
+ * different analytics shape is how instrumentation rots.
  *
  * What it stores: the step, ONE subject key, and a timestamp. Nothing else. No
  * path, no IP, no user agent, no referrer. The subject is the authenticated
@@ -50,11 +49,10 @@ export async function POST(req: Request) {
       ? body.visitorId
       : null;
 
-  // Same budget and window as /api/page-view. Funnel events are a strict subset
-  // of the actions that already fire a pageview, at most one per lesson page
-  // view plus a handful of once-ever milestones, so a bucket that is not
-  // currently dropping pageviews cannot drop these either. It is per IP, so a
-  // whole team behind one school NAT shares it.
+  // 600 an hour, which was sized against real pageview volume: at most one
+  // funnel event per lesson page view plus a handful of once-ever milestones,
+  // so a reader browsing normally comes nowhere near it. It is per IP, so a
+  // whole team behind one school NAT shares the bucket.
   const ok = await rateLimit("funnel-event", 600, 3600);
   if (!ok) return new NextResponse(null, { status: 204 });
 

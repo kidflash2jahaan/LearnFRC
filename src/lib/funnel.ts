@@ -18,8 +18,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
  *    never both on the same row — so this table never becomes the join that
  *    links a person's account to their pre-signup browsing.
  *  - events cascade-delete with the auth user.
- *  - no third-party analytics, no new dependency: this is the same
- *    service-role-insert + per-IP rateLimit() shape as /api/page-view.
+ *  - no third-party analytics, no new dependency: an anonymous body, a per
+ *    IP rateLimit(), a service-role insert, and a 204 whatever happens.
  */
 
 /* ------------------------------------------------------------------ */
@@ -88,7 +88,7 @@ const STEP_META: Record<
     label: "Opened a lesson",
     base: "signup",
     baseLabel: "signups",
-    derivedExact: false, // page_views has no user_id — nothing can answer this
+    derivedExact: false, // no pageview data carries a user id, so nothing can answer this
   },
   quiz_attempted: {
     label: "Attempted a quiz",

@@ -1,6 +1,48 @@
+/**
+ * THE ADMIN PANEL'S NUMBERS, AND WHERE EACH ONE COMES FROM
+ *
+ * Two sources, split on one line: Vercel measures traffic, the database holds
+ * application facts.
+ *
+ *  - TRAFFIC comes from Vercel Web Analytics, through
+ *    `src/lib/vercel-analytics.ts`: page views, unique visitors, the daily
+ *    views and visitors series, referrers, per-article reads, guide reads.
+ *    The homegrown `page_views` beacon that used to answer those questions is
+ *    retired and nothing writes that table any more, so reading it here would
+ *    print a frozen number that quietly ages. Vercel is also the better
+ *    measure: it counts readers who never reach our own JavaScript.
+ *  - EVERYTHING ELSE stays on Supabase, because Vercel cannot answer it.
+ *    Accounts, signups, activation, retention, completions, XP, bookmarks,
+ *    achievements, teams, referrals, feedback, edits, submissions, presence,
+ *    the funnel. Anything joined to a user id is a database question by
+ *    definition, and Vercel holds no user ids.
+ *
+ * The two are never added together and no figure here is half of each.
+ * `daily` is the single row carrying both, and it keeps them in separate
+ * keys: signups and completions from Postgres, views and visitors from
+ * Vercel, on one shared day axis.
+ *
+ * WHEN VERCEL CANNOT ANSWER
+ * Every traffic query is independent, and none of them can throw: the client
+ * returns a typed failure instead of rejecting. A revoked token, a spent rate
+ * limit or an unset env var therefore costs that one figure and never the
+ * page, every database number still renders, and `analytics.viewsSince` goes
+ * null so the panel stops claiming a coverage window it cannot back. A zero
+ * that arrives that way is a placeholder, not a measurement.
+ */
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getArticles } from "@/lib/queries";
+import {
+  getReferrerBreakdown,
+  getTrafficBreakdown,
+  getTrafficSeries,
+  getTrafficTotals,
+  trafficWindow,
+  type AnalyticsResult,
+  type FilterClause,
+  type ReferrerBreakdown,
+} from "@/lib/vercel-analytics";
 
 /** A row from the `admin_department_stats` view. */
 export type DepartmentStat = {
@@ -47,38 +89,51 @@ export type ReferralSurfaceStat = {
 };
 
 /**
- * What the pageview-derived numbers actually cover.
+ * What the traffic figures actually cover.
  *
- * `page_views` holds three eras, and reading across them without saying so is
- * how a 100%-activation illusion got into a growth analysis:
+ * This used to describe three eras of the `page_views` table, one of them 992
+ * synthetic rows reconstructed from lesson completions, which is how a
+ * 100%-activation illusion once got into a growth analysis. That table is
+ * retired and none of it applies now, so these fields say something simpler:
+ * the window Vercel was asked about.
  *
- *  1. 2026-06-19..07-03 — 992 SYNTHETIC rows (`source = 'backfill'`,
- *     `visitor = 'seed:<user_id>'`) reconstructed from `lesson_progress`. They
- *     exist ONLY for people who completed a lesson, so any funnel over them
- *     reads ~100% by construction. Kept in the table (they are honestly
- *     labelled and may stand in for real pre-beacon activity) but excluded
- *     from every figure here; the size and span come back as `backfill*` so
- *     the panel can show them as their own line instead of summing them in.
- *  2. 07-03..07-22 — real traffic, but `visitor` is NULL on every row. Fine as
- *     raw view counts, useless per-person. Needs no filter (`count(distinct)`
- *     ignores NULLs) — it is a COVERAGE fact, which is what `visitorsSince`
- *     starting later than `viewsSince` records.
- *  3. 07-22 onward — real traffic with real visitor ids.
+ * The caveat still worth printing is that "all time" is not forever. This plan
+ * keeps 366 days, so the standing totals are a rolling window that will one
+ * day start dropping its oldest days off the back. `viewsSince` is where that
+ * window begins, and it is null when Vercel could not be reached at all, which
+ * is the difference between a measured zero and an unanswered question.
  */
 export type AnalyticsCoverage = {
-  /** First measured pageview of any kind — raw view counts start here. */
+  /**
+   * Start of the Vercel window every all-time traffic figure covers. Null when
+   * the query failed or no token is configured, so the panel can drop the
+   * coverage line rather than date a number nobody measured.
+   */
   viewsSince: string | null;
-  /** First measured pageview carrying a visitor id — per-person counts start here. */
+  /**
+   * Null, always, and that means "no such boundary exists". The old beacon
+   * counted views for three weeks before it started sending visitor ids, so
+   * per-person numbers legitimately began later than raw ones. Vercel
+   * identifies every visit it records, so unique visitors cover exactly the
+   * window above and there is no second date to print.
+   */
   visitorsSince: string | null;
-  /** Synthetic rows held out of every number above. */
+  /** Zero. The synthetic rows lived in `page_views`, which nothing reads now. */
   backfillViews: number;
-  /** `seed:` pseudo-visitors held out of every per-visitor number above. */
+  /** Zero, same reason: nothing reaching this panel is reconstructed. */
   backfillVisitors: number;
   backfillFrom: string | null;
   backfillTo: string | null;
 };
 
-/** One calendar day of activity for the chart. */
+/**
+ * One calendar day of activity for the chart, on a UTC day axis.
+ *
+ * Two sources on one row, never mixed: `signups` and `completions` are counted
+ * in Postgres, `views` and `visitors` are Vercel's day buckets. `visitors` is
+ * distinct visitors WITHIN the day, so the series must not be summed to get a
+ * window total (the chart's legend figures are true window counts instead).
+ */
 export type DailyPoint = {
   day: string; // YYYY-MM-DD
   signups: number;
@@ -125,31 +180,38 @@ export type AdminStats = {
    */
   referralSurfaces: ReferralSurfaceStat[];
   daily: DailyPoint[];
-  /** Combined blog-article views, all-time. */
+  /** Every measured view on the blog-article route, over the Vercel window. */
   articleViewsTotal: number;
-  /** Per-article view counts, most read first, incl. zero-view articles. */
+  /**
+   * Per-article view counts, most read first, incl. zero-view articles. Views
+   * are Vercel's, titles are the articles table's: Vercel only knows the path.
+   */
   articleViews: { slug: string; title: string; views: number }[];
-  /** Site-wide MEASURED pageviews (all pages), all-time. Excludes the backfill. */
+  /** Site-wide measured page views (all pages), over the Vercel window. */
   pageViewsTotal: number;
-  /** Distinct first-party visitor ids (unique visitors). Excludes the backfill. */
+  /** Unique visitors over the same window, as Vercel counts them. */
   uniqueVisitors: number;
   uniqueVisitors30d: number;
-  /** Provenance + coverage window for every pageview-derived number above. */
+  /** What window every traffic figure above covers, and whether it was measured. */
   analytics: AnalyticsCoverage;
   /** Most-completed lessons. */
   topLessons: { slug: string; title: string; completions: number }[];
-  /** Where UNIQUE VISITORS came from — first-touch source (all-time / last 7d). */
+  /**
+   * Where visitors came from, by referring host, folded (all-time / last 7d).
+   * Each search engine is one row rather than four, our own Google OAuth return
+   * leg is not a source, and neither are hops between our own domains.
+   */
   visitorSources: { name: string; count: number }[];
   visitorSources7d: { name: string; count: number }[];
   /** Guest (no-account) learning — completions + distinct learners. */
   guestCompletions: number;
   guestLearners: number;
-  /** All-time MEASURED views across every /guides page (backfill excluded). */
+  /** Measured views on guide lesson pages, over the Vercel window. */
   guideViewsTotal: number;
   /**
-   * Distinct people who viewed any guide (can't be summed per-dept). Covers
-   * `analytics.visitorsSince` onward — the backfill's 73 `seed:` guide
-   * "viewers" are excluded, and rows before visitor ids existed carry none.
+   * Distinct people behind those views, over the same window and the same
+   * filter, which is what makes the pair comparable. See `GUIDE_LESSON_ROUTE`
+   * for why the filter is the lesson route rather than the whole /guides tree.
    */
   guideViewersTotal: number;
 };
@@ -157,9 +219,120 @@ export type AdminStats = {
 /** Number of trailing calendar days rendered in the activity chart. */
 const DAILY_WINDOW = 30;
 
-/** Format a Date as a UTC `YYYY-MM-DD` key (matches the daily views). */
+/** The "last 7 days" half of the sources control. */
+const RECENT_WINDOW = 7;
+
+/**
+ * "All time", as far as this plan can see. Vercel keeps 366 days and refuses a
+ * wider window, so every standing total on this panel is really a rolling year.
+ * `analytics.viewsSince` prints where it starts, which is the only honest way
+ * to label a number called all-time that is not.
+ */
+const ALL_TIME_WINDOW = 366;
+
+/**
+ * Seconds a traffic answer stays cached. The API allows 400 requests an hour
+ * and one render of this panel is seven queries, so a continuously-watched
+ * admin page costs about 84 an hour at five minutes. It also keeps the window
+ * (and therefore the cache key) stable for exactly as long as the entry lives.
+ */
+const TRAFFIC_REVALIDATE = 300;
+
+/**
+ * Blog articles, by Next.js route pattern. Grouping by `requestPath` UNDER
+ * this filter is what makes the per-article list usable: Vercel names at most
+ * 100 values per dimension, and an unfiltered path breakdown would spend that
+ * budget on guides, tools and the home page long before it reached the
+ * articles. Filtered, every named row is an article.
+ */
+const BLOG_ARTICLE_ROUTE: FilterClause = {
+  dimension: "route",
+  op: "eq",
+  value: "/blog/[slug]",
+};
+
+/**
+ * Guide lesson pages. The /guides tree is four route patterns (the index, a
+ * department, a module, a lesson) and an OData filter here can only match one
+ * value at a time. Views across the four could be added up, but DISTINCT
+ * VISITORS could not: a reader who opened the index and then a lesson is one
+ * person in two rows. Since `guideViewsTotal` and `guideViewersTotal` are
+ * printed next to each other, both come from this single filter so they
+ * describe one population. The index pages are navigation; a lesson page is
+ * the guide.
+ */
+const GUIDE_LESSON_ROUTE: FilterClause = {
+  dimension: "route",
+  op: "eq",
+  value: "/guides/[department]/[module]/[lesson]",
+};
+
+/** Named referrer rows kept before the rest folds into one remainder. */
+const SOURCE_ROWS = 12;
+
+/** Vercel names at most 100 values per dimension; keep all of them. */
+const ARTICLE_ROWS = 100;
+
+/** Format a Date as a UTC `YYYY-MM-DD` key (matches Vercel's day buckets). */
 function dayKey(d: Date): string {
   return d.toISOString().slice(0, 10);
+}
+
+/**
+ * Attaches a rejection handler the moment a traffic query starts.
+ *
+ * The client answers with a typed failure rather than throwing, so this should
+ * never fire. It exists because these promises are created before the database
+ * batch is awaited: an unexpected rejection with no handler yet attached would
+ * take down the whole render, and one unreachable analytics API must never
+ * cost the panel its database figures.
+ */
+function guard<T>(
+  promise: Promise<AnalyticsResult<T>>
+): Promise<AnalyticsResult<T> | null> {
+  return promise.catch(() => null);
+}
+
+/** The data when the query answered, null when it did not. */
+function measured<T>(result: AnalyticsResult<T> | null): T | null {
+  return result && result.ok ? result.data : null;
+}
+
+/**
+ * `/blog/a-slug/?utm=x` to `/blog/a-slug`, so one article cannot be split
+ * across two rows by a trailing slash or a tracking parameter.
+ */
+function normalizePath(raw: string): string {
+  const path = raw.split(/[?#]/, 1)[0] ?? raw;
+  return path.length > 1 && path.endsWith("/") ? path.slice(0, -1) : path;
+}
+
+/**
+ * A folded referrer breakdown, in the `{ name, count }` shape the acquisition
+ * chart takes.
+ *
+ * Direct traffic is a row, because "typed the URL or came from a bookmark" is
+ * a real answer to where people come from and dropping it would make every
+ * other share look bigger than it is. The two hops that are NOT acquisition
+ * stay out: `accounts.google.com` is our own Google sign-in round trip coming
+ * back, and a referral from one of our own domains is a reader moving around
+ * inside the site. The client's fold has already merged cn.bing.com into Bing
+ * and noai.duckduckgo.com into DuckDuckGo, so search is not split four ways.
+ */
+function toVisitorSources(
+  breakdown: ReferrerBreakdown | null
+): { name: string; count: number }[] {
+  if (!breakdown) return [];
+
+  const rows = breakdown.rows.map((r) => ({ name: r.label, count: r.visitors }));
+  if (breakdown.direct.visitors > 0) {
+    rows.push({ name: "Direct", count: breakdown.direct.visitors });
+  }
+  if (breakdown.other && breakdown.other.visitors > 0) {
+    rows.push({ name: "Everything else", count: breakdown.other.visitors });
+  }
+
+  return rows.filter((r) => r.count > 0).sort((a, b) => b.count - a.count);
 }
 
 /**
@@ -178,6 +351,39 @@ export async function getAdminStats(): Promise<AdminStats> {
 
   const countOf = (rows: { count: number | null }) => rows.count ?? 0;
 
+  // ── Traffic, from Vercel ──────────────────────────────────────────
+  // Started here, before the database batch below is awaited, so the two sets
+  // of round trips overlap instead of queueing. `guard` attaches a rejection
+  // handler to each one immediately, which is what makes starting them early
+  // safe. All three windows are built once and passed as objects: every query
+  // then shares one `since`/`until` pair, so the numbers on the panel line up
+  // with each other and the cache keys stay stable between renders.
+  const allTime = trafficWindow(ALL_TIME_WINDOW, { revalidate: TRAFFIC_REVALIDATE });
+  const lastMonth = trafficWindow(DAILY_WINDOW, { revalidate: TRAFFIC_REVALIDATE });
+  const lastWeek = trafficWindow(RECENT_WINDOW, { revalidate: TRAFFIC_REVALIDATE });
+  const cached = { revalidate: TRAFFIC_REVALIDATE };
+
+  const trafficTotalsP = guard(getTrafficTotals({ ...cached, window: allTime }));
+  const traffic30dP = guard(getTrafficTotals({ ...cached, window: lastMonth }));
+  const trafficSeriesP = guard(getTrafficSeries({ ...cached, window: lastMonth }));
+  const sourcesAllP = guard(
+    getReferrerBreakdown({ ...cached, window: allTime, top: SOURCE_ROWS })
+  );
+  const sources7dP = guard(
+    getReferrerBreakdown({ ...cached, window: lastWeek, top: SOURCE_ROWS })
+  );
+  const articlePathsP = guard(
+    getTrafficBreakdown("requestPath", {
+      ...cached,
+      window: allTime,
+      filter: [BLOG_ARTICLE_ROUTE],
+      top: ARTICLE_ROWS,
+    })
+  );
+  const guideTrafficP = guard(
+    getTrafficTotals({ ...cached, window: allTime, filter: [GUIDE_LESSON_ROUTE] })
+  );
+
   const [
     usersRes,
     completionsRes,
@@ -191,13 +397,8 @@ export async function getAdminStats(): Promise<AdminStats> {
     recentRes,
     dailySignupsRes,
     dailyCompletionsRes,
-    articleViewsRes,
-    pageSummaryRes,
-    dailyPageViewsRes,
     topLessonsRes,
-    visitorSourcesRes,
     guestStatsRes,
-    guideViewsSummaryRes,
     referralSurfacesRes,
   ] = await Promise.all([
     supabase.from("profiles").select("*", { count: "exact", head: true }),
@@ -224,21 +425,11 @@ export async function getAdminStats(): Promise<AdminStats> {
       .limit(8),
     supabase.from("admin_daily_signups").select("day, count"),
     supabase.from("admin_daily_completions").select("day, count"),
-    // Aggregated in SQL (one row per slug) so we never fetch raw view rows.
-    supabase.rpc("article_view_counts"),
-    // Site-wide pageview aggregates — all computed SQL-side, and all reading
-    // `page_views_measured` rather than `page_views` so the reconstructed
-    // backfill (see AnalyticsCoverage) is excluded. This RPC also returns the
-    // held-back backfill totals and the coverage window, so the panel can state
-    // what each number covers instead of leaving it to be re-derived.
-    supabase.rpc("page_view_summary"),
-    supabase.rpc("page_views_daily", { days: DAILY_WINDOW }),
-    // Reads lesson_progress, NOT page_views — the backfill cannot reach it, so
-    // it is deliberately left unfiltered.
+    // Reads lesson_progress, which is a record of what people did, not of what
+    // was served. Vercel could rank the most-VIEWED lesson pages; only the
+    // database knows which lessons were finished.
     supabase.rpc("top_lessons", { lim: 8 }),
-    supabase.rpc("visitor_sources"),
     supabase.rpc("guest_progress_stats"),
-    supabase.from("admin_guide_views_summary").select("*"),
     // Referral signups per `?via=` surface — grouped SQL-side, and served by
     // profiles_referred_by_idx, so it reads only the referral rows.
     supabase.rpc("referral_surfaces"),
@@ -275,16 +466,36 @@ export async function getAdminStats(): Promise<AdminStats> {
   const completionsByDay = toMap(
     dailyCompletionsRes.data as { day: string | null; count: number | null }[]
   );
-  // page_views_daily returns (day, views) — build its own map.
-  const pageViewsByDay = new Map<string, number>();
+  // Every traffic answer, resolved together. They have been in flight since
+  // before the database batch above, so this waits on whichever is still out
+  // rather than on all seven.
+  const [
+    trafficTotalsRes,
+    traffic30dRes,
+    trafficSeriesRes,
+    sourcesAllRes,
+    sources7dRes,
+    articlePathsRes,
+    guideTrafficRes,
+  ] = await Promise.all([
+    trafficTotalsP,
+    traffic30dP,
+    trafficSeriesP,
+    sourcesAllP,
+    sources7dP,
+    articlePathsP,
+    guideTrafficP,
+  ]);
+
+  // Vercel's day buckets, keyed the same way the loop below reads them: a UTC
+  // `YYYY-MM-DD`. Vercel returns an explicit zero row for a quiet day rather
+  // than dropping it, so a gap here means the query failed, not that nobody
+  // came.
+  const viewsByDay = new Map<string, number>();
   const visitorsByDay = new Map<string, number>();
-  for (const r of (dailyPageViewsRes.data as
-    | { day: string | null; views: number | string | null; visitors: number | string | null }[]
-    | null) ?? []) {
-    if (!r.day) continue;
-    const k = String(r.day).slice(0, 10);
-    pageViewsByDay.set(k, Number(r.views ?? 0));
-    visitorsByDay.set(k, Number(r.visitors ?? 0));
+  for (const point of measured(trafficSeriesRes)?.points ?? []) {
+    viewsByDay.set(point.day, point.pageviews);
+    visitorsByDay.set(point.day, point.visitors);
   }
 
   // Last DAILY_WINDOW calendar days, oldest → newest, missing days filled with 0.
@@ -295,7 +506,7 @@ export async function getAdminStats(): Promise<AdminStats> {
       day: key,
       signups: signupsByDay.get(key) ?? 0,
       completions: completionsByDay.get(key) ?? 0,
-      views: pageViewsByDay.get(key) ?? 0,
+      views: viewsByDay.get(key) ?? 0,
       visitors: visitorsByDay.get(key) ?? 0,
     });
   }
@@ -429,16 +640,16 @@ export async function getAdminStats(): Promise<AdminStats> {
     .order("last_seen_at", { ascending: false });
   const onlineMembers = (onlineRes.data ?? []).length;
   // Anonymous/guest browsers active in the SAME 5-minute window used for the
-  // member count above — everyone (members included) fires the page-view
-  // beacon, so online_visitors is normally a superset of onlineMembers. Using
-  // one consistent window means the two counts can't disagree on their window;
-  // max() then just guarantees a floor (a member whose heartbeat landed without
-  // a beacon in the window still counts).
+  // member count above. This used to be a superset of onlineMembers, because
+  // everyone fired the page-view beacon; that beacon is retired, so the RPC
+  // reads a table nothing writes and now answers 0, leaving the signed-in
+  // heartbeat as the live number. The max() was always a floor, so the tile
+  // still reports what it says it reports rather than silently going empty.
   //
-  // online_visitors also excludes the backfill now. That changes nothing today
-  // — the synthetic rows are five weeks old and this window is five minutes —
-  // but it is a distinct-visitor count, and the next reconstruction script to
-  // stamp rows with now() would otherwise inflate a LIVE tile.
+  // Vercel cannot replace this one: it reports a window of days, not who is
+  // on the site right now, and presence is a database fact about members.
+  // Counting anonymous readers live again would need its own heartbeat, which
+  // is a product decision and not this file's to make.
   const onlineVisitorsRes = await supabase.rpc("online_visitors", { minutes: 5 });
   const onlineVisitors = Number((onlineVisitorsRes.data as number | null) ?? 0);
   const onlineNow = Math.max(onlineMembers, onlineVisitors);
@@ -501,50 +712,53 @@ export async function getAdminStats(): Promise<AdminStats> {
     signups7d: Number(r.signups_7d ?? 0),
   }));
 
-  // ── Blog-article views (from the SQL aggregate above) ─────────────
-  // Postgres bigints arrive as strings, so coerce everything through Number().
-  type AVRow = { slug: string; views: number | string; views_7d: number | string };
-  const avRows = (articleViewsRes.data as AVRow[] | null) ?? [];
-  const avMap = new Map(avRows.map((r) => [r.slug, r]));
+  // ── Blog-article views ────────────────────────────────────────────
+  // Vercel knows paths, not articles, so the path is the join key and the
+  // titles come from the articles table. Both halves are needed: Vercel cannot
+  // name an article and the database can no longer count a read.
+  //
+  // The breakdown is filtered to the `/blog/[slug]` route, which is what
+  // spends Vercel's 100-value naming budget on articles instead of on guides,
+  // tools and the home page.
+  const articlePaths = measured(articlePathsRes);
+  const viewsByPath = new Map<string, number>();
+  for (const row of articlePaths?.rows ?? []) {
+    const path = normalizePath(row.key);
+    viewsByPath.set(path, (viewsByPath.get(path) ?? 0) + row.pageviews);
+  }
   const allArticles = await getArticles();
-  const articleViews = allArticles.map((a) => ({
-    slug: a.slug,
-    title: a.title,
-    views: Number(avMap.get(a.slug)?.views ?? 0),
-  })).sort((x, y) => y.views - x.views);
-  const articleViewsTotal = avRows.reduce((s, r) => s + Number(r.views ?? 0), 0);
+  const articleViews = allArticles
+    .map((a) => ({
+      slug: a.slug,
+      title: a.title,
+      views: viewsByPath.get(`/blog/${a.slug}`) ?? 0,
+    }))
+    .sort((x, y) => y.views - x.views);
+  // The exact route total, not a sum of the rows above. There are more
+  // articles than the 100 paths Vercel will name, and it folds the rest into
+  // one unnamed remainder: those few show as zero in the list above, while
+  // their views are still inside this total. The list is ordered by reads and
+  // the panel prints the top of it, so the unnamed tail never reaches a
+  // figure anyone reads as a ranking.
+  const articleViewsTotal = articlePaths?.summedPageviews ?? 0;
 
-  // ── Site-wide pageviews + top pages / lessons (SQL-aggregated) ─────
-  // Every figure here is MEASURED traffic: page_view_summary reads
-  // page_views_measured, so the 992 reconstructed rows are already out. The
-  // `backfill_*` columns are what was held back — carried through to the panel
-  // as its own labelled line, never added into the totals.
-  const pvs = ((pageSummaryRes.data as
-    | {
-        total: number | string;
-        views_7d: number | string;
-        views_30d: number | string;
-        visitors: number | string;
-        visitors_30d: number | string;
-        visitors_7d: number | string;
-        views_since: string | null;
-        visitors_since: string | null;
-        backfill_views: number | string;
-        backfill_visitors: number | string;
-        backfill_from: string | null;
-        backfill_to: string | null;
-      }[]
-    | null) ?? [])[0];
-  const pageViewsTotal = Number(pvs?.total ?? 0);
-  const uniqueVisitors = Number(pvs?.visitors ?? 0);
-  const uniqueVisitors30d = Number(pvs?.visitors_30d ?? 0);
+  // ── Site-wide traffic ─────────────────────────────────────────────
+  // Straight from Vercel, production only. A failed query leaves these at zero
+  // AND `viewsSince` at null, which is how the panel tells "nobody came" from
+  // "nobody asked": the coverage line only prints when a query answered.
+  const trafficTotals = measured(trafficTotalsRes);
+  const pageViewsTotal = trafficTotals?.pageviews ?? 0;
+  const uniqueVisitors = trafficTotals?.visitors ?? 0;
+  const uniqueVisitors30d = measured(traffic30dRes)?.visitors ?? 0;
   const analytics: AnalyticsCoverage = {
-    viewsSince: pvs?.views_since ?? null,
-    visitorsSince: pvs?.visitors_since ?? null,
-    backfillViews: Number(pvs?.backfill_views ?? 0),
-    backfillVisitors: Number(pvs?.backfill_visitors ?? 0),
-    backfillFrom: pvs?.backfill_from ?? null,
-    backfillTo: pvs?.backfill_to ?? null,
+    viewsSince: trafficTotalsRes?.ok ? trafficTotalsRes.window.since : null,
+    // Never set. Vercel identifies every visit it records, so there is no
+    // second, later date on which per-person counting began. See the type.
+    visitorsSince: null,
+    backfillViews: 0,
+    backfillVisitors: 0,
+    backfillFrom: null,
+    backfillTo: null,
   };
   const topLessons = ((topLessonsRes.data as
     | { slug: string; title: string; completions: number | string }[]
@@ -554,23 +768,12 @@ export async function getAdminStats(): Promise<AdminStats> {
     completions: Number(r.completions),
   }));
 
-  // Where UNIQUE VISITORS came from (one first-touch source per visitor).
-  // This was the worst-corrupted number on the panel: all 150 `seed:`
-  // pseudo-visitors carried `source = 'backfill'`, so the pie chart rendered
-  // "backfill" as the fourth-largest acquisition channel on the site (150
-  // visitors, ahead of Chief Delphi's 143). The RPC now excludes them, so the
-  // channel is gone and no real channel's count moved.
-  const vsRows = (visitorSourcesRes.data as
-    | { source: string; all_time: number | string; last_7d: number | string }[]
-    | null) ?? [];
-  const visitorSources = vsRows
-    .map((r) => ({ name: r.source, count: Number(r.all_time) }))
-    .filter((r) => r.count > 0)
-    .sort((a, b) => b.count - a.count);
-  const visitorSources7d = vsRows
-    .map((r) => ({ name: r.source, count: Number(r.last_7d) }))
-    .filter((r) => r.count > 0)
-    .sort((a, b) => b.count - a.count);
+  // Where visitors came from, by referring host. This is not the same question
+  // as `sources` above, and the panel says so: that one is the first-touch tag
+  // stored on a profile at signup, this one is measured arrivals, signed in or
+  // not, over a window.
+  const visitorSources = toVisitorSources(measured(sourcesAllRes));
+  const visitorSources7d = toVisitorSources(measured(sources7dRes));
 
   // Guest (no-account) learning.
   const gs = ((guestStatsRes.data as
@@ -579,13 +782,13 @@ export async function getAdminStats(): Promise<AdminStats> {
   const guestCompletions = Number(gs?.guest_completions ?? 0);
   const guestLearners = Number(gs?.guest_learners ?? 0);
 
-  // Guide audience rollup (admin_guide_views_summary); bigints arrive as
-  // strings. The view now reads page_views_measured: 842 of the backfill's 992
-  // rows were /guides/ paths, which had inflated `views` by the same 842 and
-  // `viewers` by the 73 distinct `seed:` ids among them.
-  const gvSummary = (((guideViewsSummaryRes.data as { views: number | string; viewers: number | string }[] | null) ?? []))[0];
-  const guideViewsTotal = Number(gvSummary?.views ?? 0);
-  const guideViewersTotal = Number(gvSummary?.viewers ?? 0);
+  // Guide audience. One filtered count, so the views and the people behind
+  // them are the same population over the same window: distinct visitors are
+  // exact for a filter and cannot be added up across several (see
+  // GUIDE_LESSON_ROUTE).
+  const guideTraffic = measured(guideTrafficRes);
+  const guideViewsTotal = guideTraffic?.pageviews ?? 0;
+  const guideViewersTotal = guideTraffic?.visitors ?? 0;
 
   return {
     totals: {
