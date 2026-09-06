@@ -46,7 +46,7 @@ export default async function Image({
   const { department } = await params;
   const entry = DEPT_CATALOG.find((d) => d.slug === department);
   const name = entry?.name ?? "FRC Department";
-  const tagline = entry?.tagline ?? "Master FIRST Robotics Competition";
+  const tagline = entry?.tagline ?? "every job on an FRC team, written down";
   const fonts = await ogFonts();
 
   return new ImageResponse(

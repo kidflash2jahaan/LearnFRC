@@ -15,7 +15,7 @@ import type { MetadataRoute } from "next";
  */
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "LearnFRC, master FIRST Robotics Competition",
+    name: "LearnFRC, every job on an FRC team, written down",
     short_name: "LearnFRC",
     description:
       "The complete, structured guide to mastering every department of the FIRST Robotics Competition.",

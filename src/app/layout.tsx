@@ -49,11 +49,11 @@ const SITE_URL =
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "LearnFRC, master FIRST Robotics Competition",
+    default: "LearnFRC, every job on an FRC team, written down",
     template: "%s · LearnFRC",
   },
   description:
-    "The complete, structured guide to mastering every department of the FIRST Robotics Competition: mechanical, CAD, programming, electrical, controls, strategy, business, outreach and more. Free, web-grounded, and built for new teams.",
+    "394 free lessons covering every job on a FIRST Robotics Competition team: mechanical, CAD, programming, electrical, controls, drive team, scouting, strategy, business, media and safety. No account needed to read.",
   keywords: [
     "FRC",
     "FIRST Robotics Competition",
@@ -81,9 +81,9 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     url: SITE_URL,
-    title: "LearnFRC, master FIRST Robotics Competition",
+    title: "LearnFRC, every job on an FRC team, written down",
     description:
-      "Structured, web-grounded guides for every FRC department. Build robots, write code, win awards.",
+      "394 free lessons across 11 departments of FIRST Robotics Competition, from swerve geometry to sponsor letters. No account needed to read.",
     siteName: "LearnFRC",
   },
   // Card type only: leaving title/description unset lets every page's own
