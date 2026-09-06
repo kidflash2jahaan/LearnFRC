@@ -73,7 +73,14 @@ export default function NotFound() {
       </div>
 
       <section className="mt-[clamp(2.6rem,5vw,4rem)]">
-        <p className="nb-marker">where to go instead</p>
+        {/* An h2, because the four rows below are h3s and the only heading
+            above them was the page h1: as a <p> this label left the whole list
+            hanging a level below nothing. `font-normal` and the explicit
+            leading hold the marker's own weight and line box, so it draws
+            exactly as it did. */}
+        <h2 className="nb-marker font-normal leading-[1.55]">
+          where to go instead
+        </h2>
         <div className="nb-list">
           {ROUTES.map((r) => (
             /* The third column of an nb-row is `auto`, so it hugs the right

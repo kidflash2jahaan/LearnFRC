@@ -89,12 +89,23 @@ export function LessonNextStep({
     >
       {/* Where a cold visitor actually is. Mono, because every part of it is a
           position or an identifier rather than a sentence. */}
-      <p className="nb-slug flex flex-wrap items-center gap-x-2">
-        <Link href={deptHref} className="no-underline hover:text-blue">
+      {/* Sized like the breadcrumb at the top of the sheet: `min-h-11` on each
+          link with the padding cancelled on the row, so the trail still reads
+          as one quiet mono line while each link is a 44px target. Without it
+          these wrapped to their own 17px lines on a phone, touching each
+          other. */}
+      <p className="nb-slug -my-2 flex flex-wrap items-center gap-x-2">
+        <Link
+          href={deptHref}
+          className="inline-flex min-h-11 items-center py-2 no-underline hover:text-blue"
+        >
           {deptName}
         </Link>
         <span aria-hidden="true">/</span>
-        <Link href={moduleHref} className="no-underline hover:text-blue">
+        <Link
+          href={moduleHref}
+          className="inline-flex min-h-11 items-center py-2 no-underline hover:text-blue"
+        >
           {moduleTitle}
         </Link>
         <span aria-hidden="true">/</span>

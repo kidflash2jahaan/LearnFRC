@@ -3,17 +3,6 @@
 import * as React from "react";
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import {
-  AlertTriangle,
-  ArrowRight,
-  Boxes,
-  Info,
-  Printer,
-  RotateCcw,
-  Ruler,
-  Save,
-  Sparkles,
-} from "lucide-react";
 
 /* ------------------------------------------------------------------ *
  * Exact unit conversions (defined constants, not estimates)
@@ -21,19 +10,19 @@ import {
 const M_PER_IN = 0.0254; // NIST exact: 1 in = 0.0254 m
 const IN_TO_MM = 25.4; // exact
 const LBF_TO_N = 4.4482216; // NIST exact: 1 lbf = 4.4482216 N
-const PA_PER_KSI = 6_894_757.293; // 1 ksi = 6894.757293 kPa (from lbf & inch, defined)
+const PA_PER_KSI = 6_894_757.293; // 1 ksi = 6894.757293 kPa (defined)
 
 /* ------------------------------------------------------------------ *
- * VERIFIED material data — Young's modulus E from primary datasheets.
- * These are physical constants (do not change year to year).
- *   6061-T6  E = 68.9 GPa (10,000 ksi)   — MatWeb / ASM  [high]
- *   6061-T6  yield = 276 MPa (40 ksi)    — MatWeb / ASM  [high]
- *   7075-T6  E = 71.7 GPa (10,400 ksi)   — MatWeb / ASM  [high]
- *   Steel    E = 200 GPa (~29,000 ksi)   — ASM 1018/4130 [high]
- *   Polycarb E = 2.3 GPa (~0.33 Msi)     — MatWeb/Lexan  [medium, grade 2.0–2.4]
- * Yield strength is only in our verified dataset for 6061-T6. For every
- * other material yield is a USER-EDITABLE input (enter your datasheet
- * value) — never a hardcoded authoritative number.
+ * VERIFIED MATERIAL DATA: Young's modulus E from primary datasheets.
+ * These are physical constants and do not change season to season.
+ *   6061-T6  E = 68.9 GPa (10,000 ksi)   MatWeb / ASM   [high]
+ *   6061-T6  yield = 276 MPa (40 ksi)    MatWeb / ASM   [high]
+ *   7075-T6  E = 71.7 GPa (10,400 ksi)   MatWeb / ASM   [high]
+ *   Steel    E = 200 GPa (~29,000 ksi)   ASM 1018/4130  [high]
+ *   Polycarb E = 2.3 GPa (~0.33 Msi)     MatWeb/Lexan   [medium, 2.0 to 2.4]
+ * Yield strength is only in the verified dataset for 6061-T6. For every
+ * other material yield is a USER-EDITABLE input, never a hardcoded
+ * authoritative number.
  * ------------------------------------------------------------------ */
 type Material = {
   key: string;
@@ -42,8 +31,8 @@ type Material = {
   eKsi: string; // display of the same value
   eSource: string;
   eConfidence: "high" | "medium";
-  yieldMPa: number | null; // verified yield (only 6061-T6); null = not in dataset
-  yieldNote: string; // guidance shown next to the yield field
+  yieldMPa: number | null; // verified yield (6061-T6 only); null = not in dataset
+  yieldNote: string; // guidance printed under the yield field
   note: string;
   custom?: boolean; // user enters E
 };
@@ -57,8 +46,9 @@ const MATERIALS: Material[] = [
     eSource: "MatWeb / ASM 6061-T6 datasheet",
     eConfidence: "high",
     yieldMPa: 276,
-    yieldNote: "276 MPa (40 ksi) — MatWeb / ASM 6061-T6. Verified; editable.",
-    note: "The most common FRC structural aluminum (tube & plate).",
+    yieldNote:
+      "276 MPa (40 ksi), MatWeb and ASM. This one is verified, and still editable.",
+    note: "The most common FRC structural aluminum, in tube and plate.",
   },
   {
     key: "7075",
@@ -68,51 +58,54 @@ const MATERIALS: Material[] = [
     eSource: "MatWeb / ASM 7075-T6 datasheet",
     eConfidence: "high",
     yieldMPa: null,
-    yieldNote: "Not in our verified dataset — enter your datasheet yield to get a safety factor.",
-    note: "Stronger, pricier aluminum. E is verified; enter its yield yourself.",
+    yieldNote:
+      "Not in the verified dataset. Enter your datasheet yield to get a safety factor.",
+    note: "Stronger and pricier aluminum. E is verified, the yield is yours to enter.",
   },
   {
     key: "steel",
-    label: "Steel (mild 1018 / 4130)",
+    label: "Steel (mild 1018 or 4130)",
     eGPa: 200,
-    eKsi: "≈29,000 ksi",
-    eSource: "ASM material data (1018 ~200, 4130 ~205 GPa)",
+    eKsi: "about 29,000 ksi",
+    eSource: "ASM material data (1018 about 200, 4130 about 205 GPa)",
     eConfidence: "high",
     yieldMPa: null,
-    yieldNote: "Highly grade/heat-treat dependent — enter your grade's yield.",
-    note: "1018 ~200 GPa, 4130 ~205 GPa. E is verified; enter your grade's yield.",
+    yieldNote:
+      "Yield depends heavily on grade and heat treat. Enter the number for your grade.",
+    note: "1018 sits near 200 GPa, 4130 near 205 GPa.",
   },
   {
     key: "polycarb",
     label: "Polycarbonate (Lexan)",
     eGPa: 2.3,
-    eKsi: "≈0.33 Msi",
-    eSource: "MatWeb Polycarbonate + Lexan datasheets",
+    eKsi: "about 0.33 Msi",
+    eSource: "MatWeb Polycarbonate plus Lexan datasheets",
     eConfidence: "medium",
     yieldMPa: null,
-    yieldNote: "Grade/temperature dependent — enter your grade's yield if known.",
-    note: "Grade/temperature dependent (2.0–2.4 GPa) and it creeps under sustained load — treat results as approximate.",
+    yieldNote:
+      "Grade and temperature dependent. Enter your grade's yield if you know it.",
+    note: "Varies from 2.0 to 2.4 GPa by grade, and it creeps under a sustained load.",
   },
   {
     key: "custom",
-    label: "Custom (enter E + yield)",
+    label: "Custom, enter E and yield",
     eGPa: 68.9,
     eKsi: "your value",
     eSource: "user-entered",
     eConfidence: "high",
     yieldMPa: null,
     yieldNote: "Enter the yield strength for your material.",
-    note: "Enter Young's modulus and yield strength from your own material datasheet.",
+    note: "Modulus and yield straight off your own material datasheet.",
     custom: true,
   },
 ];
 
 /* ------------------------------------------------------------------ *
- * Cross-section presets. Default dims are FRC stock in INCHES (verified:
- * 1×1 & 2×1 in, 1/16 in wall; 1/8 & 3/16 in polycarbonate plate). The
- * area moment of inertia I is COMPUTED LIVE from the standard section
- * formula — no pre-computed I is hardcoded, so it stays exact for the
- * geometry you enter.
+ * Cross-section presets. Default dimensions are FRC stock in INCHES
+ * (1x1 and 2x1 in, 1/16 in wall; 1/8 and 3/16 in polycarbonate plate).
+ * The area moment of inertia I is COMPUTED LIVE from the standard section
+ * formula, so nothing is pre-baked and it stays exact for the geometry
+ * you actually enter.
  * ------------------------------------------------------------------ */
 type Shape = "tube" | "round" | "solid" | "customI";
 
@@ -121,7 +114,7 @@ type SectionPreset = {
   label: string;
   shape: Shape;
   bIn?: number; // outer width (in)
-  hIn?: number; // outer height / thickness (in) — the bending direction
+  hIn?: number; // outer height / thickness (in), the bending direction
   wallIn?: number; // wall thickness (in)
   dIn?: number; // outer diameter (in)
   iIn4?: number; // for customI: default I (in^4)
@@ -131,64 +124,64 @@ type SectionPreset = {
 const SECTIONS: SectionPreset[] = [
   {
     key: "1x1",
-    label: "1×1 in tube, 1/16 wall",
+    label: "1x1 tube",
     shape: "tube",
     bIn: 1,
     hIn: 1,
     wallIn: 0.0625,
-    note: "1×1 in square tube, 0.0625 in (1/16) wall — WCP MaxTube / TheThriftyBot / 80-20 stock.",
+    note: "1x1 in square tube with a 0.0625 in (1/16) wall. WCP MaxTube, TheThriftyBot, 80-20 stock.",
   },
   {
     key: "2x1-strong",
-    label: "2×1 in tube — strong axis (2 in tall)",
+    label: "2x1 tube, standing tall",
     shape: "tube",
     bIn: 1,
     hIn: 2,
     wallIn: 0.0625,
-    note: "2×1 in tube standing tall — 2 in in the bending direction (stiff orientation), 1/16 in wall.",
+    note: "2x1 in tube with the 2 in dimension in the bending direction, the stiff orientation, 1/16 in wall.",
   },
   {
     key: "2x1-weak",
-    label: "2×1 in tube — weak axis (laid flat)",
+    label: "2x1 tube, laid flat",
     shape: "tube",
     bIn: 2,
     hIn: 1,
     wallIn: 0.0625,
-    note: "Same 2×1 tube laid flat — only 1 in in the bending direction (much floppier), 1/16 in wall.",
+    note: "The same 2x1 tube laid flat, so only 1 in is in the bending direction. Much floppier for no weight saved.",
   },
   {
     key: "round",
-    label: "Round tube — enter OD & wall",
+    label: "Round tube",
     shape: "round",
     dIn: 1,
     wallIn: 0.0625,
-    note: "Round tube: enter your outer diameter and wall thickness (no specific stock size assumed).",
+    note: "Round tube. Enter your outer diameter and wall thickness, no stock size assumed.",
   },
   {
     key: "plate",
-    label: "Solid bar / polycarb plate",
+    label: "Solid bar or polycarb plate",
     shape: "solid",
     bIn: 2,
     hIn: 0.125,
-    note: "Solid rectangle: enter width × thickness. Polycarb plate is commonly 1/8 in (0.125) or 3/16 in (0.1875) thick; it bends about the thin dimension.",
+    note: "Solid rectangle, width by thickness. Polycarb plate is usually 1/8 in (0.125) or 3/16 in (0.1875), and it bends about the thin dimension.",
   },
   {
     key: "customI",
-    label: "Custom — enter I directly",
+    label: "Enter I directly",
     shape: "customI",
     iIn4: 0.05,
     hIn: 1,
-    note: "Enter a known area moment of inertia I and the section height (for bending-stress c = height ÷ 2).",
+    note: "For a section this tool does not draw: enter a known area moment of inertia and the section height, which sets c = height over 2.",
   },
 ];
 
 /* ------------------------------------------------------------------ *
- * Support / load cases — exact Euler-Bernoulli beam formulas.
- *  cantilever + point (tip):   δ = P·L³/(3EI)      M = P·L
- *  cantilever + distributed:   δ = W·L³/(8EI)      M = W·L/2   (W = total load)
- *  simply-supp + point (mid):  δ = P·L³/(48EI)     M = P·L/4
- *  simply-supp + distributed:  δ = 5·W·L³/(384EI)  M = W·L/8   (W = total load)
- * Source: Roark's Formulas for Stress & Strain, Table 8.1; Hibbeler.
+ * Support and load cases: exact Euler-Bernoulli beam formulas.
+ *  cantilever + point (tip):   d = P L^3/(3EI)      M = P L
+ *  cantilever + distributed:   d = W L^3/(8EI)      M = W L/2   (W = total)
+ *  simply-supp + point (mid):  d = P L^3/(48EI)     M = P L/4
+ *  simply-supp + distributed:  d = 5 W L^3/(384EI)  M = W L/8   (W = total)
+ * Source: Roark's Formulas for Stress and Strain, Table 8.1; Hibbeler.
  * ------------------------------------------------------------------ */
 type Support = "cantilever" | "simple";
 type LoadType = "point" | "distributed";
@@ -197,11 +190,32 @@ function deflectionCoeff(support: Support, load: LoadType): number {
   if (support === "cantilever") return load === "point" ? 1 / 3 : 1 / 8;
   return load === "point" ? 1 / 48 : 5 / 384;
 }
-// Max bending moment expressed as M = k · Load · L
+/** Max bending moment as M = k x Load x L. */
 function momentCoeff(support: Support, load: LoadType): number {
   if (support === "cantilever") return load === "point" ? 1 : 1 / 2;
   return load === "point" ? 1 / 4 : 1 / 8;
 }
+
+const DELTA_FORMULA: Record<string, string> = {
+  "cantilever-point": "d = P L^3 / (3 E I)",
+  "cantilever-distributed": "d = W L^3 / (8 E I)",
+  "simple-point": "d = P L^3 / (48 E I)",
+  "simple-distributed": "d = 5 W L^3 / (384 E I)",
+};
+
+const MOMENT_FORMULA: Record<string, string> = {
+  "cantilever-point": "M = P L",
+  "cantilever-distributed": "M = W L / 2",
+  "simple-point": "M = P L / 4",
+  "simple-distributed": "M = W L / 8",
+};
+
+const SECTION_FORMULA: Record<Shape, string> = {
+  tube: "I = (b h^3 - bi hi^3) / 12",
+  round: "I = pi (D^4 - d^4) / 64",
+  solid: "I = b h^3 / 12",
+  customI: "I entered directly",
+};
 
 /* ------------------------------------------------------------------ *
  * Helpers
@@ -212,38 +226,37 @@ function parseNum(v: string): number {
 }
 
 function fmt(n: number, digits: number): string {
-  if (!Number.isFinite(n)) return "—";
+  if (!Number.isFinite(n)) return "n/a";
   return n.toLocaleString("en-US", {
     minimumFractionDigits: digits,
     maximumFractionDigits: digits,
   });
 }
 
-function Tip({ text }: { text: string }): React.ReactElement {
-  return (
-    <span
-      title={text}
-      className="inline-flex cursor-help align-middle text-muted-foreground"
-      aria-label={text}
-    >
-      <Info className="h-3.5 w-3.5" />
-    </span>
-  );
-}
-
 /* ------------------------------------------------------------------ *
  * Component
  * ------------------------------------------------------------------ */
+
+/**
+ * The member sheet.
+ *
+ * Someone opens this holding a length of tube and one worry: will it sag, and
+ * will it stay bent. So the sheet answers both across an ink band first, then
+ * shows its working: the member on one hand-ruled tag, the section drawn
+ * beside its own dimensions, and every formula printed with the entered
+ * numbers substituted in. No verdict is carried by a colour, because the
+ * binder prints in one ink.
+ */
 export default function DeflectionCalculator({
   authed,
 }: {
   authed: boolean;
-}): React.ReactElement {
+}): React.JSX.Element {
   const [lengthUnit, setLengthUnit] = useState<"in" | "mm">("in");
   const [forceUnit, setForceUnit] = useState<"lb" | "N">("lb");
 
   const [materialKey, setMaterialKey] = useState("6061");
-  const [customE, setCustomE] = useState("68.9"); // GPa, only for custom material
+  const [customE, setCustomE] = useState("68.9"); // GPa, custom material only
   const [yieldMPa, setYieldMPa] = useState("276"); // editable; 276 verified for 6061
 
   const [support, setSupport] = useState<Support>("cantilever");
@@ -259,13 +272,14 @@ export default function DeflectionCalculator({
   const [secI, setSecI] = useState("0.05"); // custom I, in display-unit^4
 
   const [saved, setSaved] = useState(false);
+  const [notesOpen, setNotesOpen] = useState(false);
 
   const material = MATERIALS.find((m) => m.key === materialKey) ?? MATERIALS[0];
   const sectionPreset = SECTIONS.find((s) => s.key === sectionKey) ?? SECTIONS[0];
   const shape = sectionPreset.shape;
   const lu = lengthUnit;
 
-  // Display a length that is defined in inches, in the currently-selected unit.
+  /** Print a length that is defined in inches, in the selected unit. */
   function fromIn(inches: number, digits: number): string {
     const v = lengthUnit === "in" ? inches : inches * IN_TO_MM;
     return String(Math.round(v * 10 ** digits) / 10 ** digits);
@@ -295,7 +309,8 @@ export default function DeflectionCalculator({
   function switchLengthUnit(next: "in" | "mm"): void {
     if (next === lengthUnit) return;
     const f = next === "mm" ? IN_TO_MM : 1 / IN_TO_MM;
-    const lin = (s: string): string => String(Math.round(parseNum(s) * f * 10000) / 10000);
+    const lin = (s: string): string =>
+      String(Math.round(parseNum(s) * f * 10000) / 10000);
     setSecB(lin(secB));
     setSecH(lin(secH));
     setSecWall(lin(secWall));
@@ -330,11 +345,12 @@ export default function DeflectionCalculator({
     setSecI("0.05");
   }
 
-  /* ------------------------------ math ------------------------------ */
+  /* ------------------------------ maths ---------------------------- */
   const r = useMemo(() => {
-    const toM = (v: number): number => (lengthUnit === "in" ? v * M_PER_IN : v / 1000);
+    const toM = (v: number): number =>
+      lengthUnit === "in" ? v * M_PER_IN : v / 1000;
 
-    // Section geometry -> I (m^4) and c (m), from the exact standard formulas.
+    // Section geometry to I (m^4) and c (m), from the exact standard formulas.
     let I = NaN;
     let c = NaN;
     if (shape === "tube") {
@@ -344,7 +360,7 @@ export default function DeflectionCalculator({
       const bi = b - 2 * t;
       const hi = h - 2 * t;
       if (b > 0 && h > 0 && t > 0 && bi > 0 && hi > 0) {
-        I = (b * h ** 3 - bi * hi ** 3) / 12; // bending about horizontal neutral axis
+        I = (b * h ** 3 - bi * hi ** 3) / 12; // about the horizontal neutral axis
         c = h / 2;
       }
     } else if (shape === "round") {
@@ -376,7 +392,8 @@ export default function DeflectionCalculator({
     const eGPa = material.custom ? parseNum(customE) : material.eGPa;
     const E = eGPa * 1e9; // Pa
     const L = toM(parseNum(length));
-    const loadN = forceUnit === "lb" ? parseNum(load) * LBF_TO_N : parseNum(load);
+    const loadN =
+      forceUnit === "lb" ? parseNum(load) * LBF_TO_N : parseNum(load);
     const yldPa = parseNum(yieldMPa) > 0 ? parseNum(yieldMPa) * 1e6 : NaN;
 
     const valid =
@@ -386,16 +403,22 @@ export default function DeflectionCalculator({
     const kM = momentCoeff(support, loadType);
 
     const deltaM = valid ? (kDelta * loadN * L ** 3) / (E * I) : NaN; // m
-    const momentNm = valid ? kM * loadN * L : NaN; // N·m
+    const momentNm = valid ? kM * loadN * L : NaN; // N*m
     const sigmaPa = valid ? (momentNm * c) / I : NaN; // Pa
     const sf = valid && Number.isFinite(yldPa) ? yldPa / sigmaPa : NaN;
-    const ratio = valid && deltaM > 0 ? L / deltaM : NaN; // span / deflection
+    const ratio = valid && deltaM > 0 ? L / deltaM : NaN; // span over deflection
 
     return {
       valid,
+      I_m4: I,
       I_in4: I / M_PER_IN ** 4,
       I_cm4: I * 1e8,
+      c_m: c,
       c_in: c / M_PER_IN,
+      L_m: L,
+      L_in: L / M_PER_IN,
+      loadN,
+      momentNm,
       deltaIn: deltaM / M_PER_IN,
       deltaMm: deltaM * 1000,
       sigmaMPa: sigmaPa / 1e6,
@@ -423,618 +446,861 @@ export default function DeflectionCalculator({
     forceUnit,
   ]);
 
-  // Deflection band from span/deflection ratio (general structural guidance).
+  // Stiffness band from the span-over-deflection ratio. General structural
+  // guidance, phrased as words rather than as a colour.
   const defBand = useMemo(() => {
-    if (!r.valid) return { label: "—", tone: "muted" as const };
-    if (r.ratio >= 360) return { label: "Very stiff", tone: "ok" as const };
-    if (r.ratio >= 180) return { label: "Stiff", tone: "ok" as const };
-    if (r.ratio >= 90) return { label: "Noticeable flex", tone: "warn" as const };
-    return { label: "Excessive — very flexible", tone: "fail" as const };
+    if (!r.valid) return "not enough numbers";
+    if (r.ratio >= 360) return "very stiff";
+    if (r.ratio >= 180) return "stiff";
+    if (r.ratio >= 90) return "noticeable flex";
+    return "excessive flex";
   }, [r.valid, r.ratio]);
 
-  // Safety-factor verdict (2× is a common FRC design target — guidance, not a rule).
-  const sfVerdict = useMemo(() => {
-    if (!r.valid || !r.hasYield) return { label: "Enter yield strength", tone: "muted" as const };
-    if (r.sf >= 2) return { label: "Comfortable margin", tone: "ok" as const };
-    if (r.sf >= 1) return { label: "Marginal — below 2× target", tone: "warn" as const };
-    return { label: "Predicted to YIELD", tone: "fail" as const };
-  }, [r.valid, r.hasYield, r.sf]);
-
-  const forceLabel = forceUnit;
-  const loadWord = loadType === "point" ? "Point load" : "Total distributed load";
+  const caseKey = `${support}-${loadType}`;
   const loadPos = support === "cantilever" ? "at the free tip" : "at mid-span";
+  const loadWord = loadType === "point" ? "Point load" : "Total distributed load";
+
+  const verdictLine = !r.valid
+    ? "Not enough numbers yet."
+    : r.hasYield && r.sf < 1
+      ? "This member is predicted to yield."
+      : r.ratio < 90
+        ? "It survives, but it flexes badly."
+        : r.hasYield && r.sf < 2
+          ? "It holds, with thinner margin than most teams want."
+          : "Stiff enough, with margin left over.";
+
+  const verdictBody = !r.valid
+    ? "Enter a span, a load and a section with real wall thickness and the sheet fills in."
+    : r.hasYield && r.sf < 1
+      ? `Bending stress reaches ${fmt(r.sigmaMPa, 1)} MPa against a ${fmt(parseNum(yieldMPa), 0)} MPa yield, so the part takes a permanent set. Add height in the bending direction before you add wall.`
+      : r.ratio < 90
+        ? `${fmt(r.deltaIn, 3)} in of sag over ${fmt(r.L_in, 1)} in of span is L/${fmt(r.ratio, 0)}. Nothing breaks, but the mechanism at the end of it will not repeat.`
+        : r.hasYield && r.sf < 2
+          ? `Safety factor of ${fmt(r.sf, 2)} against yield. Two is the usual FRC target for a static load, and a drilled or notched member yields below the plain-section figure.`
+          : r.hasYield
+            ? `${fmt(r.deltaIn, 3)} in of sag and ${fmt(r.sf, 2)} times margin against yield, on an ideal beam with no joints in it.`
+            : `${fmt(r.deltaIn, 3)} in of sag, which is L/${fmt(r.ratio, 0)}. Enter a yield strength to get a safety factor as well.`;
 
   return (
-    <div className="ac-card rounded-2xl p-5 sm:p-6">
-      {/* Header */}
-      <header className="mb-6">
-        <span className="ac-chip inline-flex items-center gap-2">
-          <span className="ac-eyebrow">STRUCTURES</span>
-        </span>
-        <h1 className="font-display mt-3 text-2xl font-bold tracking-tight sm:text-3xl">
-          Structural{" "}
-          <span
-            style={{
-              background: "linear-gradient(120deg,#2560e6,#1aa9d6)",
-              WebkitBackgroundClip: "text",
-              backgroundClip: "text",
-              color: "transparent",
-            }}
-          >
-            Deflection
-          </span>{" "}
-          Calculator
-        </h1>
-        <p className="mt-2 max-w-2xl text-sm text-foreground/70">
-          How far will your aluminum (or steel / polycarb) arm tube, rail, or plate bend under load —
-          and will it yield? Pick a support, load case, material and FRC-stock section; deflection,
-          bending stress and safety factor recompute live.
-        </p>
-        <p className="mt-2 text-xs text-muted-foreground">
-          Material moduli are physical constants from primary datasheets (do not change by season).
-          A first-order, ideal-beam estimate — verify your own geometry &amp; wall thickness against
-          your vendor stock.
-        </p>
-      </header>
-
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
-        {/* ------------------------------ INPUTS ------------------------------ */}
-        <div className="rounded-2xl border border-border bg-white/60 p-5">
-          <div className="mb-4 flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-              <Ruler className="h-4 w-4 text-primary" />
-              Beam, load &amp; section
-            </div>
-            <div className="flex flex-wrap items-center justify-end gap-1">
-              <UnitToggle value={lu} a="in" b="mm" onChange={switchLengthUnit} />
-              <UnitToggle value={forceUnit} a="lb" b="N" onChange={switchForceUnit} />
-            </div>
-          </div>
-
-          {/* Material */}
-          <label className="text-sm font-medium text-foreground" htmlFor="material">
-            Material
-          </label>
-          <select
-            id="material"
-            className="mt-1 w-full rounded-xl border border-border bg-white/60 px-3 py-2 text-sm text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-            value={materialKey}
-            onChange={(e) => selectMaterial(e.target.value)}
-          >
-            {MATERIALS.map((m) => (
-              <option key={m.key} value={m.key}>
-                {m.label}
-              </option>
-            ))}
-          </select>
-          <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
-            {material.custom ? (
-              <>Enter Young&apos;s modulus for your material.</>
-            ) : (
-              <>
-                E = {fmt(material.eGPa, 1)} GPa ({material.eKsi}){" "}
-                <Tip text={`${material.eSource} — confidence: ${material.eConfidence}`} /> ·{" "}
-                {material.note}
-              </>
-            )}
-          </p>
-
-          {material.custom && (
-            <div className="mt-3">
-              <label className="text-sm font-medium text-foreground" htmlFor="customE">
-                Young&apos;s modulus E (GPa)
-              </label>
-              <input
-                id="customE"
-                type="number"
-                inputMode="decimal"
-                step="any"
-                className="mt-1 w-full rounded-xl border border-border bg-white/60 px-3 py-2 text-sm text-foreground tabular-nums focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                value={customE}
-                onChange={(e) => setCustomE(e.target.value)}
-              />
-            </div>
-          )}
-
-          <div className="mt-3">
-            <label className="flex items-center gap-1 text-sm font-medium text-foreground" htmlFor="yield">
-              Yield strength (MPa)
-              {material.key === "6061" ? (
-                <span className="rounded-full bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-emerald-700 dark:text-emerald-400">
-                  verified
-                </span>
-              ) : (
-                <span className="rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-amber-700 dark:text-amber-400">
-                  enter yours
-                </span>
-              )}
-            </label>
-            <input
-              id="yield"
-              type="number"
-              inputMode="decimal"
-              step="any"
-              placeholder="e.g. 276"
-              className="mt-1 w-full rounded-xl border border-border bg-white/60 px-3 py-2 text-sm text-foreground tabular-nums focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-              value={yieldMPa}
-              onChange={(e) => setYieldMPa(e.target.value)}
-            />
-            <p className="mt-1 text-xs text-muted-foreground">{material.yieldNote}</p>
-          </div>
-
-          <div className="ac-divider my-5" />
-
-          {/* Support + load case */}
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label className="text-sm font-medium text-foreground" htmlFor="support">
-                Support condition
-              </label>
-              <select
-                id="support"
-                className="mt-1 w-full rounded-xl border border-border bg-white/60 px-3 py-2 text-sm text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                value={support}
-                onChange={(e) => setSupport(e.target.value as Support)}
-              >
-                <option value="cantilever">Cantilever (fixed one end)</option>
-                <option value="simple">Simply supported (both ends)</option>
-              </select>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-foreground" htmlFor="loadType">
-                Load type
-              </label>
-              <select
-                id="loadType"
-                className="mt-1 w-full rounded-xl border border-border bg-white/60 px-3 py-2 text-sm text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                value={loadType}
-                onChange={(e) => setLoadType(e.target.value as LoadType)}
-              >
-                <option value="point">Point load ({loadPos})</option>
-                <option value="distributed">Uniformly distributed</option>
-              </select>
-            </div>
-            <Field
-              label="Beam length / span"
-              help={
-                support === "cantilever"
-                  ? "Free length from the fixed end to the tip."
-                  : "Clear span between the two supports."
-              }
-              value={length}
-              onChange={setLength}
-              unit={lu}
-            />
-            <Field
-              label={`${loadWord} (${forceLabel})`}
-              help={
-                loadType === "point"
-                  ? `Single force applied ${loadPos}.`
-                  : "TOTAL load spread evenly along the beam (not per-length). Self-weight is not auto-added — include it here if it matters."
-              }
-              value={load}
-              onChange={setLoad}
-              unit={forceLabel}
-              accent
-            />
-          </div>
-
-          <div className="ac-divider my-5" />
-
-          {/* Cross-section */}
-          <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground">
-            <Boxes className="h-4 w-4 text-primary" />
-            Cross-section
-          </div>
-          <label className="sr-only" htmlFor="section">
-            Cross-section preset
-          </label>
-          <select
-            id="section"
-            className="w-full rounded-xl border border-border bg-white/60 px-3 py-2 text-sm text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-            value={sectionKey}
-            onChange={(e) => selectSection(e.target.value)}
-          >
-            {SECTIONS.map((s) => (
-              <option key={s.key} value={s.key}>
-                {s.label}
-              </option>
-            ))}
-          </select>
-          <p className="mt-1 text-xs text-muted-foreground">{sectionPreset.note}</p>
-
-          <div className="mt-3 grid gap-4 sm:grid-cols-2">
-            {shape === "tube" && (
-              <>
-                <Field label="Outer width b" help="Horizontal outer dimension." value={secB} onChange={setSecB} unit={lu} />
-                <Field
-                  label="Outer height h"
-                  help="Vertical outer dimension — the bending direction. Bigger h = much stiffer (h³)."
-                  value={secH}
-                  onChange={setSecH}
-                  unit={lu}
-                  accent
-                />
-                <Field label="Wall thickness" help="Tube wall. FRC stock is often 1/16 in (0.0625)." value={secWall} onChange={setSecWall} unit={lu} />
-              </>
-            )}
-            {shape === "round" && (
-              <>
-                <Field label="Outer diameter D" help="Outside diameter of the round tube." value={secD} onChange={setSecD} unit={lu} accent />
-                <Field label="Wall thickness" help="Tube wall thickness." value={secWall} onChange={setSecWall} unit={lu} />
-              </>
-            )}
-            {shape === "solid" && (
-              <>
-                <Field label="Width b" help="Width across the plate/bar." value={secB} onChange={setSecB} unit={lu} />
-                <Field
-                  label="Height / thickness h"
-                  help="Dimension in the bending direction. For a flat plate this is the thin thickness (1/8 or 3/16 in polycarb)."
-                  value={secH}
-                  onChange={setSecH}
-                  unit={lu}
-                  accent
-                />
-              </>
-            )}
-            {shape === "customI" && (
-              <>
-                <Field
-                  label={`Area moment I (${lu}⁴)`}
-                  help="Bending area moment of inertia of your section about the neutral axis."
-                  value={secI}
-                  onChange={setSecI}
-                  unit={`${lu}⁴`}
-                  accent
-                />
-                <Field label="Section height h" help="Full height, used for bending stress c = h ÷ 2." value={secH} onChange={setSecH} unit={lu} />
-              </>
-            )}
-          </div>
-
-          <div className="mt-3 rounded-xl border border-border bg-white/70 px-3 py-2 text-xs text-muted-foreground dark:bg-white/5">
-            Computed section: I = <span className="font-medium text-foreground tabular-nums">{fmt(r.I_in4, 4)}</span> in⁴
-            {" "}(<span className="tabular-nums">{fmt(r.I_cm4, 3)}</span> cm⁴), c ={" "}
-            <span className="tabular-nums">{fmt(r.c_in, 3)}</span> in — from the exact section formula, not a stored value.
-          </div>
-
-          <button
-            type="button"
-            onClick={resetAll}
-            className="ac-btn-ghost mt-5 inline-flex items-center gap-2 text-xs"
-          >
-            <RotateCcw className="h-3.5 w-3.5" />
-            Reset to defaults
-          </button>
-        </div>
-
-        {/* ------------------------------ RESULTS ------------------------------ */}
-        <div className="rounded-2xl border border-border bg-white/60 p-5">
-          {/* Primary result */}
-          <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            {support === "cantilever" ? "Max tip deflection" : "Max center deflection"}
-          </div>
-          <div className="mt-1 flex items-end gap-2">
-            <div
-              className="font-display text-5xl font-bold tabular-nums"
-              style={{
-                background: "linear-gradient(120deg,#2560e6,#1aa9d6)",
-                WebkitBackgroundClip: "text",
-                backgroundClip: "text",
-                color: "transparent",
-              }}
-            >
-              {fmt(r.deltaIn, 3)}
-            </div>
-            <div className="pb-1 text-lg font-semibold text-foreground/70">in</div>
-          </div>
-          <div className="mt-1 text-sm text-muted-foreground tabular-nums">
-            = {fmt(r.deltaMm, 2)} mm
-          </div>
-
-          {/* Deflection ratio + stiffness band */}
-          <div className="mt-4 grid grid-cols-2 gap-3">
-            <div className="ac-tile rounded-xl border border-border bg-white/60 p-3">
-              <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                Deflection vs span{" "}
-                <Tip text="span ÷ deflection. Structural convention (L/360 stiff … L/180 flexible); general guidance, not an FRC rule." />
-              </div>
-              <div className="mt-1 text-2xl font-bold tabular-nums text-foreground">
-                {r.valid ? `L/${fmt(r.ratio, 0)}` : "—"}
-              </div>
-              <Verdict tone={defBand.tone} label={defBand.label} />
-            </div>
-            <div className="ac-tile rounded-xl border border-border bg-white/60 p-3">
-              <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                Max bending stress{" "}
-                <Tip text="σ = M·c / I (flexure formula). M is the max bending moment for this load case." />
-              </div>
-              <div className="mt-1 flex items-end gap-1">
-                <div className="text-2xl font-bold tabular-nums text-foreground">{fmt(r.sigmaMPa, 1)}</div>
-                <div className="pb-0.5 text-sm text-foreground/60">MPa</div>
-              </div>
-              <div className="mt-0.5 text-[11px] text-muted-foreground tabular-nums">{fmt(r.sigmaKsi, 2)} ksi</div>
-            </div>
-          </div>
-
-          {/* Safety factor verdict */}
-          <div
-            className={
-              "mt-4 rounded-xl border p-4 " +
-              (sfVerdict.tone === "ok"
-                ? "border-emerald-500/30 bg-emerald-500/10"
-                : sfVerdict.tone === "warn"
-                  ? "border-amber-500/30 bg-amber-500/10"
-                  : sfVerdict.tone === "fail"
-                    ? "border-red-500/30 bg-red-500/10"
-                    : "border-border bg-muted")
-            }
-          >
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  Safety factor vs yield
-                </div>
-                <div className="mt-0.5 flex items-end gap-2">
-                  <div className="text-3xl font-bold tabular-nums text-foreground">
-                    {r.valid && r.hasYield ? fmt(r.sf, 2) : "—"}
-                    {r.valid && r.hasYield ? <span className="text-lg font-semibold text-foreground/60">×</span> : null}
-                  </div>
-                </div>
-              </div>
-              <Verdict tone={sfVerdict.tone} label={sfVerdict.label} />
-            </div>
-            <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
-              SF = yield ÷ max bending stress. 2× is a common FRC design target for static loads — your
-              team may require more. Impact, vibration, fatigue and hole stress-concentration are{" "}
-              <strong>not</strong> included, so a drilled/notched member yields below this.
+    <>
+      {/* ---------------------------------------------------------------- *
+       * 1. The question, then the shelf of stock sections
+       *
+       * A structures question starts from a piece of tube somebody already
+       * owns, so the stock shelf is the first control on the page rather
+       * than a courtesy buried in the form.
+       * ---------------------------------------------------------------- */}
+      <div className="nb-wrap py-[clamp(2.2rem,5vw,3.6rem)]">
+        <div className="grid gap-x-[clamp(1.5rem,4vw,3rem)] gap-y-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+          <div>
+            <p className="nb-marker">tools / frc-deflection-calculator</p>
+            <h1 className="max-w-[19ch]">
+              How far does it bend, and does it{" "}
+              <span className="nb-mark">come back</span>?
+            </h1>
+            <p className="nb-lede mt-5">
+              Deflection, bending stress and safety factor for an arm tube, an
+              elevator rail or a plate. Pick a support, a load case, a material
+              and a stock section, and every number recomputes as you type.
+            </p>
+            <p className="nb-slug mt-4 max-w-[62ch]">
+              Moduli are physical constants from primary datasheets, so they do
+              not change by season. This is an ideal single-piece beam: real
+              parts with bolted joints deflect more.
             </p>
           </div>
+          <p className="nb-pen max-w-[17ch] rotate-[1.5deg] lg:pb-2 lg:text-right">
+            height in the bending direction is cubed
+          </p>
+        </div>
 
-          {/* Load-case diagram */}
-          <BeamDiagram support={support} loadType={loadType} />
-
-          {/* Actions */}
-          <div className="mt-5 flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={() => window.print()}
-              className="ac-btn inline-flex items-center gap-2 text-sm"
-            >
-              <Printer className="h-4 w-4" /> Print / Save PDF
-            </button>
-            {authed ? (
+        <div className="nb-hair mt-[clamp(1.6rem,3.4vw,2.4rem)] pt-[clamp(1.1rem,2.2vw,1.5rem)]">
+          <p className="nb-slug">off the shelf</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {SECTIONS.map((s) => (
               <button
+                key={s.key}
                 type="button"
-                onClick={() => {
-                  setSaved(true);
-                  window.setTimeout(() => setSaved(false), 2000);
-                }}
-                className="ac-btn-ghost inline-flex items-center gap-2 text-sm"
+                onClick={() => selectSection(s.key)}
+                aria-pressed={sectionKey === s.key}
+                className="nb-tag min-h-[2.75rem] px-3.5 text-[0.78rem]"
               >
-                <Save className="h-4 w-4" /> {saved ? "Saved" : "Save scenario"}
+                {s.label}
               </button>
-            ) : null}
+            ))}
           </div>
-
-          {!authed && (
-            <div className="ac-badge mt-4 flex items-center justify-between gap-3 rounded-xl border border-border bg-white/60 p-3">
-              <div className="flex items-center gap-2 text-sm text-foreground">
-                <Sparkles className="h-4 w-4 text-primary" />
-                <span>
-                  <span className="font-medium">Create a free account</span> to save named member
-                  presets, compare sections &amp; export this report.
-                </span>
-              </div>
-              <Link
-                href="/signup?next=/tools/frc-deflection-calculator"
-                className="ac-btn inline-flex shrink-0 items-center gap-1 text-sm"
-              >
-                Sign up <ArrowRight className="h-3.5 w-3.5" />
-              </Link>
-            </div>
-          )}
-
-          <div className="mt-4 flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-800 dark:text-amber-300">
-            <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-            <span>
-              <strong>For reference only — verify your own geometry.</strong> Real FRC parts deflect
-              MORE than this ideal beam predicts because bolted joints, gussets, and mounts flex.
-              Not a substitute for physical load testing.
-            </span>
-          </div>
+          <p className="mt-3 max-w-[70ch] text-[0.95rem] leading-relaxed text-graphite">
+            {sectionPreset.note}
+          </p>
         </div>
       </div>
 
-      {/* -------------------- NOTES & SOURCES -------------------- */}
-      <details className="mt-6 rounded-2xl border border-border bg-white/50 p-4">
-        <summary className="cursor-pointer text-sm font-semibold text-foreground">
-          Notes &amp; sources
-        </summary>
-        <div className="mt-3 space-y-3 text-xs leading-relaxed text-muted-foreground">
-          <ul className="list-disc space-y-2 pl-5">
-            <li>
-              First-order estimate using idealized Euler-Bernoulli beam theory. It assumes a straight,
-              uniform, single-piece beam with an ideal fixed or pinned support.
-            </li>
-            <li>
-              Real FRC structures usually deflect <strong>more</strong> than this predicts, because
-              bolted/riveted joints, gussets, bearing mounts, and gearbox plates flex — joint/mount
-              compliance often dominates real-world sag and is not modeled here.
-            </li>
-            <li>
-              Ignores transverse shear deflection (minor for long slender beams, larger for short
-              stubby ones) and stress concentrations at lightening holes, bends, and welds — drilled
-              tube yields below the plain-section safety factor shown.
-            </li>
-            <li>
-              Polycarbonate modulus varies by grade/temperature and the material creeps (keeps
-              deflecting) under sustained load, so treat polycarbonate results as approximate and
-              design conservatively.
-            </li>
-            <li>
-              The yield-based safety factor is for static loads only; impact, vibration, and fatigue
-              from a competition robot are not captured. Not a substitute for physical load testing.
-            </li>
-            <li>
-              Verify member dimensions and wall thickness against your actual vendor stock; nominal
-              tube sizes vary slightly by supplier.
-            </li>
-          </ul>
-
-          <div className="ac-divider my-2" />
-
+      {/* ---------------------------------------------------------------- *
+       * 2. The verdict, stamped across an ink band
+       * ---------------------------------------------------------------- */}
+      <section
+        className="nb-slab py-[clamp(2rem,4.4vw,3.2rem)]"
+        aria-live="polite"
+      >
+        <div className="nb-wrap grid items-end gap-[clamp(1.3rem,3vw,2.6rem)] lg:grid-cols-[minmax(0,1.05fr)_repeat(3,minmax(0,0.72fr))]">
           <div>
-            <div className="mb-1 font-semibold text-foreground">Formulas</div>
-            <ul className="space-y-1">
-              <li>Cantilever, point at tip: δ = P·L³/(3EI); M = P·L</li>
-              <li>Cantilever, distributed (total W): δ = W·L³/(8EI); M = W·L/2</li>
-              <li>Simply supported, center point: δ = P·L³/(48EI); M = P·L/4</li>
-              <li>Simply supported, distributed (total W): δ = 5·W·L³/(384EI); M = W·L/8</li>
-              <li>Rectangular tube: I = (b·h³ − bᵢ·hᵢ³)/12 · Round tube: I = π(D⁴ − d⁴)/64 · Solid: I = b·h³/12</li>
-              <li>Bending stress σ = M·c/I (c = h/2) · Safety factor = σ_yield / σ_max</li>
-              <li className="text-foreground/70">
-                Source: Euler-Bernoulli beam theory — Hibbeler, <em>Mechanics of Materials</em>;
-                Roark&apos;s <em>Formulas for Stress and Strain</em>, Table 8.1.
-              </li>
-            </ul>
+            <p className="nb-slug !text-[rgba(245,246,242,0.82)]">
+              verdict / {support === "cantilever" ? "cantilever" : "simply supported"},{" "}
+              {loadType === "point" ? "point load" : "distributed load"}
+            </p>
+            <h2 className="mt-2 max-w-[16ch] text-[clamp(1.5rem,1.1rem+1.7vw,2.4rem)] text-card">
+              {verdictLine}
+            </h2>
+            <p className="mt-3 max-w-[38ch] text-[0.95rem] text-[rgba(245,246,242,0.85)]">
+              {verdictBody}
+            </p>
           </div>
 
-          <div>
-            <div className="mb-1 font-semibold text-foreground">Number sources</div>
-            <ul className="space-y-1">
-              <li>
-                <span className="font-medium text-foreground">6061-T6: E = 68.9 GPa (10,000 ksi), yield 276 MPa (40 ksi)</span>{" "}
-                — MatWeb / ASM 6061-T6 datasheet. <Src href="https://asm.matweb.com/search/SpecificMaterial.asp?bassnum=ma6061t6" />
-              </li>
-              <li>
-                <span className="font-medium text-foreground">7075-T6: E = 71.7 GPa (10,400 ksi)</span>{" "}
-                — MatWeb / ASM 7075-T6 datasheet (yield not in our verified set; enter your own).
-              </li>
-              <li>
-                <span className="font-medium text-foreground">Steel (mild 1018 / 4130): E = 200 GPa (≈29,000 ksi)</span>{" "}
-                — ASM material data (1018 ~200, 4130 ~205 GPa).
-              </li>
-              <li>
-                <span className="font-medium text-foreground">Polycarbonate: E = 2.3 GPa (≈0.33 Msi), grade-dependent 2.0–2.4</span>{" "}
-                — MatWeb Polycarbonate overview + Lexan datasheets.
-              </li>
-              <li>
-                <span className="font-medium text-foreground">Section stock: 1×1 &amp; 2×1 in, 1/16 in (0.0625) wall; 1/8 &amp; 3/16 in polycarb plate</span>{" "}
-                — WestCoast Products / TheThriftyBot / 80-20 stock. I is computed live from these dimensions, never stored.{" "}
-                <Src href="https://www.westcoastproducts.com/" />
-              </li>
-              <li>
-                Unit constants: 1 in = 25.4 mm (0.0254 m), 1 lbf = 4.4482216 N, 1 ksi = 6.894757293 MPa — defined/exact.
-              </li>
-            </ul>
+          <p className="nb-stamp">
+            <b>{fmt(r.deltaIn, 3)}</b>
+            <span>
+              inches of sag, {fmt(r.deltaMm, 2)} mm
+            </span>
+          </p>
+          <p className="nb-stamp">
+            <b>{r.valid ? `L/${fmt(r.ratio, 0)}` : "n/a"}</b>
+            <span>span over deflection, {defBand}</span>
+          </p>
+          <p className="nb-stamp">
+            <b>{r.valid && r.hasYield ? `${fmt(r.sf, 2)}x` : "n/a"}</b>
+            <span>
+              {r.hasYield
+                ? "margin against yield"
+                : "enter a yield to get margin"}
+            </span>
+          </p>
+        </div>
+      </section>
+
+      {/* ---------------------------------------------------------------- *
+       * 3. The member, written on one tag
+       *
+       * Material, how it is held and what is pushing on it are one
+       * description of one part, so they share a tag instead of being split
+       * across a form column.
+       * ---------------------------------------------------------------- */}
+      <section className="py-[clamp(2.2rem,5vw,3.6rem)]">
+        <div className="nb-wrap">
+          <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-4">
+            <div>
+              <p className="nb-marker">the member / what it is and what pushes</p>
+              <h2 className="max-w-[20ch] text-[clamp(1.5rem,1.1rem+1.6vw,2.4rem)]">
+                Describe the part you are about to load.
+              </h2>
+            </div>
+            <div className="flex flex-wrap items-center gap-6">
+              <div
+                className="flex items-center gap-4"
+                role="group"
+                aria-label="Length unit"
+              >
+                <p className="nb-slug !text-ink">lengths in</p>
+                {(["in", "mm"] as const).map((u) => (
+                  <button
+                    key={u}
+                    type="button"
+                    className="nb-tab"
+                    data-active={lengthUnit === u ? "" : undefined}
+                    aria-pressed={lengthUnit === u}
+                    onClick={() => switchLengthUnit(u)}
+                  >
+                    {u}
+                  </button>
+                ))}
+              </div>
+              <div
+                className="flex items-center gap-4"
+                role="group"
+                aria-label="Force unit"
+              >
+                <p className="nb-slug !text-ink">force in</p>
+                {(["lb", "N"] as const).map((u) => (
+                  <button
+                    key={u}
+                    type="button"
+                    className="nb-tab"
+                    data-active={forceUnit === u ? "" : undefined}
+                    aria-pressed={forceUnit === u}
+                    onClick={() => switchForceUnit(u)}
+                  >
+                    {u}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="nb-box nb-tilt-3 relative mt-[clamp(1.4rem,3vw,2.2rem)] p-[clamp(1.2rem,2.6vw,2rem)]">
+            <span
+              className="nb-tape -top-3 left-[13%] rotate-[-3.1deg]"
+              aria-hidden="true"
+            />
+
+            <div className="grid gap-[clamp(1rem,2.2vw,1.5rem)] sm:grid-cols-2 lg:grid-cols-3">
+              <div className="nb-field">
+                <label className="nb-label" htmlFor="df-material">
+                  Material
+                </label>
+                <select
+                  id="df-material"
+                  className="nb-input nb-select"
+                  value={materialKey}
+                  onChange={(e) => selectMaterial(e.target.value)}
+                >
+                  {MATERIALS.map((m) => (
+                    <option key={m.key} value={m.key}>
+                      {m.label}
+                    </option>
+                  ))}
+                </select>
+                <p className="nb-hint">
+                  {material.custom
+                    ? "Enter Young's modulus below."
+                    : `E = ${fmt(material.eGPa, 1)} GPa (${material.eKsi}). ${material.note}`}
+                </p>
+              </div>
+
+              {material.custom ? (
+                <div className="nb-field">
+                  <label className="nb-label" htmlFor="df-customE">
+                    Young’s modulus E (GPa)
+                  </label>
+                  <input
+                    id="df-customE"
+                    className="nb-input"
+                    type="number"
+                    inputMode="decimal"
+                    step="any"
+                    value={customE}
+                    onChange={(e) => setCustomE(e.target.value)}
+                  />
+                  <p className="nb-hint">Straight off your material datasheet.</p>
+                </div>
+              ) : null}
+
+              <div className="nb-field">
+                <label className="nb-label" htmlFor="df-yield">
+                  Yield strength (MPa)
+                </label>
+                <input
+                  id="df-yield"
+                  className="nb-input"
+                  type="number"
+                  inputMode="decimal"
+                  step="any"
+                  placeholder="276"
+                  value={yieldMPa}
+                  onChange={(e) => setYieldMPa(e.target.value)}
+                />
+                <p className="nb-hint">{material.yieldNote}</p>
+              </div>
+
+              <div className="nb-field">
+                <label className="nb-label" htmlFor="df-support">
+                  How it is held
+                </label>
+                <select
+                  id="df-support"
+                  className="nb-input nb-select"
+                  value={support}
+                  onChange={(e) => setSupport(e.target.value as Support)}
+                >
+                  <option value="cantilever">Cantilever, fixed at one end</option>
+                  <option value="simple">Simply supported at both ends</option>
+                </select>
+                <p className="nb-hint">
+                  {support === "cantilever"
+                    ? "An arm bolted to a gearbox plate at one end and free at the other."
+                    : "A rail resting on a bearing block at each end."}
+                </p>
+              </div>
+
+              <div className="nb-field">
+                <label className="nb-label" htmlFor="df-loadtype">
+                  How the load arrives
+                </label>
+                <select
+                  id="df-loadtype"
+                  className="nb-input nb-select"
+                  value={loadType}
+                  onChange={(e) => setLoadType(e.target.value as LoadType)}
+                >
+                  <option value="point">One point load {loadPos}</option>
+                  <option value="distributed">Spread evenly along the span</option>
+                </select>
+                <p className="nb-hint">
+                  {loadType === "point"
+                    ? `A single force ${loadPos}.`
+                    : "The TOTAL load spread along the beam, not a per-inch figure."}
+                </p>
+              </div>
+
+              <div className="nb-field">
+                <label className="nb-label" htmlFor="df-length">
+                  Span ({lu})
+                </label>
+                <input
+                  id="df-length"
+                  className="nb-input"
+                  type="number"
+                  inputMode="decimal"
+                  step="any"
+                  value={length}
+                  onChange={(e) => setLength(e.target.value)}
+                />
+                <p className="nb-hint">
+                  {support === "cantilever"
+                    ? "Free length from the fixed end to the tip."
+                    : "Clear span between the two supports."}
+                </p>
+              </div>
+
+              <div className="nb-field">
+                <label className="nb-label" htmlFor="df-load">
+                  {loadWord} ({forceUnit})
+                </label>
+                <input
+                  id="df-load"
+                  className="nb-input"
+                  type="number"
+                  inputMode="decimal"
+                  step="any"
+                  value={load}
+                  onChange={(e) => setLoad(e.target.value)}
+                />
+                <p className="nb-hint">
+                  Self weight is not added for you. Include it here if it matters.
+                </p>
+              </div>
+            </div>
+
+            {/* Tag footer: what the description above already fixes. */}
+            <dl className="nb-hair mt-[clamp(1.2rem,2.6vw,1.8rem)] grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1.5 pt-[clamp(1.1rem,2.2vw,1.5rem)]">
+              <dt className="nb-slug">modulus</dt>
+              <dd className="nb-slug !text-ink">
+                E = {fmt(r.eGPa, 1)} GPa, from {material.eSource}, confidence{" "}
+                {material.eConfidence}
+              </dd>
+              <dt className="nb-slug">load case</dt>
+              <dd className="nb-slug !text-ink">{DELTA_FORMULA[caseKey]}</dd>
+              <dt className="nb-slug">worst moment</dt>
+              <dd className="nb-slug !text-ink">
+                {MOMENT_FORMULA[caseKey]}, which is {fmt(r.momentNm, 2)} N·m here
+              </dd>
+              <dt className="nb-slug">bending stress</dt>
+              <dd className="nb-slug !text-ink">
+                {fmt(r.sigmaMPa, 1)} MPa, {fmt(r.sigmaKsi, 2)} ksi
+              </dd>
+            </dl>
           </div>
         </div>
-      </details>
-    </div>
+      </section>
+
+      {/* ---------------------------------------------------------------- *
+       * 4. The section, drawn beside its own dimensions
+       *
+       * A load case is a picture before it is an equation, so the schematic
+       * gets its own taped card next to the numbers that define it rather
+       * than sitting under a fold as decoration.
+       * ---------------------------------------------------------------- */}
+      <section className="nb-rule py-[clamp(2.2rem,5vw,3.6rem)]">
+        <div className="nb-wrap">
+          <p className="nb-marker">the section / drawn and measured</p>
+          <h2 className="max-w-[22ch] text-[clamp(1.5rem,1.1rem+1.6vw,2.4rem)]">
+            The shape doing the work, and the load bending it.
+          </h2>
+
+          <div className="mt-[clamp(1.4rem,3vw,2.2rem)] grid items-start gap-[clamp(1.2rem,2.8vw,2.2rem)] lg:grid-cols-2">
+            {/* --- Card A: the dimensions --- */}
+            <div className="nb-box nb-tilt-2 p-[clamp(1.1rem,2.4vw,1.7rem)]">
+              <p className="nb-slug border-b border-dashed border-rule pb-2.5">
+                dimensions / {sectionPreset.label}
+              </p>
+
+              <div className="mt-4 grid gap-[clamp(1rem,2.2vw,1.4rem)] sm:grid-cols-2">
+                {shape === "tube" ? (
+                  <>
+                    <NumberField
+                      id="df-b"
+                      label={`Outer width b (${lu})`}
+                      hint="The horizontal outer dimension."
+                      value={secB}
+                      onChange={setSecB}
+                    />
+                    <NumberField
+                      id="df-h"
+                      label={`Outer height h (${lu})`}
+                      hint="The bending direction. This one is cubed, so it is the number that matters."
+                      value={secH}
+                      onChange={setSecH}
+                    />
+                    <NumberField
+                      id="df-wall"
+                      label={`Wall thickness (${lu})`}
+                      hint="FRC stock is usually 1/16 in, which is 0.0625."
+                      value={secWall}
+                      onChange={setSecWall}
+                    />
+                  </>
+                ) : null}
+
+                {shape === "round" ? (
+                  <>
+                    <NumberField
+                      id="df-d"
+                      label={`Outer diameter D (${lu})`}
+                      hint="Outside diameter of the round tube."
+                      value={secD}
+                      onChange={setSecD}
+                    />
+                    <NumberField
+                      id="df-wall"
+                      label={`Wall thickness (${lu})`}
+                      hint="Tube wall thickness."
+                      value={secWall}
+                      onChange={setSecWall}
+                    />
+                  </>
+                ) : null}
+
+                {shape === "solid" ? (
+                  <>
+                    <NumberField
+                      id="df-b"
+                      label={`Width b (${lu})`}
+                      hint="Width across the plate or bar."
+                      value={secB}
+                      onChange={setSecB}
+                    />
+                    <NumberField
+                      id="df-h"
+                      label={`Thickness h (${lu})`}
+                      hint="The bending direction. On flat plate this is the thin dimension."
+                      value={secH}
+                      onChange={setSecH}
+                    />
+                  </>
+                ) : null}
+
+                {shape === "customI" ? (
+                  <>
+                    <NumberField
+                      id="df-i"
+                      label={`Area moment I (${lu} to the fourth)`}
+                      hint="Bending area moment about the neutral axis."
+                      value={secI}
+                      onChange={setSecI}
+                    />
+                    <NumberField
+                      id="df-h"
+                      label={`Section height h (${lu})`}
+                      hint="Full height, used for c = h over 2."
+                      value={secH}
+                      onChange={setSecH}
+                    />
+                  </>
+                ) : null}
+              </div>
+
+              <dl className="nb-hair mt-[clamp(1.1rem,2.4vw,1.6rem)] grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1.5 pt-[clamp(1rem,2.2vw,1.4rem)]">
+                <dt className="nb-slug">formula</dt>
+                <dd className="nb-slug !text-ink">{SECTION_FORMULA[shape]}</dd>
+                <dt className="nb-slug">area moment</dt>
+                <dd className="nb-slug !text-ink">
+                  {fmt(r.I_in4, 4)} in⁴, {fmt(r.I_cm4, 3)} cm⁴
+                </dd>
+                <dt className="nb-slug">outer fibre</dt>
+                <dd className="nb-slug !text-ink">c = {fmt(r.c_in, 3)} in</dd>
+              </dl>
+
+              <p className="nb-slug mt-4 max-w-[46ch]">
+                Computed live from the dimensions above, never read out of a
+                stored table.
+              </p>
+            </div>
+
+            {/* --- Card B: the load case, drawn --- */}
+            <div className="nb-box nb-tilt-3 relative p-[clamp(1.1rem,2.4vw,1.7rem)] lg:mt-8">
+              <span
+                className="nb-tape -top-3 right-[15%] rotate-[2.7deg]"
+                aria-hidden="true"
+              />
+              <p className="nb-slug border-b border-dashed border-rule pb-2.5">
+                load case / deflection drawn far larger than it is
+              </p>
+
+              <BeamDiagram support={support} loadType={loadType} />
+
+              <p className="mt-3 max-w-[46ch] text-[0.95rem] leading-relaxed text-graphite">
+                {support === "cantilever"
+                  ? "Fixed at the left, free at the right. The tip carries the whole moment back to the mount, which is why an arm fails where it bolts on."
+                  : "Pinned at both ends. The worst moment sits at mid-span, so that is where the holes hurt most."}
+              </p>
+
+              <button
+                type="button"
+                onClick={resetAll}
+                className="nb-btn-ghost nb-btn-sm mt-[clamp(1.1rem,2.4vw,1.6rem)]"
+              >
+                Back to the 1x1 default
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ---------------------------------------------------------------- *
+       * 5. The working, shown
+       *
+       * Nobody trusts a structures calculator that will not show its
+       * working, so every formula is printed as a row with the entered
+       * numbers substituted in. It scrolls inside itself rather than
+       * widening the page.
+       * ---------------------------------------------------------------- */}
+      <section className="nb-rule py-[clamp(2.2rem,5vw,3.6rem)]">
+        <div className="nb-wrap">
+          <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-4">
+            <div>
+              <p className="nb-marker">the working / nothing hidden</p>
+              <h2 className="max-w-[20ch] text-[clamp(1.5rem,1.1rem+1.6vw,2.4rem)]">
+                Every line, with your numbers in it.
+              </h2>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="nb-btn nb-btn-sm"
+              >
+                Print this sheet
+              </button>
+              {authed ? (
+                <button
+                  type="button"
+                  className="nb-btn-ghost nb-btn-sm"
+                  onClick={() => {
+                    setSaved(true);
+                    window.setTimeout(() => setSaved(false), 2000);
+                  }}
+                >
+                  {saved ? "Saved" : "Save scenario"}
+                </button>
+              ) : null}
+            </div>
+          </div>
+
+          {/* `tabIndex` because this table is 46rem wide and holds no links:
+              below that width the scroller is reachable by pointer only, and
+              the right-hand columns cannot be read from a keyboard at all. */}
+          <div className="nb-scroll mt-[clamp(1.4rem,3vw,2.2rem)]" tabIndex={0}>
+            <table className="nb-table min-w-[46rem]">
+              <caption className="sr-only">
+                Every formula this calculator uses, with the entered values
+                substituted in.
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col">what</th>
+                  <th scope="col">formula</th>
+                  <th scope="col">with your numbers</th>
+                </tr>
+              </thead>
+              <tbody>
+                <MathRow
+                  title="Area moment of inertia"
+                  formula={SECTION_FORMULA[shape]}
+                  worked={`I = ${fmt(r.I_in4, 4)} in⁴ = ${r.I_m4.toExponential(3)} m⁴`}
+                />
+                <MathRow
+                  title="Outer fibre distance"
+                  formula="c = h / 2"
+                  worked={`c = ${fmt(r.c_in, 3)} in = ${fmt(r.c_m * 1000, 2)} mm`}
+                />
+                <MathRow
+                  title="Span and load, in SI"
+                  formula="L in metres, P or W in newtons"
+                  worked={`L = ${fmt(r.L_m, 4)} m, load = ${fmt(r.loadN, 2)} N`}
+                />
+                <MathRow
+                  title="Max deflection"
+                  formula={DELTA_FORMULA[caseKey]}
+                  worked={`d = ${fmt(r.deltaIn, 4)} in = ${fmt(r.deltaMm, 3)} mm`}
+                />
+                <MathRow
+                  title="Deflection against span"
+                  formula="L / d"
+                  worked={r.valid ? `L/${fmt(r.ratio, 0)}, ${defBand}` : "n/a"}
+                />
+                <MathRow
+                  title="Max bending moment"
+                  formula={MOMENT_FORMULA[caseKey]}
+                  worked={`M = ${fmt(r.momentNm, 3)} N·m`}
+                />
+                <MathRow
+                  title="Max bending stress"
+                  formula="sigma = M c / I"
+                  worked={`sigma = ${fmt(r.sigmaMPa, 2)} MPa = ${fmt(r.sigmaKsi, 3)} ksi`}
+                />
+                <MathRow
+                  title="Safety factor"
+                  formula="SF = yield / sigma"
+                  worked={
+                    r.valid && r.hasYield
+                      ? `SF = ${fmt(parseNum(yieldMPa), 0)} / ${fmt(r.sigmaMPa, 2)} = ${fmt(r.sf, 2)}`
+                      : "enter a yield strength above"
+                  }
+                />
+              </tbody>
+            </table>
+          </div>
+
+          <p className="nb-note mt-[clamp(1.4rem,3vw,2.2rem)] max-w-[64ch] text-[0.95rem] leading-relaxed text-graphite">
+            <span className="nb-slug mb-1 block">
+              what a safety factor of two does not cover
+            </span>
+            Two against yield is the usual FRC target for a static load. It says
+            nothing about impact, vibration or fatigue, and a lightening hole or
+            a notch concentrates stress well above the plain-section figure, so
+            a drilled tube yields before this number says it should.
+          </p>
+
+          {!authed ? (
+            <div className="nb-hair mt-[clamp(1.4rem,3vw,2rem)] flex flex-wrap items-center justify-between gap-4 pt-[clamp(1.1rem,2.2vw,1.5rem)]">
+              <p className="max-w-[46ch] text-[0.95rem] text-graphite">
+                An account saves named member presets so you can put two sections
+                side by side. Reading and calculating never needs one.
+              </p>
+              <Link
+                href="/signup?next=/tools/frc-deflection-calculator"
+                className="nb-btn nb-btn-sm"
+              >
+                Create a free account
+              </Link>
+            </div>
+          ) : null}
+        </div>
+      </section>
+
+      {/* ---------------------------------------------------------------- *
+       * 6. The back of the sheet
+       * ---------------------------------------------------------------- */}
+      <section className="nb-rule py-[clamp(2.2rem,5vw,3.6rem)]">
+        <div className="nb-wrap">
+          <button
+            type="button"
+            className="flex w-full items-baseline justify-between gap-4 text-left"
+            onClick={() => setNotesOpen((v) => !v)}
+            aria-expanded={notesOpen}
+            aria-controls="df-notes"
+          >
+            <span>
+              <span className="nb-marker">the back of the sheet</span>
+              <span className="block text-[clamp(1.35rem,1.05rem+1.2vw,2rem)] font-extrabold tracking-[-0.025em]">
+                Where every material number came from.
+              </span>
+            </span>
+            <span className="nb-slug shrink-0 !text-ink" aria-hidden="true">
+              {notesOpen ? "hide" : "show"}
+            </span>
+          </button>
+
+          {notesOpen ? (
+            <div
+              id="df-notes"
+              className="mt-[clamp(1.4rem,3vw,2.2rem)] grid gap-[clamp(1.4rem,3vw,2.6rem)] lg:grid-cols-3"
+            >
+              <div>
+                <p className="nb-slug border-b-2 border-ink pb-2">formulas used</p>
+                <ul className="nb-prose mt-4 !max-w-none text-[0.95rem]">
+                  <li>Cantilever, point at the tip: d = P L³/(3EI), M = P L.</li>
+                  <li>
+                    Cantilever, distributed total W: d = W L³/(8EI), M = W L/2.
+                  </li>
+                  <li>
+                    Simply supported, point at mid-span: d = P L³/(48EI), M = P L/4.
+                  </li>
+                  <li>
+                    Simply supported, distributed total W: d = 5 W L³/(384EI),
+                    M = W L/8.
+                  </li>
+                  <li>
+                    Rectangular tube I = (b h³ - bi hi³)/12, round tube
+                    I = pi(D⁴ - d⁴)/64, solid I = b h³/12.
+                  </li>
+                  <li>
+                    Bending stress sigma = M c / I with c = h/2, and safety factor
+                    = yield / sigma.
+                  </li>
+                  <li>
+                    Source: Euler-Bernoulli beam theory. Hibbeler, Mechanics of
+                    Materials, and Roark’s Formulas for Stress and Strain,
+                    Table 8.1.
+                  </li>
+                </ul>
+              </div>
+
+              <div>
+                <p className="nb-slug border-b-2 border-ink pb-2">
+                  where it stops being true
+                </p>
+                <ul className="nb-prose mt-4 !max-w-none text-[0.95rem]">
+                  <li>
+                    This is an idealised straight, uniform, single-piece beam on
+                    a perfect fixed or pinned support.
+                  </li>
+                  <li>
+                    Real FRC structures deflect more than this predicts, because
+                    bolted and riveted joints, gussets, bearing mounts and
+                    gearbox plates all flex. Joint compliance often dominates the
+                    real sag and none of it is modelled here.
+                  </li>
+                  <li>
+                    Transverse shear deflection is ignored. That is minor for a
+                    long slender beam and larger for a short stubby one.
+                  </li>
+                  <li>
+                    Stress concentrations at lightening holes, bends and welds
+                    are ignored, so drilled tube yields below the plain-section
+                    safety factor shown.
+                  </li>
+                  <li>
+                    Polycarbonate modulus varies by grade and temperature, and
+                    the material creeps under a sustained load, so treat those
+                    results as approximate and design conservatively.
+                  </li>
+                  <li>
+                    Verify member dimensions and wall thickness against your
+                    actual vendor stock. Nominal tube sizes vary by supplier.
+                  </li>
+                </ul>
+              </div>
+
+              <div>
+                <p className="nb-slug border-b-2 border-ink pb-2">
+                  sources for every default
+                </p>
+                <ul className="nb-prose mt-4 !max-w-none text-[0.95rem]">
+                  <li>
+                    6061-T6: E = 68.9 GPa (10,000 ksi), yield 276 MPa (40 ksi),
+                    from the{" "}
+                    <SourceLink href="https://asm.matweb.com/search/SpecificMaterial.asp?bassnum=ma6061t6">
+                      MatWeb and ASM 6061-T6 datasheet
+                    </SourceLink>
+                    .
+                  </li>
+                  <li>
+                    7075-T6: E = 71.7 GPa (10,400 ksi), MatWeb and ASM. Yield is
+                    not in the verified set, so enter your own.
+                  </li>
+                  <li>
+                    Steel, mild 1018 or 4130: E = 200 GPa, about 29,000 ksi, from
+                    ASM material data. 4130 sits nearer 205 GPa.
+                  </li>
+                  <li>
+                    Polycarbonate: E = 2.3 GPa, about 0.33 Msi, grade-dependent
+                    across 2.0 to 2.4, from MatWeb plus the Lexan datasheets.
+                  </li>
+                  <li>
+                    Stock sections: 1x1 and 2x1 in tube with a 1/16 in (0.0625)
+                    wall, and 1/8 and 3/16 in polycarbonate plate, from{" "}
+                    <SourceLink href="https://www.westcoastproducts.com/">
+                      WestCoast Products
+                    </SourceLink>
+                    , TheThriftyBot and 80-20. I is computed from those
+                    dimensions, never stored.
+                  </li>
+                  <li>
+                    Unit constants: 1 in = 25.4 mm exactly, 1 lbf = 4.4482216 N,
+                    1 ksi = 6.894757293 MPa. All defined, not measured.
+                  </li>
+                </ul>
+                <p className="nb-slug mt-4">
+                  For reference only. Not a substitute for physical load testing,
+                  and not affiliated with or endorsed by FIRST.
+                </p>
+              </div>
+            </div>
+          ) : null}
+        </div>
+      </section>
+    </>
   );
 }
 
 /* ------------------------------------------------------------------ *
- * Sub-components
+ * Presentational helpers
  * ------------------------------------------------------------------ */
-function Field({
+
+function NumberField({
+  id,
   label,
-  help,
+  hint,
   value,
   onChange,
-  unit,
-  accent,
 }: {
+  id: string;
   label: string;
-  help: string;
+  hint: string;
   value: string;
   onChange: (v: string) => void;
-  unit: string;
-  accent?: boolean;
-}): React.ReactElement {
+}): React.JSX.Element {
   return (
-    <div>
-      <label className="flex items-center gap-1 text-sm font-medium text-foreground">
+    <div className="nb-field">
+      <label className="nb-label" htmlFor={id}>
         {label}
-        {accent ? (
-          <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-primary">
-            key
-          </span>
-        ) : null}
-        <Tip text={help} />
       </label>
-      <div className="mt-1 flex items-center gap-2">
-        <input
-          type="number"
-          inputMode="decimal"
-          step="any"
-          className="w-full rounded-xl border border-border bg-white/60 px-3 py-2 text-sm text-foreground tabular-nums focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-        />
-        <span className="shrink-0 text-xs text-muted-foreground">{unit}</span>
-      </div>
-      <p className="mt-1 text-xs text-muted-foreground">{help}</p>
+      <input
+        id={id}
+        className="nb-input"
+        type="number"
+        inputMode="decimal"
+        step="any"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      />
+      <p className="nb-hint">{hint}</p>
     </div>
-  );
-}
-
-function UnitToggle<T extends string>({
-  value,
-  a,
-  b,
-  onChange,
-}: {
-  value: T;
-  a: T;
-  b: T;
-  onChange: (next: T) => void;
-}): React.ReactElement {
-  return (
-    <div className="inline-flex overflow-hidden rounded-lg border border-border text-xs">
-      {[a, b].map((opt) => (
-        <button
-          key={opt}
-          type="button"
-          onClick={() => onChange(opt)}
-          className={
-            value === opt
-              ? "bg-primary px-2 py-1 font-semibold text-white"
-              : "bg-white/60 px-2 py-1 text-muted-foreground"
-          }
-        >
-          {opt}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function Verdict({
-  tone,
-  label,
-}: {
-  tone: "ok" | "warn" | "fail" | "muted";
-  label: string;
-}): React.ReactElement {
-  const cls =
-    tone === "ok"
-      ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
-      : tone === "warn"
-        ? "bg-amber-500/10 text-amber-700 dark:text-amber-400"
-        : tone === "fail"
-          ? "bg-red-500/10 text-red-700 dark:text-red-400"
-          : "bg-muted text-muted-foreground";
-  return (
-    <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[11px] font-medium ${cls}`}>
-      {label}
-    </span>
   );
 }
 
 /**
- * Schematic load-case diagram (deflection exaggerated, not to scale).
+ * A row header, but `.nb-table th` is styled for the mono column head, so the
+ * scope="row" cell overrides back to running weight.
+ */
+function MathRow({
+  title,
+  formula,
+  worked,
+}: {
+  title: string;
+  formula: string;
+  worked: string;
+}): React.JSX.Element {
+  return (
+    <tr>
+      <th
+        scope="row"
+        className="!border-b-0 !text-[0.86rem] !normal-case !text-ink"
+      >
+        {title}
+      </th>
+      <td className="nb-slug">{formula}</td>
+      <td className="nb-slug !text-ink">{worked}</td>
+    </tr>
+  );
+}
+
+/**
+ * The load case, drawn in ink and ballpoint.
+ *
+ * Schematic only: the sag is drawn far larger than any real deflection, so it
+ * reads as a diagram of what is happening rather than as a measurement.
  */
 function BeamDiagram({
   support,
@@ -1042,113 +1308,180 @@ function BeamDiagram({
 }: {
   support: Support;
   loadType: LoadType;
-}): React.ReactElement {
+}): React.JSX.Element {
   const W = 320;
-  const H = 130;
-  const y0 = 54; // undeflected beam line
-  const x1 = 40;
+  const H = 132;
+  const y0 = 56; // undeflected beam line
+  const x1 = 42;
   const x2 = W - 24;
   const span = x2 - x1;
-  const sag = 34; // visual deflection amplitude
+  const sag = 34; // visual amplitude, not to scale
 
-  // Deflected shape as an SVG path.
-  let path: string;
-  if (support === "cantilever") {
-    // fixed at x1, tip droops down
-    path = `M ${x1} ${y0} Q ${x1 + span * 0.6} ${y0 + sag * 0.35} ${x2} ${y0 + sag}`;
-  } else {
-    // pinned both ends, sags in the middle
-    path = `M ${x1} ${y0} Q ${(x1 + x2) / 2} ${y0 + sag * 1.6} ${x2} ${y0}`;
-  }
+  const path =
+    support === "cantilever"
+      ? `M ${x1} ${y0} Q ${x1 + span * 0.6} ${y0 + sag * 0.35} ${x2} ${y0 + sag}`
+      : `M ${x1} ${y0} Q ${(x1 + x2) / 2} ${y0 + sag * 1.6} ${x2} ${y0}`;
 
   const arrows: number[] =
     loadType === "point"
       ? support === "cantilever"
         ? [x2]
         : [(x1 + x2) / 2]
-      : [x1 + span * 0.15, x1 + span * 0.325, x1 + span * 0.5, x1 + span * 0.675, x1 + span * 0.85];
+      : [
+          x1 + span * 0.15,
+          x1 + span * 0.325,
+          x1 + span * 0.5,
+          x1 + span * 0.675,
+          x1 + span * 0.85,
+        ];
 
   return (
-    <div className="mt-4 rounded-xl border border-border bg-white/70 p-3 dark:bg-white/5">
-      <div className="mb-1 text-xs font-medium text-muted-foreground">
-        Load case (schematic — deflection exaggerated)
-      </div>
-      <svg
-        viewBox={`0 0 ${W} ${H}`}
-        className="h-auto w-full"
-        role="img"
-        aria-label={`${support === "cantilever" ? "Cantilever" : "Simply supported"} beam with ${
-          loadType === "point" ? "a point load" : "a distributed load"
-        }`}
-      >
-        <defs>
-          <marker id="ld" markerWidth="8" markerHeight="8" refX="4" refY="7" orient="auto">
-            <path d="M0,0 L8,0 L4,7 Z" fill="#ef4444" />
-          </marker>
-        </defs>
+    <svg
+      viewBox={`0 0 ${W} ${H}`}
+      className="mt-4 h-auto w-full"
+      role="img"
+      aria-label={`${
+        support === "cantilever" ? "Cantilever" : "Simply supported"
+      } beam carrying ${
+        loadType === "point" ? "a single point load" : "a distributed load"
+      }, drawn with the deflection exaggerated.`}
+    >
+      <defs>
+        <marker
+          id="df-arrow"
+          markerWidth="8"
+          markerHeight="8"
+          refX="4"
+          refY="7"
+          orient="auto"
+        >
+          <path d="M0,0 L8,0 L4,7 Z" fill="var(--ink)" />
+        </marker>
+      </defs>
 
-        {/* load arrows */}
-        {arrows.map((ax, i) => (
+      {/* the load, in ink */}
+      {arrows.map((ax, i) => (
+        <line
+          key={i}
+          x1={ax}
+          y1={y0 - 32}
+          x2={ax}
+          y2={y0 - 7}
+          stroke="var(--ink)"
+          strokeWidth={1.75}
+          markerEnd="url(#df-arrow)"
+        />
+      ))}
+      {loadType === "distributed" ? (
+        <line
+          x1={x1}
+          y1={y0 - 32}
+          x2={x2}
+          y2={y0 - 32}
+          stroke="var(--ink)"
+          strokeWidth={1.5}
+        />
+      ) : null}
+
+      {/* the beam at rest */}
+      <line
+        x1={x1}
+        y1={y0}
+        x2={x2}
+        y2={y0}
+        stroke="var(--ink)"
+        strokeWidth={3}
+      />
+
+      {/* the beam under load, in ballpoint */}
+      <path d={path} fill="none" stroke="var(--blue)" strokeWidth={2.25} />
+
+      {/* the supports */}
+      {support === "cantilever" ? (
+        <>
           <line
-            key={i}
-            x1={ax}
-            y1={y0 - 30}
-            x2={ax}
-            y2={y0 - 6}
-            stroke="#ef4444"
-            strokeWidth={1.75}
-            markerEnd="url(#ld)"
+            x1={x1}
+            y1={y0 - 24}
+            x2={x1}
+            y2={y0 + 24}
+            stroke="var(--ink)"
+            strokeWidth={2.5}
           />
-        ))}
-        {loadType === "distributed" && (
-          <line x1={x1} y1={y0 - 30} x2={x2} y2={y0 - 30} stroke="#ef4444" strokeWidth={1.25} strokeOpacity={0.7} />
-        )}
+          {[0, 1, 2, 3, 4].map((i) => (
+            <line
+              key={i}
+              x1={x1}
+              y1={y0 - 24 + i * 12}
+              x2={x1 - 9}
+              y2={y0 - 17 + i * 12}
+              stroke="var(--ink)"
+              strokeWidth={1.5}
+            />
+          ))}
+        </>
+      ) : (
+        <>
+          <path
+            d={`M ${x1} ${y0} l -9 17 l 18 0 Z`}
+            fill="none"
+            stroke="var(--ink)"
+            strokeWidth={2}
+          />
+          <path
+            d={`M ${x2} ${y0} l -9 17 l 18 0 Z`}
+            fill="none"
+            stroke="var(--ink)"
+            strokeWidth={2}
+          />
+        </>
+      )}
 
-        {/* undeflected reference beam */}
-        <line x1={x1} y1={y0} x2={x2} y2={y0} stroke="#2560e6" strokeWidth={3} strokeOpacity={0.85} />
-
-        {/* deflected shape */}
-        <path d={path} fill="none" stroke="#1aa9d6" strokeWidth={2} strokeDasharray="5 3" />
-
-        {/* supports */}
-        {support === "cantilever" ? (
-          <>
-            <rect x={x1 - 10} y={y0 - 22} width={10} height={44} fill="#2560e6" fillOpacity={0.2} stroke="#2560e6" strokeWidth={1.5} />
-            {[0, 1, 2, 3, 4].map((i) => (
-              <line key={i} x1={x1 - 10} y1={y0 - 22 + i * 11} x2={x1 - 16} y2={y0 - 16 + i * 11} stroke="#2560e6" strokeWidth={1.25} />
-            ))}
-          </>
-        ) : (
-          <>
-            <path d={`M ${x1} ${y0} l -9 16 l 18 0 Z`} fill="#2560e6" fillOpacity={0.2} stroke="#2560e6" strokeWidth={1.5} />
-            <path d={`M ${x2} ${y0} l -9 16 l 18 0 Z`} fill="#2560e6" fillOpacity={0.2} stroke="#2560e6" strokeWidth={1.5} />
-          </>
-        )}
-
-        {/* deflection callout at max point */}
-        {support === "cantilever" ? (
-          <line x1={x2} y1={y0} x2={x2} y2={y0 + sag} stroke="currentColor" strokeOpacity={0.4} strokeWidth={1} strokeDasharray="2 2" />
-        ) : (
-          <line x1={(x1 + x2) / 2} y1={y0} x2={(x1 + x2) / 2} y2={y0 + sag * 1.6} stroke="currentColor" strokeOpacity={0.4} strokeWidth={1} strokeDasharray="2 2" />
-        )}
-        <text x={x2 - 4} y={H - 6} fontSize={10} textAnchor="end" fill="currentColor" fillOpacity={0.55}>
-          δ = max deflection
-        </text>
-      </svg>
-    </div>
+      {/* the sag, called out */}
+      {support === "cantilever" ? (
+        <line
+          x1={x2}
+          y1={y0}
+          x2={x2}
+          y2={y0 + sag}
+          stroke="var(--blue)"
+          strokeWidth={1.25}
+          strokeDasharray="3 3"
+        />
+      ) : (
+        <line
+          x1={(x1 + x2) / 2}
+          y1={y0}
+          x2={(x1 + x2) / 2}
+          y2={y0 + sag * 1.6}
+          stroke="var(--blue)"
+          strokeWidth={1.25}
+          strokeDasharray="3 3"
+        />
+      )}
+      <text
+        x={x2}
+        y={H - 8}
+        fontSize={11}
+        textAnchor="end"
+        fill="var(--graphite)"
+        style={{ fontFamily: "var(--font-space-mono), monospace" }}
+      >
+        d = max deflection
+      </text>
+    </svg>
   );
 }
 
-function Src({ href }: { href: string }): React.ReactElement {
-  let host = href;
-  try {
-    host = new URL(href).hostname.replace(/^www\./, "");
-  } catch {
-    /* keep raw */
-  }
+function SourceLink({
+  href,
+  children,
+}: {
+  href: string;
+  children: React.ReactNode;
+}): React.JSX.Element {
   return (
-    <a href={href} target="_blank" rel="noreferrer" className="text-primary underline underline-offset-2">
-      {host}
+    <a href={href} target="_blank" rel="noopener noreferrer" className="nb-link">
+      {children}
     </a>
   );
 }

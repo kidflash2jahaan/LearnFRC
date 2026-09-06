@@ -68,6 +68,26 @@ export function useStaticMotion(): boolean {
   return perf || reduce;
 }
 
+/**
+ * `scrollIntoView` that obeys the same preference.
+ *
+ * This helper exists because `behavior: "smooth"` passed from JS beats the
+ * `scroll-behavior: auto !important` that the reduced-motion block in
+ * globals.css sets, so a scroll started from a click handler is the one piece
+ * of motion on the site the stylesheet cannot switch off. Read imperatively
+ * rather than through the hook: the answer that matters is the one at the
+ * moment of the click, not the one captured at the last render.
+ */
+export function scrollToElement(
+  el: Element | null | undefined,
+  options: Omit<ScrollIntoViewOptions, "behavior"> = {}
+) {
+  if (!el) return;
+  const still =
+    typeof window !== "undefined" && (readPerf() || readMotion());
+  el.scrollIntoView({ ...options, behavior: still ? "auto" : "smooth" });
+}
+
 /* ------------------------------------------------------------------ */
 /*  The control                                                        */
 /* ------------------------------------------------------------------ */

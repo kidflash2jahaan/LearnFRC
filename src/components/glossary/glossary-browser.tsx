@@ -157,12 +157,17 @@ export function GlossaryBrowser({
         className="mt-7 flex flex-wrap items-center justify-center gap-x-5 gap-y-2"
         aria-live="polite"
       >
-        <p className="nb-slug">
+        {/* A real h2, because the cards below are h3s and the page heading is
+            the h1: as a <p> this line left every term title one level adrift
+            with nothing in between. `font-normal` holds the mono weight the
+            rest of the filter furniture uses, so the heading looks identical
+            to the paragraph it replaces. */}
+        <h2 className="nb-slug font-normal">
           <span className="text-[1.1rem] font-bold text-blue tabular-nums">
             {filtered.length}
           </span>{" "}
           {filtered.length === 1 ? "term" : "terms"} showing
-        </p>
+        </h2>
         {hasFilters && (
           <button type="button" onClick={clearFilters} className="nb-btn-ghost nb-btn-sm">
             Clear filters

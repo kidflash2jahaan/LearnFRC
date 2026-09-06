@@ -180,7 +180,12 @@ export default function ToolsPage() {
 
       <section className="nb-rule py-[clamp(2.4rem,5.5vw,4rem)]">
         <div className="nb-wrap">
-          <div className="grid gap-[clamp(1.1rem,2.4vw,1.9rem)] lg:grid-cols-2">
+          {/* `grid-cols-1` below lg is not redundant. Without it the single
+              implicit track is `auto`, so it sizes to the widest card's
+              min-content and grows past `.nb-wrap`, and the root's
+              `overflow-x: clip` then shears the right edge off every card.
+              `minmax(0, 1fr)` caps the track at the gutter instead. */}
+          <div className="grid grid-cols-1 gap-[clamp(1.1rem,2.4vw,1.9rem)] lg:grid-cols-2">
             <div className="flex flex-col gap-[clamp(1.1rem,2.4vw,1.9rem)]">
               {left.map((t) => (
                 <ToolCard key={t.href} t={t} />

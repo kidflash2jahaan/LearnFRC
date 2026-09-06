@@ -21,8 +21,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 export default function LeaderboardLoading() {
   return (
     <>
-      {/* ===================== MASTHEAD ===================== */}
-      <section className="nb-wrap grid items-start gap-[clamp(1.8rem,4vw,3.4rem)] pb-[clamp(2rem,4vw,3rem)] pt-[clamp(2.2rem,5vw,3.8rem)] lg:grid-cols-[minmax(0,1.35fr)_minmax(0,0.85fr)]">
+      {/* ===================== MASTHEAD =====================
+          `grid-cols-1` below lg is load-bearing here for the same reason it is
+          on the page this stands in for: without it the implicit `auto` track
+          sizes to the standings card's min-content, pushes past `.nb-wrap` and
+          gives the whole document 91px of horizontal scroll at 320px. */}
+      <section className="nb-wrap grid grid-cols-1 items-start gap-[clamp(1.8rem,4vw,3.4rem)] pb-[clamp(2rem,4vw,3rem)] pt-[clamp(2.2rem,5vw,3.8rem)] lg:grid-cols-[minmax(0,1.35fr)_minmax(0,0.85fr)]">
         <div>
           {/* nb-marker */}
           <Skeleton className="h-4 w-40" />

@@ -28,7 +28,11 @@ export function DeskIndex({ desks }: { desks: DeskCount[] }) {
   if (desks.length === 0) return null;
 
   return (
-    <nav aria-label="Jump to a desk" className="w-full max-w-md lg:justify-self-end">
+    // "Desk dividers", not "Jump to a desk": the index page carries a second
+    // jump nav as a chip row above the log, and two landmarks sharing one name
+    // are indistinguishable in a screen reader's landmark list. This one is
+    // named after what it visibly is, the dividers card.
+    <nav aria-label="Desk dividers" className="w-full max-w-md lg:justify-self-end">
       <div className="nb-box nb-tilt-2 p-[clamp(1.1rem,2.2vw,1.6rem)]">
         <span className="nb-tape -top-3 left-[18%] rotate-[-4.2deg]" aria-hidden="true" />
 

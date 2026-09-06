@@ -134,11 +134,20 @@ export default async function StartPage({
                 The first answer is the safe one. It starts with how FRC works
                 and covers everything a new member needs.
               </p>
-              <p className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-1">
-                <Link href="/guides" className="nb-link text-[0.92rem]">
+              {/* Standalone controls rather than links in a sentence, so they
+                  carry the 44px target the system requires. `nb-link` on its
+                  own is for prose, where the line height is the target. */}
+              <p className="mt-1 flex flex-wrap items-center gap-x-6">
+                <Link
+                  href="/guides"
+                  className="nb-link inline-flex min-h-11 items-center text-[0.92rem]"
+                >
                   Browse all 11 departments
                 </Link>
-                <Link href="/dashboard" className="nb-link text-[0.92rem]">
+                <Link
+                  href="/dashboard"
+                  className="nb-link inline-flex min-h-11 items-center text-[0.92rem]"
+                >
                   Skip for now
                 </Link>
               </p>

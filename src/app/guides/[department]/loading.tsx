@@ -17,7 +17,11 @@ export default function DepartmentLoading() {
     <>
       {/* ===================== MASTHEAD ===================== */}
       <section className="nb-wrap pb-[clamp(1.6rem,3vw,2.4rem)] pt-[clamp(1.6rem,3.5vw,2.6rem)]">
-        <Skeleton className="h-4 w-56" />
+        {/* The trail's links are 44px targets, so the row they sit in is 44px
+            whatever the type inside it measures. Hold that, not the type. */}
+        <div className="flex min-h-11 items-center">
+          <Skeleton className="h-4 w-56" />
+        </div>
 
         {/* h1 at the display clamp */}
         <Skeleton className="mt-[clamp(1rem,2vw,1.5rem)] h-[clamp(2.4rem,4.6vw,4.3rem)] w-[min(30rem,88%)]" />
@@ -48,7 +52,9 @@ export default function DepartmentLoading() {
           {Array.from({ length: 4 }, (_, i) => (
             <div key={i} className={TITLE_BLOCK_CELL}>
               <Skeleton className="h-3.5 w-24" />
-              <Skeleton className="h-7 w-16 min-[861px]:mt-1.5" />
+              {/* Same label-to-figure step the real block uses, so the figures
+                  do not jump when the catalogue read lands. */}
+              <Skeleton className="h-7 w-16 min-[861px]:mt-4" />
             </div>
           ))}
         </div>

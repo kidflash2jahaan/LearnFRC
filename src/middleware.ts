@@ -2,19 +2,21 @@ import { NextResponse, type NextRequest } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
 
 /**
- * The old staging host. Its links are burned into Chief Delphi threads the
- * owner can no longer edit, so instead of Vercel's domain-level 308 (which
- * loses attribution whenever the browser strips the Referer) the app handles
- * the redirect itself and STAMPS the acquisition source into the target URL.
+ * The old staging host. Its links are baked into Chief Delphi threads nobody
+ * can edit any more, so instead of Vercel's domain level 308, which loses the
+ * attribution whenever a browser strips the Referer, the app does the redirect
+ * itself and stamps the acquisition source on the way through.
  */
 const LEGACY_HOSTS = new Set([
   "learnfrc.systemerr.com",
   "www.learnfrc.systemerr.com",
 ]);
 
-/** Map a Referer header to the same source labels SourceCapture derives.
-    No referrer defaults to Chief Delphi — the legacy links live almost
-    exclusively in CD threads. */
+/**
+ * Map a Referer header onto the same source labels SourceCapture derives.
+ * No referrer falls back to Chief Delphi, because the legacy links live almost
+ * entirely in CD threads.
+ */
 function referrerSource(referer: string | null): string {
   if (!referer) return "Chief Delphi";
   let host = "";
@@ -42,11 +44,11 @@ function referrerSource(referer: string | null): string {
 }
 
 /**
- * Hosts allowed to be indexed. Every other host that serves this app — the
- * *.vercel.app production alias and every preview deployment — serves the exact
+ * Hosts allowed to be indexed. Every other host that serves this app, the
+ * *.vercel.app production alias and every preview deployment, serves the exact
  * same pages and would be crawled as duplicate content, so those get
- * `X-Robots-Tag: noindex, nofollow`. Local hosts are allow-listed so dev and
- * Playwright QA see the same headers as production.
+ * X-Robots-Tag: noindex, nofollow. Local hosts are allow-listed so dev and
+ * Playwright QA see the same headers production sends.
  */
 const INDEXABLE_HOSTS = new Set([
   "learnfrc.com",
@@ -60,7 +62,8 @@ function requestHostname(request: NextRequest): string {
   const host = request.headers.get("host");
   if (!host) return request.nextUrl.hostname.toLowerCase();
   try {
-    // URL parsing strips the port and normalizes IPv6 ("[::1]:3000" -> "[::1]").
+    // URL parsing strips the port and normalises IPv6, so "[::1]:3000" becomes
+    // "[::1]".
     return new URL(`http://${host}`).hostname.toLowerCase();
   } catch {
     return request.nextUrl.hostname.toLowerCase();
@@ -68,18 +71,17 @@ function requestHostname(request: NextRequest): string {
 }
 
 export async function middleware(request: NextRequest) {
-  // Legacy staging host -> apex, same path/query, 308 (permanent, so the link
-  // equity transfers).
+  // Legacy staging host to the apex, same path and query, 308 so the link
+  // equity transfers.
   //
   // Attribution rides in the lf_src COOKIE, not a utm_ query param, and that
-  // distinction matters more than it looks: Search Console shows 34 of this
-  // site's 38 external backlinks pointing at this legacy host — it is by far
-  // the most valuable inbound path we have. Redirecting those links to a
+  // distinction matters more than it looks. Search Console shows 34 of this
+  // site's 38 external backlinks pointing at the legacy host, which makes it by
+  // far the most valuable inbound path there is. Redirecting those links to a
   // parameterised URL would hand every crawler a non-canonical destination and
-  // muddy the consolidation of the one authority signal that counts. The
-  // cookie keeps first-touch attribution working (the page-view beacon and the
-  // signup action both read lf_src server-side) while crawlers and humans land
-  // on the clean canonical URL.
+  // muddy the one authority signal that counts. The cookie keeps first touch
+  // attribution working, the page view beacon and the signup action both read
+  // lf_src server side, while crawlers and humans land on the clean URL.
   const hostname = requestHostname(request);
   if (LEGACY_HOSTS.has(hostname)) {
     const url = new URL(
@@ -87,14 +89,14 @@ export async function middleware(request: NextRequest) {
       "https://learnfrc.com"
     );
     const res = NextResponse.redirect(url, 308);
-    // Never overwrite an existing first-touch source, and let an explicit
-    // ?ref= referral win — SourceCapture treats that as "Referral".
+    // Never overwrite an existing first touch source, and let an explicit ?ref=
+    // referral win, which SourceCapture treats as "Referral".
     if (!request.cookies.get("lf_src") && !url.searchParams.has("ref")) {
       res.cookies.set("lf_src", referrerSource(request.headers.get("referer")), {
         path: "/",
         maxAge: 60 * 60 * 24 * 90,
         sameSite: "lax",
-        // readable by SourceCapture, which short-circuits when it is present
+        // Readable by SourceCapture, which short-circuits when it is present.
         httpOnly: false,
       });
     }
@@ -103,7 +105,7 @@ export async function middleware(request: NextRequest) {
 
   const response = await updateSession(request);
 
-  // Never redirect — previews have to stay usable — just mark them noindex.
+  // Never redirect a preview, they have to stay usable. Just mark them noindex.
   if (!INDEXABLE_HOSTS.has(requestHostname(request))) {
     response.headers.set("X-Robots-Tag", "noindex, nofollow");
   }
@@ -113,9 +115,7 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except static assets:
-     */
+    // Every request path except static assets.
     "/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff2?)$).*)",
   ],
 };

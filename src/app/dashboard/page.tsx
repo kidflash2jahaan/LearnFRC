@@ -678,7 +678,7 @@ export default async function DashboardPage() {
           <div className="mt-[clamp(1rem,2.2vw,1.5rem)] max-w-[28rem]">
             <Progress
               value={achievementsPct}
-              aria-label={`${achievementsEarned} of ${achievements.length} badges earned`}
+              label={`${achievementsEarned} of ${achievements.length} badges earned`}
             />
           </div>
 

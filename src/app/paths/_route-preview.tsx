@@ -46,10 +46,11 @@ export function RouteSlip({
       className="nb-box nb-tilt nb-lift group block overflow-hidden"
       style={{ "--tilt": tilt } as CSSProperties}
     >
-      {/* 860px, not a Tailwind breakpoint: that is where `.nb-panel` turns its
-          dividing rule from vertical to horizontal, and the columns have to
-          split on the same pixel or the rule ends up on the wrong edge. */}
-      <div className="grid min-[860px]:grid-cols-[1.3fr_1fr]">
+      {/* 861px, not a Tailwind breakpoint: `.nb-panel` turns its dividing rule
+          from horizontal back to vertical the pixel it leaves the
+          `max-width:860px` query, so the columns have to split on 861 exactly
+          or the rule spends a pixel on the wrong edge. */}
+      <div className="grid min-[861px]:grid-cols-[1.3fr_1fr]">
         <div className="nb-panel">
           <p className="nb-slug">
             route {n} / {slug}

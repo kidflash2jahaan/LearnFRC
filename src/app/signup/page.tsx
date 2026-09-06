@@ -26,7 +26,7 @@ const STAMPS = [
 ];
 
 /**
- * SIGN UP — the roster page at the front of the binder.
+ * SIGN UP, the roster page at the front of the binder.
  *
  * Read top to bottom rather than side to side, which is the whole difference
  * between this page and /login. A rookie arriving here has not decided yet, so
@@ -137,8 +137,16 @@ export default async function SignupPage({
 
           {/* Pinned in the margin on wide screens, tucked underneath on narrow
               ones, the way a note written after the fact ends up wherever
-              there was room for it. */}
-          <p className="nb-pen mt-5 max-w-[24ch] rotate-[-1.4deg] xl:absolute xl:left-[calc(100%+2.6rem)] xl:top-16 xl:mt-0">
+              there was room for it.
+
+              `xl:w-[15rem]` is load-bearing, not decoration. Absolutely
+              positioned with only `left` set, the note is shrink-to-fit against
+              the container it is offset from, and `left: 100% + 2.6rem` leaves
+              that calculation NEGATIVE room, so it collapses to its longest
+              word and prints one word per line. A width restores the measure.
+              The margin next to it is ~560px at the xl breakpoint, so 15rem
+              never collides with anything. */}
+          <p className="nb-pen mt-5 max-w-[24ch] rotate-[-1.4deg] xl:absolute xl:left-[calc(100%+2.6rem)] xl:top-16 xl:mt-0 xl:w-[15rem] xl:max-w-none">
             takes about a minute. the team number is optional, add it later if
             you don&rsquo;t know it.
           </p>

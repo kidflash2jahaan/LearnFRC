@@ -3,8 +3,13 @@ import { getSession } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
-// Lightweight session probe so the (static) layout's Navbar can fetch auth
-// state client-side instead of forcing the whole app to render dynamically.
+/**
+ * A small session probe, so the navbar can find out who is signed in from the
+ * client instead of forcing every page that renders the layout to go dynamic.
+ *
+ * Never cached. The answer is different for every reader and stale auth state in
+ * the navbar is the kind of bug that looks like a logout.
+ */
 export async function GET() {
   const { user, profile, isAdmin } = await getSession();
   return NextResponse.json(

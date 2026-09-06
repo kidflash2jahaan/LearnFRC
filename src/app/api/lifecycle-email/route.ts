@@ -23,34 +23,38 @@ import {
 export const dynamic = "force-dynamic";
 
 /**
- * Automatic, recurring win-back email. Runs on a schedule (vercel.json, daily);
- * on each run it emails a small batch of ELIGIBLE lapsed learners and never a
- * mass blast. Eligibility is deliberately conservative for legal + reputation
- * safety:
- *   - email_opt_in = true (opt-out model; unsubscribe flips this)
- *   - email is CONFIRMED (an unconfirmed account cannot sign in at all, so
- *     mailing it can never lead anywhere useful)
- *   - lapsed on BOTH signals — no completion and no presence heartbeat
- *   - throttled, with the throttle widening as the learner goes colder
- *   - hard stop past GIVE_UP_DORMANT_DAYS: we do not mail forever
+ * The recurring win-back email. It runs daily on a schedule set in vercel.json,
+ * and on each run it emails a small batch of ELIGIBLE lapsed learners. It is
+ * never a mass blast. Eligibility is deliberately conservative, for legal and
+ * reputation reasons:
+ *
+ * - email_opt_in is true. This is an opt-out model, and unsubscribe flips it.
+ * - the address is CONFIRMED. An unconfirmed account cannot sign in at all, so
+ *   mailing it can never lead anywhere useful.
+ * - the learner is lapsed on BOTH signals, no completion and no presence
+ *   heartbeat.
+ * - throttled, and the throttle widens as the learner goes colder.
+ * - hard stop past GIVE_UP_DORMANT_DAYS. Nobody gets mailed forever.
  *
  * Segmentation lives in ./segments.ts. The three lanes get three genuinely
- * different emails; see LifecycleSegment for what separates them.
+ * different emails, see LifecycleSegment for what separates them.
  *
- * GET/POST ?secret=CRON_SECRET
+ * GET or POST ?secret=CRON_SECRET
  *   &dry=1            report the target list, send nothing
  *   &preview=<lane>   render one lane's HTML in the browser, send nothing
  *   &test=<email>     send ONE sample to that address and stop
  * LIFECYCLE_DRY_RUN=1 in the environment forces dry mode for every run.
  */
 
-const MAX_PER_RUN = 40; // stay well under Resend's 100/day free cap
+const MAX_PER_RUN = 40; // stay well under Resend's 100 a day free cap
 
-/** Per-lane ceilings, so the 156-account never_started backfill can't swallow a
- * whole run and starve the lanes with demonstrated affinity. Lanes are filled
- * in descending order of measured yield: deep_churn first, never_started last.
- * At today's volumes the backfill drains over about a week, which is also a far
- * safer sending pattern than one large blast from a young domain. */
+/**
+ * Per-lane ceilings, so the 156 account never_started backfill cannot swallow a
+ * whole run and starve the lanes with demonstrated affinity. Lanes fill in
+ * descending order of measured yield: deep_churn first, never_started last. At
+ * today's volumes the backfill drains over about a week, which is also a far
+ * safer sending pattern than one large blast from a young domain.
+ */
 const LANE_ORDER: LifecycleSegment[] = [
   "deep_churn",
   "stalled_early",
@@ -60,16 +64,18 @@ const LANE_CAP: Record<LifecycleSegment, number> = {
   deep_churn: 20,
   stalled_early: 20,
   // ENABLED at Jahaan's explicit instruction (2026-08-10). This lane reaches the
-  // ~116 accounts that signed up and never finished a lesson — people who opted
-  // in at signup and have, until now, never been contacted at all, because the
+  // ~116 accounts that signed up and never finished a lesson, people who opted
+  // in at signup and had, until now, never been contacted at all, because the
   // old query structurally excluded every zero-completion user.
-  // The copy was corrected before switching this on: it previously claimed the
-  // reader "hasn't opened a lesson yet", which is unknowable — lesson_progress
-  // records only COMPLETIONS, so someone who opened ten and finished none sits
-  // in this segment. It now says "finished", which is exactly what we know.
-  // Guardrails that make the volume safe: 25/run against MAX_PER_RUN 40, filled
-  // last in LANE_ORDER, once-ever per account, email_opt_in respected, and a
-  // one-click unsubscribe in every message.
+  //
+  // The copy was corrected before switching this on. It used to claim the reader
+  // "hasn't opened a lesson yet", which is unknowable: lesson_progress records
+  // only COMPLETIONS, so someone who opened ten and finished none sits in this
+  // segment. It now says "finished", which is exactly what is known.
+  //
+  // The guardrails that make the volume safe: 25 per run against a MAX_PER_RUN
+  // of 40, filled last in LANE_ORDER, once ever per account, email_opt_in
+  // respected, and a one-click unsubscribe in every message.
   never_started: 25,
 };
 
@@ -77,8 +83,8 @@ function authed(req: Request): boolean {
   const secret = process.env.CRON_SECRET;
   if (!secret) return false;
   const url = new URL(req.url);
-  // Vercel Cron sends `Authorization: Bearer <CRON_SECRET>` automatically, so
-  // the secret never has to live in vercel.json. Also accept the manual forms.
+  // Vercel Cron sends `Authorization: Bearer <CRON_SECRET>` on its own, so the
+  // secret never has to live in vercel.json. The manual forms are accepted too.
   return (
     req.headers.get("authorization") === `Bearer ${secret}` ||
     url.searchParams.get("secret") === secret ||
@@ -93,7 +99,7 @@ type Candidate = {
   email: string;
   segment: LifecycleSegment;
   dormantDays: number;
-  /** The lesson `props` points at — needed to load its real read time/quiz. */
+  /** The lesson `props` points at, needed to load its real read time and quiz. */
   nextLessonId: string;
   props: LifecycleEmailProps;
 };
@@ -102,7 +108,7 @@ const LANES = ["never_started", "stalled_early", "deep_churn"] as const;
 const asLane = (v: string | null): LifecycleSegment | null =>
   LANES.find((l) => l === v) ?? null;
 
-/** A plausible learner in a given lane, for ?preview / ?test rendering only. */
+/** A plausible learner in a given lane, for ?preview and ?test rendering only. */
 function sampleProgress(
   segment: LifecycleSegment,
   catalog: CatalogLesson[]
@@ -120,7 +126,7 @@ function sampleProgress(
 
 /**
  * Build the email props for one learner out of their real rows. Every field is
- * measured; nothing here is estimated or invented.
+ * measured. Nothing here is estimated or invented.
  */
 function buildProps(args: {
   site: string;
@@ -134,8 +140,8 @@ function buildProps(args: {
 }): { props: LifecycleEmailProps; lessonId: string } | null {
   const { site, segment, now, name, username, token, progress, catalog } = args;
   const next = pickNextLesson(catalog, progress);
-  // Nothing left to recommend (they've finished the catalog) — there is no
-  // useful, non-promotional thing to say, so we say nothing.
+  // Nothing left to recommend, they have finished the catalogue. There is no
+  // useful, non-promotional thing to say, so nothing gets said.
   if (!next) return null;
 
   const lastLessonTitle = progress.lastLessonId
@@ -160,7 +166,7 @@ function buildProps(args: {
         : Math.floor((now - progress.lastCompletedAt) / DAY),
     lastLessonTitle,
     // The referral ask is gated inside the template on deep_churn, matching the
-    // dashboard's own 5-lesson INVITE_EARNED_AT. &via=email keeps the lifecycle
+    // dashboard's own 5 lesson INVITE_EARNED_AT. &via=email keeps the lifecycle
     // mail measurable separately from every other invite surface.
     inviteUrl: username
       ? `${site}/signup?ref=${encodeURIComponent(username)}&via=email`
@@ -170,11 +176,12 @@ function buildProps(args: {
 }
 
 /**
- * never_started learners have no history to personalise from, so their email is
- * built around one starter lesson. We enrich it with the real read time and the
- * real quiz length — the same word-count formula the lesson page renders, not
- * lessons.estimated_minutes, which overstates reading time by roughly 14x and
- * would turn an honest "about 2 minutes" into a bounce-inducing "25 min read".
+ * A never_started learner has no history to personalise from, so their email is
+ * built around one starter lesson. It gets enriched with the real read time and
+ * the real quiz length, using the same word-count formula the lesson page
+ * renders. lessons.estimated_minutes is not used: it overstates reading time by
+ * roughly 14x and would turn an honest "about 2 minutes" into a bounce-inducing
+ * "25 min read".
  */
 async function starterProps(
   base: LifecycleEmailProps,
@@ -195,18 +202,18 @@ async function run(req: Request) {
 
   const url = new URL(req.url);
   const site = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com";
-  // Env kill-switch beats the query string: if LIFECYCLE_DRY_RUN is set the job
-  // can be left scheduled and observed without a single message going out.
+  // The env kill switch beats the query string. With LIFECYCLE_DRY_RUN set, the
+  // job can be left scheduled and watched without a single message going out.
   const dry =
     url.searchParams.get("dry") === "1" ||
     process.env.LIFECYCLE_DRY_RUN === "1";
 
   const catalog = await orderedLessons();
 
-  // ?preview=<lane> — render a lane's real HTML and return it. Sends nothing,
-  // touches no user rows; this is how the templates get reviewed.
-  /** Render one lane against a synthetic learner. Shared by ?preview and ?test
-   * so the previewed email is byte-identical to the tested one. */
+  /**
+   * Render one lane against a synthetic learner. Shared by ?preview and ?test so
+   * the previewed email is byte identical to the tested one.
+   */
   const renderSample = async (segment: LifecycleSegment, name: string | null) => {
     const built = buildProps({
       site,
@@ -224,6 +231,8 @@ async function run(req: Request) {
       : built.props;
   };
 
+  // ?preview=<lane> renders a lane's real HTML and returns it. It sends nothing
+  // and touches no user rows. This is how the templates get reviewed.
   const preview = url.searchParams.get("preview");
   if (preview) {
     const segment = asLane(preview);
@@ -239,15 +248,16 @@ async function run(req: Request) {
       headers: {
         "Content-Type": "text/html; charset=utf-8",
         "X-Robots-Tag": "noindex",
-        // Subjects contain em dashes; header values are ByteStrings, so a raw
-        // subject here throws ERR_INVALID_CHAR and 500s the whole preview.
+        // Subjects can carry characters outside Latin-1, and header values are
+        // ByteStrings, so a raw subject here throws ERR_INVALID_CHAR and 500s
+        // the whole preview. Percent-encode it.
         "X-Lifecycle-Subject": encodeURIComponent(lifecycleEmailSubject(props)),
       },
     });
   }
 
-  // ?test=you@example.com&lane=<lane> — send ONE sample to that address and
-  // stop, so the founder can check a real inbox without touching any user.
+  // ?test=you@example.com&lane=<lane> sends ONE sample to that address and
+  // stops, so a real inbox can be checked without touching any user.
   const test = url.searchParams.get("test");
   if (test && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(test)) {
     const segment = asLane(url.searchParams.get("lane")) ?? "deep_churn";
@@ -270,10 +280,10 @@ async function run(req: Request) {
     });
   }
 
-  // These are RELATIONSHIP emails (a registered learner's own account activity
-  // and their own next lesson, strictly non-promotional) — under CAN-SPAM's
-  // primary-purpose test that category doesn't require a physical postal
-  // address. We still ship a one-click unsubscribe as courtesy.
+  // These are RELATIONSHIP emails: a registered learner's own account activity
+  // and their own next lesson, strictly non-promotional. Under CAN-SPAM's
+  // primary-purpose test that category does not require a physical postal
+  // address. A one-click unsubscribe ships anyway, as a courtesy.
   if (!dry && !process.env.RESEND_API_KEY) {
     return NextResponse.json({ ok: false, skipped: "no RESEND_API_KEY" });
   }
@@ -281,7 +291,7 @@ async function run(req: Request) {
   const admin = createAdminClient();
   const now = Date.now();
 
-  // 1) auth users -> confirmed email map
+  // 1) auth users, mapped to confirmed addresses.
   const emailById = new Map<string, string>();
   let unconfirmed = 0;
   for (let page = 1; page <= 20; page++) {
@@ -295,9 +305,9 @@ async function run(req: Request) {
     if (users.length < 1000) break;
   }
 
-  // 2) opted-in profiles. PAGED: PostgREST silently truncates any select at
-  // 1000 rows, and an unpaged read here would mean everyone past row 1000 is
-  // never emailed again, with no error anywhere.
+  // 2) opted-in profiles. PAGED: PostgREST silently truncates any select at 1000
+  // rows, and an unpaged read here would mean everyone past row 1000 is never
+  // emailed again, with no error anywhere.
   type ProfileRow = {
     id: string;
     username: string | null;
@@ -322,7 +332,7 @@ async function run(req: Request) {
     if (chunk.length < 1000) break;
   }
 
-  // 3) progress -> per-user rows (paged)
+  // 3) progress rows, grouped per user. Paged for the same reason.
   const rowsByUser = new Map<
     string,
     { lesson_id: string | null; completed_at: string | null }[]
@@ -404,8 +414,8 @@ async function run(req: Request) {
     });
   }
 
-  // Freshest first inside each lane — the least-dormant learner in a lane is
-  // the most recoverable one, and gets this run's slot.
+  // Freshest first inside each lane. The least dormant learner in a lane is the
+  // most recoverable one, and gets this run's slot.
   const batch: Candidate[] = [];
   for (const lane of LANE_ORDER) {
     const room = Math.min(LANE_CAP[lane], MAX_PER_RUN - batch.length);
@@ -423,8 +433,8 @@ async function run(req: Request) {
     laneCounts.deep_churn + laneCounts.stalled_early + laneCounts.never_started;
 
   if (dry) {
-    // Log the full target list server-side (masked) and return a summary. This
-    // is the verification path — nothing is sent and no row is written.
+    // Log the full target list server side, masked, and return a summary. This
+    // is the verification path: nothing is sent and no row is written.
     for (const c of batch) {
       console.log(
         `[lifecycle:dry] ${c.segment} ${maskEmail(c.email)} dormant=${c.dormantDays}d ` +

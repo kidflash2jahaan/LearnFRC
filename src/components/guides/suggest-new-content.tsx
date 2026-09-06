@@ -44,6 +44,7 @@ export function SuggestNewContent({
   const triggerRef = React.useRef<HTMLButtonElement>(null);
   const sheetRef = React.useRef<HTMLDivElement>(null);
   const firstFieldRef = React.useRef<HTMLSelectElement>(null);
+  const doneRef = React.useRef<HTMLHeadingElement>(null);
 
   /** Everything inside the sheet a keyboard can land on, in document order. */
   const FOCUSABLE =
@@ -97,6 +98,14 @@ export function SuggestNewContent({
     };
   }, [open, pending]);
 
+  // A successful submit swaps the whole body of the sheet, which unmounts the
+  // Submit button focus was sitting on. Focus would land back on <body>, and a
+  // screen-reader user would be told nothing about the swap, so move it onto
+  // the confirmation heading and let it announce itself.
+  React.useEffect(() => {
+    if (done) doneRef.current?.focus();
+  }, [done]);
+
   function close() {
     if (pending) return;
     setOpen(false);
@@ -121,9 +130,14 @@ export function SuggestNewContent({
     else setDone(true);
   }
 
+  // The signed-out form of the trigger. It stands where a button stands, so it
+  // gets a button's 44px target rather than the 27px an inline link measures.
   if (!isLoggedIn) {
     return (
-      <Link href={loginPath} className="nb-link">
+      <Link
+        href={loginPath}
+        className="nb-link inline-flex min-h-11 items-center"
+      >
         Log in to contribute a lesson
       </Link>
     );
@@ -195,7 +209,13 @@ export function SuggestNewContent({
                     strokeLinejoin="round"
                   />
                 </svg>
-                <h3 className="text-[1.2rem]">Lesson submitted</h3>
+                <h3
+                  ref={doneRef}
+                  tabIndex={-1}
+                  className="text-[1.2rem] focus-visible:outline-2 focus-visible:outline-blue"
+                >
+                  Lesson submitted
+                </h3>
                 <p className="max-w-[42ch] text-[0.95rem] text-graphite">
                   An admin reads every submission. If it is accepted it becomes a
                   real lesson in this department, with your name on it.

@@ -459,7 +459,7 @@ export default async function GlossaryTermPage({
                 <Link
                   key={r.term}
                   href={`/glossary/${glossarySlug(r.term)}`}
-                  className={`nb-box nb-lift flex flex-col p-[clamp(1rem,1.9vw,1.4rem)] ${
+                  className={`nb-box nb-lift flex min-w-0 flex-col p-[clamp(1rem,1.9vw,1.4rem)] ${
                     RELATED_TILTS[i % RELATED_TILTS.length]
                   } min-[1080px]:[grid-column:var(--span)]`}
                   style={

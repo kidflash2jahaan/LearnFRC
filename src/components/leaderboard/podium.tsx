@@ -74,9 +74,14 @@ function Plinth({ entry }: { entry: PodiumEntry }) {
 
       <div className="mt-3 w-full min-w-0">
         {entry.username ? (
+          // A member with a public page and one without were drawn exactly
+          // alike, so the only thing separating a link from a plain name was a
+          // colour that appeared on hover. The ballpoint underline is on all
+          // the time and survives greyscale; it darkens to blue on hover the
+          // way every other link in the binder does.
           <Link
             href={`/u/${entry.username}`}
-            className="inline-flex min-h-[var(--tap)] w-full min-w-0 items-center justify-center hover:text-blue"
+            className="inline-flex min-h-[var(--tap)] w-full min-w-0 items-center justify-center underline decoration-rule decoration-2 underline-offset-[4px] hover:text-blue hover:decoration-blue"
           >
             {nameTag}
           </Link>
@@ -186,9 +191,14 @@ export function LeaderTable({
                   <span className="min-w-0">
                     <span className="flex flex-wrap items-center gap-2">
                       {e.username ? (
+                        // Same two jobs as the plinth name. The underline says
+                        // "this one has a page" without a colour, and the
+                        // cancelled vertical padding lifts a three-letter
+                        // handle from a 27px tap target to a 47px one without
+                        // changing the height of the row.
                         <Link
                           href={`/u/${e.username}`}
-                          className="min-w-0 truncate font-bold hover:text-blue"
+                          className="-my-2.5 min-w-0 truncate py-2.5 font-bold underline decoration-rule decoration-2 underline-offset-[3px] hover:text-blue hover:decoration-blue"
                         >
                           {e.name}
                         </Link>

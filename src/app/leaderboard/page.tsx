@@ -113,7 +113,11 @@ export default async function LeaderboardPage() {
       {/* ===================== MASTHEAD =====================
           Split, because the page has two jobs at the top: say what the board
           is, and show the current standing. Neither should wait for a scroll. */}
-      <section className="nb-wrap grid items-start gap-[clamp(1.8rem,4vw,3.4rem)] pb-[clamp(2rem,4vw,3rem)] pt-[clamp(2.2rem,5vw,3.8rem)] lg:grid-cols-[minmax(0,1.35fr)_minmax(0,0.85fr)]">
+      {/* `grid-cols-1` below lg is load-bearing: the implicit `auto` track
+          otherwise sizes to the standings card's min-content, stretches past
+          `.nb-wrap`, and the root's `overflow-x: clip` shears the lede and the
+          buttons off the right edge on a phone. */}
+      <section className="nb-wrap grid grid-cols-1 items-start gap-[clamp(1.8rem,4vw,3.4rem)] pb-[clamp(2rem,4vw,3rem)] pt-[clamp(2.2rem,5vw,3.8rem)] lg:grid-cols-[minmax(0,1.35fr)_minmax(0,0.85fr)]">
         <div>
           <p className="nb-marker">the standings</p>
 

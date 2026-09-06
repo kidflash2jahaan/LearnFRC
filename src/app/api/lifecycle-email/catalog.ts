@@ -3,13 +3,14 @@ import { getDepartments, getDepartmentBySlug } from "@/lib/queries";
 import type { CatalogLesson } from "./segments";
 
 /**
- * Flat, ordered list of every lesson (dept -> module -> lesson order) plus the
- * department each one belongs to, so the job can name a learner's next lesson
- * inside the department they were actually working in.
+ * Every lesson in the binder, flattened into one ordered list, department then
+ * module then lesson, with the department each one belongs to carried along. The
+ * order is what lets the job name a learner's next lesson inside the department
+ * they were actually working in, rather than the first one in the catalogue.
  *
- * Uses the durably cached content functions, so it adds no real DB egress on a
- * cron run. Kept apart from ./segments.ts so that the policy module stays pure
- * and importable from the founder-facing retention panel.
+ * It reads through the durably cached content functions, so a cron run adds no
+ * real database egress. It lives apart from ./segments.ts so the policy module
+ * stays pure and can be imported by the founder-facing retention panel.
  */
 export async function orderedLessons(): Promise<CatalogLesson[]> {
   const depts = await getDepartments().catch(() => []);

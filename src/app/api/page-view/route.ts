@@ -5,9 +5,12 @@ import { rateLimit } from "@/lib/rate-limit";
 export const dynamic = "force-dynamic";
 
 /**
- * Site-wide pageview counter. Mirrors /api/article-view: anonymous (real readers
- * count), rate-limited per IP, service-role insert. Bot exclusion is automatic
- * because only client JS ever calls this. /admin + /api are dropped.
+ * Site-wide pageview counter, shaped exactly like /api/article-view: anonymous,
+ * because real readers count, rate limited per IP, service role insert.
+ *
+ * Bot exclusion is automatic. Only client JavaScript ever calls this, so a
+ * crawler that does not run scripts cannot appear in the numbers. /admin and
+ * /api are dropped because they are not public traffic.
  */
 export async function POST(req: Request) {
   let body: Record<string, unknown> = {};
@@ -20,7 +23,7 @@ export async function POST(req: Request) {
   let path = typeof body.path === "string" ? body.path : "";
   if (!path.startsWith("/") || path.length > 512)
     return new NextResponse(null, { status: 400 });
-  path = path.split(/[?#]/)[0]; // strip query/hash so pages aggregate cleanly
+  path = path.split(/[?#]/)[0]; // drop query and hash so pages aggregate cleanly
   if (/^\/(admin|api)(\/|$)/.test(path))
     return new NextResponse(null, { status: 204 });
 
@@ -29,8 +32,9 @@ export async function POST(req: Request) {
       ? body.visitorId
       : null;
 
-  // First-touch acquisition source — the beacon's request carries the lf_src
-  // cookie (set by <SourceCapture/>), so we read it here without any client work.
+  // First touch acquisition source. The beacon's request already carries the
+  // lf_src cookie that <SourceCapture/> set, so it is read here with no extra
+  // work on the client.
   let source: string | null = null;
   const cookie = req.headers.get("cookie") || "";
   const m = cookie.match(/(?:^|;\s*)lf_src=([^;]+)/);
@@ -42,20 +46,20 @@ export async function POST(req: Request) {
     }
   }
 
-  // Generous cap — a real browsing session legitimately hits many pages.
+  // Generous cap, because a real browsing session legitimately hits many pages.
   // Measured 2026-08-10: the busiest IP bucket in the retained window was 67
-  // hits, so this is ~9x headroom and is not currently dropping events. Note it
-  // is per-IP, so a whole team behind one school NAT shares the budget.
+  // hits, so this is roughly 9x headroom and is not dropping events today. It is
+  // per IP, so a whole team behind one school NAT shares the budget, which is
+  // why it is generous rather than tight.
   const ok = await rateLimit("page-view", 600, 3600);
   if (!ok) return new NextResponse(null, { status: 204 });
 
   const { error } = await createAdminClient()
     .from("page_views")
     .insert({ path, visitor, source });
-  // The response is a 204 either way (nothing useful for the client to do with
-  // a failure), but an unlogged insert error would mean traffic analytics
-  // silently going to zero with no signal anywhere. Surface it in the server
-  // logs at least.
+  // The response is 204 either way, there is nothing the client could do with a
+  // failure. But an unlogged insert error would mean traffic analytics quietly
+  // going to zero with no signal anywhere, so it lands in the server logs.
   if (error) {
     console.error("[page-view] insert failed:", error.message);
   }

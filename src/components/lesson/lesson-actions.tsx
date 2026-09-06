@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { setLessonComplete, toggleBookmark } from "@/app/actions/progress";
 import { Button } from "@/components/ui/button";
 import { Confetti } from "@/components/lesson/confetti";
+import { scrollToElement } from "@/components/perf-mode";
 
 /**
  * The two controls in the lesson header: finish the lesson, and keep it.
@@ -85,9 +86,7 @@ export function LessonActions({
     // That is the first viewport of every SEO landing, and it contradicted the
     // page's own "free, no login to read a guide" promise.
     if (quizRequired && !completed) {
-      document
-        .getElementById("lesson-quiz")
-        ?.scrollIntoView({ behavior: "smooth" });
+      scrollToElement(document.getElementById("lesson-quiz"));
       return;
     }
     if (!authed) return requireAuth("track your progress");

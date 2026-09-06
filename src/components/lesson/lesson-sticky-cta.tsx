@@ -4,6 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useMyProgress } from "@/components/progress/my-progress";
+import { scrollToElement } from "@/components/perf-mode";
 
 /**
  * The slip clipped to the bottom of the desk: a shortcut to this lesson's
@@ -111,7 +112,7 @@ export function LessonStickyCta({
   const visible = scrolled && !panelOnScreen && !dismissed && hasAction;
 
   const goToPanel = () => {
-    anchorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    scrollToElement(anchorRef.current, { block: "start" });
   };
 
   const done = mode === "next";

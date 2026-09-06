@@ -256,9 +256,9 @@ export default async function BlogPage() {
 
             {/* overflow-hidden clips the panels to the frame's hand-drawn
                 corners; without it the 2px divider runs past the border. */}
-            <div className="nb-box grid overflow-hidden min-[860px]:grid-cols-2">
+            <div className="nb-box grid overflow-hidden min-[861px]:grid-cols-2">
               {featuredColumns.map((col, colIndex) => (
-                <ol key={colIndex} className="nb-panel list-none">
+                <ol key={colIndex} className="nb-panel min-w-0 list-none">
                   {col.map((a, i) => {
                     const n = colIndex * half + i + 1;
                     return (

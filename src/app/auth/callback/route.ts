@@ -8,32 +8,40 @@ import {
 import { isFreshSignup, postAuthDestination } from "@/lib/first-run";
 
 /**
- * OAuth / email-confirmation callback.
- * Exchanges the `code` query param for a session, then redirects to `next`
- * (or /dashboard). Built as an absolute URL from the request origin so it
- * works across local, preview, and production.
+ * THE OAUTH DOOR, where Google puts people down.
  *
- * ATTRIBUTION: this route is the ONLY thing that runs on a Google signup — the
+ * Nothing is drawn here, so there is no markup in this file. What it decides
+ * is which page of the binder opens first, which makes it the earliest design
+ * decision every Google account on the site ever meets.
+ *
+ * The job itself is small: trade the `code` query param for a session, then
+ * redirect. The destination is built as an absolute URL off the request
+ * origin, so local, preview and production all behave the same way.
+ *
+ * ATTRIBUTION. This route is the only thing that runs on a Google signup. The
  * email path's server action never executes. Until 2026-08-10 it recorded
- * nothing, so Google signups landed with a NULL `source` (59-61% of all
- * signups) and no `referred_by` at all. It now writes the same attribution the
- * email path does, via the shared module, and pays the referral reward here
- * because Google has already verified the address (the email path waits for
- * /auth/confirm to get that same guarantee).
+ * nothing at all, so Google signups landed with a NULL `source` (59 to 61% of
+ * every signup on the site) and no `referred_by` whatsoever. It now writes the
+ * same attribution the email path writes, through the same shared module, and
+ * it pays the referral reward here because Google has already proved the
+ * address is real. The email path has to wait for /auth/confirm to get that
+ * same guarantee.
  *
- * FIRST RUN: a brand-new account whose destination is the GENERIC dashboard is
- * sent to /start instead — one question, then a five-lesson plan, because 45%
- * of accounts never finish a lesson and the loss is entirely upstream of the
- * content. `isNew` is the same created_at test that already gates attribution
- * below, so there is one definition of "new account" in this route, not two.
+ * FIRST RUN. A brand-new account whose destination is the GENERIC dashboard is
+ * sent to /start instead: one question, then a five-lesson plan. 45% of
+ * accounts never finish a single lesson, and that loss happens entirely
+ * upstream of the content, so the fix belongs at the door and not in the
+ * lessons. `isNew` is the same created_at test that gates attribution below,
+ * which keeps one definition of "new account" in this route rather than two
+ * that can drift apart.
  *
- * WHAT IS DELIBERATELY NOT TOUCHED: an explicit `next` — a course-code join
- * (`/join/<code>`), a lesson a signed-out reader was on, a tool page — is
- * returned verbatim, because only the literal string "/dashboard" is ever
- * swapped. `ref` and `via` are read straight off this URL for attribution and
- * are unaffected by the destination choice. Referrals through this file were
- * silently dead for 24 days once already; the invite path is a hard constraint
- * here, not a nice-to-have.
+ * WHAT IS DELIBERATELY LEFT ALONE. An explicit `next` is handed back verbatim:
+ * an invite link, a lesson someone was part-way through while signed out, a
+ * tool page. Only the literal string "/dashboard" is ever swapped out. `ref`
+ * and `via` are read straight off this URL for attribution, and the
+ * destination choice never touches either of them. Referrals through this file
+ * were silently dead for 24 days once already, so the invite path is a hard
+ * constraint here, not a preference.
  */
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
@@ -47,7 +55,7 @@ export async function GET(request: Request) {
       ? nextParam
       : "/dashboard";
 
-  // Set only on a confirmed brand-new account, and read once at the very
+  // Set only once a brand-new account is confirmed, and read once at the very
   // bottom to choose between /start and the resolved destination.
   let isNew = false;
 
@@ -60,9 +68,9 @@ export async function GET(request: Request) {
       );
     }
 
-    // Only a fresh account gets attributed; a returning user signing in again
-    // must keep the source they arrived with. attributeSignup additionally
-    // refuses to overwrite a non-empty source, so this is belt-and-braces.
+    // Only a fresh account gets attributed. Someone signing back in has to
+    // keep the source they first arrived with. attributeSignup also refuses to
+    // overwrite a source that is already set, so this is belt and braces.
     const user = data?.user;
     isNew = isFreshSignup(user?.created_at);
 
@@ -81,12 +89,13 @@ export async function GET(request: Request) {
           signupIp,
         });
         // Google has already verified the address, so the reward is safe to
-        // pay now rather than waiting for a confirmation click that this flow
-        // never produces.
+        // pay now. Waiting on a confirmation click would wait forever: this
+        // flow never produces one.
         if (referredBy) await payReferralReward(user.id);
       } catch (e) {
-        // Never block sign-in on analytics. Log loudly — a silent failure here
-        // is precisely how the previous gap went unnoticed for three weeks.
+        // Never block a sign-in on analytics. Log it loudly though, because a
+        // silent failure right here is exactly how the last gap went unnoticed
+        // for three weeks.
         console.error("auth/callback attribution failed:", e);
       }
     }

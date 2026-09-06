@@ -35,7 +35,7 @@ export default function SettingsLoading() {
       </div>
 
       {/* ---- member record strip ---- */}
-      <div className="nb-box mt-[clamp(1.6rem,3.4vw,2.4rem)] grid overflow-hidden lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
+      <div className="nb-box mt-[clamp(1.6rem,3.4vw,2.4rem)] grid overflow-hidden min-[861px]:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
         <div className="nb-panel">
           <Skeleton className="h-3.5 w-40" />
           <div className="mt-4 flex items-center gap-4">

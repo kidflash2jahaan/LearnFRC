@@ -28,13 +28,18 @@ const SNAGS = [
     body: "Links last an hour and open once. If you asked twice, only the newest one works. Come back here and send another, the dead one stays dead.",
   },
   {
-    title: "You signed up with Google",
+    // Kept to the same "subject, then verb" shape and the same length as the
+    // other two on purpose. At its old wording this one ran to a second line
+    // while its neighbours held one, which dropped its body copy half a line
+    // below theirs and made the strip read as three panels that were not
+    // set together.
+    title: "It's a Google account",
     body: "Then there's no password on the account to reset and no email is coming. Use Continue with Google on the sign-in sheet and you're in.",
   },
 ] as const;
 
 /**
- * RESET YOUR PASSWORD — a request slip, and the reasons it does not arrive.
+ * RESET YOUR PASSWORD, a request slip and the reasons it does not arrive.
  *
  * One field. The page has exactly one job and the form is most of it, so the
  * form is printed straight onto the paper under a heavy rule rather than being
@@ -78,8 +83,15 @@ export default async function ForgotPasswordPage({
           <ForgotForm defaultEmail={email} />
 
           {/* Pinned out in the margin where there is room for it, tucked
-              underneath when there is not. */}
-          <p className="nb-pen mt-6 max-w-[24ch] rotate-[-1.3deg] xl:absolute xl:left-[calc(100%+2.8rem)] xl:top-2 xl:mt-0">
+              underneath when there is not.
+
+              `xl:w-[15rem]` is load-bearing: absolutely positioned with only
+              `left` set, the note shrink-to-fits against the slip it is offset
+              from, and `left: 100% + 2.8rem` leaves that calculation negative
+              room, so it collapses to its longest word, prints one word per
+              line and runs straight through the section rule below. A width
+              restores the measure. There is ~700px of margin beside it here. */}
+          <p className="nb-pen mt-6 max-w-[24ch] rotate-[-1.3deg] xl:absolute xl:left-[calc(100%+2.8rem)] xl:top-2 xl:mt-0 xl:w-[15rem] xl:max-w-none">
             you can send this to yourself from the shop laptop and open it on
             your phone
           </p>
@@ -104,7 +116,10 @@ export default async function ForgotPasswordPage({
                 >
                   {i + 1}
                 </span>
-                <h3 className="max-w-[16ch]">{snag.title}</h3>
+                {/* 20ch, not 16: the narrowest of the three panels is ~330px
+                    of content at desktop, and a 16ch cap folded every title on
+                    to two lines well before the panel actually ran out. */}
+                <h3 className="max-w-[20ch]">{snag.title}</h3>
                 <p className="mt-2.5 text-[0.95rem] leading-snug text-graphite">
                   {snag.body}
                 </p>

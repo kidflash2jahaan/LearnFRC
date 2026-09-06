@@ -3,9 +3,14 @@ import { revalidateTag, revalidatePath } from "next/cache";
 
 export const dynamic = "force-dynamic";
 
-// CRON_SECRET-gated cache buster. Lets us surface content inserted straight into
-// the DB (e.g. an article batch) without a full redeploy — same auth shape as
-// the lifecycle-email cron. Accepts ?tags=catalog,articles (defaults to both).
+/**
+ * CRON_SECRET-gated cache buster. It surfaces content that went straight into
+ * the database, like a batch of articles, without a redeploy. Same auth shape as
+ * the lifecycle-email cron.
+ *
+ *   ?tags=catalog,articles   which cache tags to bust, defaults to both
+ *   ?paths=/sitemap.xml      optional full route revalidation, empty by default
+ */
 function authed(req: Request): boolean {
   const secret = process.env.CRON_SECRET;
   if (!secret) return false;
@@ -24,19 +29,20 @@ async function run(req: Request) {
     .split(",")
     .map((t) => t.trim())
     .filter(Boolean);
-  // Optional full-route revalidation (e.g. the ISR sitemap, which tag-based
-  // revalidation doesn't reach). Empty by default.
+  // Full route revalidation, for the routes tag-based revalidation does not
+  // reach, like the ISR sitemap.
   const paths = (url.searchParams.get("paths") || "")
     .split(",")
     .map((p) => p.trim())
     .filter((p) => p.startsWith("/"));
-  // The custom Next fork's revalidateTag takes a profile as the 2nd arg.
+  // The custom Next fork's revalidateTag takes a profile as its second argument.
   for (const t of tags) revalidateTag(t, "max");
   for (const p of paths) revalidatePath(p);
 
-  // IndexNow: tell Bing (which also feeds Copilot + ChatGPT search — already a
-  // converting channel) about the refreshed URLs immediately instead of
-  // waiting for a recrawl. Key file is served from /public. Best-effort only.
+  // IndexNow: tell Bing about the refreshed URLs straight away instead of
+  // waiting for a recrawl. Bing also feeds Copilot and ChatGPT search, which is
+  // already a converting channel here. The key file is served from /public.
+  // Best effort only, a failure never fails the revalidation.
   let indexnow = "skipped";
   const urlList = [
     ...paths.map((p) => `https://learnfrc.com${p}`),

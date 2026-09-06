@@ -3,16 +3,22 @@
 import { useEffect } from "react";
 
 /**
- * Fire-and-forget view counter for a blog article. Renders NOTHING (returns
- * null) so it can never affect layout or hydration.
+ * Counts one read of one article, then gets out of the way.
  *
- * On mount it POSTs the slug to `/api/article-view` at most once per browser
- * session per article, guarded by a `sessionStorage` flag. The guard is written
- * *before* the request is sent, so a React strict-mode double-mount (dev) and a
- * page reload in the same tab both dedupe to a single beacon.
+ * It renders null on purpose. A view counter that puts a node in the tree can
+ * shift layout or break hydration, and this one has no business doing either,
+ * so it is a client leaf that only runs an effect.
  *
- * Uses `navigator.sendBeacon` (survives navigation/unload) with a `fetch`
- * fallback for browsers where the beacon is unavailable or refused.
+ * The count fires at most once per browser session per article. The
+ * sessionStorage flag is claimed BEFORE the request goes out, so a strict-mode
+ * double mount in dev and a reload in the same tab both collapse into a single
+ * beacon. If sessionStorage is unavailable, in a private window or with storage
+ * switched off, there is no way to dedupe, so the component sends nothing
+ * rather than inflate the number on every reload.
+ *
+ * navigator.sendBeacon is the transport because it survives the navigation that
+ * usually follows. fetch with keepalive is the fallback for browsers that
+ * refuse or lack it.
  */
 export function ArticleViewBeacon({ slug }: { slug: string }) {
   useEffect(() => {
@@ -21,11 +27,9 @@ export function ArticleViewBeacon({ slug }: { slug: string }) {
     const key = `lf_av_${slug}`;
     try {
       if (sessionStorage.getItem(key)) return;
-      // Claim the guard synchronously so a double-invoke can't double-count.
+      // Claim the guard synchronously so a double invoke cannot double count.
       sessionStorage.setItem(key, "1");
     } catch {
-      // sessionStorage blocked (private mode / disabled). Without a guard we
-      // can't dedupe, so bail rather than risk inflating counts on reload.
       return;
     }
 

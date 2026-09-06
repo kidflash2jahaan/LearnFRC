@@ -5,10 +5,18 @@ import { rateLimit } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
-// Anonymous readers count, so this endpoint takes no auth. Validate the slug
-// against the real (DB-backed, cached) article list up front so junk/unknown
-// slugs never create rows. Insert with the service-role client, which bypasses
-// the (policy-less) RLS on `article_views`.
+/**
+ * Records one read of one article.
+ *
+ * No auth, because anonymous readers are most of the readers and they count.
+ * The slug is checked against the real article list, which is DB backed and
+ * cached, before anything is written, so a junk or guessed slug can never
+ * create a row. The insert uses the service role client because article_views
+ * has RLS on and no public policies.
+ *
+ * Every path returns 204. There is nothing useful for the browser to do with a
+ * failure, and the client has already set its once-per-session guard.
+ */
 export async function POST(req: Request) {
   let body: Record<string, unknown> = {};
   try {
@@ -23,9 +31,8 @@ export async function POST(req: Request) {
     return new NextResponse(null, { status: 400 });
   }
 
-  // Generous per-IP cap so a single client can't spam rows; fails open on
-  // infra errors so real readers are never blocked. A rate-limited request is
-  // silently dropped (the client has already set its once-per-session guard).
+  // Generous per-IP cap so one client cannot spam rows. It fails open on infra
+  // errors, so a real reader is never blocked by a broken limiter.
   const ok = await rateLimit("article-view", 60, 3600);
   if (!ok) return new NextResponse(null, { status: 204 });
 

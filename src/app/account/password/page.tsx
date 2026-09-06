@@ -21,7 +21,7 @@ const STEPS = [
 ] as const;
 
 /**
- * SET A NEW PASSWORD — the last page of the recovery, laid out as a ruled sheet
+ * SET A NEW PASSWORD, the last page of the recovery, laid out as a ruled sheet
  * with its sequence written in the margin.
  *
  * Nobody arrives here on purpose. They clicked a link in an inbox and this is

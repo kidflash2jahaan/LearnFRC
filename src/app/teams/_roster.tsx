@@ -68,7 +68,9 @@ export function Roster({
               no.
             </th>
             <th scope="col">member</th>
-            <th scope="col" className="w-[11rem]">
+            {/* Narrower on a phone so the sheet fits 375px without reaching
+                for its own sideways scroll, wider once there is room. */}
+            <th scope="col" className="w-[9rem] sm:w-[11rem]">
               lessons
             </th>
             <th scope="col" className="hidden text-right sm:table-cell">
@@ -127,7 +129,7 @@ export function Roster({
                       {m.completed}/{totalLessons}
                     </b>
                   </span>
-                  <span className="nb-meter mt-1.5 block h-[0.5rem]">
+                  <span className="nb-meter mt-1.5 block">
                     <span className="nb-meter-bar" style={{ width: `${pct}%` }} />
                   </span>
                 </td>

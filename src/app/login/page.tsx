@@ -10,7 +10,7 @@ export const metadata = {
 };
 
 /**
- * SIGN IN — the shop door with a sheet clipped to it.
+ * SIGN IN, the shop door with a sheet clipped to it.
  *
  * This is the most repeated task on the site, so the page is a headline band
  * and then an asymmetric split: the sheet on the left at a fixed 27rem, wide

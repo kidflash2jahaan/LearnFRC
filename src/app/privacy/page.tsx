@@ -341,8 +341,12 @@ export default function PrivacyPage() {
               <Link href={CONTACT_PATH} className="nb-btn">
                 Send the request
               </Link>
+              {/* Short on purpose. `.nb-btn` is `white-space: nowrap`, so a
+                  long label cannot wrap and simply runs off the right edge of
+                  a 320px screen. The paragraph above already says you can do
+                  it yourself. */}
               <Link href="/settings" className="nb-btn-ghost">
-                Or delete it yourself in settings
+                Delete it in settings
               </Link>
             </div>
           </div>

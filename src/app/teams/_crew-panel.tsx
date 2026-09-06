@@ -54,7 +54,11 @@ export function CrewPanel({
       <span className="nb-tape -top-3 left-[20%] rotate-[-3.6deg]" aria-hidden="true" />
       <span className="nb-tape -bottom-3 right-[16%] rotate-[2.4deg]" aria-hidden="true" />
 
-      <p className="nb-marker">the pit / team {teamNumber}</p>
+      {/* nb-slug, not nb-marker: this card carries no heading, and the kit's
+          marker (with its blue pen stroke) is the label ABOVE a heading. A
+          headingless panel labels itself the way the identity card in settings
+          does, with a plain mono slug. */}
+      <p className="nb-slug mb-3.5">the pit / team {teamNumber}</p>
 
       {shown.length === 0 ? (
         <p className="nb-slug">nobody signed in yet</p>
@@ -94,8 +98,7 @@ export function CrewPanel({
 
         <div className="mt-1.5 flex items-baseline gap-2.5">
           <span className="nb-count text-[clamp(2rem,1.4rem+1.8vw,2.7rem)]">
-            {pct}
-            <small>% done</small>
+            {pct}%<small>done</small>
           </span>
         </div>
 

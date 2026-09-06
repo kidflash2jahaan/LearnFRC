@@ -16,17 +16,27 @@ export function Progress({
   barClassName,
   style,
   indeterminate,
+  label,
 }: {
   value: number;
   className?: string;
   barClassName?: string;
   style?: React.CSSProperties;
   indeterminate?: boolean;
+  /**
+   * What this bar is measuring, e.g. "12 of 40 lessons finished". Required in
+   * practice: a `progressbar` with no name is announced as a bare percentage
+   * with nothing to attach it to. This used to be spelled `aria-label` at the
+   * call site, which did nothing, because this component takes named props
+   * rather than spreading the rest onto the div.
+   */
+  label: string;
 }) {
   const pct = clampPct(value);
   return (
     <div
       role="progressbar"
+      aria-label={label}
       aria-valuenow={indeterminate ? undefined : pct}
       aria-valuemin={0}
       aria-valuemax={100}

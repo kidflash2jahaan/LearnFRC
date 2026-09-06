@@ -29,7 +29,7 @@ const CHECKS = [
 ] as const;
 
 /**
- * VERIFY YOUR EMAIL — the page whose whole content is an address.
+ * VERIFY YOUR EMAIL, the page whose whole content is an address.
  *
  * Nothing happens here. The account is made, the link is sent, and every action
  * that matters is in another application. So the page does the one thing it is

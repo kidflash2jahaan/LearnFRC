@@ -65,7 +65,7 @@ function NoTeamNumber() {
 
         <p className="nb-marker">team / not set</p>
 
-        <h1 className="text-[clamp(1.8rem,1.3rem+2.2vw,2.9rem)]">
+        <h1 className="text-[clamp(1.9rem,1.3rem+2vw,2.9rem)]">
           Put your team number on your profile.
         </h1>
 
@@ -162,7 +162,10 @@ async function renderTeam(
   const solo = members.length <= 1;
 
   const tally: { figure: string; label: string }[] = [
-    { figure: String(members.length), label: pluralize(members.length, "member") },
+    {
+      figure: String(members.length),
+      label: members.length === 1 ? "member" : "members",
+    },
     {
       figure: `${claimedCount}/${subteamRows.length}`,
       label: "subteams claimed",
@@ -257,7 +260,6 @@ async function renderTeam(
       <section id="subteams" className="nb-wrap pb-[clamp(2.6rem,5vw,4rem)]">
         <div className="mb-[clamp(1.2rem,2.6vw,1.8rem)] flex flex-wrap items-end justify-between gap-x-8 gap-y-4">
           <div>
-            <p className="nb-marker">who is on what</p>
             <h2>Subteam coverage</h2>
             <p className="nb-sub mt-3">
               {claimedCount} of {subteamRows.length} subteams have somebody from{" "}
@@ -300,12 +302,11 @@ async function renderTeam(
       <section className="nb-wrap pb-[clamp(2.6rem,5vw,4rem)]">
         <div className="mb-[clamp(1.2rem,2.6vw,1.8rem)] flex flex-wrap items-end justify-between gap-x-8 gap-y-4">
           <div>
-            <p className="nb-marker">the roster</p>
             <h2>{solo ? "Where you are at" : "Who is furthest along"}</h2>
             <p className="nb-sub mt-3">
               {solo
                 ? `One row, for now. Anyone who signs up with ${teamNumber} lands on this sheet automatically, ranked by lessons finished.`
-                : "Ranked by lessons finished. Your own row is washed blue and barred in the margin."}
+                : "Your own row is washed blue and barred in the margin, so you can find yourself on it even printed in greyscale."}
             </p>
           </div>
           <p className="nb-slug shrink-0">

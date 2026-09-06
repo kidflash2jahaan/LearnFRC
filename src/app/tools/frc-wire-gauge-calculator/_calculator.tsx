@@ -700,7 +700,10 @@ export default function WireGaugeCalculator({
             )}
           </div>
 
-          <div className="nb-scroll mt-[clamp(1.4rem,3vw,2.2rem)]">
+          {/* `tabIndex` because this table is 46rem wide and holds no links:
+              below that width the scroller is reachable by pointer only, and
+              the right-hand columns cannot be read from a keyboard at all. */}
+          <div className="nb-scroll mt-[clamp(1.4rem,3vw,2.2rem)]" tabIndex={0}>
             <table className="nb-table min-w-[46rem]">
               <caption className="sr-only">
                 Voltage drop and legality for every offered wire gauge on the run

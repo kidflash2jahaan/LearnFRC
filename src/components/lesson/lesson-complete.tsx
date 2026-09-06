@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { setLessonComplete } from "@/app/actions/progress";
 import { Button } from "@/components/ui/button";
 import { Confetti } from "@/components/lesson/confetti";
+import { scrollToElement } from "@/components/perf-mode";
 import {
   LessonMilestoneShare,
   rememberMilestone,
@@ -139,7 +140,7 @@ export function LessonComplete({
   // bring the result into view so completion lands somewhere predictable.
   React.useEffect(() => {
     if (completed && !prevCompleted.current && quiz && quiz.length > 0) {
-      panelRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      scrollToElement(panelRef.current, { block: "nearest" });
     }
     prevCompleted.current = completed;
   }, [completed, quiz]);

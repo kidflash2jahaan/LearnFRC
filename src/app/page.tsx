@@ -193,7 +193,11 @@ export default async function HomePage() {
       {/* ===================== 1. HERO ==========================
           Asymmetric split: the claim on the left, the catalogue taped up on
           the right. No eyebrow, no trust strip, no badge. Four things only. */}
-      <section className="nb-wrap grid items-start gap-[clamp(1.6rem,4vw,3.6rem)] pb-[clamp(3rem,6vw,5rem)] pt-[clamp(2.4rem,5vw,4.2rem)] lg:grid-cols-[minmax(0,1.5fr)_minmax(0,0.82fr)]">
+      {/* `grid-cols-1` below lg is load-bearing: the implicit `auto` track
+          otherwise sizes to the catalogue card's min-content, stretches past
+          `.nb-wrap`, and the root's `overflow-x: clip` shears the h1 and the
+          lede off the right edge at 320px. */}
+      <section className="nb-wrap grid grid-cols-1 items-start gap-[clamp(1.6rem,4vw,3.6rem)] pb-[clamp(3rem,6vw,5rem)] pt-[clamp(2.4rem,5vw,4.2rem)] lg:grid-cols-[minmax(0,1.5fr)_minmax(0,0.82fr)]">
         <div>
           <h1 className="max-w-[21ch]">
             Every job on an FRC team, <span className="nb-mark">written down</span>.

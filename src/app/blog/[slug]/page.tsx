@@ -239,16 +239,16 @@ export default async function ArticlePage({
             </p>
           </div>
 
-          {/* The breakpoint is 860px, not md, because that is where
-              `.nb-panel + .nb-panel` turns its 2px divider from vertical to
-              horizontal. Splitting into columns any earlier would leave the
-              panels side by side with the rules still running across them. */}
-          <div className="nb-box grid overflow-hidden min-[860px]:grid-cols-3">
+          {/* The breakpoint is 861px, not md: `.nb-panel + .nb-panel` keeps its
+              horizontal 2px divider up to and including 860px, so the columns
+              split at 861. Splitting any earlier leaves the panels side by side
+              with the rules still running across them. */}
+          <div className="nb-box grid overflow-hidden min-[861px]:grid-cols-3">
             {related.map((r) => (
               <Link
                 key={r.slug}
                 href={`/blog/${r.slug}`}
-                className="nb-panel group hover:bg-[rgba(27,54,200,0.05)]"
+                className="nb-panel group min-w-0 hover:bg-[rgba(27,54,200,0.05)]"
               >
                 <p className="nb-slug">{r.readMins} min read</p>
                 <h3 className="mt-2 group-hover:underline group-hover:decoration-blue group-hover:decoration-2 group-hover:underline-offset-[5px]">

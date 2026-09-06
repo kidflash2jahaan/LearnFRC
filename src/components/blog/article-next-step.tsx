@@ -67,7 +67,7 @@ export function ArticleNextStep({ slug }: { slug: string }) {
             `nb-hair` already flips to card stock inside a slab. */}
         <ol className="mt-[clamp(1.5rem,3vw,2.2rem)] grid gap-x-[clamp(1.4rem,3vw,2.6rem)] gap-y-0 min-[860px]:grid-cols-3">
           {lessons.map((l, i) => (
-            <li key={l.href} className="nb-hair">
+            <li key={l.href} className="nb-hair min-w-0">
               <Link href={l.href} className="group block py-[clamp(0.9rem,1.8vw,1.15rem)]">
                 <span className="nb-slug block text-[rgba(245,246,242,0.8)]">
                   lesson {String(i + 1).padStart(2, "0")}

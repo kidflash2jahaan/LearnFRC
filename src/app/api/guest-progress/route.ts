@@ -8,21 +8,22 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const NO_STORE = { "Cache-Control": "no-store" };
 
 /**
- * Guest (no-account) lesson progress, keyed to the anonymous visitor id.
+ * Lesson progress for a reader with no account, keyed to the anonymous visitor
+ * id.
  *
- * This is not just a mirror of localStorage any more: it is the ONLY copy
- * /api/migrate-guest will carry into a real account, because a client-supplied
+ * This is not a mirror of localStorage any more. It is the ONLY copy
+ * /api/migrate-guest will carry into a real account, because a client supplied
  * list of lesson ids is not evidence that anyone did the lessons. So the quiz
- * gate is enforced here exactly as `setLessonComplete` enforces it for signed-in
- * readers — same rule, same server, no account required. `quiz_passed` is then
- * a fact rather than a claim, and "sign up and keep your progress" is a promise
- * the migration can actually honour.
+ * gate is enforced here exactly the way setLessonComplete enforces it for
+ * signed-in readers: same rule, same server, no account required. quiz_passed is
+ * then a fact rather than a claim, and "sign up and keep your progress" is a
+ * promise the migration can actually honour.
  *
- * Anonymous + rate-limited; service-role writes (guest_progress is RLS-locked
- * with no public policies).
+ * Anonymous and rate limited. Writes go through the service role client because
+ * guest_progress is RLS-locked with no public policies.
  */
 
-/** The visitor's completed lesson ids — the set that will migrate at signup. */
+/** The visitor's completed lesson ids, the set that migrates at signup. */
 export async function GET(req: Request) {
   const visitor = (
     new URL(req.url).searchParams.get("visitorId") || ""
@@ -34,10 +35,10 @@ export async function GET(req: Request) {
     return NextResponse.json({ lessonIds: [] }, { headers: NO_STORE });
 
   const admin = createAdminClient();
-  // Paged: PostgREST silently truncates any select at 1000 rows. A single
-  // visitor cannot realistically exceed that today (394 lessons), but the
-  // catalogue grows and a silent truncation here would quietly drop lessons
-  // out of someone's migration.
+  // Paged, because PostgREST silently truncates any select at 1000 rows. One
+  // visitor cannot realistically pass that today, there are 394 lessons, but the
+  // catalogue grows and a silent truncation here would quietly drop lessons out
+  // of somebody's migration.
   const PAGE = 1000;
   const ids: string[] = [];
   for (let from = 0; ; from += PAGE) {
@@ -75,10 +76,10 @@ export async function POST(req: Request) {
     ? (body.answers as unknown[]).map((n) => (typeof n === "number" ? n : -1))
     : null;
 
-  // 429, not a silent 204: the client parks unconfirmed writes in a retry queue
-  // and needs to be able to tell "saved" from "dropped". The old 204-on-limit
-  // was indistinguishable from success, so a throttled completion looked saved
-  // and then vanished at signup.
+  // 429, not a silent 204. The client parks unconfirmed writes in a retry queue
+  // and needs to tell "saved" apart from "dropped". The old 204-on-limit was
+  // indistinguishable from success, so a throttled completion looked saved and
+  // then vanished at signup.
   if (!(await rateLimit("guest-progress", 120, 3600)))
     return new NextResponse(null, { status: 429, headers: NO_STORE });
 
@@ -93,7 +94,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ saved: false }, { headers: NO_STORE });
   }
 
-  // ---- Server-enforced quiz gate (same rule as src/app/actions/progress.ts) --
+  // Server-enforced quiz gate, the same rule as src/app/actions/progress.ts.
   const { data: lesson } = await admin
     .from("lessons")
     .select("quiz")
@@ -111,8 +112,9 @@ export async function POST(req: Request) {
     if (verified) {
       quizPassed = true;
     } else {
-      // No answers (a retry from the pending queue, or a stale client) — accept
-      // it only if this visitor already has a verified row for the lesson.
+      // No answers on this request, so it is a retry from the pending queue or a
+      // stale client. Accept it only if this visitor already has a verified row
+      // for the lesson.
       const { data: existing } = await admin
         .from("guest_progress")
         .select("quiz_passed")
@@ -128,7 +130,7 @@ export async function POST(req: Request) {
     }
   }
 
-  // Upsert on (visitor, lesson_id) — repeat completes are idempotent.
+  // Upsert on (visitor, lesson_id), so repeat completions are idempotent.
   const { error } = await admin
     .from("guest_progress")
     .upsert(

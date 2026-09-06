@@ -226,16 +226,26 @@ export default async function DepartmentPage({
           The visible trail matches the BreadcrumbList above it, so the page
           tells a reader and a crawler the same thing about where it sits. */}
       <section className="nb-wrap pb-[clamp(1.6rem,3vw,2.4rem)] pt-[clamp(1.6rem,3.5vw,2.6rem)]">
+        {/* The trail is navigation, so its links are real 44px targets rather
+            than 19px of small mono type, the same floor `.nb-navlink` holds in
+            the header. The row is sized by them, which also gives the slug some
+            air under the header rule instead of jamming it against it. */}
         <nav aria-label="Breadcrumb">
           <ol className="nb-slug m-0 flex list-none flex-wrap items-center gap-x-2 p-0">
             <li>
-              <Link href="/" className="hover:text-blue hover:underline">
+              <Link
+                href="/"
+                className="inline-flex min-h-11 items-center hover:text-blue hover:underline"
+              >
                 Home
               </Link>
             </li>
             <li aria-hidden="true">/</li>
             <li>
-              <Link href="/guides" className="hover:text-blue hover:underline">
+              <Link
+                href="/guides"
+                className="inline-flex min-h-11 items-center hover:text-blue hover:underline"
+              >
                 Guides
               </Link>
             </li>
@@ -277,21 +287,17 @@ export default async function DepartmentPage({
 
           <div className={TITLE_BLOCK_CELL}>
             <p className="nb-slug">modules</p>
-            <p className={`${TITLE_BLOCK_FIGURE} min-[861px]:mt-1`}>
-              {totalModules}
-            </p>
+            <p className={TITLE_BLOCK_FIGURE}>{totalModules}</p>
           </div>
 
           <div className={TITLE_BLOCK_CELL}>
             <p className="nb-slug">lessons</p>
-            <p className={`${TITLE_BLOCK_FIGURE} min-[861px]:mt-1`}>
-              {totalLessons}
-            </p>
+            <p className={TITLE_BLOCK_FIGURE}>{totalLessons}</p>
           </div>
 
           <div className={TITLE_BLOCK_CELL}>
             <p className="nb-slug">reading time</p>
-            <p className={`${TITLE_BLOCK_FIGURE} min-[861px]:mt-1`}>
+            <p className={TITLE_BLOCK_FIGURE}>
               {totalHours}
               <small>hours</small>
             </p>
@@ -303,7 +309,7 @@ export default async function DepartmentPage({
 
       {/* ===================== THE PATH, AND THE MARGIN ===================== */}
       <div className="nb-wrap grid gap-[clamp(2rem,4vw,3.2rem)] pb-[clamp(2.6rem,5vw,4rem)] lg:grid-cols-[minmax(0,1fr)_minmax(0,19rem)]">
-        <div className="min-w-0">
+        <div className="flex min-w-0 flex-col">
           {/* Week rhythm, resume, next badge. Renders nothing for a reader with
               no tracked progress, so the static HTML below is untouched. */}
           <DeptWeekGoal
@@ -321,16 +327,24 @@ export default async function DepartmentPage({
 
           <DeptModules departmentSlug={dept.slug} modules={dept.modules} />
 
-          <div className="nb-hair mt-[clamp(1.8rem,3.5vw,2.6rem)] flex flex-wrap items-center gap-x-4 gap-y-3 pt-[clamp(1.4rem,2.6vw,1.9rem)]">
-            <p className="text-[0.95rem] text-graphite">
-              Know something this department is missing?
-            </p>
-            <DeptSuggest
-              departmentId={dept.id}
-              departmentName={dept.name}
-              modules={dept.modules.map((m) => ({ id: m.id, title: m.title }))}
-              loginPath={`/signup?next=${encodeURIComponent(`/guides/${dept.slug}`)}`}
-            />
+          {/* Ruled off at the FOOT of the spread, not wherever the module log
+              happens to stop. On a short department the margin sheet beside it
+              runs 400px longer, and this prompt floated in the middle of an
+              empty left column. `mt-auto` hands that surplus to the gap above
+              the rule, and the outer padding keeps a floor under it for the
+              long departments where the log is the taller of the two. */}
+          <div className="mt-[clamp(1.8rem,3.5vw,2.6rem)] lg:mt-auto lg:pt-[clamp(1.8rem,3.5vw,2.6rem)]">
+            <div className="nb-hair flex flex-wrap items-center gap-x-4 gap-y-3 pt-[clamp(1.4rem,2.6vw,1.9rem)]">
+              <p className="text-[0.95rem] text-graphite">
+                Know something this department is missing?
+              </p>
+              <DeptSuggest
+                departmentId={dept.id}
+                departmentName={dept.name}
+                modules={dept.modules.map((m) => ({ id: m.id, title: m.title }))}
+                loginPath={`/signup?next=${encodeURIComponent(`/guides/${dept.slug}`)}`}
+              />
+            </div>
           </div>
         </div>
 

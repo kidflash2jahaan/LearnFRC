@@ -150,7 +150,7 @@ export default async function PublicProfilePage({
 
           <div className="mt-[clamp(1.2rem,2.6vw,1.8rem)] grid items-start gap-[clamp(1.4rem,3.4vw,2.6rem)] min-[760px]:grid-cols-[minmax(0,1fr)_auto]">
             <div className="min-w-0">
-              <h1 className="text-[clamp(2rem,1.3rem+2.6vw,3.4rem)]">
+              <h1 className="text-[clamp(2rem,1.3rem+2.4vw,3.4rem)]">
                 @{displayName}
               </h1>
 

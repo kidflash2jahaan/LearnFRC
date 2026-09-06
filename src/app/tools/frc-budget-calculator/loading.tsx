@@ -47,7 +47,9 @@ export default function BudgetCalculatorLoading() {
           <Skeleton className="h-4 w-44" />
           <Skeleton className="mt-4 h-9 w-full max-w-[22ch]" />
 
-          <div className="nb-box mt-[clamp(1.4rem,3vw,2.2rem)] grid overflow-hidden lg:grid-cols-[1.05fr_1fr_0.92fr]">
+          {/* Divider held horizontal through 861-1023 to match the real strip,
+              which splits at `lg` rather than the usual 861. */}
+          <div className="nb-box mt-[clamp(1.4rem,3vw,2.2rem)] grid overflow-hidden max-lg:[&>.nb-panel+.nb-panel]:border-l-0 max-lg:[&>.nb-panel+.nb-panel]:border-t-2 lg:grid-cols-[1.05fr_1fr_0.92fr]">
             {Array.from({ length: 3 }).map((_, panel) => (
               <div key={panel} className="nb-panel gap-4">
                 <Skeleton className="h-3.5 w-32" />

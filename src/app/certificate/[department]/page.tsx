@@ -66,7 +66,7 @@ export default async function CertificatePage({
   const total = flat.length;
   const completed = await getCompletedLessonIds(user.id);
   const done = flat.filter((l) => completed.has(l.id)).length;
-  const earned = true; // TEMP-PREVIEW
+  const earned = total > 0 && done === total;
   const name = profile?.full_name || profile?.username || "FRC Learner";
   const moduleCount = dept.modules?.length ?? 0;
 
@@ -115,7 +115,11 @@ export default async function CertificatePage({
             </p>
 
             <div className="mt-3 flex items-center gap-3">
-              <Progress value={pct} className="flex-1" />
+              <Progress
+                value={pct}
+                className="flex-1"
+                label={`${done} of ${total} lessons finished`}
+              />
               <span className="nb-slug shrink-0 text-ink">{pct}%</span>
             </div>
 
@@ -182,7 +186,7 @@ export default async function CertificatePage({
         <Link href={`/guides/${dept.slug}`} className="nb-navlink">
           back to {dept.name}
         </Link>
-        <div className="flex flex-wrap items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-3.5">
           <ShareButton
             variant="outline"
             label="Share it"

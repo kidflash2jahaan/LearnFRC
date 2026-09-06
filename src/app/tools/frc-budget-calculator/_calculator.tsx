@@ -707,7 +707,13 @@ export default function BudgetCalculator({ authed }: { authed: boolean }) {
             Set the three things that move the number.
           </h2>
 
-          <div className="nb-box mt-[clamp(1.4rem,3vw,2.2rem)] grid overflow-hidden lg:grid-cols-[1.05fr_1fr_0.92fr]">
+          {/* Every other panel strip on the site splits at 861px, the pixel
+              `.nb-panel` turns its 2px divider back to vertical. This one is
+              the exception: three columns of chip groups and hints do not fit
+              at 861, so it holds until `lg`. That means the divider has to be
+              held horizontal through the 861-1023 band by hand, or panels 2 and
+              3 wear a stray ink line down their left edge while still stacked. */}
+          <div className="nb-box mt-[clamp(1.4rem,3vw,2.2rem)] grid overflow-hidden max-lg:[&>.nb-panel+.nb-panel]:border-l-0 max-lg:[&>.nb-panel+.nb-panel]:border-t-2 lg:grid-cols-[1.05fr_1fr_0.92fr]">
             {/* ---- Panel 1: the team and its events ---- */}
             <div className="nb-panel gap-4">
               <p className="nb-slug border-b-2 border-ink pb-2">01 / the team</p>

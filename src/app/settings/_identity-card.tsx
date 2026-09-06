@@ -50,9 +50,11 @@ export function IdentityCard({
 
   return (
     // The two panels divide on the kit's 2px ink rule, which turns horizontal
-    // under 860px. The column split has to break ABOVE that width or the rule
-    // would be drawn on the wrong axis in the gap between the two breakpoints.
-    <div className="nb-box grid overflow-hidden lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
+    // at and below 860px. The column split has to happen on 861 EXACTLY, not
+    // merely somewhere above 860: split at `lg` instead and the rule is already
+    // vertical from 861 while the panels are still stacked, so the second panel
+    // wears a stray ink line down its left edge and the two run together.
+    <div className="nb-box grid overflow-hidden min-[861px]:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
       <div className="nb-panel">
         <p className="nb-slug">account / this is you</p>
         <div className="mt-4 flex items-center gap-4">

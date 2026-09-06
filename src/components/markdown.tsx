@@ -202,11 +202,20 @@ export function Markdown({
           },
           // A wide table is the one thing in a lesson that can push the page
           // sideways, so it always gets its own scroller.
+          // `tabIndex` for the same reason the listing below gets one: a table
+          // holds no links, so without it the scroller is reachable by mouse
+          // and trackpad only and the right-hand columns are unreadable from
+          // the keyboard. Focusable, so the arrow keys scroll it.
           table: ({ node: _node, ...p }) => (
-            <div className="nb-scroll">
+            <div className="nb-scroll" tabIndex={0}>
               <table {...p} />
             </div>
           ),
+          // A listing wider than the sheet scrolls sideways. Nothing inside it
+          // can take focus, so it needs to take focus itself or the end of
+          // every long line is unreachable without a pointer. No `role` here
+          // on purpose: one landmark per code block would bury the real ones.
+          pre: ({ node: _node, ...p }) => <pre tabIndex={0} {...p} />,
           // `.hljs` is what the token colours in globals.css hang off. The
           // panel around it is styled by `.nb-prose pre`.
           code: ({ className: codeClass, children, ...rest }) => {

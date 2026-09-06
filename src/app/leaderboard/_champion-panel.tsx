@@ -98,7 +98,7 @@ export function ChampionPanel({ top3 }: { top3: PodiumEntry[] }) {
                 </span>
               </div>
 
-              <span className="nb-meter mt-2 block h-[0.45rem]">
+              <span className="nb-meter mt-2 block">
                 <span className="nb-meter-bar" style={{ width: `${pct}%` }} />
               </span>
             </li>

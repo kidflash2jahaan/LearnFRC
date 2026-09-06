@@ -5,13 +5,15 @@ import { usePathname } from "next/navigation";
 import { ensureSourceCookie } from "@/components/source-capture";
 
 /**
- * Site-wide pageview beacon. Mounted once at the body level (next to
- * PresenceBeacon), so — unlike the per-article ArticleViewBeacon — it must key
- * its effect on usePathname() to re-fire on client-side (App Router) navigation,
- * since the root layout never remounts.
+ * Counts one pageview anywhere on the site. Renders null, like every beacon.
  *
- * Bot-safe by construction: it's client JS, so crawlers that don't run scripts
- * never count. /admin and /api are excluded from public traffic stats.
+ * It is mounted once in the root layout, next to PresenceBeacon, and the root
+ * layout never remounts. So unlike the per-article beacon it has to key its
+ * effect on usePathname() to fire again on a client side navigation.
+ *
+ * Crawlers are excluded by construction: this is client JavaScript, so anything
+ * that does not run scripts never counts. /admin and /api are dropped because
+ * they are not public traffic.
  */
 export function PageViewBeacon() {
   const pathname = usePathname();
@@ -20,12 +22,13 @@ export function PageViewBeacon() {
   useEffect(() => {
     if (!pathname) return;
     if (/^\/(admin|api)(\/|$)/.test(pathname)) return;
-    // Dedupe rapid duplicates (strict-mode double-mount / double-render); a real
-    // later navigation back to the same path still counts.
+    // Collapse rapid duplicates (a strict-mode double mount, a double render).
+    // A real later navigation back to the same path still counts.
     if (lastSent.current === pathname) return;
     lastSent.current = pathname;
 
-    // Persistent first-party visitor id (no PII) for unique-visitor counts.
+    // First-party visitor id, no personal data in it, so unique visitors can be
+    // counted without tracking anyone across sites.
     let visitorId: string | null = null;
     try {
       visitorId = localStorage.getItem("lf_vid");
@@ -34,19 +37,19 @@ export function PageViewBeacon() {
         localStorage.setItem("lf_vid", visitorId);
       }
     } catch {
-      /* storage blocked — still count the pageview, just without an id */
+      // Storage blocked. Still count the view, just without an id.
     }
 
     // Write the first-touch acquisition cookie BEFORE reporting. /api/page-view
-    // reads `lf_src` off this very request, so if the cookie does not exist yet
-    // the visitor's first pageview — the only one that carries the acquisition
-    // source — is stored with source NULL.
+    // reads lf_src off this very request, so if the cookie is not in the jar yet
+    // the visitor's first pageview, the only one that carries the acquisition
+    // source, gets stored with source NULL.
     //
     // Ordering <SourceCapture/> ahead of this component in the layout is not
-    // enough on its own to rely on: it makes the fix depend on React's sibling
-    // effect-flush order and on nobody ever reordering that JSX. This call is
-    // synchronous and idempotent, so the cookie is in the jar by the time
-    // sendBeacon runs a few lines below, regardless of mount order.
+    // enough to rely on: that makes correctness depend on React's sibling effect
+    // flush order and on nobody ever reordering the JSX. This call is
+    // synchronous and idempotent, so the cookie is set by the time sendBeacon
+    // runs a few lines below, whatever the mount order.
     ensureSourceCookie();
 
     const body = JSON.stringify({ path: pathname, visitorId });

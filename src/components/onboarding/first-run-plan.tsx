@@ -24,7 +24,7 @@ function Tick() {
 }
 
 /**
- * THE PLAN — one obvious next action, and a finish line five lessons away.
+ * THE PLAN, one obvious next action and a finish line five lessons away.
  *
  * This replaces the zero-progress dashboard experience, which offers a
  * brand-new learner FIVE competing calls to action pointing at four different

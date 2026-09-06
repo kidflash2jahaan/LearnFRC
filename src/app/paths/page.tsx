@@ -215,7 +215,7 @@ export default function PathsPage() {
           rather than a route, or they are setting this up for other people. */}
       <section className="nb-wrap pb-[clamp(3rem,6vw,5rem)]">
         <div className="nb-rule pt-[clamp(1.8rem,3.5vw,2.6rem)]">
-          <div className="nb-box grid overflow-hidden min-[860px]:grid-cols-2">
+          <div className="nb-box grid overflow-hidden min-[861px]:grid-cols-2">
             <div className="nb-panel">
               <p className="nb-slug">none of them is your job</p>
               <h2 className="mt-2 text-[clamp(1.25rem,1rem+0.9vw,1.7rem)]">

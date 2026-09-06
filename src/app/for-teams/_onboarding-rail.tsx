@@ -21,7 +21,7 @@ export type OnboardingStep = {
  */
 export function OnboardingStrip({ steps }: { steps: OnboardingStep[] }) {
   return (
-    <ol className="nb-box grid overflow-hidden min-[860px]:grid-cols-[1.15fr_1fr_0.95fr]">
+    <ol className="nb-box grid overflow-hidden min-[861px]:grid-cols-[1.15fr_1fr_0.95fr]">
       {steps.map((step) => (
         <li key={step.n} className="nb-panel">
           <span

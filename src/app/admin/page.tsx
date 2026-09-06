@@ -116,7 +116,7 @@ export default async function AdminPage() {
         <div className="nb-box nb-tilt-2 w-full max-w-lg p-[clamp(1.4rem,4vw,2.4rem)]">
           <span className="nb-tape -top-3 left-[18%] rotate-[-3.2deg]" aria-hidden="true" />
           <p className="nb-slug">access / denied</p>
-          <h1 className="mt-3 text-[clamp(1.9rem,1.2rem+2.4vw,2.8rem)]">
+          <h1 className="mt-3 text-[clamp(1.9rem,1.3rem+2vw,2.8rem)]">
             This drawer is locked.
           </h1>
           <p className="mt-4 text-graphite">

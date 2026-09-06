@@ -4,13 +4,16 @@ import { createAdminClient } from "@/lib/supabase/admin";
 export const dynamic = "force-dynamic";
 
 /**
- * Endpoint the scheduled name-moderation agent calls.
- *   GET  ?secret=CRON_SECRET  -> every profile's { id, username, full_name }
- *   POST ?secret=CRON_SECRET  -> { changes: [{ id, username_offensive?, full_name_offensive?, reason }] }
+ * The endpoint the scheduled name-moderation agent calls.
  *
- * The agent only *identifies* clearly-offensive fields (biased to leave names
- * alone when unsure). The site generates a safe, unique replacement, records
- * the old value for reversal, and emails ONE digest only if anything changed.
+ *   GET  ?secret=CRON_SECRET   every profile's { id, username, full_name }
+ *   POST ?secret=CRON_SECRET   { changes: [{ id, username_offensive?,
+ *                                            full_name_offensive?, reason }] }
+ *
+ * The agent only IDENTIFIES clearly offensive fields, and is biased toward
+ * leaving a name alone when it is unsure. The site is what generates a safe,
+ * unique replacement, records the old value so a change can be reversed, and
+ * leaves the digest to the routine that called it.
  */
 
 function authed(req: Request): boolean {
@@ -45,6 +48,11 @@ type Change = {
   reason?: string;
 };
 
+/**
+ * A free "memberNNNNNN" handle. It checks each candidate against the table
+ * rather than trusting randomness, and after 20 misses falls back to a
+ * timestamp tail, which cannot collide with a live row in practice.
+ */
 async function uniqueUsername(admin: ReturnType<typeof createAdminClient>): Promise<string> {
   for (let i = 0; i < 20; i++) {
     const candidate = "member" + Math.floor(100000 + Math.random() * 899999).toString();
@@ -96,7 +104,7 @@ export async function POST(req: Request) {
         update.username = newUsername;
       }
       if (c.full_name_offensive) {
-        update.full_name = null; // display falls back to (now-safe) username
+        update.full_name = null; // display falls back to the now-safe username
       }
       if (!Object.keys(update).length) continue;
 
@@ -116,10 +124,10 @@ export async function POST(req: Request) {
         reason: c.reason ?? "",
       });
     } catch {
-      /* skip a bad change, keep going */
+      // One bad change does not stop the batch.
     }
   }
 
-  // No email here — the scheduled routine folds `done` into one combined digest.
+  // No email from here. The scheduled routine folds `done` into one digest.
   return NextResponse.json({ changed: done.length, done });
 }

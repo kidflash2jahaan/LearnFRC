@@ -128,7 +128,7 @@ export function SubteamBoard({ rows }: { rows: SubteamRow[] }) {
                     {row.teamCompleted}/{row.lessonCount}
                   </b>
                 </span>
-                <span className="nb-meter mt-1.5 block h-[0.5rem]">
+                <span className="nb-meter mt-1.5 block">
                   <span className="nb-meter-bar" style={{ width: `${pct}%` }} />
                 </span>
               </span>

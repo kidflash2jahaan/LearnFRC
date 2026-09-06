@@ -8,102 +8,118 @@ import { Skeleton } from "@/components/ui/skeleton";
  * lesson count, achievements) before anything can render, and a stranger
  * arriving from a shared link has no prior page to look at.
  *
- * Container classes are copied verbatim from page.tsx — the `lg:grid-cols-[1fr_360px]`
- * hero, the `max-w-6xl` column with its `pt-28 lg:pt-36`, the stat ribbon's
- * `grid-cols-2 sm:grid-cols-4`, and the medal wall's `pb-12 pt-10`.
+ * It mirrors page.tsx section for section, on the same numbers:
+ *   record sheet  nb-box nb-tilt-3, max-w-[58rem], split at 760px
+ *   the figures   nb-slab band, four stamps, 1 / 2 / 4 columns
+ *   the roster    ruled lines under a heading
+ *
+ * THE FRAMES ARE REAL, ONLY THE WRITING IS A PLACEHOLDER. The card, its tilt,
+ * its tape and the blue band are drawn exactly as the page draws them, because
+ * their edges are the part of the layout that has to be in the right place when
+ * the data lands. A grey rectangle standing in for the whole card would move
+ * every edge on the page at swap time.
  *
  * TWO JUDGEMENT CALLS, both settled against the live data rather than guessed:
- *  • No bio block. `bio` is optional and only 6 of 338 profiles have one, so
+ *  - No bio block. `bio` is optional and only 6 of 338 profiles have one, so
  *    drawing it would invent a paragraph for 98% of visits.
- *  • Two medal cards. Badges average 1.5 per profile; 44% of profiles have none
- *    and get a single dashed empty card instead. Two cards is one grid row at
- *    sm — the closest single shape to both, and it sits at/below the fold.
+ *  - Two roster lines. Badges average 1.5 per profile and 44% of profiles have
+ *    none, so two lines is the closest single shape to both, and it sits at or
+ *    below the fold either way.
  */
 export default function PublicProfileLoading() {
   return (
-    <div className="relative overflow-x-clip">
-      {/* ============================ HERO ============================ */}
-      <section className="mx-auto grid max-w-6xl items-center gap-10 px-4 pb-14 pt-28 sm:px-6 lg:grid-cols-[1fr_360px] lg:gap-12 lg:pb-20 lg:pt-36 lg:px-8">
-        <div>
-          {/* ac-chip "Learner trophy card" */}
-          <Skeleton className="h-7 w-52 rounded-full" />
+    <>
+      {/* ===================== THE RECORD SHEET ===================== */}
+      <section className="nb-wrap pb-[clamp(2rem,4vw,3rem)] pt-[clamp(2.2rem,5vw,4rem)]">
+        <div className="nb-box nb-tilt-3 mx-auto max-w-[58rem] p-[clamp(1.3rem,3vw,2.4rem)]">
+          <span className="nb-tape -top-3 left-[18%] rotate-[-3.4deg]" aria-hidden="true" />
+          <span className="nb-tape -bottom-3 right-[14%] rotate-[2.2deg]" aria-hidden="true" />
 
-          {/* h1 — @username, always one line */}
-          <Skeleton className="mt-5 h-10 w-64 max-w-full sm:h-12 sm:w-80" />
-
-          {/* role / team / joined badge row (px-2.5 py-0.5 pills) */}
-          <div className="mt-5 flex flex-wrap items-center gap-2">
-            <Skeleton className="h-6 w-20 rounded-full" />
-            <Skeleton className="h-6 w-24 rounded-full" />
-            <Skeleton className="h-6 w-32 rounded-full" />
+          {/* the "learnfrc / record of work" rule */}
+          <div className="border-b border-dashed border-rule pb-2.5">
+            <Skeleton className="h-4 w-52" />
           </div>
 
-          {/* share button — min-h-[44px] rounded-2xl */}
-          <Skeleton className="mt-7 h-11 w-44 rounded-2xl" />
-        </div>
+          <div className="mt-[clamp(1.2rem,2.6vw,1.8rem)] grid items-start gap-[clamp(1.4rem,3.4vw,2.6rem)] min-[760px]:grid-cols-[minmax(0,1fr)_auto]">
+            <div className="min-w-0">
+              {/* @username, always one line */}
+              <Skeleton className="h-[clamp(2rem,1.3rem+2.4vw,3.4rem)] w-72 max-w-full" />
 
-        {/* SIGNATURE: the trophy panel — level ring, tier pill, XP rail */}
-        <div className="ac-glass w-full max-w-sm overflow-hidden p-6 sm:p-7 lg:justify-self-end">
-          <div className="flex items-center justify-between gap-3">
-            <Skeleton className="h-4 w-28" />
-            <Skeleton className="h-4 w-14" />
-          </div>
-
-          <div className="mt-6 flex flex-col items-center">
-            {/* the 176px level ring with the avatar inside it */}
-            <Skeleton className="h-44 w-44 rounded-full" />
-            {/* tier pill */}
-            <Skeleton className="mt-5 h-7 w-32 rounded-full" />
-          </div>
-
-          <div className="mt-6">
-            <div className="mb-1.5 flex items-baseline justify-between gap-3">
-              <Skeleton className="h-5 w-20" />
-              <Skeleton className="h-4 w-36" />
+              {/* role / team / joined chips */}
+              <div className="mt-[clamp(1rem,2.2vw,1.4rem)] flex flex-wrap gap-2">
+                <Skeleton className="h-7 w-20" />
+                <Skeleton className="h-7 w-24" />
+                <Skeleton className="h-7 w-32" />
+              </div>
             </div>
-            <Skeleton className="h-2.5 w-full rounded-full" />
+
+            {/* the rank stamp, drawn as the real small card */}
+            <div className="nb-box-sm nb-tilt-4 w-full max-w-[19rem] p-[clamp(1rem,2.2vw,1.4rem)] min-[760px]:justify-self-end">
+              <div className="flex items-center gap-3.5">
+                <Skeleton className="h-14 w-14 shrink-0 rounded-full" />
+                <div className="min-w-0 flex-1 space-y-1.5">
+                  <Skeleton className="h-3.5 w-12" />
+                  <Skeleton className="h-4 w-24" />
+                </div>
+              </div>
+
+              <div className="nb-hair mt-4 flex items-end gap-3 pt-4">
+                <Skeleton className="h-[clamp(2.6rem,2rem+2vw,3.4rem)] w-14" />
+                <Skeleton className="mb-1 h-3.5 w-10" />
+              </div>
+
+              <Skeleton className="mt-3 h-[0.8rem] w-full" />
+              <Skeleton className="mt-2 h-3.5 w-40 max-w-full" />
+            </div>
+          </div>
+
+          <div className="nb-hair mt-[clamp(1.4rem,3vw,2.2rem)] flex flex-wrap items-center gap-x-4 gap-y-3 pt-[clamp(1rem,2.2vw,1.4rem)]">
+            <Skeleton className="h-11 w-44" />
+            <Skeleton className="h-4 w-48 max-w-full" />
           </div>
         </div>
       </section>
 
-      {/* ================== Stat ribbon — clay tiles ================== */}
-      <section className="mx-auto max-w-6xl px-4 pb-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+      {/* ===================== THE FIGURES =====================
+          The band is painted for real. It is the strongest edge on the page,
+          and holding it still is most of what keeps the swap from jumping. */}
+      <section className="nb-slab py-[clamp(2rem,4.5vw,3.4rem)]">
+        <div className="nb-wrap grid gap-[clamp(1.2rem,3vw,2.4rem)] min-[520px]:grid-cols-2 min-[860px]:grid-cols-4">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div
-              key={i}
-              className="ac-tile flex h-full flex-col items-center rounded-3xl p-5 text-center"
-            >
-              <Skeleton className="h-11 w-11 rounded-2xl" />
-              <Skeleton className="mt-3 h-9 w-16" />
-              <Skeleton className="mt-1.5 h-3 w-20" />
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ================= Medal wall — achievements ================= */}
-      <section className="mx-auto max-w-6xl px-4 pb-12 pt-10 sm:px-6 lg:px-8">
-        <div className="mb-5 flex items-end justify-between gap-4">
-          <div>
-            <Skeleton className="h-4 w-40" />
-            <Skeleton className="mt-2 h-8 w-44" />
-          </div>
-          <Skeleton className="h-6 w-24 shrink-0 rounded-full" />
-        </div>
-
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {Array.from({ length: 2 }).map((_, i) => (
-            <div key={i} className="ac-card flex items-center gap-4 rounded-3xl p-5">
-              <Skeleton className="h-12 w-12 shrink-0 rounded-2xl" />
-              <div className="min-w-0 flex-1">
-                <Skeleton className="h-5 w-40 max-w-full" />
-                <Skeleton className="mt-1.5 h-4 w-56 max-w-full" />
+            <div key={i}>
+              <Skeleton className="h-[clamp(2.5rem,1.4rem+3.6vw,4.4rem)] w-28 max-w-full" />
+              <div className="mt-[0.6rem] border-t border-[rgba(245,246,242,0.4)] pt-[0.55rem]">
+                <Skeleton className="h-4 w-16" />
               </div>
             </div>
           ))}
         </div>
       </section>
-    </div>
+
+      {/* ===================== THE ROSTER ===================== */}
+      <section className="nb-wrap py-[clamp(2.2rem,4.5vw,3.6rem)]">
+        <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-3">
+          <div>
+            <Skeleton className="h-[clamp(1.5rem,1.1rem+1.4vw,2.3rem)] w-52" />
+            <Skeleton className="mt-3 h-5 w-full max-w-[52ch]" />
+          </div>
+          <Skeleton className="h-6 w-24 shrink-0" />
+        </div>
+
+        <div className="nb-list mt-[clamp(1.2rem,2.6vw,1.8rem)]">
+          {Array.from({ length: 2 }).map((_, i) => (
+            <div
+              key={i}
+              className="grid items-baseline gap-x-[clamp(1rem,3vw,2.2rem)] gap-y-1.5 border-b border-dashed border-rule py-[clamp(0.9rem,2vw,1.3rem)] min-[720px]:grid-cols-[minmax(0,18rem)_minmax(0,1fr)]"
+            >
+              <Skeleton className="h-5 w-44 max-w-full" />
+              <Skeleton className="h-4 w-full max-w-[54ch]" />
+            </div>
+          ))}
+        </div>
+
+        <Skeleton className="mt-[clamp(1.4rem,3vw,2.2rem)] h-5 w-full max-w-[46ch]" />
+      </section>
+    </>
   );
 }

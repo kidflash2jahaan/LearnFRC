@@ -31,9 +31,9 @@ export function GoogleSignInButton({
   via,
 }: {
   next?: string;
-  /** Referrer's username from ?ref= — must survive the trip to Google. */
+  /** Referrer's username from ?ref=. Must survive the trip to Google. */
   referrer?: string;
-  /** Share surface from ?via= — must survive the trip to Google. */
+  /** Share surface from ?via=. Must survive the trip to Google. */
   via?: string;
 }) {
   const [loading, setLoading] = React.useState(false);
@@ -45,8 +45,8 @@ export function GoogleSignInButton({
       const dest = next && next.startsWith("/") ? next : "/dashboard";
       // ref/via ride along on the callback URL. Without this they are dropped
       // the moment the browser leaves for Google, which is exactly how every
-      // referral through this button went unrecorded from 2026-07-17 onward —
-      // and this is the FIRST button on the form, so it is the common path.
+      // referral through this button went unrecorded from 2026-07-17 onward.
+      // This is the FIRST button on the form, so it is the common path.
       const cb = new URL("/auth/callback", window.location.origin);
       cb.searchParams.set("next", dest);
       if (referrer) cb.searchParams.set("ref", referrer);

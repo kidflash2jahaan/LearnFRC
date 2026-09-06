@@ -40,16 +40,16 @@ export async function sendEmail({
   }
 }
 
-/** The one shared email frame — every LearnFRC email renders inside this. */
+/** The one shared email frame. Every LearnFRC email renders inside this. */
 const emailShell = (inner: string) => `
-<div style="background:#eef3fb;padding:40px 20px;font-family:'Helvetica Neue',Arial,sans-serif">
-  <div style="max-width:520px;margin:0 auto;background:#ffffff;border:1px solid #e2e8f5;border-radius:18px;overflow:hidden;box-shadow:0 8px 30px rgba(16,30,60,0.08)">
-    <div style="background:linear-gradient(110deg,#2560e6,#1aa9d6);padding:28px 32px">
-      <div style="color:#fff;font-size:22px;font-weight:800;letter-spacing:-0.02em">LearnFRC</div>
-      <div style="color:rgba(255,255,255,0.9);font-size:13px;margin-top:2px">Master FIRST Robotics Competition</div>
+<div style="background:#E6E8E3;padding:40px 20px;font-family:'Helvetica Neue',Arial,sans-serif">
+  <div style="max-width:520px;margin:0 auto;background:#F5F6F2;border:2px solid #16181B;border-radius:6px;overflow:hidden">
+    <div style="background:#F5F6F2;padding:26px 32px;border-bottom:2px solid #16181B">
+      <div style="color:#16181B;font-size:22px;font-weight:800;letter-spacing:-0.025em">LearnFRC</div>
+      <div style="color:#565C60;font-size:13px;margin-top:3px;font-family:ui-monospace,Menlo,Consolas,monospace">every job on an FRC team, written down</div>
     </div>
-    <div style="padding:30px 32px;color:#1e2a44;font-size:15px;line-height:1.6">${inner}</div>
-    <div style="padding:18px 32px;border-top:1px solid #eef2f9;color:#64748b;font-size:12px">
+    <div style="padding:30px 32px;color:#16181B;font-size:15px;line-height:1.6">${inner}</div>
+    <div style="padding:18px 32px;border-top:1px solid rgba(22,24,27,.30);color:#565C60;font-size:12px">
       LearnFRC · Built by Jahaan Pardhanani
     </div>
   </div>
@@ -59,7 +59,7 @@ const esc = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
 /**
- * Lifecycle frame — same look as emailShell, for RELATIONSHIP emails to a
+ * Lifecycle frame, same look as emailShell, for RELATIONSHIP emails to a
  * registered user about their OWN account activity (their unfinished lessons /
  * progress). Kept strictly non-promotional so its primary purpose is
  * relationship/transactional, which under CAN-SPAM does not require a physical
@@ -70,7 +70,7 @@ const marketingShell = (
   inner: string,
   unsubscribeUrl: string,
   /** Why this person is receiving THIS email. Must be true for the segment it
-   * is used with — a learner who has never opened a lesson does not have
+   * is used with. A learner who has never opened a lesson does not have
    * "lessons in progress", and telling them they do is the kind of small lie
    * that earns a spam complaint. Defaults to the original wording. */
   reason: string = "You're getting this because you have a LearnFRC account with lessons in progress."
@@ -78,17 +78,17 @@ const marketingShell = (
   const site = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com";
   const address = process.env.MAILING_ADDRESS; // optional; shown only if set
   return `
-<div style="background:#eef3fb;padding:40px 20px;font-family:'Helvetica Neue',Arial,sans-serif">
-  <div style="max-width:520px;margin:0 auto;background:#ffffff;border:1px solid #e2e8f5;border-radius:18px;overflow:hidden;box-shadow:0 8px 30px rgba(16,30,60,0.08)">
-    <div style="background:linear-gradient(110deg,#2560e6,#1aa9d6);padding:28px 32px">
-      <div style="color:#fff;font-size:22px;font-weight:800;letter-spacing:-0.02em">LearnFRC</div>
-      <div style="color:rgba(255,255,255,0.9);font-size:13px;margin-top:2px">Master FIRST Robotics Competition</div>
+<div style="background:#E6E8E3;padding:40px 20px;font-family:'Helvetica Neue',Arial,sans-serif">
+  <div style="max-width:520px;margin:0 auto;background:#F5F6F2;border:2px solid #16181B;border-radius:6px;overflow:hidden">
+    <div style="background:#F5F6F2;padding:26px 32px;border-bottom:2px solid #16181B">
+      <div style="color:#16181B;font-size:22px;font-weight:800;letter-spacing:-0.025em">LearnFRC</div>
+      <div style="color:#565C60;font-size:13px;margin-top:3px;font-family:ui-monospace,Menlo,Consolas,monospace">every job on an FRC team, written down</div>
     </div>
-    <div style="padding:30px 32px;color:#1e2a44;font-size:15px;line-height:1.6">${inner}</div>
-    <div style="padding:18px 32px;border-top:1px solid #eef2f9;color:#64748b;font-size:12px;line-height:1.6">
+    <div style="padding:30px 32px;color:#16181B;font-size:15px;line-height:1.6">${inner}</div>
+    <div style="padding:18px 32px;border-top:1px solid rgba(22,24,27,.30);color:#565C60;font-size:12px;line-height:1.6">
       ${reason} Manage emails in your
-      <a href="${site}/settings" style="color:#2560e6">settings</a> or
-      <a href="${unsubscribeUrl}" style="color:#2560e6">turn these off</a>.${address ? `<br/>LearnFRC · ${esc(address)}` : ""}
+      <a href="${site}/settings" style="color:#1B36C8">settings</a> or
+      <a href="${unsubscribeUrl}" style="color:#1B36C8">turn these off</a>.${address ? `<br/>LearnFRC · ${esc(address)}` : ""}
     </div>
   </div>
 </div>`;
@@ -97,11 +97,11 @@ const marketingShell = (
 /**
  * Which win-back conversation this learner is actually in. The three are
  * genuinely different situations and get genuinely different emails:
- *   never_started — has an account, has never completed a lesson. Sent ONCE,
+ *   never_started: has an account, has never completed a lesson. Sent ONCE,
  *                   ever. They need a starting point, not a reminder.
- *   stalled_early — 1-4 lessons then stopped. They have context but never got
+ *   stalled_early: 1-4 lessons then stopped. They have context but never got
  *                   deep enough for the product to be worth anything to them.
- *   deep_churn    — 5+ lessons then stopped. Demonstrated affinity; the email
+ *   deep_churn:    5+ lessons then stopped. Demonstrated affinity; the email
  *                   can safely assume they know what LearnFRC is.
  */
 export type LifecycleSegment =
@@ -113,7 +113,7 @@ export type LifecycleEmailProps = {
   segment: LifecycleSegment;
   name?: string | null;
   unsubscribeUrl: string;
-  /** The learner's real next lesson — named, summarised, deep-linked. */
+  /** The learner's real next lesson, named, summarised and deep-linked. */
   nextLessonTitle?: string | null;
   nextLessonHref?: string | null;
   nextLessonSummary?: string | null;
@@ -136,7 +136,7 @@ export type LifecycleEmailProps = {
 const plural = (n: number, one: string, many = `${one}s`) =>
   `${n} ${n === 1 ? one : many}`;
 
-/** "3 days ago" / "yesterday" — reads as a fact, never as a reprimand. */
+/** "3 days ago" / "yesterday", reads as a fact, never as a reprimand. */
 const agoPhrase = (days: number | null | undefined) =>
   days === null || days === undefined
     ? null
@@ -156,12 +156,12 @@ export function lifecycleEmailSubject(p: LifecycleEmailProps): string {
   if (!title) return "Your next FRC lesson";
   if (p.segment === "never_started") return `Start here: ${title}`;
   if (p.segment === "deep_churn" && p.completed && dept)
-    return `${plural(p.completed, "lesson")} in — next up: ${title}`;
+    return `${plural(p.completed, "lesson")} in. Next up: ${title}`;
   return dept ? `Next in ${dept}: ${title}` : `Your next lesson: ${title}`;
 }
 
 /**
- * Lifecycle win-back email — RELATIONSHIP content only, strictly about this
+ * Lifecycle win-back email, RELATIONSHIP content only, strictly about this
  * learner's own account and their own next lesson. Deliberately contains no
  * deadline, no expiring offer, no streak-at-risk framing and no "you're falling
  * behind": every eligible learner is by definition dormant, so manufactured
@@ -189,12 +189,12 @@ export function lifecycleEmailHtml(p: LifecycleEmailProps): string {
         : "Your next lesson";
 
   const nextBlock = p.nextLessonTitle
-    ? `<div style="margin:0 0 22px;padding:16px 18px;background:#f6f9fe;border:1px solid #e2e8f5;border-radius:14px">
-         <p style="margin:0 0 6px;color:#64748b;font-size:12px;text-transform:uppercase;letter-spacing:.06em">${eyebrow}</p>
-         <p style="margin:0;font-size:18px;font-weight:700;color:#0f1c33;line-height:1.35">${esc(p.nextLessonTitle)}</p>
+    ? `<div style="margin:0 0 22px;padding:16px 18px;background:#FFFFFF;border:1px solid rgba(22,24,27,.30);border-radius:4px">
+         <p style="margin:0 0 6px;color:#565C60;font-size:12px;text-transform:uppercase;letter-spacing:.06em">${eyebrow}</p>
+         <p style="margin:0;font-size:18px;font-weight:700;color:#16181B;line-height:1.35">${esc(p.nextLessonTitle)}</p>
          ${
            p.nextLessonSummary
-             ? `<p style="margin:8px 0 0;color:#475569;font-size:14px;line-height:1.55">${esc(p.nextLessonSummary)}</p>`
+             ? `<p style="margin:8px 0 0;color:#565C60;font-size:14px;line-height:1.55">${esc(p.nextLessonSummary)}</p>`
              : ""
          }
        </div>`
@@ -211,7 +211,7 @@ export function lifecycleEmailHtml(p: LifecycleEmailProps): string {
   // are known, so it can never read "lesson 1 of 0".
   const positionLine =
     dept && p.departmentTotal
-      ? `<p style="margin:18px 0 0;color:#64748b;font-size:13px">You've done ${p.departmentDone ?? 0} of ${p.departmentTotal} lessons in ${dept}.</p>`
+      ? `<p style="margin:18px 0 0;color:#565C60;font-size:13px">You've done ${p.departmentDone ?? 0} of ${p.departmentTotal} lessons in ${dept}.</p>`
       : "";
 
   let intro: string;
@@ -226,14 +226,14 @@ export function lifecycleEmailHtml(p: LifecycleEmailProps): string {
           ? `It's about ${plural(p.readMinutes, "minute")} of reading, then a short quiz at the end. You can retry the quiz as many times as you like.`
           : `It's a short read with a quick quiz at the end. You can retry the quiz as many times as you like.`;
     // Says "finished", never "opened". This segment is defined purely by having
-    // zero rows in lesson_progress, and that table only records COMPLETIONS — so
+    // zero rows in lesson_progress, and that table only records COMPLETIONS, so
     // a reader who opened ten lessons and finished none lands in this segment.
     // Telling them they never opened one is simply false to their face, and
     // being caught in a small lie is exactly the failure mode this project can
     // least afford right now.
-    intro = `<p style="margin:0 0 16px">You created a LearnFRC account but haven't finished a lesson yet. Nothing's wrong — picking where to start out of 394 lessons is the hard part, so here's the one we'd start you on.</p>`;
-    closing = `<p style="margin:18px 0 0;color:#64748b;font-size:13px">${shape}</p>
-      <p style="margin:10px 0 0;color:#64748b;font-size:13px">Everything on LearnFRC is free and there's nothing else to set up. If it turns out not to be what you wanted, you can turn these off below — no hard feelings.</p>`;
+    intro = `<p style="margin:0 0 16px">You created a LearnFRC account but haven't finished a lesson yet. Nothing's wrong. Picking where to start out of 394 lessons is the hard part, so here's the one we'd start you on.</p>`;
+    closing = `<p style="margin:18px 0 0;color:#565C60;font-size:13px">${shape}</p>
+      <p style="margin:10px 0 0;color:#565C60;font-size:13px">Everything on LearnFRC is free and there's nothing else to set up. If it turns out not to be what you wanted, you can turn these off below. No hard feelings.</p>`;
     reason = `You're getting this once because you created a LearnFRC account and haven't finished a lesson yet. It's the only reminder we'll send about it.`;
   } else if (p.segment === "stalled_early") {
     const last = p.lastLessonTitle
@@ -247,15 +247,15 @@ export function lifecycleEmailHtml(p: LifecycleEmailProps): string {
     // "There's no streak to keep" used to sit here, and it was simply false.
     // `handle_lesson_completed` awards `10 + least(10, streak - 1)` XP per
     // lesson, where the streak is the run of consecutive days with a
-    // completion — so a streak exists, it lapses, and it is worth up to double
+    // completion, so a streak exists, it lapses, and it is worth up to double
     // XP. Telling a learner otherwise is a claim they can disprove from their
     // own dashboard, which shows the multiplier. The replacement says only
     // what is true: nothing already earned goes away, consecutive days pay
     // more, and a new run costs exactly one lesson. No deadline, no
-    // streak-at-risk framing — this segment's streak has already lapsed by
+    // streak-at-risk framing: this segment's streak has already lapsed by
     // definition, so urgency here would be manufactured as well as unkind.
     closing = `${positionLine}
-      <p style="margin:10px 0 0;color:#64748b;font-size:13px">Nothing you've finished expires — your lessons and XP stay exactly as you left them. Lessons on back-to-back days earn bonus XP, and a new run starts with your next one, so pick it up whenever the shop's quiet.</p>`;
+      <p style="margin:10px 0 0;color:#565C60;font-size:13px">Nothing you've finished expires. Your lessons and XP stay exactly as you left them. Lessons on back-to-back days earn bonus XP, and a new run starts with your next one, so pick it up whenever the shop's quiet.</p>`;
     reason = `You're getting this because you have a LearnFRC account with lessons in progress.`;
   } else {
     const daysLine =
@@ -269,9 +269,9 @@ export function lifecycleEmailHtml(p: LifecycleEmailProps): string {
             : ""
         }.`
       : "";
-    intro = `<p style="margin:0 0 16px">You're <strong>${plural(p.completed ?? 0, "lesson")}</strong> into LearnFRC${daysLine} — that's real work.${last} Whenever you want to pick it back up, this is where you left off.</p>`;
+    intro = `<p style="margin:0 0 16px">You're <strong>${plural(p.completed ?? 0, "lesson")}</strong> into LearnFRC${daysLine}, and that's real work.${last} Whenever you want to pick it back up, this is where you left off.</p>`;
     closing = `${positionLine}
-      <p style="margin:10px 0 0;color:#64748b;font-size:13px">Nothing expires and your progress is saved exactly as you left it.</p>`;
+      <p style="margin:10px 0 0;color:#565C60;font-size:13px">Nothing expires and your progress is saved exactly as you left it.</p>`;
     reason = `You're getting this because you have a LearnFRC account with lessons in progress.`;
   }
 
@@ -279,9 +279,9 @@ export function lifecycleEmailHtml(p: LifecycleEmailProps): string {
   // uses, so it only ever reaches people who have actually earned the invite.
   const inviteBlock =
     p.inviteUrl && p.segment === "deep_churn"
-      ? `<p style="margin:26px 0 0;padding-top:16px;border-top:1px solid #eef2f9;color:#64748b;font-size:13px">
-           Learning with a team? Bring a teammate and you <strong>both get +25 XP</strong> —
-           <a href="${p.inviteUrl}" style="color:#2560e6;font-weight:600">share your invite link</a>.
+      ? `<p style="margin:26px 0 0;padding-top:16px;border-top:1px solid rgba(22,24,27,.30);color:#565C60;font-size:13px">
+           Learning with a team? Bring a teammate and you <strong>both get +25 XP</strong>,
+           <a href="${p.inviteUrl}" style="color:#1B36C8;font-weight:600">share your invite link</a>.
          </p>`
       : "";
 
@@ -291,10 +291,10 @@ export function lifecycleEmailHtml(p: LifecycleEmailProps): string {
     ${intro}
     ${nextBlock}
     <a href="${ctaHref}"
-       style="display:inline-block;background:linear-gradient(110deg,#2560e6,#1aa9d6);color:#fff;text-decoration:none;padding:12px 22px;border-radius:12px;font-weight:600">${ctaLabel}</a>
+       style="display:inline-block;background:#1B36C8;color:#ffffff;text-decoration:none;padding:12px 22px;border:2px solid #16181B;border-radius:4px;font-weight:700">${ctaLabel}</a>
     ${closing}
     ${inviteBlock}
-    <p style="margin:22px 0 0;color:#64748b">Gracious professionalism, always. 🤖</p>
+    <p style="margin:22px 0 0;color:#565C60">Gracious professionalism, always. 🤖</p>
   `,
     p.unsubscribeUrl,
     reason
@@ -323,7 +323,7 @@ export function adminNotifyHtml({
   const rowsHtml = rows
     .map(
       (r) =>
-        `<p style="margin:6px 0"><strong style="color:#334155">${esc(r.label)}:</strong> ${esc(r.value)}</p>`
+        `<p style="margin:6px 0"><strong style="color:#16181B">${esc(r.label)}:</strong> ${esc(r.value)}</p>`
     )
     .join("");
   return emailShell(`
@@ -332,10 +332,10 @@ export function adminNotifyHtml({
     ${bodyHtml ?? ""}
     ${
       ctaText && ctaUrl
-        ? `<p style="margin:20px 0 6px"><a href="${ctaUrl}" style="display:inline-block;background:linear-gradient(110deg,#2560e6,#1aa9d6);color:#fff;text-decoration:none;padding:11px 20px;border-radius:12px;font-weight:600">${esc(ctaText)} →</a></p>`
+        ? `<p style="margin:20px 0 6px"><a href="${ctaUrl}" style="display:inline-block;background:#1B36C8;color:#ffffff;text-decoration:none;padding:11px 20px;border:2px solid #16181B;border-radius:4px;font-weight:700">${esc(ctaText)} →</a></p>`
         : ""
     }
-    ${note ? `<p style="margin:16px 0 0;color:#64748b;font-size:13px">${esc(note)}</p>` : ""}
+    ${note ? `<p style="margin:16px 0 0;color:#565C60;font-size:13px">${esc(note)}</p>` : ""}
   `);
 }
 
@@ -343,11 +343,11 @@ export function welcomeEmailHtml(name?: string | null) {
   const greeting = name ? `Hey ${name},` : "Welcome aboard,";
   return emailShell(`
     <p style="margin:0 0 14px">${greeting}</p>
-    <p style="margin:0 0 14px">Welcome to <strong>LearnFRC</strong> — your structured path to mastering every department of FIRST Robotics Competition, from swerve drivetrains and WPILib to the Impact Award and scouting.</p>
+    <p style="margin:0 0 14px">Welcome to <strong>LearnFRC</strong>. It's every job on an FRC team written down, from swerve drivetrains and WPILib to the Impact Award and scouting.</p>
     <p style="margin:0 0 22px">Pick a department, work through the guides, and track your progress as you go.</p>
     <a href="${process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com"}/guides"
-       style="display:inline-block;background:linear-gradient(110deg,#2560e6,#1aa9d6);color:#fff;text-decoration:none;padding:12px 22px;border-radius:12px;font-weight:600">Explore the guides →</a>
-    <p style="margin:22px 0 0;color:#64748b">Gracious professionalism, always. 🤖</p>
+       style="display:inline-block;background:#1B36C8;color:#ffffff;text-decoration:none;padding:12px 22px;border:2px solid #16181B;border-radius:4px;font-weight:700">Explore the guides →</a>
+    <p style="margin:22px 0 0;color:#565C60">Gracious professionalism, always. 🤖</p>
   `);
 }
 
@@ -361,13 +361,13 @@ export function feedbackEmailHtml({
   page?: string;
 }) {
   // Every interpolation goes through `esc`. `message` used to be `<`-only and
-  // `fromEmail`/`page` were interpolated raw — fine while the only caller was a
+  // `fromEmail`/`page` were interpolated raw, which was fine while the only caller was a
   // server action, but /api/report-error accepts these fields from anonymous
   // visitors, and an unescaped field is markup injected into the admin's inbox.
   return emailShell(`
     <p style="margin:0 0 10px;font-weight:600">New feedback / topic request</p>
     <p style="margin:0 0 10px;white-space:pre-wrap">${esc(message)}</p>
-    <p style="margin:14px 0 0;color:#64748b;font-size:13px">From: ${esc(
+    <p style="margin:14px 0 0;color:#565C60;font-size:13px">From: ${esc(
       fromEmail || "anonymous"
     )}${page ? ` · Page: ${esc(page)}` : ""}</p>
   `);
@@ -386,19 +386,19 @@ export function feedbackReplyHtml({
   original?: string | null;
 }) {
   return emailShell(`
-    <p style="margin:0 0 14px">Thanks for reaching out to LearnFRC — here&rsquo;s a reply to your message:</p>
-    <div style="margin:0 0 16px;padding:14px 16px;background:#f4f7fd;border:1px solid #e2e8f5;border-radius:12px;white-space:pre-wrap;color:#1e2a44">${esc(
+    <p style="margin:0 0 14px">Thanks for reaching out to LearnFRC. Here&rsquo;s a reply to your message:</p>
+    <div style="margin:0 0 16px;padding:14px 16px;background:#f4f7fd;border:1px solid #e2e8f5;border-radius:12px;white-space:pre-wrap;color:#16181B">${esc(
       reply
     )}</div>
     ${
       original
-        ? `<p style="margin:0 0 6px;color:#64748b;font-size:12px">In reply to what you sent:</p>
-    <div style="margin:0;padding:12px 14px;background:#fbfcfe;border:1px solid #eef2f9;border-radius:10px;color:#64748b;font-size:13px;white-space:pre-wrap">${esc(
+        ? `<p style="margin:0 0 6px;color:#565C60;font-size:12px">In reply to what you sent:</p>
+    <div style="margin:0;padding:12px 14px;background:#fbfcfe;border:1px solid rgba(22,24,27,.30);border-radius:10px;color:#565C60;font-size:13px;white-space:pre-wrap">${esc(
       original
     ).slice(0, 800)}</div>`
         : ""
     }
-    <p style="margin:18px 0 0">— Jahaan · LearnFRC</p>
+    <p style="margin:18px 0 0">Jahaan · LearnFRC</p>
   `);
 }
 
@@ -407,6 +407,6 @@ export function subscribeEmailHtml() {
     <p style="margin:0 0 14px">Thanks for joining the LearnFRC list! 🤖</p>
     <p style="margin:0 0 18px">We'll send the occasional update on new departments, lessons, and features. In the meantime, dive in:</p>
     <a href="${process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com"}/guides"
-       style="display:inline-block;background:linear-gradient(110deg,#2560e6,#1aa9d6);color:#fff;text-decoration:none;padding:12px 22px;border-radius:12px;font-weight:600">Explore the guides</a>
+       style="display:inline-block;background:#1B36C8;color:#ffffff;text-decoration:none;padding:12px 22px;border:2px solid #16181B;border-radius:4px;font-weight:700">Explore the guides</a>
   `);
 }

@@ -5,26 +5,23 @@ const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com";
 /**
  * RSS 2.0 feed for the article library.
  *
- * Statically generated and revalidated hourly. The underlying `getArticles()`
- * is itself durably cached under the `catalog` tag, so accepting an article
- * edit refreshes the data immediately and this route picks it up on its next
- * revalidation window.
+ * Statically generated and revalidated hourly. getArticles() is itself durably
+ * cached under the `catalog` tag, so accepting an article edit refreshes the
+ * data immediately and this route picks it up on its next revalidation window.
  */
 export const revalidate = 3600;
 
 /**
- * How many articles ride in the feed. Full-text items average ~13KB of
- * markdown each, so shipping all 86 would make a multi-megabyte response that
- * no reader wants to poll. Readers only ever surface recent items anyway.
+ * How many articles ride in the feed. Full-text items average about 13KB of
+ * markdown each, so shipping all 86 would make a multi-megabyte response no
+ * reader wants to poll. Readers only ever surface recent items anyway.
  */
 const MAX_ITEMS = 20;
 
-/** Author + channel identity, kept in sync with /about. */
+/** Author and channel identity, kept in sync with /about. */
 const AUTHOR = "Jahaan Pardhanani";
 
-/* ------------------------------------------------------------------ */
-/*  Escaping                                                          */
-/* ------------------------------------------------------------------ */
+/* ── Escaping ──────────────────────────────────────────────────────────── */
 
 const ESCAPES: Record<string, string> = {
   "&": "&amp;",
@@ -34,25 +31,25 @@ const ESCAPES: Record<string, string> = {
   "'": "&#39;",
 };
 
-/** Escape a raw string for use as XML/HTML text or an attribute value. */
+/** Escape a raw string for use as XML or HTML text, or as an attribute value. */
 function esc(s: string): string {
   return s.replace(/[&<>"']/g, (c) => ESCAPES[c]);
 }
 
 /**
- * Strip the code points XML 1.0 forbids outright. Nothing in the corpus has
- * them today, but a stray control character from a paste would otherwise make
- * the whole feed unparseable.
+ * Strip the code points XML 1.0 forbids outright. Nothing in the corpus has one
+ * today, but a stray control character from a paste would make the whole feed
+ * unparseable, and a broken feed fails silently in every reader at once.
  */
 function stripInvalidXmlChars(s: string): string {
   return s.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]/g, "");
 }
 
 /**
- * A handful of article titles are stored HTML-encoded (e.g. "Deadlines &amp;
- * Amounts"). Decode that layer before XML-escaping, or the feed would show a
- * literal "&amp;". Applied only to title/description — the markdown body
- * contains no entities and must be treated as literal text.
+ * A handful of article titles are stored HTML-encoded, like "Deadlines &amp;
+ * Amounts". Decode that layer before XML-escaping, or the feed shows a literal
+ * "&amp;". Applied only to title and description: the markdown body contains no
+ * entities and has to be treated as literal text.
  */
 function decodeEntities(s: string): string {
   return s
@@ -65,18 +62,15 @@ function decodeEntities(s: string): string {
     .replace(/&amp;/g, "&");
 }
 
-/* ------------------------------------------------------------------ */
-/*  Markdown -> HTML                                                  */
-/*                                                                    */
-/*  A deliberately small converter for the subset the article corpus  */
-/*  actually uses: headings, GFM tables, fenced code, blockquotes,    */
-/*  lists, rules, paragraphs, and inline code/bold/italic/links.      */
-/*  Everything else is emitted as escaped text, so strings like       */
-/*  "<R103>" (game-manual rule references) and "List<Double>" survive */
-/*  as literal text instead of being mistaken for markup.             */
-/* ------------------------------------------------------------------ */
+/* ── Markdown to HTML ──────────────────────────────────────────────────────
+   A deliberately small converter, covering the subset the article corpus
+   actually uses: headings, GFM tables, fenced code, blockquotes, lists, rules,
+   paragraphs, and inline code, bold, italic and links. Everything else is
+   emitted as escaped text, so strings like "<R103>", which is a game-manual rule
+   reference, and "List<Double>" survive as literal text instead of being
+   mistaken for markup.                                                       */
 
-/** Resolve a link target against the site / the article it appears in. */
+/** Resolve a link target against the site, or against the article it sits in. */
 function absoluteUrl(href: string, itemUrl: string): string {
   if (href.startsWith("#")) return `${itemUrl}${href}`;
   if (href.startsWith("/")) return `${SITE}${href}`;
@@ -85,18 +79,19 @@ function absoluteUrl(href: string, itemUrl: string): string {
 
 /** Inline markdown on a single line of text. */
 function inline(src: string, itemUrl: string): string {
-  // Escape first; every regex below then runs over already-safe text, and the
-  // tags we splice in are the only markup in the result.
+  // Escape first. Every rule below then runs over already-safe text, and the
+  // tags spliced in are the only markup in the result.
   let s = esc(src);
 
-  // Pull code spans out so bold/italic/link rules can't fire inside them.
+  // Pull code spans out so the bold, italic and link rules cannot fire inside
+  // them.
   const codes: string[] = [];
   s = s.replace(/`([^`\n]+)`/g, (_m, code: string) => {
     codes.push(code);
     return `\u0001${codes.length - 1}\u0001`;
   });
 
-  // [text](href) — href is already escaped, so `&` reads as `&amp;` in the
+  // [text](href). The href is already escaped, so "&" reads as "&amp;" in the
   // attribute, which is what HTML wants.
   s = s.replace(
     /\[([^\]\n]+)\]\(([^)\s]+)(?:\s+&quot;[^)]*&quot;)?\)/g,
@@ -104,9 +99,9 @@ function inline(src: string, itemUrl: string): string {
       `<a href="${absoluteUrl(href, itemUrl)}">${text}</a>`
   );
 
-  // Bold first, and the body may contain lone `*` so that nested italics
-  // ("**BAE *FIRST* Team Grant**") still match; the italic pass below then
-  // converts what's left inside.
+  // Bold first, and the body may contain a lone "*" so that nested italics like
+  // "**BAE *FIRST* Team Grant**" still match. The italic pass below then
+  // converts what is left inside.
   s = s.replace(/\*\*((?:[^*\n]|\*(?!\*))+)\*\*/g, "<strong>$1</strong>");
   s = s.replace(/(^|[^*\w])\*([^*\n]+)\*/g, "$1<em>$2</em>");
 
@@ -123,7 +118,7 @@ const RE_QUOTE = /^\s*>\s?/;
 const RE_UL = /^\s*[-*+]\s+/;
 const RE_OL = /^\s*\d+[.)]\s+/;
 
-/** Does this line open a block that a running paragraph must yield to? */
+/** Does this line open a block that a running paragraph has to yield to? */
 function isBlockStart(line: string): boolean {
   return (
     !line.trim() ||
@@ -161,22 +156,22 @@ function mdToHtml(md: string, itemUrl: string): string {
       continue;
     }
 
-    // ── fenced code ──────────────────────────────────────────────
+    // Fenced code.
     if (RE_FENCE.test(line)) {
       const lang = line.trim().slice(3).trim();
       const buf: string[] = [];
       i++;
       while (i < lines.length && !RE_FENCE.test(lines[i])) buf.push(lines[i++]);
-      i++; // closing fence (or EOF)
+      i++; // closing fence, or end of file
       const cls = lang ? ` class="language-${esc(lang.split(/\s+/)[0])}"` : "";
       out.push(`<pre><code${cls}>${esc(buf.join("\n"))}</code></pre>`);
       continue;
     }
 
-    // ── GFM table ────────────────────────────────────────────────
+    // GFM table.
     if (isTableHead(line, lines[i + 1])) {
       const head = tableCells(line);
-      i += 2; // header + delimiter
+      i += 2; // header plus delimiter
       const body: string[][] = [];
       while (i < lines.length && lines[i].includes("|") && lines[i].trim()) {
         body.push(tableCells(lines[i]));
@@ -195,7 +190,7 @@ function mdToHtml(md: string, itemUrl: string): string {
       continue;
     }
 
-    // ── heading (h1 is demoted: the item title is already the h1) ──
+    // Heading. h1 is demoted, because the item title is already the h1.
     const h = RE_HEADING.exec(line);
     if (h) {
       const level = Math.min(6, Math.max(2, h[1].length));
@@ -204,14 +199,14 @@ function mdToHtml(md: string, itemUrl: string): string {
       continue;
     }
 
-    // ── horizontal rule ──────────────────────────────────────────
+    // Horizontal rule.
     if (RE_HR.test(line)) {
       out.push("<hr />");
       i++;
       continue;
     }
 
-    // ── blockquote (recursive on the un-marked body) ─────────────
+    // Blockquote, recursive on the un-marked body.
     if (RE_QUOTE.test(line)) {
       const buf: string[] = [];
       while (i < lines.length && RE_QUOTE.test(lines[i])) {
@@ -222,7 +217,7 @@ function mdToHtml(md: string, itemUrl: string): string {
       continue;
     }
 
-    // ── lists (flat; the corpus has effectively no nesting) ──────
+    // Lists, flat. The corpus has effectively no nesting.
     if (RE_UL.test(line) || RE_OL.test(line)) {
       const ordered = RE_OL.test(line) && !RE_UL.test(line);
       const marker = ordered ? RE_OL : RE_UL;
@@ -238,7 +233,7 @@ function mdToHtml(md: string, itemUrl: string): string {
       continue;
     }
 
-    // ── paragraph ────────────────────────────────────────────────
+    // Paragraph.
     const para: string[] = [line.trim()];
     i++;
     while (
@@ -255,14 +250,12 @@ function mdToHtml(md: string, itemUrl: string): string {
   return out.join("");
 }
 
-/* ------------------------------------------------------------------ */
-/*  Feed                                                              */
-/* ------------------------------------------------------------------ */
+/* ── Feed ──────────────────────────────────────────────────────────────── */
 
 /** RFC 822 date, which is what RSS 2.0 requires. */
 function rfc822(dateOnly: string): string {
   // Articles carry a date, not a timestamp. Pin to midday UTC so the value is
-  // stable regardless of where the response is rendered.
+  // stable wherever the response is rendered.
   const d = new Date(`${dateOnly}T12:00:00Z`);
   return Number.isNaN(d.getTime()) ? new Date().toUTCString() : d.toUTCString();
 }
@@ -297,8 +290,8 @@ export async function GET(): Promise<Response> {
     })
     .join("\n");
 
-  // Newest article date drives lastBuildDate, so the value only moves when the
-  // library actually changes rather than on every regeneration.
+  // The newest article date drives lastBuildDate, so the value only moves when
+  // the library actually changes, not on every regeneration.
   const lastBuild = articles.length
     ? rfc822(articles[0].date)
     : new Date().toUTCString();
@@ -306,9 +299,9 @@ export async function GET(): Promise<Response> {
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:dc="http://purl.org/dc/elements/1.1/">
   <channel>
-    <title>LearnFRC — FIRST Robotics Competition guides</title>
+    <title>LearnFRC, FIRST Robotics Competition guides</title>
     <link>${SITE}/blog</link>
-    <description>Free, structured guides for every department of the FIRST Robotics Competition — mechanical, CAD, programming, electrical, controls, strategy, business and outreach.</description>
+    <description>Free, structured guides for every department of the FIRST Robotics Competition: mechanical, CAD, programming, electrical, controls, strategy, business and outreach.</description>
     <language>en-us</language>
     <lastBuildDate>${lastBuild}</lastBuildDate>
     <managingEditor>noreply@learnfrc.com (${esc(AUTHOR)})</managingEditor>

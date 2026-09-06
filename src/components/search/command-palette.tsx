@@ -185,7 +185,13 @@ export function CommandPalette() {
               aria-activedescendant={
                 results[active] ? `cmdk-opt-${active}` : undefined
               }
-              className="w-full bg-transparent py-3 text-base text-ink outline-none placeholder:text-graphite"
+              /* No `outline-none`. Tab moves between this field and the
+                 result buttons, and with the outline stripped the field was
+                 the one control on the site with no visible focus at all.
+                 The base ring (2px blue, 2px offset) applies here like
+                 everywhere else; `outline-offset-0` keeps it off the row's
+                 own ink rule. */
+              className="w-full bg-transparent py-3 text-base text-ink focus-visible:outline-offset-0 placeholder:text-graphite"
             />
           </div>
 

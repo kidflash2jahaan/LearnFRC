@@ -248,8 +248,14 @@ export default async function AboutPage() {
               <dd className="nb-count text-[clamp(2rem,1.2rem+2.4vw,3.1rem)] leading-none">
                 {t.value.toLocaleString()}
               </dd>
-              <dt className="mt-2 text-[1.02rem] font-bold">{t.label}</dt>
-              <p className="nb-slug mt-1">{t.note}</p>
+              {/* The note lives inside the <dt>, not beside it: a <dl>'s
+                  grouping <div> may hold only <dt> and <dd>, and a loose <p>
+                  breaks the term/description pairing a screen reader reads
+                  out. A block <span> renders identically to the <p> it was. */}
+              <dt className="mt-2 text-[1.02rem] font-bold">
+                {t.label}
+                <span className="nb-slug mt-1 block font-normal">{t.note}</span>
+              </dt>
             </div>
           ))}
         </dl>
@@ -289,7 +295,7 @@ export default async function AboutPage() {
                     and reading "01" before every heading only doubles it. */}
                 <span
                   aria-hidden="true"
-                  className="nb-box-sm grid h-11 w-11 rotate-[-2deg] place-items-center border-blue font-mono text-[1rem] font-bold text-blue"
+                  className="nb-box-sm grid h-11 w-11 rotate-[-2deg] place-items-center border-blue font-mono text-[1.05rem] font-bold text-blue"
                 >
                   {step.n}
                 </span>
@@ -322,7 +328,6 @@ export default async function AboutPage() {
           uses to change subject. */}
       <div className="nb-wrap pb-[clamp(3rem,6vw,4.5rem)]">
         <section id="what" className="border-t-2 border-ink pt-[clamp(2rem,4vw,3rem)]">
-          <p className="nb-marker">what LearnFRC is</p>
           <h2 className="max-w-[18ch]">A curriculum, not a forum thread.</h2>
           <div className="nb-prose mt-5">
             <p>
@@ -350,7 +355,6 @@ export default async function AboutPage() {
         </section>
 
         <section id="who" className="mt-[clamp(2.4rem,5vw,3.6rem)] border-t-2 border-ink pt-[clamp(2rem,4vw,3rem)]">
-          <p className="nb-marker">who builds it</p>
           <h2 className="max-w-[18ch]">One person, and his name is on it.</h2>
           <div className="nb-prose mt-5">
             <p>
@@ -388,7 +392,6 @@ export default async function AboutPage() {
             because each one is a claim and its consequence, and the ruled
             two-part shape says so without a bullet doing the work. */}
         <section id="trust" className="mt-[clamp(2.4rem,5vw,3.6rem)] border-t-2 border-ink pt-[clamp(2rem,4vw,3rem)]">
-          <p className="nb-marker">what this is not</p>
           <h2 className="max-w-[20ch]">Four things LearnFRC won&rsquo;t pretend to be.</h2>
 
           <dl className="mt-6 max-w-[68ch]">
@@ -431,7 +434,6 @@ export default async function AboutPage() {
         </section>
 
         <section id="correct" className="mt-[clamp(2.4rem,5vw,3.6rem)] border-t-2 border-ink pt-[clamp(2rem,4vw,3rem)]">
-          <p className="nb-marker">found something wrong</p>
           <h2 className="max-w-[20ch]">Corrections are the most useful thing you can send.</h2>
           <div className="nb-prose mt-5">
             <p>There are two ways to send one.</p>
@@ -470,7 +472,6 @@ export default async function AboutPage() {
         </section>
 
         <section id="follow" className="mt-[clamp(2.4rem,5vw,3.6rem)] border-t-2 border-ink pt-[clamp(2rem,4vw,3rem)]">
-          <p className="nb-marker">following along</p>
           <h2 className="max-w-[20ch]">New pages, however you read things.</h2>
           <div className="nb-prose mt-5">
             <p>

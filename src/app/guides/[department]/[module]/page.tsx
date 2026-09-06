@@ -902,29 +902,41 @@ export default async function ModulePage({
           </div>
         )}
 
-        {/* Where this tab hands over. One box torn across the page rather than
-            two cards, because previous and next are one movement through the
-            binder, not two separate offers. */}
-        <div className="nb-box mt-[clamp(1.8rem,3.5vw,2.8rem)] grid sm:grid-cols-2">
+        {/* Where this tab hands over. Drawn exactly like the pagination at the
+            foot of a lesson, because it is the same movement one level up and
+            a reader walking module -> lesson should not meet it redrawn. Ruled,
+            not boxed: a box here would be a second card immediately before the
+            jargon card below, which is the one thing on this page meant to sit
+            on top of the paper. */}
+        <nav
+          aria-label="Module pagination"
+          className="nb-rule mt-[clamp(2rem,4vw,3rem)] grid gap-y-0 pt-5 sm:grid-cols-2 sm:gap-x-8"
+        >
           <Link
             href={prev ? `/guides/${dept.slug}/${prev.slug}` : `/guides/${dept.slug}`}
-            className="nb-panel gap-1.5 no-underline"
+            className="group flex min-w-0 flex-col justify-start py-2 no-underline"
+            {...(prev ? { rel: "prev" } : {})}
           >
             <span className="nb-slug">
               {prev ? "← the module before" : "← up to the department"}
             </span>
-            <h3 className="mt-1">{prev ? prev.title : dept.name}</h3>
+            <span className="mt-1 font-bold leading-snug group-hover:text-blue">
+              {prev ? prev.title : dept.name}
+            </span>
           </Link>
           <Link
             href={next ? `/guides/${dept.slug}/${next.slug}` : `/guides/${dept.slug}`}
-            className="nb-panel gap-1.5 no-underline sm:text-right"
+            className="group nb-hair flex min-w-0 flex-col justify-start py-2 no-underline sm:border-t-0 sm:text-right"
+            {...(next ? { rel: "next" } : {})}
           >
             <span className="nb-slug">
               {next ? "the module after →" : "back to the department →"}
             </span>
-            <h3 className="mt-1">{next ? next.title : dept.name}</h3>
+            <span className="mt-1 font-bold leading-snug group-hover:text-blue">
+              {next ? next.title : dept.name}
+            </span>
           </Link>
-        </div>
+        </nav>
       </section>
 
       {/* ================= JARGON =================

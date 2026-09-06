@@ -125,8 +125,14 @@ export function ProgressLedger({
           {readings.map((r) => (
             <div key={r.label} className="border-t-2 border-ink pt-2">
               <dd className="nb-count">{r.value.toLocaleString()}</dd>
-              <dt className="nb-slug mt-1">{r.label}</dt>
-              {r.note && <p className="nb-slug">{r.note}</p>}
+              {/* The note goes inside the <dt>, not beside it: a <dl>'s
+                  grouping <div> may hold only <dt> and <dd>, and a loose <p>
+                  breaks the term/description pairing. A block <span> renders
+                  identically to the <p> it was. */}
+              <dt className="nb-slug mt-1">
+                {r.label}
+                {r.note && <span className="block">{r.note}</span>}
+              </dt>
             </div>
           ))}
         </dl>
