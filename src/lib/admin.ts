@@ -197,6 +197,8 @@ export type AdminStats = {
   daily: DailyPoint[];
   /** Every measured view on the blog-article route, over the Vercel window. */
   articleViewsTotal: number;
+  /** True when the two totals above came from the banked ledger, not live. */
+  trafficFromLedger: boolean;
   /**
    * Per-article view counts, most read first, incl. zero-view articles. Views
    * are Vercel's, titles are the articles table's: Vercel only knows the path.
@@ -781,8 +783,30 @@ export async function getAdminStats(): Promise<AdminStats> {
   // AND `viewsSince` at null, which is how the panel tells "nobody came" from
   // "nobody asked": the coverage line only prints when a query answered.
   const trafficTotals = measured(trafficTotalsRes);
-  const pageViewsTotal = trafficTotals?.pageviews ?? 0;
-  const uniqueVisitors = trafficTotals?.visitors ?? 0;
+
+  // FALL BACK TO THE BANKED LEDGER when Vercel will not answer.
+  //
+  // /api/snapshot writes every closed month into `traffic_months` precisely so
+  // these figures outlive Vercel's 366-day window. That ledger is equally the
+  // right answer when the API is merely unreachable: a dead token is not a
+  // reason to print 0 next to "unique visitors" when the real number is sitting
+  // in our own database. Verified summable: month buckets add to exactly the
+  // same totals a single range query returns, which is why this is a
+  // substitution and not an estimate.
+  let bankedVisitors: number | null = null;
+  let bankedPageviews: number | null = null;
+  if (!trafficTotals) {
+    const { data: ledger } = await supabase
+      .from("traffic_months")
+      .select("visitors, pageviews");
+    if (ledger && ledger.length > 0) {
+      bankedVisitors = ledger.reduce((a, r) => a + (r.visitors ?? 0), 0);
+      bankedPageviews = ledger.reduce((a, r) => a + (r.pageviews ?? 0), 0);
+    }
+  }
+
+  const pageViewsTotal = trafficTotals?.pageviews ?? bankedPageviews ?? 0;
+  const uniqueVisitors = trafficTotals?.visitors ?? bankedVisitors ?? 0;
   const uniqueVisitors30d = measured(traffic30dRes)?.visitors ?? 0;
   const uniqueVisitors7d = measured(traffic7dRes)?.visitors ?? 0;
   // The first traffic query that could not answer, in the order the panel
@@ -881,6 +905,7 @@ export async function getAdminStats(): Promise<AdminStats> {
     recruiters,
     referralSurfaces,
     daily,
+    trafficFromLedger: bankedVisitors != null,
     articleViewsTotal,
     articleViews,
     pageViewsTotal,

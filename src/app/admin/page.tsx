@@ -171,7 +171,13 @@ export default async function AdminPage() {
   const trafficUnmeasured = !analyticsAvailability.configured
     ? analyticsAvailability.message
     : stats.analytics.failure
-      ? `${stats.analytics.failure.message} Every traffic figure on this page is therefore unmeasured, not zero: unique visitors, page views, article and guide reads, the visitor line on the growth chart, and the Visitors half of the sources drawer.`
+      ? stats.trafficFromLedger
+        ? // The headline pair is real, just not live. Say which is which
+          // rather than blanketing the whole band as unmeasured: a reader
+          // told to distrust every figure cannot use the two that are still
+          // trustworthy.
+          `${stats.analytics.failure.message} Unique visitors and page views above come from the banked monthly ledger, which is complete through the last closed month and is where these numbers are kept permanently. Everything else here that needs live traffic is unmeasured rather than zero: article and guide reads, the visitor line on the growth chart, and the Visitors half of the sources drawer.`
+        : `${stats.analytics.failure.message} Every traffic figure on this page is therefore unmeasured, not zero: unique visitors, page views, article and guide reads, the visitor line on the growth chart, and the Visitors half of the sources drawer.`
       : null;
   const viewsSince = utcDay(stats.analytics.viewsSince, true);
   const visitorsSince = utcDay(stats.analytics.visitorsSince, true);
@@ -420,7 +426,11 @@ export default async function AdminPage() {
       {trafficUnmeasured ? (
         <div className="nb-wrap mt-6">
           <div className="nb-note max-w-[70ch]">
-            <p className="nb-slug">traffic panels are not measuring</p>
+            <p className="nb-slug">
+              {stats.trafficFromLedger
+                ? "traffic is coming from the banked ledger"
+                : "traffic panels are not measuring"}
+            </p>
             <p className="mt-2 text-[0.88rem] leading-relaxed text-graphite">
               {trafficUnmeasured}
             </p>
