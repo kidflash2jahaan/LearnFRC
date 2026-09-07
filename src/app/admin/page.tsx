@@ -158,10 +158,33 @@ export default async function AdminPage() {
   // bare "Sep 6" reads as TODAY and makes a year of page views look like one
   // day's traffic. That is the exact misreading this block exists to stop.
   const analyticsAvailability = getAnalyticsAvailability();
+  // Why the traffic figures cannot be believed, or null when they can.
+  //
+  // TWO WAYS TO FAIL, and only one of them used to be said out loud. Missing
+  // credentials was caught here; a token that is present but dead, a spent rate
+  // limit, or Web Analytics switched off on the project was not, because
+  // availability only ever checked whether the env vars exist. Every traffic
+  // query then failed, every traffic figure fell back to 0, and the panel
+  // printed "0 unique visitors" in stamp type with no note beside it. A zero
+  // that arrives that way is a placeholder, not a measurement, and this line is
+  // what makes the page say which one it is looking at.
+  const trafficUnmeasured = !analyticsAvailability.configured
+    ? analyticsAvailability.message
+    : stats.analytics.failure
+      ? `${stats.analytics.failure.message} Every traffic figure on this page is therefore unmeasured, not zero: unique visitors, page views, article and guide reads, the visitor line on the growth chart, and the Visitors half of the sources drawer.`
+      : null;
   const viewsSince = utcDay(stats.analytics.viewsSince, true);
   const visitorsSince = utcDay(stats.analytics.visitorsSince, true);
   const coverageParts: string[] = [];
-  if (viewsSince) coverageParts.push(`Page views measured since ${viewsSince}`);
+  // BOTH traffic figures, not just page views. This used to date page views
+  // alone, which left "unique visitors" stamped undated directly under a band
+  // that says these are totals over the whole history of the site. They are not:
+  // they are the rolling year Vercel keeps, and the visitors stamp has no
+  // "since" of its own now that Vercel dates every visit it records.
+  if (viewsSince)
+    coverageParts.push(
+      `Page views and unique visitors are Vercel's, and Vercel keeps a rolling 366 days, so both of those cover ${viewsSince} onward rather than the whole history. Every figure read out of the database does go back to the first signup`
+    );
   if (visitorsSince)
     coverageParts.push(
       `every per-person number (unique visitors, guide viewers, acquisition sources) since ${visitorsSince}, when the beacon began sending visitor ids`
@@ -394,12 +417,12 @@ export default async function AdminPage() {
         </div>
       </section>
 
-      {!analyticsAvailability.configured ? (
+      {trafficUnmeasured ? (
         <div className="nb-wrap mt-6">
           <div className="nb-note max-w-[70ch]">
             <p className="nb-slug">traffic panels are not measuring</p>
             <p className="mt-2 text-[0.88rem] leading-relaxed text-graphite">
-              {analyticsAvailability.message}
+              {trafficUnmeasured}
             </p>
           </div>
         </div>
@@ -468,10 +491,15 @@ export default async function AdminPage() {
               suffix="%"
               hint="of activated accounts, active on a second day"
             />
+            {/* The median is across every ACTIVATED account, not across the
+                power users beside it. Written as "median N lessons each" it
+                read as the typical power user's total, which it is not and is
+                nowhere near: 8 against 47 the day this was caught. The figure
+                is right, the sentence was not. */}
             <Stat
               label="Power users"
               value={retention.powerUsers}
-              hint={`median ${retention.medianLessons} lessons each`}
+              hint={`active on 5+ days; median ${retention.medianLessons} lessons across all activated`}
             />
             <Stat
               label="Achievements earned"
@@ -573,24 +601,23 @@ export default async function AdminPage() {
               visitorWeek={stats.visitorSources7d}
               visitorAllTime={stats.visitorSources}
               visitorTotal={stats.uniqueVisitors}
+              visitorWeekTotal={stats.uniqueVisitors7d}
             />
             {/* The two halves of this control do NOT cover the same span, and
-                the toggle says "All-time" for both. Users come from
-                profiles.source (every signup ever); visitors come from
-                first-touch pageviews, which only carry a visitor id from the
-                date below. Differencing the two would invent a gap. */}
-            {visitorsSince ? (
-              <Footnote>
-                &ldquo;All-time&rdquo; means every signup ever on the Users view,
-                but only {visitorsSince} onward on the Visitors view: that is
-                when pageviews began carrying a visitor id, so no earlier visitor
-                can be attributed to a source. The two are not comparable totals.
-                The backfill no longer appears as a channel here. It was our own
-                reconstruction script, not a referrer, and it was counting{" "}
-                {stats.analytics.backfillVisitors.toLocaleString()} synthetic
-                visitors.
-              </Footnote>
-            ) : null}
+                the toggle says "All-time" for both, so the difference has to be
+                written down. This note used to be gated on `visitorsSince`,
+                which Vercel made permanently null, so it stopped rendering at
+                all and the mismatch went unlabelled. It is unconditional now,
+                because the mismatch is unconditional. */}
+            <Footnote>
+              &ldquo;All-time&rdquo; means two different spans here. On the Users
+              view it is every signup ever, out of the database. On the Visitors
+              view it is only as far back as Vercel still keeps, which is a
+              rolling 366 days
+              {viewsSince ? `, starting ${viewsSince}` : ""}. Differencing the
+              two would invent a gap that is really just the older half of the
+              site&rsquo;s history.
+            </Footnote>
           </CollapsiblePanel>
 
           <CollapsiblePanel title="What gets read" slug="drawer / engagement">

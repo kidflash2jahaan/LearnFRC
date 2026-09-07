@@ -194,11 +194,21 @@ export default async function LeaderboardPage() {
             </p>
           </div>
 
+          {/* "learners" on its own read as the size of the site, and it is
+              not: getXpTotals counts profiles with xp > 0, so it leaves out
+              every account that has not finished a lesson yet. The home page's
+              counter says "learners with an account" and is a much larger
+              number, so two public pages were printing the same word for two
+              different populations. The figure is right for what it measures;
+              the caption now says what that is. */}
           <p className="nb-stamp">
             <Ink as="b" className="block">
               {xpTotals.learners.toLocaleString()}
             </Ink>
-            <span>{xpTotals.learners === 1 ? "learner" : "learners"}</span>
+            <span>
+              {xpTotals.learners === 1 ? "learner" : "learners"} who have earned
+              xp
+            </span>
           </p>
           <p className="nb-stamp">
             <Ink as="b" className="block">

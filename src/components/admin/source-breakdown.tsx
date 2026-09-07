@@ -47,10 +47,17 @@ function Strip<T extends string>({
  * "Where they come from": signed-up USERS or all UNIQUE VISITORS, over the last
  * seven days or everything on record.
  *
- * The two halves do not cover the same span and the page says so in the note
- * under this control. Users come from `profiles.source`, i.e. every signup
- * ever; visitors come from first-touch pageviews, which only carry a visitor id
- * from the day the beacon started sending one.
+ * The two halves do not cover the same span and the note under this control
+ * says so. Users come from `profiles.source`, i.e. every signup ever; visitors
+ * are measured arrivals inside the rolling window Vercel keeps.
+ *
+ * THE AUTHORITATIVE TOTAL MUST MATCH THE SELECTED WINDOW. Visitor rows overlap
+ * (one person arriving direct on Monday and from Google on Friday is counted
+ * under both), so summing them is not a headcount — that is the bug that once
+ * printed 10,637 against a real 8,937. The fix is to hand the chart a measured
+ * total instead of a sum, and it is only a fix while the total covers the same
+ * days as the rows: handing the all-time figure to a seven-day breakdown swaps
+ * a 19% overcount for a far larger one. So there is one total per range.
  */
 export function SourceBreakdown({
   userWeek,
@@ -58,13 +65,16 @@ export function SourceBreakdown({
   visitorWeek,
   visitorAllTime,
   visitorTotal,
+  visitorWeekTotal,
 }: {
   userWeek: Series;
   userAllTime: Series;
   visitorWeek: Series;
   visitorAllTime: Series;
-  /** Real unique visitors; the visitor rows overlap and cannot be summed. */
+  /** Measured unique visitors over the all-time window. Never a row sum. */
   visitorTotal?: number;
+  /** Measured unique visitors over the last 7 days. Never a row sum. */
+  visitorWeekTotal?: number;
 }) {
   const [metric, setMetric] = React.useState<Metric>("visitors");
   const [range, setRange] = React.useState<Range>("7d");
@@ -80,6 +90,17 @@ export function SourceBreakdown({
   const total = data.reduce((s, d) => s + d.count, 0);
 
   const noun = metric === "users" ? "signups" : "visitors";
+  // Signups carry exactly one source each, so their rows DO sum to a headcount
+  // and the chart is left to add them up. Visitors get the measured total for
+  // whichever window is showing, and none at all if that query did not answer,
+  // which makes the chart fall back to the row sum with its own caveat rather
+  // than print a zero.
+  const authoritativeTotal =
+    metric === "users"
+      ? undefined
+      : range === "7d"
+        ? visitorWeekTotal
+        : visitorTotal;
 
   return (
     <div className="min-w-0">
@@ -118,7 +139,7 @@ export function SourceBreakdown({
         <SourceChart
           data={data}
           noun={noun}
-          authoritativeTotal={noun === "visitors" ? visitorTotal : undefined}
+          authoritativeTotal={authoritativeTotal}
         />
       )}
     </div>

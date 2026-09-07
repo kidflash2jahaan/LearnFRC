@@ -11,6 +11,13 @@ export type SocialProofStats = {
 };
 
 /**
+ * Highest plausible FRC team number. Teams are numbered sequentially from 1
+ * since 1992 and the newest are a little over 10,000, so this leaves headroom
+ * for several more seasons while still excluding placeholders.
+ */
+const MAX_FRC_TEAM = 12_000;
+
+/**
  * The three public counters under the home page's "Who uses it" section.
  *
  * UNCACHED ON PURPOSE. Two callers wrap it differently:
@@ -54,7 +61,15 @@ export async function getSocialProofStats(): Promise<SocialProofStats> {
     if (error) throw error;
     const chunk = (data ?? []) as { team_number: number | null }[];
     for (const row of chunk) {
-      if (row.team_number != null) teamNumbers.add(row.team_number);
+      // Plausibility bound, not validation. FRC numbers are handed out
+      // sequentially from 1 and the highest issued is a little over 10,000, so
+      // anything past MAX_FRC_TEAM is a typo or a placeholder somebody typed to
+      // get past the field. Two such rows (12345 and 99990) were inflating this
+      // counter, and it sits on the home page next to real measured figures.
+      // The account keeps whatever it entered; it just does not add a team that
+      // has never existed to a public count.
+      const n = row.team_number;
+      if (n != null && n >= 1 && n <= MAX_FRC_TEAM) teamNumbers.add(n);
     }
     if (chunk.length < PAGE) break;
   }

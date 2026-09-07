@@ -64,6 +64,9 @@ export function SourceChart({
    *
    * Row shares still divide by the row sum, which is the correct denominator
    * for "share of attributed traffic". Only the headline changes.
+   *
+   * It MUST cover the same window as `data`. A total for a wider span is not a
+   * safer number than the sum, it is a bigger wrong one.
    */
   authoritativeTotal,
 }: {
@@ -72,8 +75,17 @@ export function SourceChart({
   authoritativeTotal?: number;
 }) {
   const rowSum = data.reduce((s, d) => s + d.count, 0) || 1;
-  const total = authoritativeTotal ?? rowSum;
-  const overlaps = authoritativeTotal != null && rowSum > authoritativeTotal;
+  // A zero here means the total was never measured (the query failed and the
+  // caller's fallback is 0), not that nobody came — rows exist, so somebody
+  // did. Printing that zero over a populated legend would be the confidently
+  // wrong number this component was rewritten to stop, so fall back to the row
+  // sum, which the caveat below then qualifies.
+  const measuredTotal =
+    authoritativeTotal != null && authoritativeTotal > 0
+      ? authoritativeTotal
+      : null;
+  const total = measuredTotal ?? rowSum;
+  const overlaps = measuredTotal != null && rowSum > measuredTotal;
 
   const segs = data.map((d, i) => ({
     ...d,

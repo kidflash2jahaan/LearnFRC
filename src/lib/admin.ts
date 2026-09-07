@@ -39,6 +39,7 @@ import {
   getTrafficSeries,
   getTrafficTotals,
   trafficWindow,
+  type AnalyticsFailureKind,
   type AnalyticsResult,
   type FilterClause,
   type ReferrerBreakdown,
@@ -124,6 +125,19 @@ export type AnalyticsCoverage = {
   backfillVisitors: number;
   backfillFrom: string | null;
   backfillTo: string | null;
+  /**
+   * Why the traffic queries could not answer, or null when they did.
+   *
+   * WITHOUT THIS the panel could not tell a measured zero from an unanswered
+   * question. Every traffic figure falls back to 0 when a query fails, and a
+   * dead token, a spent rate limit or Web Analytics being switched off would
+   * therefore print "0 unique visitors" in stamp type with nothing beside it
+   * saying the number was never measured. That is the exact failure this whole
+   * file is written against, and the client already builds the sentence: it was
+   * being thrown away one line later by `measured()`. The panel prints this in
+   * the same note the missing-credentials case uses.
+   */
+  failure: { kind: AnalyticsFailureKind; message: string } | null;
 };
 
 /**
@@ -192,6 +206,18 @@ export type AdminStats = {
   /** Unique visitors over the same window, as Vercel counts them. */
   uniqueVisitors: number;
   uniqueVisitors30d: number;
+  /**
+   * Unique visitors over the last 7 days.
+   *
+   * Exists because the sources drawer opens on "Visitors / last 7 days" and its
+   * headline figure must be a real headcount for THAT window. Visitor rows are
+   * not additive across referrers (one person who arrives direct on Monday and
+   * from Google on Friday is in both rows), so the chart is handed an
+   * authoritative total instead of summing them — and the authoritative total
+   * has to cover the same window as the rows underneath it, or the fix for the
+   * summing bug just moves the error somewhere else.
+   */
+  uniqueVisitors7d: number;
   /** What window every traffic figure above covers, and whether it was measured. */
   analytics: AnalyticsCoverage;
   /** Most-completed lessons. */
@@ -232,8 +258,8 @@ const ALL_TIME_WINDOW = 366;
 
 /**
  * Seconds a traffic answer stays cached. The API allows 400 requests an hour
- * and one render of this panel is seven queries, so a continuously-watched
- * admin page costs about 84 an hour at five minutes. It also keeps the window
+ * and one render of this panel is eight queries, so a continuously-watched
+ * admin page costs about 96 an hour at five minutes. It also keeps the window
  * (and therefore the cache key) stable for exactly as long as the entry lives.
  */
 const TRAFFIC_REVALIDATE = 300;
@@ -365,6 +391,7 @@ export async function getAdminStats(): Promise<AdminStats> {
 
   const trafficTotalsP = guard(getTrafficTotals({ ...cached, window: allTime }));
   const traffic30dP = guard(getTrafficTotals({ ...cached, window: lastMonth }));
+  const traffic7dP = guard(getTrafficTotals({ ...cached, window: lastWeek }));
   const trafficSeriesP = guard(getTrafficSeries({ ...cached, window: lastMonth }));
   const sourcesAllP = guard(
     getReferrerBreakdown({ ...cached, window: allTime, top: SOURCE_ROWS })
@@ -472,6 +499,7 @@ export async function getAdminStats(): Promise<AdminStats> {
   const [
     trafficTotalsRes,
     traffic30dRes,
+    traffic7dRes,
     trafficSeriesRes,
     sourcesAllRes,
     sources7dRes,
@@ -480,6 +508,7 @@ export async function getAdminStats(): Promise<AdminStats> {
   ] = await Promise.all([
     trafficTotalsP,
     traffic30dP,
+    traffic7dP,
     trafficSeriesP,
     sourcesAllP,
     sources7dP,
@@ -750,6 +779,35 @@ export async function getAdminStats(): Promise<AdminStats> {
   const pageViewsTotal = trafficTotals?.pageviews ?? 0;
   const uniqueVisitors = trafficTotals?.visitors ?? 0;
   const uniqueVisitors30d = measured(traffic30dRes)?.visitors ?? 0;
+  const uniqueVisitors7d = measured(traffic7dRes)?.visitors ?? 0;
+  // The first traffic query that could not answer, in the order the panel
+  // reads them. One reason is enough — a dead token fails all eight the same
+  // way, and eight copies of one sentence is not eight findings. `null` is the
+  // guard()ed rejection that should never happen, and it is still a failure, so
+  // it gets its own sentence rather than being read as "answered".
+  const trafficResults = [
+    trafficTotalsRes,
+    traffic30dRes,
+    traffic7dRes,
+    trafficSeriesRes,
+    sourcesAllRes,
+    sources7dRes,
+    articlePathsRes,
+    guideTrafficRes,
+  ];
+  const firstBad = trafficResults.find((r) => r === null || !r.ok);
+  const trafficFailure: AnalyticsCoverage["failure"] =
+    firstBad === undefined
+      ? null
+      : firstBad === null
+        ? {
+            kind: "unreachable",
+            message:
+              "A traffic query rejected outright, which the client is written never to do. Treat every traffic figure below as unmeasured and check the server logs.",
+          }
+        : firstBad.ok
+          ? null
+          : { kind: firstBad.kind, message: firstBad.message };
   const analytics: AnalyticsCoverage = {
     viewsSince: trafficTotalsRes?.ok ? trafficTotalsRes.window.since : null,
     // Never set. Vercel identifies every visit it records, so there is no
@@ -759,6 +817,7 @@ export async function getAdminStats(): Promise<AdminStats> {
     backfillVisitors: 0,
     backfillFrom: null,
     backfillTo: null,
+    failure: trafficFailure,
   };
   const topLessons = ((topLessonsRes.data as
     | { slug: string; title: string; completions: number | string }[]
@@ -822,6 +881,7 @@ export async function getAdminStats(): Promise<AdminStats> {
     pageViewsTotal,
     uniqueVisitors,
     uniqueVisitors30d,
+    uniqueVisitors7d,
     analytics,
     topLessons,
     visitorSources,
