@@ -454,10 +454,12 @@ export default async function AdminPage() {
 
         <StatSheet>
           <StatColumn slug="tally / reach">
+            {/* Same figure and same rule as the home page's public counter,
+                which carries this exact label. See @/lib/frc-team. */}
             <Stat
               label="FRC teams represented"
               value={stats.totalUniqueTeams}
-              hint="counted from team numbers on profiles"
+              hint="distinct team numbers on profiles, placeholders excluded"
             />
             <Stat
               label="Guest learners"

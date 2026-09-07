@@ -32,6 +32,7 @@
  */
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { countDistinctTeams, isPlausibleTeamNumber } from "@/lib/frc-team";
 import { getArticles } from "@/lib/queries";
 import {
   getReferrerBreakdown,
@@ -576,7 +577,9 @@ export async function getAdminStats(): Promise<AdminStats> {
   const teamAgg = new Map<number, { members: number; completed: number }>();
   const userTeam = new Map<string, number>();
   for (const p of allProfs as { id: string; team_number: number | null }[]) {
-    if (p.team_number == null) continue;
+    // Same plausibility rule as the count below, so the "top teams" list cannot
+    // rank a team the tally above says does not exist.
+    if (!isPlausibleTeamNumber(p.team_number)) continue;
     userTeam.set(p.id, p.team_number);
     const t = teamAgg.get(p.team_number) ?? { members: 0, completed: 0 };
     t.members += 1;
@@ -616,11 +619,13 @@ export async function getAdminStats(): Promise<AdminStats> {
     .map(([teamNumber, v]) => ({ teamNumber, members: v.members, completed: v.completed }))
     .sort((a, b) => b.completed - a.completed || b.members - a.members);
 
-  const totalUniqueTeams = new Set(
-    (allProfs as { team_number: number | null }[])
-      .map((p) => p.team_number)
-      .filter((t): t is number => t != null)
-  ).size;
+  // Same predicate the home page's public counter uses. Both surfaces print
+  // the label "FRC teams represented"; when only one of them filtered
+  // placeholder entries the site read 173 in one place and 175 in the other for
+  // the same words. The rule lives in @/lib/frc-team so it cannot drift again.
+  const totalUniqueTeams = countDistinctTeams(
+    allProfs as { team_number: number | null }[]
+  );
 
   // Recent lesson completions (activity feed under the "Lessons completed" card).
   const recentCompRes = await supabase

@@ -1,5 +1,6 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { isPlausibleTeamNumber } from "@/lib/frc-team";
 
 export type SocialProofStats = {
   /** Rows in `profiles`: everyone who has made an account. */
@@ -9,13 +10,6 @@ export type SocialProofStats = {
   /** Rows in `lesson_progress`, which only ever records completions. */
   lessonsCompleted: number;
 };
-
-/**
- * Highest plausible FRC team number. Teams are numbered sequentially from 1
- * since 1992 and the newest are a little over 10,000, so this leaves headroom
- * for several more seasons while still excluding placeholders.
- */
-const MAX_FRC_TEAM = 12_000;
 
 /**
  * The three public counters under the home page's "Who uses it" section.
@@ -68,8 +62,10 @@ export async function getSocialProofStats(): Promise<SocialProofStats> {
       // counter, and it sits on the home page next to real measured figures.
       // The account keeps whatever it entered; it just does not add a team that
       // has never existed to a public count.
-      const n = row.team_number;
-      if (n != null && n >= 1 && n <= MAX_FRC_TEAM) teamNumbers.add(n);
+      // Shared with the admin tally via @/lib/frc-team, because both surfaces
+      // print the label "FRC teams represented" and two definitions behind one
+      // label is how the site ends up disagreeing with itself.
+      if (isPlausibleTeamNumber(row.team_number)) teamNumbers.add(row.team_number);
     }
     if (chunk.length < PAGE) break;
   }
