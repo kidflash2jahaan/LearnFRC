@@ -36,9 +36,7 @@ export default async function FactCheckPage() {
   const supabase = createPublicClient();
   const { data } = await supabase
     .from("lessons")
-    .select(
-      "slug, title, verified_at, verified_by, verified_note, modules(slug, departments(slug, name))"
-    )
+    .select("slug, title, verified_at, modules(slug, departments(slug, name))")
     .not("verified_at", "is", null)
     .order("verified_at", { ascending: false })
     .limit(200);
@@ -47,8 +45,6 @@ export default async function FactCheckPage() {
     slug: string;
     title: string;
     verified_at: string;
-    verified_by: string | null;
-    verified_note: string | null;
     modules: { slug: string; departments: { slug: string; name: string } } | null;
   };
   const rows = (data ?? []) as unknown as Row[];
@@ -90,10 +86,10 @@ export default async function FactCheckPage() {
           />
         </div>
         <p className="mt-3 text-[0.9rem] leading-relaxed text-[var(--graphite)]">
-          A check means a person read that lesson against the sources named on
-          it, on the date shown. It is not a guarantee, and the rules change
-          every season. Anything unchecked is still readable, it just has not
-          been through this pass yet.
+          A check means the lesson was read against primary sources on the date
+          shown. It is not a guarantee, and the rules change every season.
+          Anything unchecked is still readable, it just has not been through
+          this pass yet.
         </p>
       </div>
 
@@ -124,14 +120,9 @@ export default async function FactCheckPage() {
                       <span className="font-semibold">{r.title}</span>
                     )}
                     <span className="nb-slug shrink-0 text-[var(--graphite)]">
-                      {r.verified_by} / {when}
+                      {when}
                     </span>
                   </div>
-                  {r.verified_note ? (
-                    <p className="mt-1 text-[0.88rem] leading-relaxed text-[var(--graphite)]">
-                      {r.verified_note}
-                    </p>
-                  ) : null}
                 </li>
               );
             })}
@@ -143,8 +134,8 @@ export default async function FactCheckPage() {
             <p className="nb-slug">nothing checked yet</p>
             <p className="mt-2 max-w-[58ch] text-[0.95rem] leading-relaxed text-[var(--graphite)]">
               The pass has not started. When it does, every lesson that has been
-              read appears here with who read it and when, and this page will
-              say so before any lesson claims it.
+              read appears here with the date, and this page will say so before
+              any lesson claims it.
             </p>
           </div>
         </section>

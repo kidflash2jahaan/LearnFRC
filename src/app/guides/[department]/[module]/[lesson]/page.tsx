@@ -438,12 +438,7 @@ export default async function LessonPage({
                 than tucked inside it: whether a human has read this page is
                 the first thing a sceptical reader wants, and burying it under
                 the reference list would look like hiding it. */}
-            <VerifiedBadge
-              verifiedAt={body?.verified_at ?? null}
-              verifiedBy={body?.verified_by ?? null}
-              note={body?.verified_note}
-              sources={body?.verified_sources}
-            />
+            <VerifiedBadge verifiedAt={body?.verified_at ?? null} />
 
             {/* Provenance: the lesson's sources, its last logged correction,
                 and the report-an-error control. The links are the same
