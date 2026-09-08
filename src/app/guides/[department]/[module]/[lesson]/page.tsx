@@ -23,6 +23,7 @@ import {
 } from "./_progress-islands";
 import { LessonSignupHook } from "@/components/lesson/lesson-signup-hook";
 import { Provenance } from "@/components/lesson/provenance";
+import { VerifiedBadge } from "@/components/lesson/verified-badge";
 import { LessonReadNext } from "@/components/lesson/lesson-read-next";
 import {
   LessonNextStep,
@@ -430,6 +431,18 @@ export default async function LessonPage({
               relatedLabel={relatedLabel}
               startHref={startHref}
               showStart={idx > 0}
+            />
+
+            {/* The fact-check state, immediately above the sources it was
+                checked against. Deliberately placed BEFORE the colophon rather
+                than tucked inside it: whether a human has read this page is
+                the first thing a sceptical reader wants, and burying it under
+                the reference list would look like hiding it. */}
+            <VerifiedBadge
+              verifiedAt={body?.verified_at ?? null}
+              verifiedBy={body?.verified_by ?? null}
+              note={body?.verified_note}
+              sources={body?.verified_sources}
             />
 
             {/* Provenance: the lesson's sources, its last logged correction,
