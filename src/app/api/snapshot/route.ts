@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { countDistinctTeams } from "@/lib/frc-team";
 
 /**
  * Bank the numbers so they can never disappear.
@@ -53,11 +54,29 @@ function monthKey(iso: string): string {
   return iso.slice(0, 7) + "-01";
 }
 
-/** A month is final once we are past its last day, so its numbers are frozen. */
+/** Has this month ended? Necessary for finality, but on its own NOT sufficient. */
 function isClosed(monthStart: string, now: Date): boolean {
   const next = new Date(monthStart + "T00:00:00Z");
   next.setUTCMonth(next.getUTCMonth() + 1);
   return now >= next;
+}
+
+/**
+ * Did the query window actually contain the WHOLE month?
+ *
+ * This is the guard that keeps the ledger honest forever. The window opens 365
+ * days back, so the oldest month it touches is nearly always clipped: asked on
+ * 8 September, it can see only the 8th onward of the September a year earlier.
+ * A clipped read is a real number for a partial month, and marking that final
+ * would freeze an undercount into the permanent record with nothing later able
+ * to correct it, because finality is exactly what stops us rewriting a row.
+ *
+ * So a month is only frozen when the window started on or before its first day.
+ * A clipped month is still stored, but stays open, and a later run that can see
+ * all of it corrects the value upward.
+ */
+function fullyCovered(monthStart: string, windowStart: Date): boolean {
+  return new Date(monthStart + "T00:00:00Z") >= windowStart;
 }
 
 function creds() {
@@ -94,7 +113,7 @@ async function vercelQuery(
   return (await res.json()) as Record<string, unknown>;
 }
 
-async function vercelMonths(): Promise<MonthRow[] | null> {
+async function vercelMonths(): Promise<{ rows: MonthRow[]; windowStart: Date } | null> {
   const token = process.env.VERCEL_ANALYTICS_TOKEN;
   const projectId = process.env.VERCEL_PROJECT_ID;
   const teamId = process.env.VERCEL_TEAM_ID;
@@ -119,7 +138,7 @@ async function vercelMonths(): Promise<MonthRow[] | null> {
   });
   if (!res.ok) return null;
   const json = (await res.json()) as { data?: MonthRow[] };
-  return json.data ?? null;
+  return json.data ? { rows: json.data, windowStart: since } : null;
 }
 
 export async function GET(req: Request) {
@@ -139,17 +158,29 @@ export async function GET(req: Request) {
   const today = now.toISOString().slice(0, 10);
 
   // ---- 1. bank the months -------------------------------------------------
-  const months = await vercelMonths();
+  const monthsResult = await vercelMonths();
+  const months = monthsResult?.rows ?? null;
+  const windowStart = monthsResult?.windowStart ?? null;
   let banked = 0;
   let skipped = 0;
   const monthErrors: string[] = [];
+  const regressions: string[] = [];
 
   if (months) {
     const { data: existing } = await supabase
       .from("traffic_months")
-      .select("month, is_final");
+      .select("month, visitors, pageviews, is_final");
     const final = new Set(
       (existing ?? []).filter((r) => r.is_final).map((r) => r.month as string)
+    );
+    // Previous values, so a clipped or degraded read can never write a banked
+    // figure DOWNWARD. Traffic for a past month is a fact that only ever gets
+    // more complete as we learn it, never less.
+    const prior = new Map(
+      (existing ?? []).map((r) => [
+        r.month as string,
+        { visitors: r.visitors ?? 0, pageviews: r.pageviews ?? 0 },
+      ])
     );
 
     for (const m of months) {
@@ -163,12 +194,29 @@ export async function GET(req: Request) {
       }
       if (m.pageviews === 0 && m.visitors === 0) continue;
 
+      // MONOTONIC. Never let a fresh read lower a banked month. A clipped
+      // window, a partial outage or a Vercel-side change would otherwise erase
+      // real traffic from the permanent record, and no later run could tell
+      // that it had happened.
+      const was = prior.get(key);
+      const visitors = Math.max(m.visitors, was?.visitors ?? 0);
+      const pageviews = Math.max(m.pageviews, was?.pageviews ?? 0);
+      if (was && (m.visitors < was.visitors || m.pageviews < was.pageviews)) {
+        regressions.push(
+          `${key}: read ${m.visitors}/${m.pageviews}, kept banked ${was.visitors}/${was.pageviews}`
+        );
+      }
+
+      // FINAL only when the month has ended AND the window covered all of it.
+      const complete =
+        isClosed(key, now) && windowStart != null && fullyCovered(key, windowStart);
+
       const { error } = await supabase.from("traffic_months").upsert(
         {
           month: key,
-          visitors: m.visitors,
-          pageviews: m.pageviews,
-          is_final: isClosed(key, now),
+          visitors,
+          pageviews,
+          is_final: complete,
           updated_at: new Date().toISOString(),
         },
         { onConflict: "month" }
@@ -288,7 +336,12 @@ export async function GET(req: Request) {
   const database = {
     accounts: await count("profiles"),
     accountsWithTeam: (teamRows ?? []).length,
-    distinctFrcTeams: new Set((teamRows ?? []).map((t) => t.team_number)).size,
+    // Same predicate the public counter and the admin tally use. Recording a
+    // different number here would put a third value on a figure that is meant
+    // to be one fact, and this table is the copy meant to outlive the others.
+    distinctFrcTeams: countDistinctTeams(
+      (teamRows ?? []) as { team_number: number | null }[]
+    ),
     lessonCompletions: await count("lesson_progress", ["completed_at", ""]),
     lessonsPublished: await count("lessons"),
     modules: await count("modules"),
@@ -326,6 +379,7 @@ export async function GET(req: Request) {
     allTime,
     database,
     ...(monthErrors.length ? { monthErrors } : {}),
+    ...(regressions.length ? { regressionsBlocked: regressions } : {}),
     ...(snapErr ? { snapshotError: snapErr.message } : {}),
     ...(months === null
       ? { warning: "Vercel unreachable, months not banked this run" }
