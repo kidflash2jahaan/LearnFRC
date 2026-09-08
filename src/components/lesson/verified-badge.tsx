@@ -3,23 +3,20 @@ import { CheckCircle2 } from "lucide-react";
 /**
  * The accuracy check mark on a lesson.
  *
- * The date comes along for free (it is stamped when the box is ticked) and it
- * is worth showing: "verified" on its own is a claim, "verified on 8 Sep 2026"
- * is a claim a reader can weigh against a rule change. Nothing else is asked
- * for, so ticking a lesson stays a one-click job.
+ * Renders only once a lesson has been verified. An unverified lesson shows
+ * nothing at all, so the mark reads as a positive signal on the pages that
+ * carry it rather than as a warning on the ones that do not.
  *
- * The unchecked state renders too, rather than showing nothing. If unchecked
- * lessons were silent, a reader who happened to open two checked ones would
- * assume the whole catalogue had been done, and the badge would mean nothing.
+ * The date comes along for free, stamped when the box is ticked. It is worth
+ * showing: "verified" on its own is a claim, "verified on 8 Sep 2026" is a
+ * claim a reader can weigh against a rule change.
  */
 export function VerifiedBadge({
   verifiedAt,
 }: {
   verifiedAt: string | null;
 }) {
-  if (!verifiedAt) {
-    return <p className="nb-slug text-[var(--graphite)]">not verified yet</p>;
-  }
+  if (!verifiedAt) return null;
 
   const when = new Date(verifiedAt).toLocaleDateString("en-GB", {
     day: "numeric",

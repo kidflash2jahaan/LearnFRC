@@ -433,11 +433,11 @@ export default async function LessonPage({
               showStart={idx > 0}
             />
 
-            {/* The fact-check state, immediately above the sources it was
-                checked against. Deliberately placed BEFORE the colophon rather
-                than tucked inside it: whether a human has read this page is
-                the first thing a sceptical reader wants, and burying it under
-                the reference list would look like hiding it. */}
+            {/* The verified mark, immediately above the sources it was checked
+                against. Renders nothing until the lesson has been verified, so
+                this is a no-op on most pages for now. Placed BEFORE the
+                colophon rather than inside it: on a page that has been checked,
+                that is the first thing a sceptical reader wants. */}
             <VerifiedBadge verifiedAt={body?.verified_at ?? null} />
 
             {/* Provenance: the lesson's sources, its last logged correction,

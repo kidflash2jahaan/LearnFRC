@@ -134,8 +134,8 @@ export default async function FactCheckPage() {
             <p className="nb-slug">nothing checked yet</p>
             <p className="mt-2 max-w-[58ch] text-[0.95rem] leading-relaxed text-[var(--graphite)]">
               The pass has not started. When it does, every lesson that has been
-              read appears here with the date, and this page will say so before
-              any lesson claims it.
+              read appears here with the date. Until then this page is the
+              honest answer to how far it has got.
             </p>
           </div>
         </section>
