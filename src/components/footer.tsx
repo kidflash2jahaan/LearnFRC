@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Logo } from "@/components/logo";
 import { NewsletterForm } from "@/components/newsletter-form";
+import { getOverviewStats } from "@/lib/queries";
 
 /**
  * The inside back cover of the binder: every destination written out, the
@@ -92,7 +93,19 @@ function Offsite() {
 const COL_LINK =
   "inline-flex min-h-11 items-center text-[0.95rem] text-[var(--ink)] no-underline decoration-2 underline-offset-4 transition-[color] duration-[var(--nb-t-hover)] ease-[var(--nb-ease-out)] hover:text-[var(--blue)] hover:underline";
 
-export function Footer() {
+export async function Footer() {
+  // Read, never hardcode. The footer is on every page, so a stale figure here
+  // is the most-seen wrong number on the site. Cached for a day and refreshed
+  // by the "catalog" tag when content changes.
+  const { lessonCount, deptCount } = await getOverviewStats().catch(() => ({
+    lessonCount: 0,
+    deptCount: 0,
+  }));
+  const catalogue =
+    lessonCount > 0 && deptCount > 0
+      ? `${lessonCount.toLocaleString()} lessons across ${deptCount} departments`
+      : null;
+
   return (
     <footer className="nb-rule mt-16">
       <div className="nb-wrap pb-[clamp(1.6rem,3vw,2.4rem)] pt-[clamp(2.4rem,4.5vw,3.6rem)]">
@@ -100,7 +113,7 @@ export function Footer() {
           <div className="sm:col-span-2">
             <Logo className="text-[1.35rem]" />
             <p className="mt-3 max-w-[34ch] text-[0.95rem] text-[var(--graphite)]">
-              394 lessons across 11 departments, from swerve geometry to the Impact Award
+              {catalogue ? `${catalogue}, ` : ""}from swerve geometry to the Impact Award
               essay. Written by a high-school student who needed this and could not find it.
             </p>
             <p className="nb-pen mt-3 max-w-[24ch] -rotate-1">free to read, no account needed</p>
@@ -177,7 +190,11 @@ export function Footer() {
             <Link href="/terms" className="nb-link inline-flex min-h-11 items-center">
               Terms
             </Link>
-            <span>394 lessons / 11 departments</span>
+            {catalogue ? (
+              <span>
+                {lessonCount.toLocaleString()} lessons / {deptCount} departments
+              </span>
+            ) : null}
             <span>&copy; {new Date().getFullYear()}</span>
           </span>
         </div>

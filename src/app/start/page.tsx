@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { getOverviewStats } from "@/lib/queries";
 import { needsUsernameSetup } from "@/lib/onboarding-server";
 import { getSession } from "@/lib/auth";
 import { FirstRunGoalPicker } from "@/components/onboarding/first-run-goal-picker";
@@ -57,7 +58,7 @@ import {
 export const metadata: Metadata = {
   title: "Start here",
   description:
-    "Answer one question and we'll turn 394 lessons into the five that get you started.",
+    "Answer one question and we'll turn the whole catalogue into the five lessons that get you started.",
   // Signed-in only, and a thin router. Keep it out of the index entirely so it
   // never competes with the guides for crawl budget.
   robots: { index: false, follow: false },
@@ -68,6 +69,11 @@ export default async function StartPage({
 }: {
   searchParams: Promise<{ change?: string }>;
 }) {
+  // Live, so this copy cannot promise a catalogue size the site no longer has.
+  const { lessonCount, deptCount } = await getOverviewStats().catch(() => ({
+    lessonCount: 0,
+    deptCount: 0,
+  }));
   const { user, profile } = await getSession();
   if (!user) redirect("/login?next=/start");
   // Required handle first: OAuth lands here, and the setup step lives on the
@@ -112,9 +118,9 @@ export default async function StartPage({
             </h1>
 
             <p className="nb-lede mt-[clamp(1rem,2vw,1.5rem)]">
-              Pick the closest one. It turns 394 lessons across 11 departments
-              into the {STARTER_TARGET} that get you moving, and you can change
-              it any time.
+              Pick the closest one. It turns {lessonCount.toLocaleString()} lessons
+              across {deptCount} departments into the {STARTER_TARGET} that get you
+              moving, and you can change it any time.
             </p>
 
             <p className="nb-pen mt-4 rotate-[-1.1deg]">
@@ -142,7 +148,7 @@ export default async function StartPage({
                   href="/guides"
                   className="nb-link inline-flex min-h-11 items-center text-[0.92rem]"
                 >
-                  Browse all 11 departments
+                  Browse all {deptCount} departments
                 </Link>
                 <Link
                   href="/dashboard"

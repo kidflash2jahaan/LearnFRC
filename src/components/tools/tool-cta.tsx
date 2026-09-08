@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { getOverviewStats } from "@/lib/queries";
 export type RelatedLink = { href: string; label: string };
 
 /**
@@ -15,7 +16,17 @@ export type RelatedLink = { href: string; label: string };
  * the top of the funnel for search traffic), and the keyword-bearing internal
  * links on the right, which is what actually feeds link equity to the lessons.
  */
-export function ToolCTA({ related }: { related: RelatedLink[] }) {
+export async function ToolCTA({ related }: { related: RelatedLink[] }) {
+  // Read, so this never advertises a catalogue size that has moved on.
+  const { lessonCount, deptCount } = await getOverviewStats().catch(() => ({
+    lessonCount: 0,
+    deptCount: 0,
+  }));
+  const catalogue =
+    lessonCount > 0 && deptCount > 0
+      ? `${lessonCount.toLocaleString()} lessons across all ${deptCount} departments`
+      : "Every lesson in the binder";
+
   return (
     <section className="nb-rule mt-[clamp(2.5rem,6vw,4rem)] pt-[clamp(1.8rem,4vw,2.8rem)] pb-[clamp(2rem,5vw,3.4rem)]">
       <div className="nb-wrap grid gap-[clamp(1.6rem,4vw,3rem)] lg:grid-cols-[minmax(0,1fr)_minmax(0,0.72fr)]">
@@ -25,9 +36,8 @@ export function ToolCTA({ related }: { related: RelatedLink[] }) {
             Every tool here is free, and so is the rest of the binder.
           </h2>
           <p className="nb-sub mt-4">
-            394 lessons across all 11 departments, plus every calculator on this
-            site. An account is only for saving your work and tracking what
-            you have finished.
+            {catalogue}, plus every calculator on this site. An account is only
+            for saving your work and tracking what you have finished.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <Link href="/signup" className="nb-btn">

@@ -1,5 +1,6 @@
 import { ImageResponse } from "next/og";
 import { ogFonts, OG_DISPLAY, OG_MONO } from "@/app/_og/font";
+import { getOverviewStats } from "@/lib/queries";
 
 export const alt =
   "LearnFRC, the notebook every FIRST Robotics Competition team wishes it had";
@@ -39,6 +40,14 @@ const COLS = Math.ceil(size.width / 23);
 const ROWS = Math.ceil(size.height / 23);
 
 export default async function Image() {
+  // This card is what every shared link renders, so a stale count here travels
+  // further than one on a page. Read it, and fall back to the previous known
+  // figures only if the query fails, since an OG image cannot show an error.
+  const { lessonCount, deptCount } = await getOverviewStats().catch(() => ({
+    lessonCount: 394,
+    deptCount: 11,
+  }));
+
   const fonts = await ogFonts();
 
   return new ImageResponse(
@@ -174,9 +183,9 @@ export default async function Image() {
               color: GRAPHITE,
             }}
           >
-            <span style={{ color: INK }}>11 departments</span>
+            <span style={{ color: INK }}>{deptCount} departments</span>
             <span style={{ margin: "0 14px" }}>/</span>
-            <span style={{ color: INK }}>394 lessons</span>
+            <span style={{ color: INK }}>{lessonCount.toLocaleString()} lessons</span>
             <span style={{ margin: "0 14px" }}>/</span>
             <span>learnfrc.com</span>
           </div>

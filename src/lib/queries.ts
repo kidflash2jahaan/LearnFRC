@@ -284,7 +284,17 @@ export async function getProfile(userId: string): Promise<Profile | null> {
   return (data as Profile) ?? null;
 }
 
-/** Site-wide catalog counts for the home hero. Count-only (no row egress), cached. */
+/**
+ * Site-wide catalog counts. Count-only (no row egress), cached for a day and
+ * invalidated on content edits through the "catalog" tag.
+ *
+ * EVERY user-visible statement of these numbers reads from here. The site used
+ * to spell "394 lessons across 11 departments" into seventeen different files,
+ * including the footer on every page, the OpenGraph card on every shared link
+ * and the site-wide meta description. All seventeen were right, and all
+ * seventeen would have gone quietly wrong the moment lesson 395 was published,
+ * with nothing to catch it.
+ */
 export const getOverviewStats = unstable_cache(
   async () => {
     const supabase = createPublicClient();
@@ -293,16 +303,18 @@ export const getOverviewStats = unstable_cache(
     // learner count has to come from the service-role client. Head/count-only:
     // no rows leave the database.
     const admin = createAdminClient();
-    const [depts, modules, lessons, learners] = await Promise.all([
+    const [depts, modules, lessons, articles, learners] = await Promise.all([
       supabase.from("departments").select("*", { count: "exact", head: true }),
       supabase.from("modules").select("*", { count: "exact", head: true }),
       supabase.from("lessons").select("*", { count: "exact", head: true }),
+      supabase.from("articles").select("*", { count: "exact", head: true }),
       admin.from("profiles").select("id", { count: "exact", head: true }),
     ]);
     return {
       deptCount: depts.count ?? 0,
       moduleCount: modules.count ?? 0,
       lessonCount: lessons.count ?? 0,
+      articleCount: articles.count ?? 0,
       learners: learners.count ?? 0,
     };
   },

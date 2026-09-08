@@ -10,6 +10,7 @@ import { PresenceBeacon } from "@/components/presence-beacon";
 import { SourceCapture } from "@/components/source-capture";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { getOverviewStats } from "@/lib/queries";
 
 /* Three faces with fixed jobs, per docs/NOTEBOOK-SYSTEM.md. Nothing else is
    loaded, and nothing else may be. */
@@ -45,14 +46,30 @@ const caveat = Caveat({
 const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com";
 
-export const metadata: Metadata = {
+/**
+ * Dynamic so the two figures in these descriptions cannot go stale. They are
+ * the site-wide SEO fallback and the OpenGraph card text, which means a wrong
+ * number here is what Google and every shared link show. getOverviewStats is
+ * cached for a day and refreshed by the "catalog" tag, so this costs one
+ * memoised read, not a query per request.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const { lessonCount, deptCount } = await getOverviewStats().catch(() => ({
+    lessonCount: 0,
+    deptCount: 0,
+  }));
+  // Fall back to wording with no figures rather than printing a zero.
+  const n = lessonCount > 0 ? lessonCount.toLocaleString() : null;
+  const d = deptCount > 0 ? String(deptCount) : null;
+
+  return {
   metadataBase: new URL(SITE_URL),
   title: {
     default: "LearnFRC, every job on an FRC team, written down",
     template: "%s · LearnFRC",
   },
   description:
-    "394 free lessons covering every job on a FIRST Robotics Competition team: mechanical, CAD, programming, electrical, controls, drive team, scouting, strategy, business, media and safety. No account needed to read.",
+    `${n ? `${n} free lessons` : "Free lessons"} covering every job on a FIRST Robotics Competition team: mechanical, CAD, programming, electrical, controls, drive team, scouting, strategy, business, media and safety. No account needed to read.`,
   keywords: [
     "FRC",
     "FIRST Robotics Competition",
@@ -82,7 +99,7 @@ export const metadata: Metadata = {
     url: SITE_URL,
     title: "LearnFRC, every job on an FRC team, written down",
     description:
-      "394 free lessons across 11 departments of FIRST Robotics Competition, from swerve geometry to sponsor letters. No account needed to read.",
+      `${n ? `${n} free lessons` : "Free lessons"}${d ? ` across ${d} departments` : ""} of FIRST Robotics Competition, from swerve geometry to sponsor letters. No account needed to read.`,
     siteName: "LearnFRC",
   },
   // Card type only: leaving title/description unset lets every page's own
@@ -106,7 +123,8 @@ export const metadata: Metadata = {
   verification: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION
     ? { google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION }
     : undefined,
-};
+  };
+}
 
 export const viewport: Viewport = {
   // The paper ground, so the mobile browser chrome matches the page edge.

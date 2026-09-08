@@ -231,7 +231,7 @@ export function lifecycleEmailHtml(p: LifecycleEmailProps): string {
     // Telling them they never opened one is simply false to their face, and
     // being caught in a small lie is exactly the failure mode this project can
     // least afford right now.
-    intro = `<p style="margin:0 0 16px">You created a LearnFRC account but haven't finished a lesson yet. Nothing's wrong. Picking where to start out of 394 lessons is the hard part, so here's the one we'd start you on.</p>`;
+    intro = `<p style="margin:0 0 16px">You created a LearnFRC account but haven't finished a lesson yet. Nothing's wrong. Picking where to start out of the whole catalogue is the hard part, so here's the one we'd start you on.</p>`;
     closing = `<p style="margin:18px 0 0;color:#565C60;font-size:13px">${shape}</p>
       <p style="margin:10px 0 0;color:#565C60;font-size:13px">Everything on LearnFRC is free and there's nothing else to set up. If it turns out not to be what you wanted, you can turn these off below. No hard feelings.</p>`;
     reason = `You're getting this once because you created a LearnFRC account and haven't finished a lesson yet. It's the only reminder we'll send about it.`;

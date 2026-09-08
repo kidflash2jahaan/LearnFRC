@@ -5,6 +5,7 @@ import { Ink } from "@/components/motion/primitives";
 import { OnboardingStrip, type OnboardingStep } from "./_onboarding-rail";
 import { RosterSheet, type RosterMember } from "./_team-panel";
 
+import { getOverviewStats } from "@/lib/queries";
 export const metadata: Metadata = {
   title: "LearnFRC for Teams: free onboarding curriculum for FRC teams",
   description:
@@ -33,11 +34,18 @@ const STEPS: OnboardingStep[] = [
   },
 ];
 
-/** What a team gets out of this, in the order a mentor cares about it. */
-const OFFER: { title: string; body: string }[] = [
+/**
+ * What a team gets out of this, in the order a mentor cares about it.
+ * Takes the counts rather than baking them in, so the pitch cannot quote a
+ * catalogue size the site no longer has.
+ */
+const offerFor = (
+  lessons: number,
+  depts: number
+): { title: string; body: string }[] => [
   {
     title: "A curriculum that already exists",
-    body: "394 lessons across all 11 departments, written and reviewed. Nobody on your team has to rebuild rookie training from scratch in January again.",
+    body: `${lessons > 0 ? `${lessons.toLocaleString()} lessons` : "Lessons"}${depts > 0 ? ` across all ${depts} departments` : ""}, written and reviewed. Nobody on your team has to rebuild rookie training from scratch in January again.`,
   },
   {
     title: "A quiz at the end of every lesson",
@@ -78,6 +86,11 @@ const TALLY: { n: string; unit: string }[] = [
  * Server Component. Same single catalogue fetch as before.
  */
 export default async function ForTeamsPage() {
+  const { lessonCount, deptCount } = await getOverviewStats().catch(() => ({
+    lessonCount: 0,
+    deptCount: 0,
+  }));
+  const OFFER = offerFor(lessonCount, deptCount);
   const departments = await getDepartments().catch(() => []);
   const track = departments.slice(0, 6);
 
