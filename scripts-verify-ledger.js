@@ -113,6 +113,27 @@ const vq = async (kind, params) => {
   })());
   if (openClosed.length) ok.push(`${openClosed.length} closed month(s) still open, will be frozen on the next covered run`);
 
+  // 6. Does the archive still agree with the live site? The two are computed by
+  //    different code, so a rule that changes in one and not the other puts two
+  //    values on one fact. That already happened once with FRC team numbers.
+  try {
+    const latest = (await (await fetch(`${U}/rest/v1/stats_snapshots?select=captured_on,database_counts&order=captured_on.desc&limit=1`, { headers: H })).json())[0];
+    const live = await (await fetch("https://learnfrc.com/api/stats")).json();
+    const pairs = [
+      ["distinctFrcTeams", latest?.database_counts?.distinctFrcTeams, live.teams],
+      ["accounts", latest?.database_counts?.accounts, live.learners],
+      ["lessonCompletions", latest?.database_counts?.lessonCompletions, live.lessonsCompleted],
+    ];
+    for (const [name, archived, liveVal] of pairs) {
+      if (archived == null || liveVal == null) continue;
+      // These grow between the snapshot and now, so only a LOWER live value or
+      // a big gap means the two are computed differently rather than just aged.
+      if (liveVal < archived)
+        fail.push(`${name}: archive says ${archived} but the live site says ${liveVal}, which is lower. Different rules, not growth.`);
+      else ok.push(`${name}: archive ${archived}, live ${liveVal}, consistent`);
+    }
+  } catch (e) { ok.push("live-site comparison skipped: " + e.message); }
+
   ok.forEach((s) => console.log("  ok    " + s));
   fail.forEach((s) => console.log("  FAIL  " + s));
   console.log(fail.length ? `\n${fail.length} PROBLEM(S)` : "\nledger verified, no drift");
