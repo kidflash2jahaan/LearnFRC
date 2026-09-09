@@ -6,6 +6,7 @@ import { LessonComplete } from "@/components/lesson/lesson-complete";
 import { SuggestEdit } from "@/components/lesson/suggest-edit";
 import { useMyProgress } from "@/components/progress/my-progress";
 import { sendFunnelEvent } from "@/lib/funnel-client";
+import { setLessonVerified } from "@/app/actions/verify-lesson";
 import type { TocHeading } from "@/components/markdown";
 import type { QuizQuestion } from "@/lib/types";
 import { ReadingRail } from "./_reading-rail";
@@ -254,6 +255,86 @@ export function LessonStatusDot({ lessonId }: { lessonId: string }) {
       />
       <span className="sr-only">{done ? "Read:" : "Not read yet:"}</span>
     </>
+  );
+}
+
+/**
+ * The admin-only verify control, in the same place the verified mark goes.
+ *
+ * Lives HERE rather than in its own file for a reason found the hard way: a
+ * standalone "use client" component imported straight into this page renders on
+ * the server and then never hydrates, so its effect never runs and the button
+ * never appears. The islands in this file do hydrate, so the control is one of
+ * them.
+ *
+ * The verified MARK itself stays server-rendered on the page, so a reader and a
+ * crawler get it in the HTML. Only the button is client-side, and only an admin
+ * ever sees it.
+ */
+export function VerifyLessonIsland({
+  lessonId,
+  initialVerifiedAt,
+}: {
+  lessonId: string;
+  initialVerifiedAt: string | null;
+}) {
+  const [isAdmin, setIsAdmin] = React.useState(false);
+  const [verifiedAt, setVerifiedAt] = React.useState(initialVerifiedAt);
+  const [error, setError] = React.useState<string | null>(null);
+  const [pending, startTransition] = React.useTransition();
+
+  React.useEffect(() => {
+    let live = true;
+    fetch("/api/me", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (live && d?.isAdmin) setIsAdmin(true);
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, []);
+
+  if (!isAdmin) return null;
+  const verified = Boolean(verifiedAt);
+
+  return (
+    <div className="mt-3">
+      <button
+        type="button"
+        disabled={pending}
+        aria-pressed={verified}
+        className={verified ? "nb-btn-ghost" : "nb-btn"}
+        onClick={() => {
+          setError(null);
+          const next = !verified;
+          startTransition(async () => {
+            const res = await setLessonVerified(lessonId, next);
+            if (!res.ok) setError(res.error);
+            else setVerifiedAt(res.verifiedAt);
+          });
+        }}
+      >
+        {pending
+          ? "Saving"
+          : verified
+            ? "Remove verified mark"
+            : "Mark this lesson verified"}
+      </button>
+      {/* Said next to the button, because the mark is a public claim and the
+          person clicking it should be reminded that it is one. */}
+      <p className="nb-slug mt-2 text-graphite">
+        {verified
+          ? "readers see a verified mark on this lesson"
+          : "admin only, this puts a public verified mark on the lesson"}
+      </p>
+      {error ? (
+        <p role="alert" className="mt-1 text-[0.9rem] text-blue">
+          Could not save: {error}
+        </p>
+      ) : null}
+    </div>
   );
 }
 

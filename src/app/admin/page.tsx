@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { getVerificationProgress } from "@/lib/queries";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
@@ -133,7 +132,7 @@ export default async function AdminPage() {
     );
   }
 
-  const [stats, retention, funnel, pendingEdits, pendingSubmissions, feedback, verification] =
+  const [stats, retention, funnel, pendingEdits, pendingSubmissions, feedback] =
     await Promise.all([
       getAdminStats(),
       getRetentionStats(),
@@ -141,9 +140,7 @@ export default async function AdminPage() {
       getPendingEdits(),
       getPendingSubmissions(),
       getFeedback(),
-      getVerificationProgress().catch(() => ({ checked: 0, total: 0 })),
     ]);
-  const verifiedCount = verification.checked;
 
   // Computed here, not via the client module's openFeedbackCount helper:
   // calling an export of a "use client" module from a Server Component throws.
@@ -372,16 +369,6 @@ export default async function AdminPage() {
                 />
               </div>
             </div>
-            {/* The fact-check pass runs for months, so the way in belongs
-                where the work queues already are, not buried in a drawer. */}
-            <p className="mt-4">
-              <Link href="/admin/verify" className="nb-link">
-                Verify lessons
-              </Link>
-              <span className="nb-slug ml-2 text-graphite">
-                {verifiedCount} of {stats.totals.lessons} checked
-              </span>
-            </p>
             <p className="nb-pen mt-4 rotate-[-1.2deg]">this card first, the rest after</p>
           </div>
         </div>

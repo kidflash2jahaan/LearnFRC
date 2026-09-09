@@ -20,6 +20,7 @@ import {
   MobileProgressCard,
   LessonStatusDot,
   SuggestEditIsland,
+  VerifyLessonIsland,
 } from "./_progress-islands";
 import { LessonSignupHook } from "@/components/lesson/lesson-signup-hook";
 import { Provenance } from "@/components/lesson/provenance";
@@ -439,6 +440,14 @@ export default async function LessonPage({
                 colophon rather than inside it: on a page that has been checked,
                 that is the first thing a sceptical reader wants. */}
             <VerifiedBadge verifiedAt={body?.verified_at ?? null} />
+            {/* The control sits in the same place as the mark, so verifying is
+                the last thing you do after reading the lesson rather than a
+                trip to a separate list. Renders nothing for everyone who is
+                not an admin, which is everyone. */}
+            <VerifyLessonIsland
+              lessonId={les.id}
+              initialVerifiedAt={body?.verified_at ?? null}
+            />
 
             {/* Provenance: the lesson's sources, its last logged correction,
                 and the report-an-error control. The links are the same
