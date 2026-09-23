@@ -59,7 +59,13 @@ const months = async (since, until) => {
     bookmarks: await count("bookmarks"),
   };
   const teamRows = await (await fetch(`${U}/rest/v1/profiles?select=team_number&team_number=not.is.null`, { headers: H })).json();
-  db.distinctFrcTeams = new Set(teamRows.map((t) => t.team_number)).size;
+  // Same plausibility rule as src/lib/frc-team.ts (a real FRC team number is
+  // an integer from 1 to 12,000): the 2026-09-06 baseline counted 12119, 12345
+  // and 99990 as teams because this line had no predicate, so its team figure
+  // does not compare with the cron snapshot's. Keep the two rules identical.
+  const MAX_FRC_TEAM = 12000;
+  const plausible = (n) => Number.isInteger(n) && n >= 1 && n <= MAX_FRC_TEAM;
+  db.distinctFrcTeams = new Set(teamRows.map((t) => t.team_number).filter(plausible)).size;
 
   const snap = { capturedAt: now.toISOString(), window: { since, until: today }, traffic, byMonth: by, database: db };
   const jsonPath = path.join(ROOT, "docs/snapshots", `${today}.json`);

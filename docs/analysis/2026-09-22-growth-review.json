@@ -1,0 +1,1395 @@
+{
+  "capturedAt": "2026-09-22",
+  "reportedBy": "growth review, docs/analysis/2026-09-22-growth-review.md",
+  "method": {
+    "windowsAreInclusiveUtcDays": true,
+    "todayExcludedFromHeadlineWindows": true,
+    "todayReason": "2026-09-22 is still accruing; visits/count for 2026-09-01..2026-09-22 returned 2980 visitors on one call and 2983 twenty minutes later",
+    "trafficSource": "https://api.vercel.com/v1/query/web-analytics/ with projectId and teamId",
+    "environmentFilterMakesNoDifference": "since=2026-09-01&until=2026-09-22 returns 2980/17702 with and without filter=environment eq 'production'",
+    "bareDateIsWholeInclusiveDay": "since=2026-09-05&until=2026-09-05 returns 163/1757, matching that day's by=day row",
+    "isoInstantIsExclusiveEnd": "since=2026-09-05T00:00:00.000Z&until=2026-09-06T00:00:00.000Z returns the same 163/1757",
+    "singleDayAggregateWithCategoricalByIsBroken": "by=country with since==until on 2026-09-05 returned 3 US visitors on a 163-visitor day; use a by=day series with a filter instead",
+    "visitorsAdditiveAcrossDays": "sum of by=day 2026-09-01..2026-09-21 equals visits/count for the same window exactly: 2831 visitors, 16604 pageviews; no cross-day dedup, so read visitors as visitor-days",
+    "visitorsNotAdditiveAcrossDimensionValues": "last 14 days: country rows sum to 1840 visitors, device rows to 1840, referrer rows to 2224, window total is 1977",
+    "everyTrafficFigureNeedsABasis": "visits/count is day-summed (visitor-days); visits/aggregate with a by dimension is deduped inside the window. They disagree by up to 40 percent on the same filter and must never be divided into each other. Four figures in the first draft broke this and are listed under verification.",
+    "requestPathCapCollapsesTail": "by=requestPath limit=100 puts the tail in a literal Others row: 657 visitors, 2796 pageviews over the last 14 days",
+    "oauthHopIsNotASource": "accounts.google.com, 91 visitors last 14 days",
+    "engineFolding": "bing.com + cn.bing.com; duckduckgo.com + noai.duckduckgo.com; google.com + google.com.hk",
+    "noBounceRateInApi": true,
+    "eventsDatasetEmpty": "events/count for 2026-08-25..2026-09-22 returns 0 visitors, 0 events; nothing calls track()",
+    "dbSource": "Supabase REST, paged at 1000 rows with an offset loop",
+    "teamPlausibility": "integer 1..12000, per src/lib/frc-team.ts MAX_FRC_TEAM"
+  },
+  "windows": {
+    "last28complete": [
+      "2026-08-25",
+      "2026-09-21"
+    ],
+    "w1": [
+      "2026-08-25",
+      "2026-08-31"
+    ],
+    "w2": [
+      "2026-09-01",
+      "2026-09-07"
+    ],
+    "w3": [
+      "2026-09-08",
+      "2026-09-14"
+    ],
+    "w4": [
+      "2026-09-15",
+      "2026-09-21"
+    ],
+    "preRedesign14": [
+      "2026-08-23",
+      "2026-09-05"
+    ],
+    "postRedesign14": [
+      "2026-09-06",
+      "2026-09-19"
+    ],
+    "prev14": [
+      "2026-08-25",
+      "2026-09-07"
+    ],
+    "last14": [
+      "2026-09-08",
+      "2026-09-21"
+    ],
+    "redesignLive": "2026-09-06",
+    "factCheckLive": "2026-09-08"
+  },
+  "rowCountsPulled": {
+    "profiles": 594,
+    "lesson_progress": 7409,
+    "funnel_events": 2940,
+    "feedback": 3,
+    "content_edits": 5,
+    "lessons": 394,
+    "modules": 101,
+    "departments": 11,
+    "profilesOnVerificationRepull": 595,
+    "profilesRepullNote": "an earlier verification pull returned 597; the two extra rows (created 2026-09-22T22:11:56Z and 22:11:58Z, role mentor, source null, teams 4414 and 1678) were the maintainer's throwaway test accounts for the admin-application flow, created and deleted the same evening; not signups, not a data-loss event"
+  },
+  "trend": {
+    "last28": {
+      "visitors": 3613,
+      "pageviews": 19488,
+      "signups": 190,
+      "completions": 2308,
+      "perDay": {
+        "visitors": 129,
+        "pageviews": 696,
+        "signups": 6.8,
+        "completions": 82.4
+      }
+    },
+    "byWeek": [
+      {
+        "week": "2026-08-25..2026-08-31",
+        "visitors": 782,
+        "pageviews": 2884,
+        "pvPerVisitor": 3.69,
+        "signups": 31,
+        "completions": 264,
+        "distinctCompleters": 37,
+        "visitorToSignupPct": 3.96,
+        "signupPageVisitors": 152,
+        "mobileVisitors": 165
+      },
+      {
+        "week": "2026-09-01..2026-09-07",
+        "visitors": 854,
+        "pageviews": 5913,
+        "pvPerVisitor": 6.92,
+        "signups": 70,
+        "completions": 746,
+        "distinctCompleters": 59,
+        "visitorToSignupPct": 8.2,
+        "signupPageVisitors": 136,
+        "mobileVisitors": 184
+      },
+      {
+        "week": "2026-09-08..2026-09-14",
+        "visitors": 923,
+        "pageviews": 5155,
+        "pvPerVisitor": 5.59,
+        "signups": 33,
+        "completions": 837,
+        "distinctCompleters": 57,
+        "visitorToSignupPct": 3.58,
+        "signupPageVisitors": 143,
+        "mobileVisitors": 216
+      },
+      {
+        "week": "2026-09-15..2026-09-21",
+        "visitors": 1054,
+        "pageviews": 5536,
+        "pvPerVisitor": 5.25,
+        "signups": 56,
+        "completions": 461,
+        "distinctCompleters": 61,
+        "visitorToSignupPct": 5.31,
+        "signupPageVisitors": 186,
+        "mobileVisitors": 278
+      }
+    ],
+    "redesignComparison": {
+      "pre": {
+        "visitors": 1801,
+        "pageviews": 7834,
+        "usVisitors": 1198,
+        "nonCnVisitors": 1612,
+        "nonCnPageviews": 6307,
+        "signups": 102,
+        "completions": 923,
+        "visitorToSignupPct": 5.66
+      },
+      "post": {
+        "visitors": 1931,
+        "pageviews": 11566,
+        "usVisitors": 1101,
+        "nonCnVisitors": 1600,
+        "nonCnPageviews": 8077,
+        "signups": 90,
+        "completions": 1380,
+        "visitorToSignupPct": 4.66
+      },
+      "deltaPct": {
+        "visitors": 7.2,
+        "pageviews": 47.6,
+        "usVisitors": -8.1,
+        "nonCnVisitors": -0.7,
+        "nonCnPageviews": 28.1,
+        "signups": -11.8,
+        "completions": 49.5
+      }
+    },
+    "rollingFortnight": {
+      "prev14": {
+        "visitors": 1636,
+        "pageviews": 8797,
+        "usVisitors": 1009,
+        "nonCnVisitors": 1452,
+        "signups": 101,
+        "completions": 1010,
+        "visitorToSignupPct": 6.17
+      },
+      "last14": {
+        "visitors": 1977,
+        "pageviews": 10691,
+        "usVisitors": 1199,
+        "nonCnVisitors": 1689,
+        "signups": 89,
+        "completions": 1298,
+        "visitorToSignupPct": 4.5
+      },
+      "deltaPct": {
+        "visitors": 20.8,
+        "pageviews": 21.5,
+        "usVisitors": 18.8,
+        "nonCnVisitors": 16.3,
+        "signups": -11.9,
+        "completions": 28.5
+      }
+    },
+    "boomingVerdict": "traffic yes, signups no: genuine visitor growth 16.3 to 20.8 percent over the fortnight and 34.8 percent from week 1 to week 4, signups down 11.9 percent"
+  },
+  "whoTheNewPeopleAre": {
+    "last14Signups": 89,
+    "clusterDefinition": "3 or more accounts sharing one plausible team number inside the same 14-day window",
+    "clusters": [
+      {
+        "team": 7002,
+        "accounts": 23,
+        "first": "2026-09-11",
+        "last": "2026-09-21"
+      },
+      {
+        "team": 9427,
+        "accounts": 10,
+        "first": "2026-09-16",
+        "last": "2026-09-18"
+      }
+    ],
+    "inClusters": 33,
+    "inClustersPct": 37.1,
+    "pairsAccounts": 10,
+    "soloAccounts": 19,
+    "noPlausibleTeamNumber": 27,
+    "prev14": {
+      "signups": 101,
+      "clusters": [
+        [
+          7002,
+          26
+        ],
+        [
+          6017,
+          16
+        ],
+        [
+          447,
+          3
+        ],
+        [
+          5449,
+          3
+        ]
+      ],
+      "inClusters": 48,
+      "inClustersPct": 47.5
+    },
+    "team7002AllTimeAccounts": 64,
+    "team7002ShareOfAllAccountsPct": 10.8,
+    "team7002Span": [
+      "2026-08-05",
+      "2026-09-21"
+    ],
+    "team7002ShareOfLast28SignupsPct": 25.8,
+    "sourceLast14": {
+      "Direct": 37,
+      "Google": 19,
+      "Bing": 17,
+      "Referral": 10,
+      "Chief Delphi": 4,
+      "Other": 2
+    },
+    "sourcePrev14": {
+      "Direct": 21,
+      "Google": 22,
+      "Bing": 19,
+      "Referral": 19,
+      "Chief Delphi": 9,
+      "DuckDuckGo": 5,
+      "chatgpt.com": 4,
+      "Other": 2
+    },
+    "referredByPopulatedAllTime": 35,
+    "referredByPopulatedLast14": 7,
+    "rolesLast14": {
+      "student": 89
+    },
+    "rolesLast28": {
+      "student": 190
+    },
+    "rolesSiteWide": {
+      "student": 576,
+      "mentor": 13,
+      "other": 3,
+      "coach": 2,
+      "alum": 1
+    },
+    "mostRecentNonStudentSignup": "2026-08-05",
+    "distinctPlausibleTeams": 196,
+    "distinctNonNullTeamNumbers": 199,
+    "implausibleTeamNumbersPresent": [
+      12119,
+      12345,
+      99990
+    ],
+    "distinctPlausibleTeamsCorrection": "the first draft published 194, which is the unfiltered distinct count of non-null team_number; countDistinctTeams gives 191 on the 594-row pull and 196 on the 595-row verification pull",
+    "accountsWithoutPlausibleTeam": 194,
+    "accountsWithoutPlausibleTeamNote": "a count of accounts, not of teams; it collided with the unfiltered 194 above and that collision hid the error",
+    "referredByDistinctReferrers": 10,
+    "referredByPerReferrer": [
+      11,
+      5,
+      5,
+      3,
+      3,
+      3,
+      2,
+      1,
+      1,
+      1
+    ]
+  },
+  "referrers": {
+    "byWeekFoldedCountQueries": {
+      "w1": {
+        "google": 82,
+        "bing": 73,
+        "duckduckgo": 58,
+        "direct": 593
+      },
+      "w2": {
+        "google": 84,
+        "bing": 104,
+        "duckduckgo": 54,
+        "direct": 658
+      },
+      "w3": {
+        "google": 126,
+        "bing": 130,
+        "duckduckgo": 65,
+        "direct": 672
+      },
+      "w4": {
+        "google": 139,
+        "bing": 142,
+        "duckduckgo": 78,
+        "direct": 773
+      }
+    },
+    "fourWeekGrowthPct": {
+      "google": 69.5,
+      "bing": 94.5,
+      "duckduckgo": 34.5
+    },
+    "byWeekBasis": "byWeekFoldedCountQueries is visits/count (day-summed); every *ByWeek array below except chiefDelphiByWeekCount is visits/aggregate (deduped in-window)",
+    "chiefDelphiByWeekAggregate": [
+      18,
+      19,
+      21,
+      12
+    ],
+    "chiefDelphiByWeekCount": [
+      31,
+      22,
+      23,
+      14
+    ],
+    "chiefDelphiShareOfW4Pct": 1.3,
+    "chiefDelphiW4ChangePct": -39.1,
+    "chiefDelphiCorrection": "first draft published the aggregate series and 1.1 percent (12 over a day-summed 1054); on one basis it is 14 over 1054 = 1.3 percent and -39.1 percent week on week. Decline survives; shape changes from rise-then-fall to fall, plateau, fall.",
+    "chatgptByWeek": [
+      5,
+      11,
+      2,
+      5
+    ],
+    "braveByWeek": [
+      7,
+      4,
+      5,
+      13
+    ],
+    "soDotComByWeek": [
+      0,
+      9,
+      7,
+      5
+    ],
+    "ecosiaByWeek": [
+      4,
+      0,
+      6,
+      2
+    ],
+    "oauthHopByWeek": [
+      29,
+      55,
+      43,
+      46
+    ],
+    "directLast14": {
+      "basis": "visits/count",
+      "visitors": 1445,
+      "pageviews": 9462,
+      "shareOfWindowVisitorsPct": 73.1,
+      "shareOfWindowPageviewsPct": 88.5,
+      "pvPerVisitor": 6.55
+    },
+    "directLast14Aggregate": {
+      "basis": "visits/aggregate",
+      "visitors": 1342,
+      "pageviews": 8939,
+      "pvPerVisitor": 6.66
+    },
+    "directCorrection": "first draft divided the aggregate 1342/8939 into the visits/count window totals and published 67.9 and 83.6 percent, understating direct by 5.2 points",
+    "googlePvPerVisitorLast14": {
+      "count": 1.22,
+      "aggregate": 1.23
+    },
+    "referredVisitorsLast14": 902,
+    "oddHosts": [
+      "learnfrc.systemerr.com (2)",
+      "wiki.teamroboto.org (2)",
+      "frenship.schoology.com (2)",
+      "nisd.schoology.com (1)",
+      "teams.public.onecdn.static.microsoft (5)",
+      "circuitrunners.clickup.com (1)"
+    ]
+  },
+  "searchLanding": {
+    "window": [
+      "2026-09-08",
+      "2026-09-21"
+    ],
+    "method": "four filtered calls, by=requestPath with filter=referrerHostname eq '<host>' for google.com, bing.com, cn.bing.com, duckduckgo.com; the two-dimension by=requestPath&by=referrerHostname call collapses 984 visitors into an Others/Others bucket",
+    "totalVisitorRows": 706,
+    "distinctPaths": 171,
+    "bySurface": {
+      "blog": {
+        "visitors": 296,
+        "pageviews": 323,
+        "paths": 59
+      },
+      "guidesLessons": {
+        "visitors": 186,
+        "pageviews": 210,
+        "paths": 92
+      },
+      "home": {
+        "visitors": 168,
+        "pageviews": 254,
+        "paths": 1
+      },
+      "paths": {
+        "visitors": 15,
+        "pageviews": 19,
+        "paths": 2
+      },
+      "other": {
+        "visitors": 41,
+        "pageviews": 44,
+        "paths": 17
+      }
+    },
+    "guidesVisitorsPerRankingPage": 2,
+    "topLandingPages": [
+      {
+        "path": "/",
+        "total": 168,
+        "google": 91,
+        "bing": 25,
+        "cnBing": 47,
+        "ddg": 5
+      },
+      {
+        "path": "/blog/frc-systemcore",
+        "total": 87,
+        "google": 17,
+        "bing": 29,
+        "cnBing": 1,
+        "ddg": 40
+      },
+      {
+        "path": "/blog/frc-2027-season-calendar",
+        "total": 17,
+        "google": 0,
+        "bing": 5,
+        "cnBing": 1,
+        "ddg": 11
+      },
+      {
+        "path": "/blog/frc-2027-biocore",
+        "total": 15,
+        "google": 4,
+        "bing": 8,
+        "cnBing": 0,
+        "ddg": 3
+      },
+      {
+        "path": "/guides/programming-software",
+        "total": 14,
+        "google": 9,
+        "bing": 4,
+        "cnBing": 0,
+        "ddg": 1
+      },
+      {
+        "path": "/guides",
+        "total": 14,
+        "google": 2,
+        "bing": 5,
+        "cnBing": 7,
+        "ddg": 0
+      },
+      {
+        "path": "/paths",
+        "total": 14,
+        "google": 0,
+        "bing": 5,
+        "cnBing": 9,
+        "ddg": 0
+      }
+    ],
+    "topPagesOverallLast14": [
+      {
+        "path": "Others (100-row cap)",
+        "visitors": 657,
+        "pageviews": 2796,
+        "pvPerVisitor": 4.26
+      },
+      {
+        "path": "/",
+        "visitors": 547,
+        "pageviews": 987,
+        "pvPerVisitor": 1.8
+      },
+      {
+        "path": "/signup",
+        "visitors": 299,
+        "pageviews": 583,
+        "pvPerVisitor": 1.95
+      },
+      {
+        "path": "/guides",
+        "visitors": 279,
+        "pageviews": 529,
+        "pvPerVisitor": 1.9
+      },
+      {
+        "path": "/dashboard",
+        "visitors": 210,
+        "pageviews": 330,
+        "pvPerVisitor": 1.57
+      },
+      {
+        "path": "/guides/getting-started",
+        "visitors": 207,
+        "pageviews": 380,
+        "pvPerVisitor": 1.84
+      },
+      {
+        "path": "/blog/frc-systemcore",
+        "visitors": 169,
+        "pageviews": 213,
+        "pvPerVisitor": 1.26
+      }
+    ],
+    "byRouteLast14Basis": "visits/aggregate?by=route, deduped in-window; these rows must not be divided into a visits/count window total",
+    "blogRouteReachLast14": {
+      "countVisitors": 608,
+      "windowTotalCount": 1977,
+      "sharePct": 30.8,
+      "aggregateVisitors": 567,
+      "firstDraftSharePct": 28.7,
+      "correction": "28.7 percent put the deduped 567 over the day-summed 1977; restated as 608 of 1977 on visits/count"
+    },
+    "byRouteLast14": [
+      {
+        "route": "/guides/[department]/[module]/[lesson]",
+        "visitors": 800,
+        "pageviews": 3549
+      },
+      {
+        "route": "/blog/[slug]",
+        "visitors": 567,
+        "pageviews": 853
+      },
+      {
+        "route": "/",
+        "visitors": 547,
+        "pageviews": 987
+      },
+      {
+        "route": "/guides/[department]",
+        "visitors": 503,
+        "pageviews": 1119
+      },
+      {
+        "route": "/signup",
+        "visitors": 299,
+        "pageviews": 583
+      },
+      {
+        "route": "/dashboard",
+        "visitors": 210,
+        "pageviews": 330
+      }
+    ],
+    "highestPvPerVisitorMin20Visitors": [
+      [
+        "/login",
+        1.98
+      ],
+      [
+        "/signup",
+        1.95
+      ],
+      [
+        "/guides",
+        1.9
+      ],
+      [
+        "/guides/getting-started",
+        1.84
+      ],
+      [
+        "/",
+        1.8
+      ],
+      [
+        "/settings",
+        1.76
+      ]
+    ],
+    "note": "nothing on the site exceeds 2.0 pageviews per visitor; the API has no bounce metric so this is a proxy, not bounce rate"
+  },
+  "activation": {
+    "clusterDefinitionForCohorts": "account's plausible team number is shared by 3 or more accounts site-wide",
+    "sept1to15": {
+      "all": {
+        "n": 108,
+        "within48h_1plus": 44,
+        "within48h_5plus": 30,
+        "within48h_10plus": 18,
+        "ever1plus": 62,
+        "ever5plus": 50,
+        "ever10plus": 37,
+        "seen7plusDaysAfter": 44,
+        "medianLessonsEver": 3
+      },
+      "cluster": {
+        "n": 61,
+        "within48h_1plus": 26,
+        "within48h_5plus": 22,
+        "within48h_10plus": 13,
+        "ever1plus": 40,
+        "ever5plus": 37,
+        "ever10plus": 28,
+        "seen7plusDaysAfter": 33,
+        "medianLessonsEver": 9
+      },
+      "solo": {
+        "n": 47,
+        "within48h_1plus": 18,
+        "within48h_5plus": 8,
+        "within48h_10plus": 5,
+        "ever1plus": 22,
+        "ever5plus": 13,
+        "ever10plus": 9,
+        "seen7plusDaysAfter": 11,
+        "medianLessonsEver": 0
+      },
+      "clusterOverSoloRatios": {
+        "ever10plus": 2.4,
+        "ever5plus": 2.19,
+        "seen7plus": 2.31,
+        "within48h_1plus": 1.11
+      }
+    },
+    "aug1to15": {
+      "n": 49,
+      "within48h_1plusPct": 57.1,
+      "ever1plusPct": 63.3,
+      "ever5plusPct": 40.8,
+      "ever10plusPct": 30.6,
+      "seen7plusPct": 53.1
+    },
+    "augFullMonth": {
+      "n": 113,
+      "within48h_1plusPct": 55.8,
+      "ever1plusPct": 64.6,
+      "ever5plusPct": 38.9,
+      "ever10plusPct": 29.2,
+      "seen7plusPct": 44.2
+    },
+    "preVsPostRedesign": {
+      "pre": {
+        "n": 480,
+        "within48h_1plus": 252,
+        "within48h_1plusPct": 52.5,
+        "ever1plus": 284,
+        "ever5plus": 172,
+        "ever10plus": 138
+      },
+      "post": {
+        "n": 90,
+        "within48h_1plus": 33,
+        "within48h_1plusPct": 36.7,
+        "ever1plus": 39,
+        "ever5plus": 29,
+        "ever10plus": 18
+      },
+      "dropPoints": 15.8,
+      "clusterPre": {
+        "n": 156,
+        "pct": 60.9
+      },
+      "clusterPost": {
+        "n": 48,
+        "pct": 39.6
+      },
+      "soloPre": {
+        "n": 324,
+        "pct": 48.5
+      },
+      "soloPost": {
+        "n": 42,
+        "pct": 33.3
+      },
+      "caveat": "correlation with the redesign date, not proof of cause; signup mix changed at the same time and the pre group spans the whole site history including the Chief Delphi launch wave"
+    },
+    "siteWideRecency": {
+      "seen7d": 148,
+      "seen14d": 189,
+      "seen28d": 250,
+      "nullLastSeen": 121,
+      "totalAccounts": 594
+    }
+  },
+  "funnelEvents": {
+    "usable": false,
+    "reason": "268 lesson_completed rows all time against 7409 completed lesson_progress rows, about 3.6 percent capture; and logged-in lesson_opened lands on exactly 33 in three of the last four weeks",
+    "steps": [
+      "lesson_opened",
+      "quiz_attempted",
+      "lesson_completed",
+      "second_lesson_completed",
+      "return_visit"
+    ],
+    "allTime": {
+      "lesson_opened": 2045,
+      "quiz_attempted": 279,
+      "lesson_completed": 268,
+      "second_lesson_completed": 194,
+      "return_visit": 154
+    },
+    "byWeek": {
+      "w1": {
+        "lesson_opened": 207,
+        "quiz_attempted": 42,
+        "lesson_completed": 40,
+        "second_lesson_completed": 25,
+        "return_visit": 18,
+        "distinctUsers": 38,
+        "distinctVisitors": 174
+      },
+      "w2": {
+        "lesson_opened": 264,
+        "quiz_attempted": 64,
+        "lesson_completed": 63,
+        "second_lesson_completed": 47,
+        "return_visit": 32,
+        "distinctUsers": 68,
+        "distinctVisitors": 205
+      },
+      "w3": {
+        "lesson_opened": 457,
+        "quiz_attempted": 44,
+        "lesson_completed": 44,
+        "second_lesson_completed": 34,
+        "return_visit": 26,
+        "distinctUsers": 53,
+        "distinctVisitors": 427
+      },
+      "w4": {
+        "lesson_opened": 673,
+        "quiz_attempted": 45,
+        "lesson_completed": 41,
+        "second_lesson_completed": 34,
+        "return_visit": 15,
+        "distinctUsers": 41,
+        "distinctVisitors": 642
+      }
+    },
+    "lessonOpenedLoggedInByWeek": [
+      33,
+      60,
+      33,
+      33
+    ],
+    "lessonOpenedAnonByWeek": [
+      174,
+      204,
+      424,
+      640
+    ],
+    "openToCompleteRatioPct": {
+      "w1": 19.3,
+      "w4": 6.1
+    }
+  },
+  "devicesAndCountries": {
+    "window": [
+      "2026-09-08",
+      "2026-09-21"
+    ],
+    "devices": [
+      {
+        "deviceType": "desktop",
+        "visitors": 1343,
+        "pageviews": 7857,
+        "pvPerVisitor": 5.85
+      },
+      {
+        "deviceType": "mobile",
+        "visitors": 466,
+        "pageviews": 2155,
+        "pvPerVisitor": 4.62
+      },
+      {
+        "deviceType": "tablet",
+        "visitors": 12,
+        "pageviews": 44,
+        "pvPerVisitor": 3.67
+      },
+      {
+        "deviceType": "unknown",
+        "visitors": 19,
+        "pageviews": 39,
+        "pvPerVisitor": 2.05
+      }
+    ],
+    "devicesBasis": "visits/aggregate?by=deviceType, deduped in-window; rows sum to 1840, not to the 1977 window total",
+    "mobileShareByWeekPct": [
+      21.1,
+      21.6,
+      23.4,
+      26.4
+    ],
+    "mobileShareByWeekConfirmed": "165/782, 184/854, 216/923, 278/1054, exact",
+    "signupPageReach": {
+      "basis": "visits/count on both numerator and denominator",
+      "mobileVisitorsToSignup": 83,
+      "mobileVisitors": 494,
+      "mobilePct": 16.8,
+      "desktopVisitorsToSignup": 238,
+      "desktopVisitors": 1451,
+      "desktopPct": 16.4,
+      "direction": "mobile reaches /signup slightly more often than desktop"
+    },
+    "signupPageReachCorrection": "first draft used the aggregate desktop row (1343) under a count numerator, published 17.7 percent, and had the direction backwards; conclusion that mobile is not the leak is unchanged",
+    "mobileConversionBeyondSignupPage": "not answerable: profiles has no device column and the Vercel events dataset is empty",
+    "countriesReturned": 43,
+    "topCountries": [
+      {
+        "country": "US",
+        "visitors": 1100,
+        "pageviews": 4075,
+        "pvPerVisitor": 3.7
+      },
+      {
+        "country": "CN",
+        "visitors": 275,
+        "pageviews": 2730,
+        "pvPerVisitor": 9.93
+      },
+      {
+        "country": "CA",
+        "visitors": 87,
+        "pageviews": 501,
+        "pvPerVisitor": 5.76
+      },
+      {
+        "country": "SG",
+        "visitors": 75,
+        "pageviews": 1092,
+        "pvPerVisitor": 14.56
+      },
+      {
+        "country": "TW",
+        "visitors": 65,
+        "pageviews": 341,
+        "pvPerVisitor": 5.25
+      },
+      {
+        "country": "MX",
+        "visitors": 43,
+        "pageviews": 326,
+        "pvPerVisitor": 7.58
+      },
+      {
+        "country": "TR",
+        "visitors": 36,
+        "pageviews": 208,
+        "pvPerVisitor": 5.78
+      },
+      {
+        "country": "IL",
+        "visitors": 33,
+        "pageviews": 404,
+        "pvPerVisitor": 12.24
+      },
+      {
+        "country": "PY",
+        "visitors": 13,
+        "pageviews": 158,
+        "pvPerVisitor": 12.15
+      }
+    ],
+    "countryDimensionTotals": {
+      "visitors": 1840,
+      "pageviews": 10095
+    },
+    "usShareOfCountryDimensionPct": 59.8
+  },
+  "emailOptIn": {
+    "true": 567,
+    "false": 27,
+    "null": 0,
+    "total": 594,
+    "optedInPct": 95.45,
+    "priorReview20260908": {
+      "true": 471,
+      "total": 495,
+      "pct": 95.15
+    },
+    "settingsToggleExists": false,
+    "grepEvidence": "grep -rn \"email_opt_in\" src/app/settings/ returns nothing",
+    "referencedIn": [
+      "src/components/auth/auth-form.tsx",
+      "src/app/unsubscribe/page.tsx",
+      "src/app/api/lifecycle-email/route.ts",
+      "src/lib/retention.ts"
+    ],
+    "shippedSincePriorReview": [
+      "point-of-collection disclosure on the signup form",
+      "token-gated one-click /unsubscribe with resub=1 reversal"
+    ],
+    "unsubscribePageLast14": {
+      "visitors": 28,
+      "pageviews": 30
+    },
+    "gap": "the signup disclosure says people can switch emails off in Settings and Settings has no such control"
+  },
+  "feedbackAndContributions": {
+    "feedbackRows": 3,
+    "feedbackByStatus": {
+      "replied": 3
+    },
+    "feedbackDates": [
+      "2026-07-18",
+      "2026-07-19",
+      "2026-08-17"
+    ],
+    "feedbackPages": [
+      "/resources",
+      "/resources",
+      null
+    ],
+    "daysSinceLastFeedback": 36,
+    "contentEditsRows": 5,
+    "contentEditsByStatus": {
+      "accepted": 3,
+      "rejected": 2
+    },
+    "contentEditsDates": [
+      "2026-07-06",
+      "2026-07-06",
+      "2026-07-19",
+      "2026-08-03",
+      "2026-08-06"
+    ],
+    "daysSinceLastContentEdit": 47,
+    "lessonsVerified": 2,
+    "lessonsTotal": 394,
+    "lessonsVerifiedPct": 0.51,
+    "factCheckPageSinceLaunch": {
+      "window": [
+        "2026-09-06",
+        "2026-09-22"
+      ],
+      "visitors": 1,
+      "pageviews": 1
+    }
+  },
+  "anomalies": {
+    "cnEdgePattern": {
+      "window": [
+        "2026-09-08",
+        "2026-09-21"
+      ],
+      "filter": "country eq 'CN' and browserName eq 'Microsoft Edge'",
+      "visitors": 116,
+      "pageviews": 1651,
+      "pvPerVisitor": 14.2
+    },
+    "cnSpikeDays": [
+      {
+        "day": "2026-09-05",
+        "siteVisitors": 163,
+        "sitePageviews": 1757,
+        "cnVisitors": 80,
+        "cnPageviews": 1071,
+        "edgeVisitors": 49,
+        "edgePageviews": 1086,
+        "usVisitors": 47,
+        "usPageviews": 252
+      },
+      {
+        "day": "2026-09-06",
+        "siteVisitors": 114,
+        "sitePageviews": 1289,
+        "cnVisitors": 46,
+        "cnPageviews": 615,
+        "edgeVisitors": 27,
+        "edgePageviews": 588
+      },
+      {
+        "day": "2026-09-12",
+        "siteVisitors": 172,
+        "sitePageviews": 1615,
+        "cnVisitors": 66,
+        "cnPageviews": 761,
+        "edgeVisitors": 53,
+        "edgePageviews": 750
+      },
+      {
+        "day": "2026-09-19",
+        "siteVisitors": 167,
+        "sitePageviews": 1056,
+        "cnVisitors": 64,
+        "cnPageviews": 704,
+        "edgeVisitors": 35,
+        "edgePageviews": 485
+      }
+    ],
+    "cnShareOf0905PageviewsPct": 60.96,
+    "topPageviewDaysComplete": [
+      [
+        "2026-09-05",
+        1757
+      ],
+      [
+        "2026-09-12",
+        1615
+      ],
+      [
+        "2026-09-17",
+        1402
+      ],
+      [
+        "2026-09-06",
+        1289
+      ],
+      [
+        "2026-09-19",
+        1056
+      ]
+    ],
+    "cnSpikeDaysAreNotTopPageviewDays": "first draft claimed the four CN spike days are the four biggest pageview days; 09-17 is third and is not a CN day, and 09-19 is fifth",
+    "sept17Spike": {
+      "day": "2026-09-17",
+      "sitePageviews": 1402,
+      "siteVisitors": 134,
+      "cnPageviews": 96,
+      "cnSharePct": 6.9,
+      "usPageviews": 282,
+      "edgePageviewsAllCountries": 159,
+      "byRouteThatDay": {
+        "/guides/[department]/[module]/[lesson]": {
+          "visitors": 66,
+          "pageviews": 586,
+          "normalNeighbourPageviews": "about 200 on 62-71 visitors"
+        },
+        "/blog/[slug]": {
+          "visitors": 40,
+          "pageviews": 170,
+          "normalNeighbourPageviews": "about 60 on 50-odd visitors"
+        },
+        "/guides/[department]": {
+          "visitors": 41,
+          "pageviews": 84,
+          "normalNeighbourPageviews": "flat"
+        }
+      },
+      "unattributedAfterThoseRoutes": 562,
+      "reading": "pageviews-per-visitor spike on the lesson library and the blog with a normal visitor count and no country concentration, which is a crawler Vercel's bot filter did not catch"
+    },
+    "highPvPerVisitorCountries": {
+      "visitors": 396,
+      "pageviews": 4384,
+      "shareOfCountryDimensionPageviewsPct": 43.4,
+      "shareOfCountryDimensionVisitorsPct": 21.5,
+      "countries": [
+        "CN",
+        "SG",
+        "IL",
+        "PY"
+      ]
+    },
+    "funnelVsProgressDiscrepancy": {
+      "funnelLessonCompleted": 268,
+      "lessonProgressCompleted": 7409,
+      "capturePct": 3.6
+    },
+    "loggedInOpensConstant": [
+      33,
+      60,
+      33,
+      33
+    ],
+    "completionConcentrationLast14": {
+      "totalCompletions": 1298,
+      "distinctUsers": 91,
+      "top1User": 182,
+      "top1Pct": 14,
+      "top5": 408,
+      "top5Pct": 31.4,
+      "top10": 601,
+      "top10Pct": 46.3,
+      "team7002": 421,
+      "team7002Pct": 32.4
+    },
+    "top1UserLessonsPerDay": 13,
+    "top1UserShareOfLibraryPct": 46,
+    "bigCompletionDaysAreNotTrafficDays": [
+      {
+        "day": "2026-09-12",
+        "completions": 312,
+        "users": 26,
+        "visitors": 172
+      },
+      {
+        "day": "2026-09-22 (partial)",
+        "completions": 308,
+        "users": 25,
+        "visitors": 149,
+        "signups": 13
+      }
+    ],
+    "suspiciousHost": "learnfrc.systemerr.com, 2 visitors in the week of 2026-09-08",
+    "baselineReconciliation": {
+      "identicalMonths": {
+        "2026-06": [
+          688,
+          4526
+        ],
+        "2026-07": [
+          4471,
+          20924
+        ],
+        "2026-08": [
+          3025,
+          13368
+        ]
+      },
+      "septemberWindowThen": {
+        "window": [
+          "2026-09-01",
+          "2026-09-06"
+        ],
+        "visitors": 752,
+        "pageviews": 5172
+      },
+      "septemberWindowNow": {
+        "window": [
+          "2026-09-01",
+          "2026-09-06"
+        ],
+        "visitors": 757,
+        "pageviews": 5213
+      },
+      "explanation": "the baseline was captured at 22:53 UTC on 2026-09-06, so the rest of that day accrued afterwards",
+      "rollingTotalThen": {
+        "window": [
+          "2025-09-06",
+          "2026-09-06"
+        ],
+        "visitors": 8936,
+        "pageviews": 43990
+      },
+      "rollingTotalNow": {
+        "window": [
+          "2025-09-22",
+          "2026-09-22"
+        ],
+        "visitors": 11164,
+        "pageviews": 56520
+      },
+      "check": "8936 + 2226 visitors recorded 2026-09-07..2026-09-22 = 11162, two short of 11164, within live-accrual drift",
+      "nothingFellOutOfWindow": "first recorded visit is 2026-06-19"
+    },
+    "dbGrowthSinceBaseline": {
+      "accounts": [
+        491,
+        594
+      ],
+      "completions": [
+        5700,
+        7409
+      ],
+      "distinctPlausibleTeams": "WITHDRAWN. The published 174 to 194 (+20) was unfiltered at both ends.",
+      "distinctTeamsToday": {
+        "filtered": 196,
+        "unfiltered": 199
+      },
+      "distinctTeamsAt594RowPull": {
+        "filtered": 191,
+        "unfiltered": 194
+      },
+      "baselineIsUnfiltered": "scripts-snapshot.js line 62 is new Set(teamRows.map((t) => t.team_number)).size with no predicate, stored as distinctFrcTeams: 174",
+      "fix": "make scripts-snapshot.js import countDistinctTeams from src/lib/frc-team.ts, then recompute the baseline before quoting any delta"
+    }
+  },
+  "completionsByDepartmentLast14": {
+    "Getting Started with FRC": 446,
+    "Programming, Controls & Sensors": 220,
+    "Mechanical, Build & Pneumatics": 167,
+    "Business, Operations & Fundraising": 142,
+    "Safety": 89,
+    "CAD & Design": 52,
+    "The Impact Award": 50,
+    "Scouting & Strategy": 46,
+    "Electrical & Wiring": 36,
+    "Media, Branding & Outreach": 31,
+    "Drive Team": 19,
+    "total": 1298,
+    "distinctLessonsTouched": 353,
+    "lessonsTotal": 394,
+    "gettingStartedSharePct": 34.4
+  },
+  "verification": {
+    "summary": "six claims were independently re-derived and disputed; all six were upheld against this report and none survived unchanged. Five were the same basis error, a deduped visits/aggregate row divided into a day-summed visits/count total. The sixth was a plausibility filter described in prose and not applied in code.",
+    "disputed": [
+      {
+        "id": "chiefdelphi-decay",
+        "published": "18, 19, 21, 12 visitors by week, now 1.1 percent of traffic",
+        "rederived": "aggregate 18, 19, 21, 12; visits/count 31, 22, 23, 14; 1.3 percent on one basis",
+        "resolution": "corrected to the count series",
+        "why": "the aggregate row was quoted beside a visits/count engine series, then a deduped 12 was divided into a day-summed 1054; the decline survives on both bases but the shape goes from rise-then-fall to fall, plateau, fall"
+      },
+      {
+        "id": "direct-share",
+        "published": "1342 visitors (67.9 percent), 8939 pageviews (83.6 percent), 6.66 each",
+        "rederived": "1445 (73.1 percent), 9462 (88.5 percent), 6.55 each, all visits/count",
+        "resolution": "corrected",
+        "why": "the raw aggregate figures reproduce and the percentages do not; direct is 5.2 points larger than published, and the google.com contrast holds either way at 1.23 aggregate and 1.22 count"
+      },
+      {
+        "id": "blog-route-reach",
+        "published": "/blog/[slug] drew 567 of 1977 visitors, 28.7 percent",
+        "rederived": "608 of 1977, 30.8 percent, both visits/count",
+        "resolution": "corrected, and the opening paragraph restated",
+        "why": "the 567 reproduces as an aggregate row; 28.7 percent was that row over a day-summed total, and this figure leads the report"
+      },
+      {
+        "id": "cn-spike-days",
+        "published": "the four biggest pageview days are Chinese bursts: 09-05, 09-06, 09-12, 09-19",
+        "rederived": "09-05 is 1071 of 1757 (60.96 percent) exactly; the four biggest complete days are 09-05, 09-12, 09-17, 09-06",
+        "resolution": "corrected, and 09-17 added as anomaly item 2",
+        "why": "the 09-05 arithmetic was right and the framing was wrong; 09-17 is third at 1402 pageviews with China at 96 of them, and 09-19 is fifth"
+      },
+      {
+        "id": "mobile-share-rising",
+        "published": "weekly share 21.1/21.6/23.4/26.4; mobile 16.8 percent reaches /signup against desktop 17.7 percent",
+        "rederived": "weekly shares exact (165/184/216/278 over 782/854/923/1054); mobile 83/494 = 16.80 percent, desktop 238/1451 = 16.40 percent",
+        "resolution": "corrected; direction flipped",
+        "why": "the desktop denominator was the aggregate row (1343) under a count numerator, so mobile actually reaches /signup slightly more often than desktop; the conclusion that mobile is not the leak stands"
+      },
+      {
+        "id": "db-growth-since-baseline",
+        "published": "accounts 491 to 594, completions 5700 to 7409, distinct plausible FRC teams 174 to 194 (+20)",
+        "rederived": "accounts and completions confirmed; countDistinctTeams gives 191 on the 594-row pull and 196 today, not 194",
+        "resolution": "corrected, and the +20 withdrawn rather than restated",
+        "why": "194 was the unfiltered distinct count of non-null team_number and includes 12119, 12345 and 99990; the 174 baseline is unfiltered too, so there is no like-for-like delta until scripts-snapshot.js imports the predicate"
+      }
+    ],
+    "directionOfCorrections": "two make the site look better than the first draft (direct +5.2 points, blog reach +2.1 points), one flips a direction, one withdraws a number"
+  },
+  "questionsNotAnswered": {
+    "adminPanelPersonalData": {
+      "answer": "already stripped; nothing to remove",
+      "columnsRendered": [
+        "id",
+        "username",
+        "team_number",
+        "xp",
+        "referred_by",
+        "source",
+        "created_at"
+      ],
+      "evidence": "src/lib/admin.ts:482 and :597, src/lib/admin-team.ts:53, src/lib/admin.ts:1006; people are named through handleLabel() as @username or 'member' plus six id characters; grep finds no full_name or signup_ip reads under src/app/admin, src/components/admin or src/lib/admin.ts",
+      "hideNameSet": 8,
+      "remainingExposureSurfaces": [
+        "src/app/api/name-scan/route.ts sends full_name to a moderation scan",
+        "src/app/api/progress-scan/route.ts reads signup_ip",
+        "src/app/api/lifecycle-email/route.ts puts full_name in email greetings",
+        "a person's own settings, dashboard, profile and certificate pages"
+      ]
+    },
+    "adminRecruitPool": {
+      "siteWideRoles": {
+        "student": 576,
+        "mentor": 13,
+        "other": 3,
+        "coach": 2,
+        "alum": 1
+      },
+      "nonStudentCount": 19,
+      "nonStudentPct": 3.2,
+      "mentorOrCoachCount": 15,
+      "mentorOrCoachPct": 2.5,
+      "last28SignupsAllStudents": 190,
+      "mostRecentSurvivingNonStudentSignup": "2026-08-05",
+      "answer": "if the process wants mentors, the applicant base is 15 people and it has not gained one in seven weeks"
+    },
+    "sept17Spike": "answered; see anomalies.sept17Spike and anomaly item 2. About 562 pageviews remain unattributed after three route-filtered by=day calls, and closing that needs one by=day series per candidate route because single-day by=requestPath aggregates are broken.",
+    "team7002Runway": {
+      "accounts": 64,
+      "completionsAllTime": 842,
+      "distinctLessonsTouched": 241,
+      "librarySize": 394,
+      "lessonsNeverTouched": 153,
+      "accountsWithAnyCompletion": 37,
+      "accountsWithNone": 27,
+      "medianAmongActive": 14,
+      "heaviestAccount": 159,
+      "siteTopAccountIsNot7002": "site top account did 182 in 14 days, above 7002's all-time maximum of 159",
+      "headlinesWithout7002": {
+        "signupsLast14": 66,
+        "signupsPrev14": 75,
+        "signupsChangePct": -12,
+        "completionsLast14": 877,
+        "visitorToSignupPct": 3.34,
+        "signupsLast28": 141
+      },
+      "notComputable": "completions growth rate excluding 7002, because the previous fortnight's 7002 completion share was never measured",
+      "reading": "supply is not the risk (153 lessons untouched, median active member at 14 of 394); attention is"
+    },
+    "funnelInstrumentFix": {
+      "problem": "funnel_events captures 3.6 percent of completions and logged-in lesson_opened is pinned at 33 in three separate weeks; all 7409 lesson_progress rows have a non-null completed_at, so nothing in the database records a start",
+      "fix": "one table and one server action: write a row on lesson open using the server-session user id, key on (user_id, lesson_id, day) for idempotency, index on user_id, leave completions in lesson_progress",
+      "unlocks": "where the 47 solo accounts with a median of 0 lessons actually stop"
+    },
+    "basisLabels": "done; see method.everyTrafficFigureNeedsABasis and the per-table basis keys",
+    "referredBy": {
+      "populated": 35,
+      "ofAccounts": 595,
+      "pct": 5.9,
+      "last14": 7,
+      "ofLast14": 89,
+      "distinctReferrers": 10,
+      "perReferrer": [
+        11,
+        5,
+        5,
+        3,
+        3,
+        3,
+        2,
+        1,
+        1,
+        1
+      ],
+      "contrast": "10 of the last 89 self-reported source 'Referral' while only 7 carry a referred_by"
+    },
+    "personLevelConversion": {
+      "answer": "not available from Vercel at all",
+      "why": "visits/count is day-summed (by=day sums to exactly the same 2831 as a single call), and visits/aggregate dedups only inside one dimension and sums to 1840",
+      "headlineRestated": "4.50 percent is 89 accounts over 1977 visitor-days, not 4.50 percent of people; the true per-person rate is higher by an unretrievable repeat-visit factor",
+      "whatItWouldTake": "a first-party identifier written through the Vercel events dataset, which nothing does because nothing calls track()"
+    },
+    "automatedSignups": {
+      "sourceNull": 162,
+      "ofAccounts": 595,
+      "mostRecentNullSource": "2026-08-10",
+      "reportClaimHolds": "null sources really are all pre-redesign",
+      "whatHappenedDuringVerification": "an earlier pull returned 597 rows and 164 nulls; the two extra rows (created 2026-09-22T22:11:56Z and 22:11:58Z, teams 4414 and 1678, role mentor) were throwaway test accounts created and deleted by the maintainer's own test harness that evening, which is why the mentor count went 15 to 13 between pulls",
+      "pairsUnder10sAllTime": 13,
+      "benignPairs": "11 of 13 are one team registering together (8056 three times in a minute on 07-16, 6017 four times in 21 seconds on 09-01, 9427 on 09-18)",
+      "liveSuspiciousPair": "2026-09-22 19:38:22 and 19:38:24, both source Direct, team numbers 1099 and 1",
+      "resolved": "test accounts, created and deleted by the maintainer while testing the admin-application flow"
+    },
+    "monitoringCadence": {
+      "existsToday": "vercel.json runs /api/snapshot daily at 06:00 UTC and /api/lifecycle-email at 16:00; nothing re-reads this report",
+      "fixFirst": "scripts-snapshot.js computes distinctFrcTeams without the plausibility predicate, which is how the 174 baseline got there",
+      "thresholds": [
+        "non-China visitor-days below 700 in a complete week, against roughly 845 now",
+        "signups below 25 in each of two consecutive complete weeks, since one week of 31 is normal in the run 31/70/33/56",
+        "rolling 90-account 48-hour activation below 30 percent, against 36.7 percent now",
+        "Bing ahead of Google by more than 20 percent for three consecutive weeks",
+        "zero completed lesson_progress rows from any of team 7002's 64 user ids for seven consecutive days, or fewer than 100 in a fortnight against 421 in the last one"
+      ],
+      "thresholdBasis": "visits/count throughout",
+      "whyTheLastOneMatters": "it covers 32.4 percent of completions and 25.8 percent of 28-day signups, and nothing watches it today"
+    }
+  }
+}
