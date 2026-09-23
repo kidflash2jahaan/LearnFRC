@@ -11,13 +11,15 @@ export const dynamic = "force-dynamic";
  * the navbar is the kind of bug that looks like a logout.
  */
 export async function GET() {
-  const { user, profile, isAdmin } = await getSession();
+  const { user, profile, role, isAdmin, isSuperAdmin } = await getSession();
   return NextResponse.json(
     {
       authed: !!user,
       email: user?.email ?? null,
       profile,
+      role,
       isAdmin,
+      isSuperAdmin,
     },
     { headers: { "Cache-Control": "no-store" } }
   );

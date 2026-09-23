@@ -410,3 +410,55 @@ export function subscribeEmailHtml() {
        style="display:inline-block;background:#1B36C8;color:#ffffff;text-decoration:none;padding:12px 22px;border:2px solid #16181B;border-radius:4px;font-weight:700">Explore the guides</a>
   `);
 }
+
+/* ── Admin team applications ─────────────────────────────────────── */
+
+/** To the applicant, the moment they apply. */
+export function applicationReceivedHtml(username?: string | null) {
+  const greeting = username ? `Hey @${esc(username)},` : "Hey,";
+  return emailShell(`
+    <p style="margin:0 0 14px">${greeting}</p>
+    <!-- No clock on it. /apply says "You'll get an email either way" twice and
+         attaches no deadline, deliberately: the reviewer is one person who also
+         writes every lesson, and nothing has been decided yet, so "usually
+         within a week" would be a track record that does not exist. This is the
+         first thing an applicant reads from the site, and it should not be the
+         one promise it can be caught breaking. -->
+    <p style="margin:0 0 14px">Your application to help run LearnFRC is in. It goes to one person, and you'll get a plain answer either way.</p>
+    <p style="margin:0 0 14px">There's nothing else to do for now. If your plans change, you can withdraw it from the same page you applied on.</p>
+    <p style="margin:0;color:#565C60;font-size:13px">Thanks for offering. Most of what makes the site better comes from people who noticed something wrong and said so.</p>
+  `);
+}
+
+/** To the applicant, once a super admin has decided. */
+export function applicationDecisionHtml({
+  accepted,
+  note,
+  username,
+}: {
+  accepted: boolean;
+  note?: string | null;
+  username?: string | null;
+}) {
+  const greeting = username ? `Hey @${esc(username)},` : "Hey,";
+  const noteHtml = note
+    ? `<div style="margin:16px 0;padding:12px 16px;border-left:3px solid #C4A77D;background:#E6E8E3"><p style="margin:0;color:#565C60;font-size:12px;font-family:ui-monospace,Menlo,Consolas,monospace">note from the reviewer</p><p style="margin:6px 0 0;white-space:pre-wrap">${esc(note)}</p></div>`
+    : "";
+  if (accepted) {
+    return emailShell(`
+      <p style="margin:0 0 14px">${greeting}</p>
+      <p style="margin:0 0 14px;font-weight:700;font-size:17px">You're on the LearnFRC team.</p>
+      <p style="margin:0 0 14px">Your account now opens the admin panel. From there you can read the site's numbers, answer feedback that readers send in, review edits people suggest to lessons, and mark a lesson as verified once you've checked it against its sources.</p>
+      ${noteHtml}
+      <p style="margin:20px 0 6px"><a href="https://learnfrc.com/admin" style="display:inline-block;background:#1B36C8;color:#ffffff;text-decoration:none;padding:11px 20px;border:2px solid #16181B;border-radius:4px;font-weight:700">Open the admin panel →</a></p>
+      <p style="margin:16px 0 0;color:#565C60;font-size:13px">Two things to know. The panel shows no real names or email addresses, on purpose. And the verified mark is a public claim, so only tick it when you've actually checked.</p>
+    `);
+  }
+  return emailShell(`
+    <p style="margin:0 0 14px">${greeting}</p>
+    <p style="margin:0 0 14px">Thanks for applying to help run LearnFRC. I'm not adding you to the admin team right now.</p>
+    ${noteHtml}
+    <p style="margin:0 0 14px">That isn't a judgement on you or your team. The site is small and the admin side needs very few people at a time. You can apply again later, and suggesting edits to any lesson stays open to everyone.</p>
+    <p style="margin:0;color:#565C60;font-size:13px">Thanks again for offering.</p>
+  `);
+}

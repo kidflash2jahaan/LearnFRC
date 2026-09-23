@@ -11,7 +11,9 @@ import { getOverviewStats } from "@/lib/queries";
  * of the codebase owns the route. "the record" is the one worth naming: About,
  * Contributions and Corrections are where the site says who wrote it and what
  * it got wrong, and burying a corrections log in the fine print is the same as
- * not having one.
+ * not having one. "Help run it" closes that column because it is the same
+ * subject from the other side: who is accountable, and how somebody else joins
+ * the list.
  */
 const LEARN = [
   { label: "Guides", href: "/guides" },
@@ -35,6 +37,7 @@ const RECORD = [
   { label: "Contributions", href: "/contributions" },
   { label: "Corrections", href: "/corrections" },
   { label: "Contact", href: "/contact" },
+  { label: "Help run it", href: "/apply" },
 ];
 
 const ELSEWHERE = [

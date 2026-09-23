@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { getAdminStats, getPendingEdits, getPendingSubmissions } from "@/lib/admin";
+import { getPendingApplicationCount } from "@/lib/admin-team";
 import { getAnalyticsAvailability } from "@/lib/vercel-analytics";
 import { getRetentionStats } from "@/lib/retention";
 import { getFunnelStats } from "@/lib/funnel";
@@ -84,31 +85,58 @@ function Footnote({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** One line of the taped card at the top: a figure and what it wants. */
+/**
+ * One line of the taped card at the top: a figure and what it wants.
+ *
+ * With `href` the whole row becomes the link and the label takes a standing
+ * 2px underline, rather than one that appears under the pointer: this is the
+ * only actionable row in the card, and a row that only looks like a link once
+ * a mouse is on it is not discoverable by keyboard or on a touch screen. The
+ * row clears 44px on its own, because the figure beside it is set at 24px and
+ * up with 10px of padding either side.
+ */
 function NowRow({
   value,
   label,
   hint,
+  href,
 }: {
   value: number;
   label: string;
   hint?: string;
+  href?: string;
 }) {
-  return (
-    <div className="flex items-baseline gap-3 border-t border-[rgba(22,24,27,0.13)] py-2.5 first:border-t-0">
+  const body = (
+    <>
       <b className="min-w-[2.6ch] shrink-0 font-mono text-[clamp(1.5rem,1.1rem+1.3vw,2.05rem)] leading-none font-bold tabular-nums text-blue">
         {value.toLocaleString()}
       </b>
       <span className="min-w-0">
-        <span className="block text-[0.95rem] leading-snug">{label}</span>
+        <span
+          className={
+            href
+              ? "block text-[0.95rem] leading-snug font-bold text-blue underline decoration-2 underline-offset-4"
+              : "block text-[0.95rem] leading-snug"
+          }
+        >
+          {label}
+        </span>
         {hint ? <span className="nb-slug mt-0.5 block">{hint}</span> : null}
       </span>
-    </div>
+    </>
+  );
+  const shell =
+    "flex items-baseline gap-3 border-t border-[rgba(22,24,27,0.13)] py-2.5 first:border-t-0";
+  if (!href) return <div className={shell}>{body}</div>;
+  return (
+    <Link href={href} className={shell}>
+      {body}
+    </Link>
   );
 }
 
 export default async function AdminPage() {
-  const { user, isAdmin } = await getSession();
+  const { user, isAdmin, isSuperAdmin } = await getSession();
   if (!user) redirect("/login?next=/admin");
 
   if (!isAdmin) {
@@ -132,15 +160,26 @@ export default async function AdminPage() {
     );
   }
 
-  const [stats, retention, funnel, pendingEdits, pendingSubmissions, feedback] =
-    await Promise.all([
-      getAdminStats(),
-      getRetentionStats(),
-      getFunnelStats(),
-      getPendingEdits(),
-      getPendingSubmissions(),
-      getFeedback(),
-    ]);
+  const [
+    stats,
+    retention,
+    funnel,
+    pendingEdits,
+    pendingSubmissions,
+    feedback,
+    pendingApplications,
+  ] = await Promise.all([
+    getAdminStats(),
+    getRetentionStats(),
+    getFunnelStats(),
+    getPendingEdits(),
+    getPendingSubmissions(),
+    getFeedback(),
+    // Only a super admin sees the line this feeds, so a plain admin does not
+    // pay for the query at all. It rides in the same batch either way, so the
+    // person who does see it waits on nothing extra.
+    isSuperAdmin ? getPendingApplicationCount() : Promise.resolve(0),
+  ]);
 
   // Computed here, not via the client module's openFeedbackCount helper:
   // calling an export of a "use client" module from a Server Component throws.
@@ -223,10 +262,12 @@ export default async function AdminPage() {
       value: t.completed,
     }))
   );
+  // One identifier per row, already built server-side: a handle, or a short id
+  // fragment for someone who never picked one. There is no second name to put
+  // in `sub` any more, and there should not be.
   const recruiterRows = withPct(
     stats.recruiters.slice(0, 8).map((r) => ({
-      label: r.name,
-      sub: r.username ? `@${r.username}` : undefined,
+      label: r.label,
       value: r.referrals,
     }))
   );
@@ -338,6 +379,22 @@ export default async function AdminPage() {
             <p className="mt-5">
               <AutoRefresh seconds={30} />
             </p>
+
+            {/* Wayfinding only, with no count on it. The count lives in the
+                card on the right with the other four things waiting on a
+                person, so this stamp says where the desk is and nothing more:
+                two figures for one fact on one screen is two figures that can
+                disagree. A plain admin does not get the line at all. */}
+            {isSuperAdmin ? (
+              <p className="mt-1">
+                <Link
+                  href="/admin/team"
+                  className="nb-slug inline-flex min-h-11 items-center font-bold text-blue underline decoration-2 underline-offset-4 hover:decoration-blue"
+                >
+                  team / manage admins
+                </Link>
+              </p>
+            ) : null}
           </div>
 
           <div>
@@ -359,6 +416,25 @@ export default async function AdminPage() {
                   label="messages waiting for a reply"
                   hint={`${feedback.length.toLocaleString()} received in total`}
                 />
+                {/* Super admins only, and the one row in this card that is a
+                    link. Applications are the single thing on the site that
+                    nobody else can answer, so leaving them out of the card the
+                    page itself tells you to read first was the one count a
+                    super admin could miss. A plain admin does not get the row,
+                    because a link to a page that turns you away is worse than
+                    no link. */}
+                {isSuperAdmin ? (
+                  <NowRow
+                    value={pendingApplications}
+                    label={
+                      pendingApplications === 1
+                        ? "application waiting on you"
+                        : "applications waiting on you"
+                    }
+                    hint="only a super admin can answer these"
+                    href="/admin/team"
+                  />
+                ) : null}
                 <NowRow
                   value={pendingEdits.length}
                   label="content edits to review"
@@ -700,7 +776,7 @@ export default async function AdminPage() {
                         className="nb-hair flex items-baseline justify-between gap-3 py-2 first:border-t-0 first:pt-0"
                       >
                         <span className="min-w-0 truncate text-[0.95rem]">
-                          {u.username ? `@${u.username}` : u.full_name || "New member"}
+                          {u.username ? `@${u.username}` : "New member"}
                           {u.team_number ? (
                             <span className="nb-slug ml-2">#{u.team_number}</span>
                           ) : null}

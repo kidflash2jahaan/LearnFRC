@@ -23,15 +23,20 @@ function timeAgo(iso: string): string {
 /**
  * What people wrote in, and the box to write back from.
  *
- * A carbon-copy log: one message per ruled line, the sender and the page they
- * were on stamped above it in mono, the message itself in reading type. No
- * card chrome and no heading, because the drawer above supplies both.
+ * A carbon-copy log: one message per ruled line, whether it can be answered and
+ * the page it came from stamped above it in mono, the message itself in reading
+ * type. No card chrome and no heading, because the drawer above supplies both.
  *
  * The old version leant on Lucide envelopes to say whether a message had an
  * address, had been answered, or was anonymous. This system has no icon set, so
  * every one of those states is now a WORD. That is not a downgrade: "anonymous"
  * and "replied" are unambiguous read aloud, printed in greyscale, or glanced at
  * by someone who has never seen the icon before.
+ *
+ * The stamp used to print the sender's email. It does not any more, and the
+ * address never reaches this component at all: an admin answering feedback
+ * needs to know that a reply will arrive, not who they are writing to, and
+ * `replyToFeedback` re-reads the address server-side from the id in the form.
  */
 export function FeedbackInbox({ items }: { items: FeedbackItem[] }) {
   const shown = items.slice(0, MAX_ROWS);
@@ -76,22 +81,27 @@ function FeedbackRow({ item }: { item: FeedbackItem }) {
   }, [state]);
 
   const replied = item.status === "replied" || state?.success;
-  const canReply = !replied && !!item.fromEmail;
+  const canReply = !replied && item.hasReplyAddress;
 
   return (
     <li className="nb-hair py-4 first:border-t-0 first:pt-0">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          {/* The stamp along the top of a filed message: who, where from, when,
-              and whether it has been answered. Slug-shaped, like every other
-              identifier on the site. */}
+          {/* The stamp along the top of a filed message: whether it can be
+              answered, where it came from, when, and whether it has been
+              answered already. Slug-shaped, like every other identifier on the
+              site. The first line is set in ink when a reply will reach
+              someone and left grey when it will not, so the two cases are
+              apart at a glance as well as in words. */}
           <p className="nb-slug flex min-w-0 flex-wrap items-baseline gap-x-4 gap-y-1">
-            {item.fromEmail ? (
-              <span className="min-w-0 max-w-full truncate text-ink" title={item.fromEmail}>
-                from / {item.fromEmail}
-              </span>
+            {/* The state, not the mechanism behind it. What this line has to
+                answer is whether the Reply button below will appear, and
+                "has a reply address" answers a different question while
+                putting the word this panel exists to strip back on screen. */}
+            {item.hasReplyAddress ? (
+              <span className="text-ink">from / can be answered</span>
             ) : (
-              <span>from / anonymous, no address</span>
+              <span>from / anonymous, no reply possible</span>
             )}
             {item.page ? (
               <span className="min-w-0 max-w-full truncate" title={item.page}>
@@ -141,7 +151,7 @@ function FeedbackRow({ item }: { item: FeedbackItem }) {
         <form id={formId} action={action} className="nb-field mt-3 max-w-2xl">
           <input type="hidden" name="id" value={item.id} />
           <label className="nb-label" htmlFor={fieldId}>
-            Reply to {item.fromEmail}
+            Reply to the sender
           </label>
           <textarea
             id={fieldId}
@@ -152,8 +162,12 @@ function FeedbackRow({ item }: { item: FeedbackItem }) {
             aria-invalid={state?.error ? true : undefined}
             className="nb-input min-h-[6rem]"
           />
+          {/* "app" appears nowhere else a reader can see on this site, and
+              what matters before writing is that this row is the end of the
+              exchange, not which client the recipient is not using. */}
           <p className="nb-hint">
-            Goes straight to their inbox from LearnFRC. They cannot reply to it in the app.
+            It goes straight to their inbox from LearnFRC. There&rsquo;s no
+            thread on the site, so this row is the whole conversation.
           </p>
           {/* The toast is easy to miss if the drawer has scrolled: the failure
               is also printed against the field that caused it. */}

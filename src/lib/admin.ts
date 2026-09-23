@@ -57,11 +57,16 @@ export type DepartmentStat = {
   learners: number;
 };
 
-/** A trimmed profile used for the recent-signups table. */
+/**
+ * A trimmed profile used for the recent-signups table.
+ *
+ * No `full_name`. Someone's real name is not an admin figure, and it used to
+ * ride along here purely as the label when a member had not picked a handle.
+ * The panel prints a neutral label in that case instead.
+ */
 export type RecentSignup = {
   id: string;
   username: string | null;
-  full_name: string | null;
   team_number: number | null;
   xp: number;
   created_at: string;
@@ -177,6 +182,7 @@ export type AdminStats = {
   teams: AdminTeam[];
   /** Distinct FRC team numbers represented across all user profiles. */
   totalUniqueTeams: number;
+  /** `user` is a public handle or a neutral label, never a real name. */
   recentCompletions: { user: string; lesson: string; dept: string; at: string }[];
   achievementBreakdown: { name: string; icon: string; earned: number }[];
   /** Signed-in users (or anonymous visitors) active in the last few minutes. */
@@ -187,8 +193,12 @@ export type AdminStats = {
   sources7d: { name: string; count: number }[];
   /** Number of users who joined via a referral link. */
   referralUsers: number;
-  /** Who referred how many people, most first. */
-  recruiters: { name: string; username: string | null; referrals: number }[];
+  /**
+   * Who referred how many people, most first. One label per recruiter, already
+   * built: a public handle, or a short id fragment when they never picked one.
+   * Never a real name, and never a whole id.
+   */
+  recruiters: { label: string; referrals: number }[];
   /**
    * Which surface earned each referral signup. Sums to `referralUsers`; the
    * `surface: null` row is everything that predates attribution.
@@ -337,6 +347,25 @@ function normalizePath(raw: string): string {
 }
 
 /**
+ * How a person is named anywhere this file feeds: their public handle, and
+ * nothing else.
+ *
+ * Every list on the panel used to fall back to `profiles.full_name`, which put
+ * real names in front of every admin for no operational gain: nothing on this
+ * page is an action taken against a named individual, it is counting. A handle
+ * is what the rest of the site shows, so it is what the panel shows too, and
+ * when someone never picked one there is nothing left worth printing.
+ *
+ * Pass `id` ONLY where rows have to stay apart from each other, like a ranked
+ * list where two handle-less members would otherwise collapse into one
+ * indistinguishable row. It prints six characters and never a whole id.
+ */
+function handleLabel(username: string | null | undefined, id?: string): string {
+  if (username) return `@${username}`;
+  return id ? `member ${id.slice(0, 6)}` : "a member";
+}
+
+/**
  * A folded referrer breakdown, in the `{ name, count }` shape the acquisition
  * chart takes.
  *
@@ -450,7 +479,7 @@ export async function getAdminStats(): Promise<AdminStats> {
     supabase.from("admin_department_stats").select("*"),
     supabase
       .from("profiles")
-      .select("id, username, full_name, team_number, xp, created_at")
+      .select("id, username, team_number, xp, created_at")
       .order("created_at", { ascending: false })
       .limit(8),
     supabase.from("admin_daily_signups").select("day, count"),
@@ -543,12 +572,16 @@ export async function getAdminStats(): Promise<AdminStats> {
     });
   }
 
-  const authList = await supabase.auth.admin.listUsers({ perPage: 1000 });
-
-  // Verified-user total, derived from auth (email_confirmed_at).
+  // Verified-user total, derived from auth (email_confirmed_at). Paged, for
+  // the same reason the profiles read below is paged: listUsers returns at
+  // most one page, so a single call would freeze this figure at 1000 forever
+  // once the site grows past it, and nothing on the panel would say so.
   let verifiedUsers = 0;
-  for (const u of authList.data?.users ?? []) {
-    if (u.email_confirmed_at) verifiedUsers++;
+  for (let page = 1; ; page++) {
+    const { data } = await supabase.auth.admin.listUsers({ page, perPage: 1000 });
+    const users = data?.users ?? [];
+    for (const u of users) if (u.email_confirmed_at) verifiedUsers++;
+    if (users.length < 1000) break;
   }
 
   // Page through profiles — the table can exceed PostgREST's 1000-row response
@@ -558,8 +591,11 @@ export async function getAdminStats(): Promise<AdminStats> {
   for (let from = 0; ; from += 1000) {
     const { data } = await supabase
       .from("profiles")
+      // No `full_name`, and no `hide_name` either: that flag only ever decided
+      // whether a real name was safe to print, and there is no real name here
+      // to make that decision about any more.
       .select(
-        "id, full_name, username, team_number, xp, referred_by, source, hide_name, created_at"
+        "id, username, team_number, xp, referred_by, source, created_at"
       )
       .order("id", { ascending: true })
       .range(from, from + 999);
@@ -646,9 +682,16 @@ export async function getAdminStats(): Promise<AdminStats> {
   const recentCompletions = ((recentCompRes.data as unknown as CompRow[]) ?? []).map((r) => {
     const p = pmap.get(r.user_id) as Record<string, unknown> | undefined;
     return {
-      user: (p?.full_name as string) || (p?.username as string) || "Learner",
-      lesson: r.lessons?.title ?? "—",
-      dept: r.lessons?.modules?.departments?.name ?? "—",
+      // No id fragment here: this is a feed of separate events, not a ranked
+      // list, so two rows reading "a member" are two different moments and
+      // nothing is lost by not telling them apart.
+      user: handleLabel(p?.username as string | null | undefined),
+      // Words, not a glyph. Both of these are printed straight at a reader in
+      // the recent-completions list, and the binder's rule is that a state is
+      // a word: an em dash is unreadable aloud, unreadable in greyscale, and
+      // the one punctuation mark the writing rules ban outright.
+      lesson: r.lessons?.title ?? "untitled lesson",
+      dept: r.lessons?.modules?.departments?.name ?? "no department",
       at: r.completed_at,
     };
   });
@@ -669,12 +712,15 @@ export async function getAdminStats(): Promise<AdminStats> {
 
   // Online now: signed-in users with a heartbeat in the last 5 minutes.
   const onlineSince = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+  // A count, not a list. Nothing was ever read off these rows except `.length`,
+  // so fetching names to measure the size of an array was pure exposure, and
+  // the unbounded select would also have stopped counting at PostgREST's
+  // 1000-row cap. `head: true` returns the number and no rows at all.
   const onlineRes = await supabase
     .from("profiles")
-    .select("full_name, username, hide_name, last_seen_at")
-    .gte("last_seen_at", onlineSince)
-    .order("last_seen_at", { ascending: false });
-  const onlineMembers = (onlineRes.data ?? []).length;
+    .select("id", { count: "exact", head: true })
+    .gte("last_seen_at", onlineSince);
+  const onlineMembers = onlineRes.count ?? 0;
   // Anonymous/guest browsers active in the SAME 5-minute window used for the
   // member count above. This used to be a superset of onlineMembers, because
   // everyone fired the page-view beacon; that beacon is retired, so the RPC
@@ -693,11 +739,9 @@ export async function getAdminStats(): Promise<AdminStats> {
   // ── Acquisition sources + referrals (from the profiles we already fetched) ──
   type ProfRow = {
     id: string;
-    full_name: string | null;
     username: string | null;
     referred_by: string | null;
     source: string | null;
-    hide_name: boolean | null;
     created_at: string;
   };
   // Reuse the fully-paginated profile list fetched above (typed for this block).
@@ -726,14 +770,13 @@ export async function getAdminStats(): Promise<AdminStats> {
     recruiterCounts.set(p.referred_by, (recruiterCounts.get(p.referred_by) ?? 0) + 1);
   }
   const recruiters = [...recruiterCounts.entries()]
-    .map(([refId, count]) => {
-      const r = pmap.get(refId) as ProfRow | undefined;
-      const name =
-        (r && !r.hide_name && (r.full_name || r.username)) ||
-        r?.username ||
-        "Member";
-      return { name, username: r?.username ?? null, referrals: count };
-    })
+    .map(([refId, count]) => ({
+      // A ranked list, so the id fragment earns its place: without it every
+      // recruiter who never picked a handle folds into one "a member" row and
+      // the ranking stops being readable.
+      label: handleLabel((pmap.get(refId) as ProfRow | undefined)?.username, refId),
+      referrals: count,
+    }))
     .sort((a, b) => b.referrals - a.referrals);
 
   // Which surface earned each referral (SQL aggregate above). Postgres bigints
@@ -928,6 +971,7 @@ export type PendingEdit = {
   lessonId: string;
   lessonTitle: string;
   lessonPath: string;
+  /** Public handle, or a neutral label. Never a real name. */
   editor: string;
   note: string | null;
   original: string;
@@ -959,7 +1003,7 @@ export async function getPendingEdits(): Promise<PendingEdit[]> {
     articleIds.length
       ? admin.from("articles").select("id, slug, title").in("id", articleIds)
       : Promise.resolve({ data: [] as { id: string; slug: string; title: string }[] }),
-    admin.from("profiles").select("id, full_name, username").in("id", editorIds),
+    admin.from("profiles").select("id, username").in("id", editorIds),
   ]);
 
   type LessonRow = {
@@ -974,10 +1018,11 @@ export async function getPendingEdits(): Promise<PendingEdit[]> {
   const articleById = new Map(
     ((articlesRes.data as { id: string; slug: string; title: string }[]) ?? []).map((a) => [a.id, a])
   );
-  const nameById = new Map(
-    ((profs as { id: string; full_name: string | null; username: string | null }[]) ?? []).map(
-      (p) => [p.id, p.full_name || p.username || "A member"]
-    )
+  const labelById = new Map(
+    ((profs as { id: string; username: string | null }[]) ?? []).map((p) => [
+      p.id,
+      handleLabel(p.username),
+    ])
   );
 
   return edits.map((e) => {
@@ -999,7 +1044,7 @@ export async function getPendingEdits(): Promise<PendingEdit[]> {
       lessonId: (e.lesson_id ?? e.article_id) as string,
       lessonTitle: title,
       lessonPath: path,
-      editor: nameById.get(e.editor_id as string) ?? "A member",
+      editor: labelById.get(e.editor_id as string) ?? "a member",
       note: (e.note as string) ?? null,
       original: (e.original_content as string) ?? "",
       proposed: (e.proposed_content as string) ?? "",
@@ -1013,6 +1058,7 @@ export type PendingSubmission = {
   title: string;
   department: string;
   moduleLabel: string;
+  /** Public handle, or a neutral label. Never a real name. */
   submitter: string;
   note: string | null;
   summary: string | null;
@@ -1055,7 +1101,7 @@ export async function getPendingSubmissions(): Promise<PendingSubmission[]> {
     modIds.length
       ? admin.from("modules").select("id, title").in("id", modIds)
       : Promise.resolve({ data: [] as { id: string; title: string }[] }),
-    admin.from("profiles").select("id, full_name, username").in("id", subIds),
+    admin.from("profiles").select("id, username").in("id", subIds),
   ]);
   const deptById = new Map(
     ((depts.data as { id: string; name: string }[]) ?? []).map((d) => [d.id, d.name])
@@ -1063,20 +1109,22 @@ export async function getPendingSubmissions(): Promise<PendingSubmission[]> {
   const modById = new Map(
     ((mods.data as { id: string; title: string }[]) ?? []).map((m) => [m.id, m.title])
   );
-  const nameById = new Map(
-    ((profs.data as { id: string; full_name: string | null; username: string | null }[]) ?? []).map(
-      (p) => [p.id, p.full_name || p.username || "A member"]
-    )
+  const labelById = new Map(
+    ((profs.data as { id: string; username: string | null }[]) ?? []).map((p) => [
+      p.id,
+      handleLabel(p.username),
+    ])
   );
 
   return rows.map((s) => ({
     id: s.id,
     title: s.title,
-    department: deptById.get(s.department_id) ?? "—",
+    // A word, like the two fallbacks directly under it.
+    department: deptById.get(s.department_id) ?? "no department",
     moduleLabel: s.module_id
       ? (modById.get(s.module_id) ?? "an existing module")
       : `New module: ${s.new_module_title ?? "Community Lessons"}`,
-    submitter: nameById.get(s.submitter_id) ?? "A member",
+    submitter: labelById.get(s.submitter_id) ?? "a member",
     note: s.note ?? null,
     summary: s.summary ?? null,
     content: s.content,

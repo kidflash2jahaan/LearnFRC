@@ -55,6 +55,8 @@ type Me = {
   profile: Profile | null;
   email?: string | null;
   isAdmin: boolean;
+  /** Site owner: can accept applications and change who else has authority. */
+  isSuperAdmin: boolean;
 };
 
 /**
@@ -106,7 +108,12 @@ function Caret() {
  */
 export function Navbar() {
   const pathname = usePathname();
-  const [me, setMe] = React.useState<Me>({ authed: false, profile: null, isAdmin: false });
+  const [me, setMe] = React.useState<Me>({
+    authed: false,
+    profile: null,
+    isAdmin: false,
+    isSuperAdmin: false,
+  });
   const [loaded, setLoaded] = React.useState(false);
 
   // Auth is fetched client-side so the root layout can stay static/cacheable.
@@ -131,7 +138,7 @@ export function Navbar() {
     };
   }, []);
 
-  const { authed, profile, email, isAdmin } = me;
+  const { authed, profile, email, isAdmin, isSuperAdmin } = me;
   const openSearch = () => window.dispatchEvent(new Event("open-search"));
   const who = profile?.full_name || profile?.username || "Learner";
 
@@ -249,6 +256,17 @@ export function Navbar() {
                 {isAdmin && (
                   <DropdownMenuItem asChild>
                     <Link href="/admin">Admin</Link>
+                  </DropdownMenuItem>
+                )}
+                {/* Sits under Admin rather than beside it: /admin/team is the
+                    one desk inside the panel that an ordinary admin cannot
+                    open, so it reads as a room off that room. "Admin team",
+                    not "Team": "My team" four rows up is the reader's own FRC
+                    team, and the one person who sees both labels is the one
+                    who can take somebody off the site from this one. */}
+                {isSuperAdmin && (
+                  <DropdownMenuItem asChild>
+                    <Link href="/admin/team">Admin team</Link>
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuSeparator />
