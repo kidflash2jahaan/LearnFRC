@@ -1,5 +1,7 @@
 # LearnFRC next steps, 2026-09-22
 
+Update 2026-09-25: the Chief Delphi thread gained four posts on Sept 24 to 25. See `2026-09-25-chief-delphi-update.md`, which moves three items to the front of the 14-day list.
+
 Source: `docs/analysis/2026-09-22-growth-review.md` and its JSON. Every number below is quoted from that file with its basis attached, because that report's own verification section shows five of its six disputed numbers broke when a deduped `visits/aggregate` row got divided into a day-summed `visits/count` total. Where a number comes from the codebase instead of the report, this file says so.
 
 ## 1. What the numbers say
