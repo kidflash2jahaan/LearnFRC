@@ -6,6 +6,8 @@ import { PATHS } from "@/lib/paths-data";
 import { SocialProof } from "@/components/social-proof";
 import { RevealGroup } from "@/components/motion/primitives";
 import { HeroPanel, type HeroDept } from "./_hero-panel";
+import { VideoTour } from "@/components/video-tour";
+import { TOUR_VIDEO_URL } from "@/lib/tour-video";
 
 // Title/description/OG are inherited from the root layout defaults (which are
 // written for the home page); we only pin the self-referential canonical.
@@ -225,6 +227,41 @@ export default async function HomePage() {
           deptCount={stats.deptCount}
           depts={heroDepts}
         />
+      </section>
+
+      {/* ================= 1b. THE 60-SECOND TOUR ================
+          The ad from the LearnFRC channel, placed where a first-time visitor
+          is still deciding what this site is. It is a poster until someone
+          presses play (see VideoTour), so it costs the page one image. The
+          card is taped but left straight: a tilted video player reads as a
+          rendering bug, not as paper. */}
+      <section id="tour" className="nb-rule">
+        <div className="nb-wrap grid grid-cols-1 items-center gap-[clamp(1.6rem,4vw,3.2rem)] py-[clamp(2.6rem,5vw,4.4rem)] lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.3fr)]">
+          <div>
+            <p className="nb-marker">the 60-second tour</p>
+            <h2 className="max-w-[15ch]">Week 1 to kickoff, in one minute.</h2>
+            <p className="nb-sub mt-4">
+              What a rookie season looks like on LearnFRC: the words nobody
+              explains at the first meeting, the preseason plan, the
+              calculators, and where you&apos;ll be by kickoff.
+            </p>
+            <a
+              href={TOUR_VIDEO_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="nb-link mt-4 inline-block py-3"
+            >
+              Watch it on YouTube
+            </a>
+          </div>
+          <div className="nb-box p-[clamp(0.55rem,1.3vw,0.85rem)]">
+            <span
+              aria-hidden="true"
+              className="nb-tape -top-3 left-[44%] rotate-[2.6deg]"
+            />
+            <VideoTour />
+          </div>
+        </div>
       </section>
 
       {/* ================ 2. THE DEPARTMENT WALL =================
