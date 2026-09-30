@@ -3,6 +3,8 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   // hide the floating dev-tools indicator so local review matches production
   devIndicators: false,
+  // YouTube thumbnails for lesson videos that have no poster of our own
+  images: { remotePatterns: [{ protocol: "https", hostname: "i.ytimg.com", pathname: "/vi/**" }] },
   async redirects() {
     // Old department slugs that still exist in early external links
     // (pre-rename staging URLs shared on Chief Delphi etc.).

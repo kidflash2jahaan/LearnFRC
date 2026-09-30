@@ -205,6 +205,8 @@ export type LessonContent = Pick<
   verified_by: string | null;
   verified_note: string | null;
   verified_sources: string[] | null;
+  /** The lesson's video on the LearnFRC YouTube channel, once it's uploaded. */
+  youtube_id: string | null;
 };
 
 /**
@@ -234,7 +236,7 @@ export const getLessonContent = unstable_cache(
     const { data, error } = await supabase
       .from("lessons")
       .select(
-        "id, content, key_takeaways, resources, quiz, verified_at, verified_by, verified_note, verified_sources"
+        "id, content, key_takeaways, resources, quiz, verified_at, verified_by, verified_note, verified_sources, youtube_id"
       )
       .eq("id", lessonId)
       .maybeSingle();

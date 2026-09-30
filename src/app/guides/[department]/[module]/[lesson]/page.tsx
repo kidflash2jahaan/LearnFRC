@@ -26,6 +26,7 @@ import { LessonSignupHook } from "@/components/lesson/lesson-signup-hook";
 import { Provenance } from "@/components/lesson/provenance";
 import { VerifiedBadge } from "@/components/lesson/verified-badge";
 import { LessonReadNext } from "@/components/lesson/lesson-read-next";
+import { YouTubeFacade } from "@/components/youtube-facade";
 import {
   LessonNextStep,
   type NextStepLink,
@@ -378,6 +379,30 @@ export default async function LessonPage({
             id={ARTICLE_ID}
             className="min-w-0 lg:border-l-2 lg:border-ink lg:pl-[clamp(1.8rem,3vw,3rem)]"
           >
+            {/* The video version, when the lesson has one. It sits above the
+                text so a student who'd rather watch finds it first, and it's a
+                poster until pressed, so readers who scroll past pay one image. */}
+            {body?.youtube_id && (
+              <section aria-label="Video version of this lesson" className="mb-[clamp(1.8rem,3.4vw,2.6rem)]">
+                <p className="nb-marker">the video version</p>
+                <div className="nb-box p-[clamp(0.45rem,1vw,0.7rem)]">
+                  <YouTubeFacade
+                    videoId={body.youtube_id}
+                    title={`${les.title}, the LearnFRC video`}
+                    sizes="(min-width: 1024px) 720px, 100vw"
+                    label="watch"
+                    playLabel={`Play the video version of ${les.title}`}
+                  />
+                </div>
+                <p className="mt-3 text-[0.92rem] leading-snug text-graphite">
+                  The same lesson, explained on screen with no narration.{" "}
+                  <a href={`https://www.youtube.com/watch?v=${body.youtube_id}`} target="_blank" rel="noopener noreferrer" className="nb-link">
+                    Watch it on YouTube
+                  </a>
+                </p>
+              </section>
+            )}
+
             <div className="nb-prose">
               <Markdown content={content} />
             </div>
