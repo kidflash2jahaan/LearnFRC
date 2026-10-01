@@ -395,7 +395,7 @@ export default async function LessonPage({
                   />
                 </div>
                 <p className="mt-3 text-[0.92rem] leading-snug text-graphite">
-                  The same lesson, explained on screen with no narration.{" "}
+                  The same lesson as a narrated video.{" "}
                   <a href={`https://www.youtube.com/watch?v=${body.youtube_id}`} target="_blank" rel="noopener noreferrer" className="nb-link">
                     Watch it on YouTube
                   </a>
