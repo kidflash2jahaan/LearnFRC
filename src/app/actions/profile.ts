@@ -114,7 +114,11 @@ export async function updateProfile(
             : "Please remove the inappropriate language from your bio.",
     };
 
-  const { error } = await supabase
+  // Service-role: `authenticated` has no SELECT on profiles.id, and Postgres
+  // needs it for the WHERE, so a session-scoped update failed with "permission
+  // denied" and no settings change ever saved. user.id comes from
+  // auth.getUser() above, verified against the auth server.
+  const { error } = await createAdminClient()
     .from("profiles")
     .update({ full_name, bio, username, team_number, role, avatar_url })
     .eq("id", user.id);

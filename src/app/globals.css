@@ -264,6 +264,15 @@
     overflow-x: clip;
   }
 
+  /* Radix menus and dialogs lock scrolling with `body { overflow: hidden }`.
+     Because html clips overflow-x above, that never reaches the viewport; it
+     turns body into a scroll box instead, and the sticky navbar sticks to the
+     top of body, which is scrolled out of view. `clip` keeps body a plain box
+     (the lock still blocks wheel and touch scrolling on its own). */
+  html body[data-scroll-locked] {
+    overflow: clip !important;
+  }
+
   body {
     margin: 0;
     min-height: 100dvh;
