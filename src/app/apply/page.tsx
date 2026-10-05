@@ -5,6 +5,7 @@ import { getMyApplication } from "@/lib/admin-team";
 import { teamRoleLabel } from "@/lib/team-roles";
 import { ApplyForm } from "./_apply-form";
 import { WithdrawForm } from "./_withdraw-form";
+import { APPLICATIONS_OPEN } from "@/lib/applications";
 
 export const metadata: Metadata = {
   // `absolute` on purpose. The root template appends " · LearnFRC", and this
@@ -410,6 +411,11 @@ export default async function ApplyPage() {
             {/* `handle &&` above is how the type system sees what `mode`
                 already guarantees: "again" and "new" are only reachable once
                 `needsHandle` is false, which is exactly when a handle exists. */}
+            {!APPLICATIONS_OPEN ? (
+              <p className="nb-note mt-6" role="status">
+                Applications are closed for now. Check back soon.
+              </p>
+            ) : (
             <div className="mt-6">
               <ApplyForm
                 username={handle}
@@ -423,6 +429,7 @@ export default async function ApplyPage() {
                 again={!!closed}
               />
             </div>
+            )}
           </>
         )}
       </section>

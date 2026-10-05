@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { APPLICATIONS_OPEN } from "@/lib/applications";
 import { after } from "next/server";
 import { getSession, isOwnerEmail } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -93,6 +94,7 @@ export async function submitAdminApplication(
   const { user, profile, isAdmin } = await getSession();
   if (!user) return { error: "Sign in first, then apply." };
   if (isAdmin) return { error: "You're already on the team." };
+  if (!APPLICATIONS_OPEN) return { error: "Applications are closed for now. Check back later." };
 
   const experience = field(formData, "experience");
   const why = field(formData, "why");
