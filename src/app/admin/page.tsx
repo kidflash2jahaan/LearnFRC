@@ -481,9 +481,11 @@ export default async function AdminPage() {
               </span>
             </p>
             <p className="nb-stamp">
-              <b>{stats.totals.users.toLocaleString()}</b>
+              <b>{(stats.totals.users + stats.guestLearners).toLocaleString()}</b>
               <span>
-                accounts, {stats.verifiedUsers.toLocaleString()} verified
+                learners: {stats.totals.users.toLocaleString()} accounts
+                (including unverified) + {stats.guestLearners.toLocaleString()}{" "}
+                guest learners
               </span>
             </p>
             <p className="nb-stamp">
