@@ -74,6 +74,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticRoutes: MetadataRoute.Sitemap = [
     { path: "", lastModified: STATIC_UPDATED },
     { path: "/guides", lastModified: STATIC_UPDATED },
+    { path: "/videos", lastModified: STATIC_UPDATED },
     { path: "/paths", lastModified: PATHS_UPDATED },
     { path: "/glossary", lastModified: GLOSSARY_UPDATED },
     { path: "/resources", lastModified: STATIC_UPDATED },

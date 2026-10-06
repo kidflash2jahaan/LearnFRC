@@ -20,6 +20,7 @@ import type { Profile } from "@/lib/types";
 
 const NAV = [
   { href: "/guides", label: "Guides" },
+  { href: "/videos", label: "Videos" },
   { href: "/blog", label: "Articles" },
   { href: "/paths", label: "Paths" },
   { href: "/glossary", label: "Glossary" },

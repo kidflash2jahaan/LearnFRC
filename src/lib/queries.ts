@@ -230,6 +230,58 @@ export const getVerificationProgress = unstable_cache(
   { revalidate: CATALOG_TTL, tags: ["catalog", "lessons"] }
 );
 
+/** One lesson video, with where it sits in the catalog. */
+export type CatalogVideo = {
+  lessonId: string;
+  title: string;
+  youtubeId: string;
+  href: string;
+  moduleTitle: string;
+};
+export type DepartmentVideos = { slug: string; name: string; videos: CatalogVideo[] };
+
+/**
+ * Every published lesson video for /videos, grouped by department and in the
+ * catalog's own order (department, then module, then lesson sort_order), so
+ * the page reads like the course. Only lessons with a youtube_id: site-ids.py
+ * sets it when a video goes public and revalidates `lessons`, which refreshes
+ * this too.
+ */
+export const getAllVideos = unstable_cache(
+  async (): Promise<DepartmentVideos[]> => {
+    const supabase = createPublicClient();
+    const { data, error } = await supabase
+      .from("departments")
+      .select("slug, name, sort_order, modules(slug, title, sort_order, lessons(id, slug, title, sort_order, youtube_id))")
+      .order("sort_order");
+    if (error) throw error;
+    type L = { id: string; slug: string; title: string; sort_order: number; youtube_id: string | null };
+    type M = { slug: string; title: string; sort_order: number; lessons: L[] | null };
+    type D = { slug: string; name: string; sort_order: number; modules: M[] | null };
+    const bySort = <T extends { sort_order: number }>(a: T, b: T) => a.sort_order - b.sort_order;
+    return ((data as unknown as D[]) ?? [])
+      .map((d) => ({
+        slug: d.slug,
+        name: d.name,
+        videos: [...(d.modules ?? [])].sort(bySort).flatMap((m) =>
+          [...(m.lessons ?? [])]
+            .sort(bySort)
+            .filter((l) => l.youtube_id)
+            .map((l) => ({
+              lessonId: l.id,
+              title: l.title,
+              youtubeId: l.youtube_id as string,
+              href: `/guides/${d.slug}/${m.slug}/${l.slug}`,
+              moduleTitle: m.title,
+            }))
+        ),
+      }))
+      .filter((d) => d.videos.length > 0);
+  },
+  ["all-videos"],
+  { revalidate: CATALOG_TTL, tags: ["catalog", "lessons"] }
+);
+
 export const getLessonContent = unstable_cache(
   async (lessonId: string): Promise<LessonContent | null> => {
     const supabase = createPublicClient();
