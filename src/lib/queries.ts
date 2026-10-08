@@ -1006,6 +1006,95 @@ export type SubteamCoverage = {
  * which is exactly the moment that makes the page worth reloading. The
  * expensive half (the catalog index) IS cached.
  */
+/** Every lesson in course order, grouped by department: for "how far along" on the team page. */
+const getDeptLessonOrder = unstable_cache(
+  async (): Promise<{ slug: string; name: string; lessons: { id: string; title: string; moduleTitle: string; href: string }[] }[]> => {
+    const supabase = createPublicClient();
+    const { data, error } = await supabase
+      .from("departments")
+      .select("slug, name, sort_order, modules(slug, title, sort_order, lessons(id, slug, title, sort_order))")
+      .order("sort_order");
+    if (error) throw error;
+    type L = { id: string; slug: string; title: string; sort_order: number };
+    type M = { slug: string; title: string; sort_order: number; lessons: L[] | null };
+    type D = { slug: string; name: string; modules: M[] | null };
+    const bySort = <T extends { sort_order: number }>(a: T, b: T) => a.sort_order - b.sort_order;
+    return ((data as unknown as D[]) ?? []).map((d) => ({
+      slug: d.slug,
+      name: d.name,
+      lessons: [...(d.modules ?? [])].sort(bySort).flatMap((m) =>
+        [...(m.lessons ?? [])].sort(bySort).map((l) => ({
+          id: l.id,
+          title: l.title,
+          moduleTitle: m.title,
+          href: `/guides/${d.slug}/${m.slug}/${l.slug}`,
+        }))
+      ),
+    }));
+  },
+  ["dept-lesson-order"],
+  { revalidate: CATALOG_TTL, tags: ["catalog", "lessons"] }
+);
+
+export type MemberDeptProgress = {
+  slug: string;
+  name: string;
+  completed: number;
+  total: number;
+  /** The furthest lesson they've finished, in course order. */
+  furthest: { title: string; moduleTitle: string } | null;
+  /** The first lesson in course order they haven't finished yet. */
+  next: { title: string; href: string } | null;
+};
+
+/**
+ * Each teammate's progress department by department, for the team page: how
+ * many lessons they've done, the furthest one they've reached in course order,
+ * and what's next. Same cross-user read as getTeamSubteamCoverage (service
+ * role, two columns, no PII); the caller only passes ids of people on the
+ * viewer's own team.
+ */
+export async function getTeamMemberDeptProgress(
+  userIds: string[]
+): Promise<Record<string, MemberDeptProgress[]>> {
+  const order = await getDeptLessonOrder();
+  const ids = userIds.slice(0, 200);
+  const done: Record<string, Set<string>> = {};
+  if (ids.length) {
+    // MUST page: PostgREST truncates a response at 1000 rows without saying so.
+    const admin = createAdminClient();
+    const PAGE = 1000;
+    for (let from = 0; ; from += PAGE) {
+      const { data } = await admin
+        .from("lesson_progress")
+        .select("user_id, lesson_id")
+        .in("user_id", ids)
+        .order("id", { ascending: true })
+        .range(from, from + PAGE - 1);
+      const chunk = (data ?? []) as { user_id: string; lesson_id: string }[];
+      for (const r of chunk) (done[r.user_id] || (done[r.user_id] = new Set())).add(r.lesson_id);
+      if (chunk.length < PAGE) break;
+    }
+  }
+  const out: Record<string, MemberDeptProgress[]> = {};
+  for (const uid of ids) {
+    const mine = done[uid] ?? new Set<string>();
+    out[uid] = order.map((d) => {
+      let completed = 0;
+      let furthest: MemberDeptProgress["furthest"] = null;
+      let next: MemberDeptProgress["next"] = null;
+      for (const l of d.lessons) {
+        if (mine.has(l.id)) {
+          completed++;
+          furthest = { title: l.title, moduleTitle: l.moduleTitle };
+        } else if (!next) next = { title: l.title, href: l.href };
+      }
+      return { slug: d.slug, name: d.name, completed, total: d.lessons.length, furthest, next };
+    });
+  }
+  return out;
+}
+
 export async function getTeamSubteamCoverage(
   userIds: string[]
 ): Promise<SubteamCoverage[]> {

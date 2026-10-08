@@ -5,6 +5,7 @@ import { getSession } from "@/lib/auth";
 import {
   getTeamByNumber,
   getTeamSubteamCoverage,
+  getTeamMemberDeptProgress,
   getReferralCount,
 } from "@/lib/queries";
 import { ShareButton } from "@/components/share-button";
@@ -22,6 +23,7 @@ import { TeamInvite } from "@/components/team/team-invite";
 import { Straighten } from "@/components/motion/primitives";
 import { Roster, type RosterMember } from "./_roster";
 import { CrewPanel, type CrewMember } from "./_crew-panel";
+import { MemberProgress, type ProgressMember } from "./_member-progress";
 
 export const metadata: Metadata = {
   title: "My Team",
@@ -133,7 +135,18 @@ async function renderTeam(
   // on. Only usernames and avatars cross the boundary: the coverage query
   // never opens the profiles table at all.
   const byId = new Map(rosterMembers.map((m) => [m.userId, m]));
-  const coverage = await getTeamSubteamCoverage(members.map((m) => m.userId));
+  const [coverage, deptProgress] = await Promise.all([
+    getTeamSubteamCoverage(members.map((m) => m.userId)),
+    getTeamMemberDeptProgress(members.map((m) => m.userId)),
+  ]);
+  const progressMembers: ProgressMember[] = rosterMembers.map((m) => ({
+    userId: m.userId,
+    name: m.name,
+    avatarUrl: m.avatarUrl,
+    isYou: m.isYou,
+    completed: m.completed,
+    depts: deptProgress[m.userId] ?? [],
+  }));
   const subteamRows: SubteamRow[] = coverage.map((c) => ({
     slug: c.slug,
     name: c.name,
@@ -346,6 +359,26 @@ async function renderTeam(
           </div>
         )}
       </section>
+
+      {/* ===================== EACH PERSON'S PROGRESS =====================
+          The roster says who is furthest along overall; this says where. One
+          fold per teammate: a strip of department cells closed, the
+          departments they've started (bar, furthest lesson, next lesson)
+          open. Your own fold starts open. */}
+      {members.length > 0 && (
+        <section id="progress" className="nb-wrap pb-[clamp(2.6rem,5vw,4rem)]">
+          <div className="mb-[clamp(1.2rem,2.6vw,1.8rem)]">
+            <h2>Each person&rsquo;s progress</h2>
+            <p className="nb-sub mt-3">
+              How far everyone is in every department. Each little bar is one
+              department; open a name to see where they are and what&rsquo;s next.
+            </p>
+          </div>
+          <div className="max-w-[58rem]">
+            <MemberProgress members={progressMembers} />
+          </div>
+        </section>
+      )}
 
       {/* ===================== INVITE =====================
           The real referral panel, not a bare homepage link. Both share
