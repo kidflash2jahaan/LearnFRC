@@ -1,0 +1,11 @@
+-- Reminder emails become opt-in (owner, 2026-10-12, after a mentor on Chief
+-- Delphi flagged mail going to people who never asked for it).
+--
+-- New accounts, from the email form and from Google sign-in alike, get their
+-- profile row from the handle_new_user trigger, which never sets email_opt_in,
+-- so the column default decides. It was true, which enrolled everyone. Now it's
+-- false: the signup checkbox (src/app/actions/auth.ts) or the switch in
+-- Settings (setEmailOptIn in src/app/actions/profile.ts) turns reminders on.
+--
+-- Existing rows are left as they are. Changing them is a separate decision.
+alter table public.profiles alter column email_opt_in set default false;

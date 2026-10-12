@@ -5,6 +5,8 @@ import { getSession } from "@/lib/auth";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import { SettingsForm } from "@/components/settings/settings-form";
 import { PerfModeCard } from "@/components/perf-mode";
+import { EmailPrefsCard } from "@/components/settings/email-prefs-card";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { IdentityCard } from "./_identity-card";
 
 export const metadata = {
@@ -44,6 +46,16 @@ export default async function SettingsPage() {
   if (!user) redirect("/login?next=/settings");
   // Required handle: hold them on the setup step (see onboarding-server.ts).
   if (needsUsernameSetup(profile)) redirect("/dashboard");
+
+  // The reminder switch's starting state. Read on its own, service-role and
+  // scoped to the caller's id, rather than widening getProfile's column list,
+  // which every page that calls getSession() pays for.
+  const { data: emailRow } = await createAdminClient()
+    .from("profiles")
+    .select("email_opt_in")
+    .eq("id", user.id)
+    .maybeSingle();
+  const emailOptIn = emailRow?.email_opt_in === true;
 
   const displayName =
     profile?.full_name || profile?.username || user.email || "Your account";
@@ -120,6 +132,12 @@ export default async function SettingsPage() {
           would name the same control twice. */}
       <div id="performance" className="mt-[clamp(2.4rem,5vw,3.4rem)]">
         <PerfModeCard />
+      </div>
+
+      {/* ---- email ------------------------------------------------------
+          Like the motion card, it draws its own card and heading. */}
+      <div id="email" className="mt-5">
+        <EmailPrefsCard initialOn={emailOptIn} />
       </div>
 
       {/* ---- session ----------------------------------------------------- */}

@@ -80,6 +80,8 @@ export async function signUp(
   const fullName = String(formData.get("full_name") || "").trim();
   const usernameRaw = String(formData.get("username") || "").trim();
   const teamNumber = String(formData.get("team_number") || "").trim();
+  // Reminder emails are opt-in: an unticked checkbox isn't submitted at all.
+  const emailOptIn = formData.get("email_opt_in") === "on";
   const next = String(formData.get("next") || "/dashboard");
   // A `ref` is normally a referrer's username. Conversion hooks (lesson/article
   // signup CTAs) instead pass a known hook token that names the surface. Those
@@ -193,6 +195,16 @@ export async function signUp(
   // is still paid out only on email verification (see /auth/confirm).
   // The profile row is created by a trigger. Self-referrals are blocked.
   if (data.user) {
+    // The profile row comes from the handle_new_user trigger with the column
+    // default, email_opt_in = false (opt-in since 2026-10-12). Only a ticked
+    // box turns reminders on. Service-role, scoped to the account just created.
+    if (emailOptIn) {
+      await createAdminClient()
+        .from("profiles")
+        .update({ email_opt_in: true })
+        .eq("id", data.user.id);
+    }
+
     const cookieStore = await cookies();
     // Shared with the Google/OAuth path (/auth/callback); see
     // src/lib/signup-attribution.ts. The reward itself is paid later, on email

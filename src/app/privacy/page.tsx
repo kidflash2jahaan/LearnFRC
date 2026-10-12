@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/privacy" },
 };
 
-const UPDATED = "July 3, 2026";
+const UPDATED = "October 12, 2026";
 // NOT an email address. learnfrc.com publishes no MX record, so every address
 // printed here bounced, including the one on the legally-operative "request
 // deletion of your data" line. A personal mailbox is not an option either:
@@ -61,9 +61,10 @@ const SECTIONS: Section[] = [
           Send essential emails: email verification, welcome, password reset.
         </li>
         <li>
-          Send occasional learning reminders to account holders, like your next
-          lesson or a streak about to end. These are on by default and every one
-          carries a one-click unsubscribe. Opting out stops them permanently.
+          Send occasional learning reminders, like your next lesson or a streak
+          about to end, only if you turn them on, with the box at signup or the
+          switch in Settings. Every one carries a one-click unsubscribe, and
+          turning them off stops them.
         </li>
         <li>Send product updates only if you subscribed to the newsletter.</li>
         <li>Prevent abuse, spam, and security incidents.</li>

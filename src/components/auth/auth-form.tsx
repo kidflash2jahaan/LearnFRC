@@ -232,6 +232,30 @@ export function AuthForm({
         )}
       </div>
 
+      {/* Reminder emails are opt-in (owner, 2026-10-12). Unticked by default,
+          and the account is created with email_opt_in false unless this is
+          ticked; it can be changed later in Settings. The whole row is the
+          label, so the tap target is the sentence, not just the 16px box. */}
+      {isSignup && (
+        <label className="flex cursor-pointer items-start gap-3 text-[0.95rem] leading-snug">
+          <input
+            type="checkbox"
+            name="email_opt_in"
+            disabled={busy}
+            className="mt-0.5 size-4 shrink-0"
+          />
+          <span>
+            Email me the occasional reminder, like my next lesson or a streak
+            about to end. Optional, and you can change it in Settings. Here&rsquo;s
+            the{" "}
+            <Link href="/privacy" className="nb-link">
+              privacy policy
+            </Link>
+            .
+          </span>
+        </label>
+      )}
+
       <button
         type="submit"
         className="nb-btn mt-1 w-full"
@@ -246,22 +270,6 @@ export function AuthForm({
             ? "Create my account"
             : "Sign in"}
       </button>
-
-      {/* Disclosure at the point of collection. Accounts are enrolled in
-          learning-reminder email by default (email_opt_in defaults true), and
-          until this line existed nothing on the form said so. A real person
-          reported receiving mail he never knowingly opted into. */}
-      {isSignup && (
-        <p className="nb-hint">
-          We&rsquo;ll email you the occasional reminder, your next lesson or a
-          streak about to lapse. Every one has a one-click unsubscribe and you
-          can switch them off in Settings. Here&rsquo;s the{" "}
-          <Link href="/privacy" className="nb-link">
-            privacy policy
-          </Link>
-          .
-        </p>
-      )}
 
       <p className="nb-hair pt-4 text-[0.95rem] text-graphite">
         {isSignup ? "Already on the roster? " : "First time here? "}

@@ -79,6 +79,29 @@ export interface Correction {
  */
 export const CORRECTIONS: Correction[] = [
   {
+    id: "student-led-opinion",
+    date: "2026-10-12",
+    status: "corrected",
+    summary:
+      "A leadership lesson stated one view of how students and mentors split the work as FIRST's philosophy",
+    affects: [
+      {
+        title: "Student Leadership and Mentors",
+        path: "/guides/business-operations/team-structure-and-leadership/student-leadership-and-mentors",
+      },
+    ],
+    raised:
+      "A mentor on Chief Delphi pointed out that the lesson's \"Student-Led, Mentor-Supported\" section stated an opinion as fact. It said FIRST's philosophy is that students do the work, and that mentors who do the work for students undermine the program's purpose. How much mentors should design and build is a long-running debate in FRC, and teams answer it differently.",
+    outcome:
+      "The section now describes both the student-led model and teams where mentors build hands-on beside students, says there's no single right answer, and notes the lesson assumes a student-led team because it's about student leadership. The first key takeaway and the matching quiz question were reworded the same way.",
+    quote:
+      "Teams split the work between students and mentors in different ways, and how much mentors should design and build is one of the longest-running debates in FRC.",
+    reportedAt: {
+      title: "Chief Delphi, thread 521987, post #246",
+      url: "https://www.chiefdelphi.com/t/521987/246",
+    },
+  },
+  {
     id: "si-base-units",
     date: "2026-08-10",
     status: "checked",

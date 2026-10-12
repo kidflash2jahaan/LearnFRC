@@ -258,6 +258,37 @@ export async function skipProfileSetup(): Promise<void> {
 }
 
 /**
+ * Turn learning-reminder emails on or off for the signed-in user. Reminders are
+ * opt-in (owner, 2026-10-12, after a mentor on Chief Delphi flagged mail going
+ * to people who never asked for it): new accounts start with email_opt_in false
+ * and this switch in Settings, or the box at signup, is the only way to turn
+ * them on. Essential account mail (verification, password reset) isn't affected.
+ *
+ * Service-role write scoped to the caller's own id, like updateProfile, so it
+ * keeps working whatever the `authenticated` grants on `profiles` are.
+ */
+export async function setEmailOptIn(
+  optIn: boolean
+): Promise<{ error?: string; optIn?: boolean }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "You must be signed in." };
+  if (typeof optIn !== "boolean") return { error: "Something went wrong. Try again." };
+  if (!(await rateLimit("email-opt-in", 30, 3600, user.id)))
+    return { error: "Too many changes. Try again in a bit." };
+
+  const { error } = await createAdminClient()
+    .from("profiles")
+    .update({ email_opt_in: optIn })
+    .eq("id", user.id);
+  if (error) return { error: "Couldn't save that. Try again." };
+  revalidatePath("/settings");
+  return { optIn };
+}
+
+/**
  * Permanently delete the signed-in user's own account and all their data.
  * Deletes child rows explicitly (no cascade FK to auth.users), then the auth user.
  */
