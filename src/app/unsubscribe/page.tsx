@@ -36,7 +36,9 @@ export default async function UnsubscribePage({
     const admin = createAdminClient();
     const { data } = await admin
       .from("profiles")
-      .update({ email_opt_in: optIn })
+      // An unsubscribe (or resub) is the member's own answer, so it also
+      // records email_choice_at and the reminder prompt won't ask again.
+      .update({ email_opt_in: optIn, email_choice_at: new Date().toISOString() })
       .eq("unsubscribe_token", token)
       .select("id")
       .maybeSingle();

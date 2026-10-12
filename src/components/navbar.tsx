@@ -17,6 +17,7 @@ import {
 import { signOut } from "@/app/actions/auth";
 import { createClient } from "@/lib/supabase/client";
 import type { Profile } from "@/lib/types";
+import { EmailChoicePrompt } from "@/components/settings/email-choice-prompt";
 
 const NAV = [
   { href: "/guides", label: "Guides" },
@@ -58,6 +59,8 @@ type Me = {
   isAdmin: boolean;
   /** Site owner: can accept applications and change who else has authority. */
   isSuperAdmin: boolean;
+  /** Ask about reminder emails: signed in and hasn't answered yet. */
+  emailPrompt?: boolean;
 };
 
 /**
@@ -144,155 +147,160 @@ export function Navbar() {
   const who = profile?.full_name || profile?.username || "Learner";
 
   return (
-    <header className="sticky top-0 z-40 border-b-2 border-[var(--ink)] bg-[var(--card)]">
-      <nav
-        aria-label="Main"
-        className="nb-wrap flex flex-wrap items-center gap-x-[clamp(0.7rem,1.8vw,1.4rem)] py-1.5 xl:h-16 xl:flex-nowrap xl:py-0"
-      >
-        <Logo className="mr-auto xl:mr-0" />
-
-        {/* The tab strip. `nb-scroll` only actually scrolls once the tabs stop
-            fitting, so the same markup is a single quiet line at xl and a
-            flickable strip below it. The vertical padding is not decoration:
-            it holds the 2px focus ring clear of the scroll container's edge. */}
-        <div
-          className={[
-            "nb-scroll order-3 flex w-full items-center gap-x-[clamp(0.55rem,1.5vw,1.3rem)] py-1.5",
-            "[scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
-            "max-xl:border-t max-xl:border-dashed max-xl:border-[var(--rule)] max-xl:pr-8",
-            "max-xl:[mask-image:linear-gradient(to_right,#000_calc(100%-2.2rem),transparent)]",
-            "xl:order-none xl:mr-auto xl:w-auto xl:overflow-visible",
-          ].join(" ")}
+    <>
+      <header className="sticky top-0 z-40 border-b-2 border-[var(--ink)] bg-[var(--card)]">
+        <nav
+          aria-label="Main"
+          className="nb-wrap flex flex-wrap items-center gap-x-[clamp(0.7rem,1.8vw,1.4rem)] py-1.5 xl:h-16 xl:flex-nowrap xl:py-0"
         >
-          {navFor(authed).map((item) => {
-            const active = pathname === item.href || pathname.startsWith(item.href + "/");
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                aria-current={active ? "page" : undefined}
-                className="nb-navlink"
-              >
-                {item.label}
-              </Link>
-            );
-          })}
+          <Logo className="mr-auto xl:mr-0" />
 
-          {/* Signed out, "Log in" rides at the end of the strip behind a rule,
-              which keeps it reachable at 390px without a second row of chrome
-              competing with the one CTA. */}
-          {loaded && !authed && (
-            <>
-              <span aria-hidden="true" className="h-5 w-px shrink-0 bg-[var(--rule)]" />
-              <Link href="/login" className="nb-navlink">
-                Log in
-              </Link>
-            </>
-          )}
-        </div>
-
-        {/* The bottom padding below xl is clearance, not spacing: these buttons
-            carry a 3px offset ink drop, and without it the drop lands on the
-            dashed rule that opens the tab row. */}
-        <div className="flex shrink-0 items-center gap-2 max-xl:pb-1.5">
-          <button
-            type="button"
-            onClick={openSearch}
-            className="nb-btn-ghost nb-btn-sm"
-            aria-label="Search lessons and articles"
+          {/* The tab strip. `nb-scroll` only actually scrolls once the tabs stop
+              fitting, so the same markup is a single quiet line at xl and a
+              flickable strip below it. The vertical padding is not decoration:
+              it holds the 2px focus ring clear of the scroll container's edge. */}
+          <div
+            className={[
+              "nb-scroll order-3 flex w-full items-center gap-x-[clamp(0.55rem,1.5vw,1.3rem)] py-1.5",
+              "[scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+              "max-xl:border-t max-xl:border-dashed max-xl:border-[var(--rule)] max-xl:pr-8",
+              "max-xl:[mask-image:linear-gradient(to_right,#000_calc(100%-2.2rem),transparent)]",
+              "xl:order-none xl:mr-auto xl:w-auto xl:overflow-visible",
+            ].join(" ")}
           >
-            search
-            <kbd
-              aria-hidden="true"
-              className="hidden rounded-[var(--hand-s)] border border-[var(--rule)] px-1.5 py-px font-[inherit] text-[0.68rem] font-normal lg:inline-block"
+            {navFor(authed).map((item) => {
+              const active = pathname === item.href || pathname.startsWith(item.href + "/");
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  aria-current={active ? "page" : undefined}
+                  className="nb-navlink"
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
+
+            {/* Signed out, "Log in" rides at the end of the strip behind a rule,
+                which keeps it reachable at 390px without a second row of chrome
+                competing with the one CTA. */}
+            {loaded && !authed && (
+              <>
+                <span aria-hidden="true" className="h-5 w-px shrink-0 bg-[var(--rule)]" />
+                <Link href="/login" className="nb-navlink">
+                  Log in
+                </Link>
+              </>
+            )}
+          </div>
+
+          {/* The bottom padding below xl is clearance, not spacing: these buttons
+              carry a 3px offset ink drop, and without it the drop lands on the
+              dashed rule that opens the tab row. */}
+          <div className="flex shrink-0 items-center gap-2 max-xl:pb-1.5">
+            <button
+              type="button"
+              onClick={openSearch}
+              className="nb-btn-ghost nb-btn-sm"
+              aria-label="Search lessons and articles"
             >
-              &#8984;K
-            </kbd>
-          </button>
+              search
+              <kbd
+                aria-hidden="true"
+                className="hidden rounded-[var(--hand-s)] border border-[var(--rule)] px-1.5 py-px font-[inherit] text-[0.68rem] font-normal lg:inline-block"
+              >
+                &#8984;K
+              </kbd>
+            </button>
 
-          {!loaded ? (
-            <Skeleton className="size-10 rounded-full" />
-          ) : authed ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  type="button"
-                  /* `group` so the caret can read this trigger's data-state.
-                     The colour move is the same one every nav item makes, on
-                     the same timing, so the avatar stops being the one control
-                     in the header that does not answer a pointer. */
-                  className="group flex min-h-11 cursor-pointer items-center gap-1.5 text-[var(--graphite)] transition-colors duration-[var(--nb-t-hover)] ease-[var(--nb-ease-out)] hover:text-[var(--ink)] data-[state=open]:text-[var(--ink)]"
-                  aria-label="Account menu"
-                >
-                  <Avatar
-                    name={profile?.full_name || profile?.username || email}
-                    src={profile?.avatar_url}
-                    seed={profile?.id}
-                  />
-                  <Caret />
-                </button>
-              </DropdownMenuTrigger>
+            {!loaded ? (
+              <Skeleton className="size-10 rounded-full" />
+            ) : authed ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    /* `group` so the caret can read this trigger's data-state.
+                       The colour move is the same one every nav item makes, on
+                       the same timing, so the avatar stops being the one control
+                       in the header that does not answer a pointer. */
+                    className="group flex min-h-11 cursor-pointer items-center gap-1.5 text-[var(--graphite)] transition-colors duration-[var(--nb-t-hover)] ease-[var(--nb-ease-out)] hover:text-[var(--ink)] data-[state=open]:text-[var(--ink)]"
+                    aria-label="Account menu"
+                  >
+                    <Avatar
+                      name={profile?.full_name || profile?.username || email}
+                      src={profile?.avatar_url}
+                      seed={profile?.id}
+                    />
+                    <Caret />
+                  </button>
+                </DropdownMenuTrigger>
 
-              <DropdownMenuContent className="w-64">
-                <DropdownMenuLabel>
-                  <div className="truncate text-[0.95rem] font-bold">{who}</div>
-                  <div className="nb-slug truncate">{email}</div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <Link href="/dashboard">Dashboard</Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/profile">Profile</Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/teams">My team</Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/bookmarks">Bookmarks</Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/settings">Settings</Link>
-                </DropdownMenuItem>
-                {isAdmin && (
+                <DropdownMenuContent className="w-64">
+                  <DropdownMenuLabel>
+                    <div className="truncate text-[0.95rem] font-bold">{who}</div>
+                    <div className="nb-slug truncate">{email}</div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
-                    <Link href="/admin">Admin</Link>
+                    <Link href="/dashboard">Dashboard</Link>
                   </DropdownMenuItem>
-                )}
-                {/* Sits under Admin rather than beside it: /admin/team is the
-                    one desk inside the panel that an ordinary admin cannot
-                    open, so it reads as a room off that room. "Admin team",
-                    not "Team": "My team" four rows up is the reader's own FRC
-                    team, and the one person who sees both labels is the one
-                    who can take somebody off the site from this one. */}
-                {isSuperAdmin && (
                   <DropdownMenuItem asChild>
-                    <Link href="/admin/team">Admin team</Link>
+                    <Link href="/profile">Profile</Link>
                   </DropdownMenuItem>
-                )}
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onSelect={async (e) => {
-                    e.preventDefault();
-                    try {
-                      await signOut();
-                    } finally {
-                      // Full reload so the whole app drops the session at once.
-                      window.location.assign("/");
-                    }
-                  }}
-                >
-                  Sign out
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : (
-            <Link href="/signup" className="nb-btn nb-btn-sm">
-              Get started
-            </Link>
-          )}
-        </div>
-      </nav>
-    </header>
+                  <DropdownMenuItem asChild>
+                    <Link href="/teams">My team</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/bookmarks">Bookmarks</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/settings">Settings</Link>
+                  </DropdownMenuItem>
+                  {isAdmin && (
+                    <DropdownMenuItem asChild>
+                      <Link href="/admin">Admin</Link>
+                    </DropdownMenuItem>
+                  )}
+                  {/* Sits under Admin rather than beside it: /admin/team is the
+                      one desk inside the panel that an ordinary admin cannot
+                      open, so it reads as a room off that room. "Admin team",
+                      not "Team": "My team" four rows up is the reader's own FRC
+                      team, and the one person who sees both labels is the one
+                      who can take somebody off the site from this one. */}
+                  {isSuperAdmin && (
+                    <DropdownMenuItem asChild>
+                      <Link href="/admin/team">Admin team</Link>
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onSelect={async (e) => {
+                      e.preventDefault();
+                      try {
+                        await signOut();
+                      } finally {
+                        // Full reload so the whole app drops the session at once.
+                        window.location.assign("/");
+                      }
+                    }}
+                  >
+                    Sign out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Link href="/signup" className="nb-btn nb-btn-sm">
+                Get started
+              </Link>
+            )}
+          </div>
+        </nav>
+      </header>
+      {/* Outside the header on purpose: a fixed card inside a sticky header can
+          end up positioned against the header instead of the window. */}
+      <EmailChoicePrompt show={authed && !!me.emailPrompt} />
+    </>
   );
 }

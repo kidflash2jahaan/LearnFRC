@@ -64,6 +64,10 @@ export interface Profile {
   xp: number;
   hide_name: boolean;
   created_at: string;
+  /** Reminder emails on. Only ever true by the member's own choice. */
+  email_opt_in?: boolean | null;
+  /** When the member said yes or no to reminders; null means not asked yet. */
+  email_choice_at?: string | null;
 }
 
 export interface Achievement {

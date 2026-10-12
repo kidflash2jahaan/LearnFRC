@@ -8,6 +8,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { firstProfaneField } from "@/lib/profanity";
 import { hookSourceFor } from "@/lib/signup-source";
 import { attributeSignup, normalizeVia } from "@/lib/signup-attribution";
+import { isFreshSignup } from "@/lib/first-run";
 
 export type AuthState =
   | {
@@ -197,12 +198,19 @@ export async function signUp(
   if (data.user) {
     // The profile row comes from the handle_new_user trigger with the column
     // default, email_opt_in = false (opt-in since 2026-10-12). Only a ticked
-    // box turns reminders on. Service-role, scoped to the account just created.
-    if (emailOptIn) {
+    // box turns reminders on. Either way they saw the question, so the choice
+    // is recorded and the one-time prompt won't ask again. Service-role.
+    //
+    // Only for an account this request actually created, and only if it has
+    // never answered: Supabase hands back the existing user's id when someone
+    // signs up again with a registered but unconfirmed email, and without both
+    // guards a stranger could tick the box on somebody else's account.
+    if (isFreshSignup(data.user.created_at)) {
       await createAdminClient()
         .from("profiles")
-        .update({ email_opt_in: true })
-        .eq("id", data.user.id);
+        .update({ email_opt_in: emailOptIn, email_choice_at: new Date().toISOString() })
+        .eq("id", data.user.id)
+        .is("email_choice_at", null);
     }
 
     const cookieStore = await cookies();

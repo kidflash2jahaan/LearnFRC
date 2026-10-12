@@ -28,9 +28,11 @@ export const dynamic = "force-dynamic";
  * never a mass blast. Eligibility is deliberately conservative, for legal and
  * reputation reasons:
  *
- * - email_opt_in is true. New accounts start false since 2026-10-12 (opt-in:
- *   the signup box or the Settings switch turns it on); unsubscribe flips it
- *   back. Accounts created before then were enrolled by default.
+ * - email_opt_in is true AND email_choice_at is set: the member said yes
+ *   themselves (signup box, Settings switch, the one-time prompt, or a
+ *   resubscribe link). Opt-in since 2026-10-12; the accounts that had been
+ *   enrolled by default were switched off that day and asked on their next
+ *   visit (migration 20261012190000).
  * - the address is CONFIRMED. An unconfirmed account cannot sign in at all, so
  *   mailing it can never lead anywhere useful.
  * - the learner is lapsed on BOTH signals, no completion and no presence
@@ -327,6 +329,9 @@ async function run(req: Request) {
         "id, username, full_name, unsubscribe_token, last_lifecycle_email_at, last_seen_at, created_at"
       )
       .eq("email_opt_in", true)
+      // Belt and braces for consent: only members who answered for themselves
+      // (signup box, Settings, the prompt, or a resubscribe link).
+      .not("email_choice_at", "is", null)
       .order("id", { ascending: true })
       .range(from, from + 999);
     const chunk = (data ?? []) as ProfileRow[];

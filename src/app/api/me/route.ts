@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
+import { needsUsernameSetup } from "@/lib/onboarding-server";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +21,11 @@ export async function GET() {
       role,
       isAdmin,
       isSuperAdmin,
+      // Ask about reminder emails until the member has answered once (signup
+      // box, Settings, the prompt, or an unsubscribe link). Not while they're
+      // still on the username step, which has the screen to itself.
+      emailPrompt:
+        !!profile && !profile.email_choice_at && !needsUsernameSetup(profile),
     },
     { headers: { "Cache-Control": "no-store" } }
   );

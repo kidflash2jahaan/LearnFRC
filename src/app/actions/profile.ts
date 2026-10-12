@@ -260,9 +260,13 @@ export async function skipProfileSetup(): Promise<void> {
 /**
  * Turn learning-reminder emails on or off for the signed-in user. Reminders are
  * opt-in (owner, 2026-10-12, after a mentor on Chief Delphi flagged mail going
- * to people who never asked for it): new accounts start with email_opt_in false
- * and this switch in Settings, or the box at signup, is the only way to turn
- * them on. Essential account mail (verification, password reset) isn't affected.
+ * to people who never asked for it): accounts start with email_opt_in false,
+ * and the box at signup, this switch in Settings, or the one-time prompt is the
+ * only way to turn them on. Essential account mail (verification, password
+ * reset) isn't affected.
+ *
+ * Every call records email_choice_at, which is what stops the prompt from
+ * asking again and what the reminder sender requires before mailing anyone.
  *
  * Service-role write scoped to the caller's own id, like updateProfile, so it
  * keeps working whatever the `authenticated` grants on `profiles` are.
@@ -281,7 +285,7 @@ export async function setEmailOptIn(
 
   const { error } = await createAdminClient()
     .from("profiles")
-    .update({ email_opt_in: optIn })
+    .update({ email_opt_in: optIn, email_choice_at: new Date().toISOString() })
     .eq("id", user.id);
   if (error) return { error: "Couldn't save that. Try again." };
   revalidatePath("/settings");

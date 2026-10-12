@@ -5,6 +5,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { setEmailOptIn } from "@/app/actions/profile";
+import { EMAIL_CHOICE_EVENT } from "@/components/settings/email-choice-prompt";
 
 /**
  * The learning-reminder switch, drawn like the motion switch beside it so the
@@ -24,11 +25,20 @@ export function EmailPrefsCard({ initialOn }: { initialOn: boolean }) {
     const next = !on;
     setOn(next);
     startTransition(async () => {
-      const res = await setEmailOptIn(next);
+      // A thrown server action (offline, a deploy mid-session) is caught here
+      // so it snaps the switch back instead of reaching an error boundary.
+      let res: { error?: string };
+      try {
+        res = await setEmailOptIn(next);
+      } catch {
+        res = { error: "Couldn't save that. Check your connection and try again." };
+      }
       if (res.error) {
         setOn(!next);
         toast.error(res.error);
       } else {
+        // Close the one-time reminder question if it's open in this tab.
+        window.dispatchEvent(new Event(EMAIL_CHOICE_EVENT));
         toast.success(next ? "Reminder emails are on." : "Reminder emails are off.");
       }
     });
