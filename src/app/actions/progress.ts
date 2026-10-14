@@ -2,97 +2,15 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { rateLimit } from "@/lib/rate-limit";
-import { recordFunnelEvent } from "@/lib/funnel";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import { completeLesson, uncompleteLesson } from "@/lib/app/progress";
+import { clientsFor } from "@/lib/app/result";
 
-function currentStreak(timestamps: string[]): number {
-  const key = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
-  const days = new Set<string>();
-  for (const ts of timestamps) {
-    const d = new Date(ts);
-    if (!Number.isNaN(d.getTime())) days.add(key(d));
-  }
-  if (!days.size) return 0;
-  const DAY = 86_400_000;
-  const today = new Date();
-  if (!days.has(key(today)) && !days.has(key(new Date(today.getTime() - DAY))))
-    return 0;
-  let streak = 0;
-  const cur = new Date(today);
-  if (!days.has(key(cur))) cur.setTime(cur.getTime() - DAY);
-  while (days.has(key(cur))) {
-    streak++;
-    cur.setTime(cur.getTime() - DAY);
-  }
-  return streak;
-}
-
-/** Returns the user's lifetime completed-lesson count, which the caller reuses
- *  for the activation-funnel milestones rather than paying for a second count
- *  query. */
-async function awardAchievements(
-  supabase: SupabaseClient,
-  userId: string
-): Promise<number> {
-  // total completed
-  const { data: progress } = await supabase
-    .from("lesson_progress")
-    .select("lesson_id, completed_at")
-    .eq("user_id", userId);
-  const completedIds = new Set((progress ?? []).map((r) => r.lesson_id as string));
-  const completedCount = completedIds.size;
-  const streak = currentStreak(
-    (progress ?? []).map((r) => r.completed_at as string)
-  );
-
-  // lesson -> department map to compute fully-finished departments
-  const { data: lessonRows } = await supabase
-    .from("lessons")
-    .select("id, modules(department_id)");
-  const totals: Record<string, number> = {};
-  const done: Record<string, number> = {};
-  for (const l of lessonRows ?? []) {
-    const dep = (l.modules as { department_id?: string } | null)?.department_id;
-    if (!dep) continue;
-    totals[dep] = (totals[dep] ?? 0) + 1;
-    if (completedIds.has(l.id as string)) done[dep] = (done[dep] ?? 0) + 1;
-  }
-  let fullDepts = 0;
-  for (const dep of Object.keys(totals)) {
-    if (totals[dep] > 0 && (done[dep] ?? 0) >= totals[dep]) fullDepts++;
-  }
-
-  const { data: achievements } = await supabase
-    .from("achievements")
-    .select("id, criteria");
-  const { data: have } = await supabase
-    .from("user_achievements")
-    .select("achievement_id")
-    .eq("user_id", userId);
-  const haveSet = new Set((have ?? []).map((h) => h.achievement_id as string));
-
-  const toInsert: { user_id: string; achievement_id: string }[] = [];
-  for (const a of achievements ?? []) {
-    if (haveSet.has(a.id as string)) continue;
-    const c = (a.criteria ?? {}) as {
-      type?: string;
-      count?: number;
-      days?: number;
-    };
-    if (c.type === "lessons" && completedCount >= (c.count ?? Infinity))
-      toInsert.push({ user_id: userId, achievement_id: a.id as string });
-    if (c.type === "departments" && fullDepts >= (c.count ?? Infinity))
-      toInsert.push({ user_id: userId, achievement_id: a.id as string });
-    if (c.type === "streak" && streak >= (c.days ?? Infinity))
-      toInsert.push({ user_id: userId, achievement_id: a.id as string });
-  }
-  if (toInsert.length)
-    await supabase.from("user_achievements").insert(toInsert);
-
-  return completedCount;
-}
-
+/**
+ * The website's door onto lesson completion. The rules themselves (quiz gate,
+ * rate limits, the service-role insert, achievements, funnel events,
+ * revalidation) live in src/lib/app/progress.ts, shared with the app's
+ * /api/app/progress/complete route, so the two can't drift.
+ */
 export async function setLessonComplete(
   lessonId: string,
   deptSlug: string,
@@ -105,80 +23,11 @@ export async function setLessonComplete(
   } = await supabase.auth.getUser();
   if (!user) return { error: "You must be signed in." };
 
-  if (completed) {
-    // Server-enforced quiz gate: if the lesson has a quiz, it only counts as
-    // complete when every answer is correct. Verified here, not just in the UI,
-    // so a completion can't be recorded by calling this action directly.
-    const { data: lesson } = await supabase
-      .from("lessons")
-      .select("quiz")
-      .eq("id", lessonId)
-      .maybeSingle();
-    const quiz = (lesson?.quiz as { answer: number }[] | null) ?? [];
-    if (quiz.length > 0) {
-      const a = Array.isArray(answers) ? answers : [];
-      const allCorrect =
-        a.length === quiz.length && quiz.every((q, i) => a[i] === q.answer);
-      if (!allCorrect)
-        return {
-          error: "Answer every quiz question correctly to complete this lesson.",
-        };
-    }
-
-    // Leaderboard integrity: a real learner reads before completing, so no one
-    // legitimately marks dozens of lessons done per minute. Cap the rate per
-    // user (keyed to their id, not just IP) so the board can't be farmed by a
-    // script hammering this action. XP itself is trigger-computed and no longer
-    // user-writable, so this is defense-in-depth against automated completion.
-    const withinLimit =
-      (await rateLimit("lesson-complete", 12, 60, user.id)) &&
-      (await rateLimit("lesson-complete-hourly", 120, 3600, user.id));
-    if (!withinLimit)
-      return { error: "You're completing lessons unusually fast. Take a breather and try again in a minute." };
-
-    const { error } = await supabase
-      .from("lesson_progress")
-      .upsert(
-        { user_id: user.id, lesson_id: lessonId },
-        { onConflict: "user_id,lesson_id", ignoreDuplicates: true }
-      );
-    if (error) return { error: error.message };
-    const completedCount = await awardAchievements(supabase, user.id);
-
-    // ---- Activation funnel ------------------------------------------------
-    // Recorded HERE rather than from the browser: this is the point at which a
-    // completion is a server-verified fact (the quiz gate above has already
-    // passed and the row is in lesson_progress), so the event cannot be minted
-    // by anyone POSTing at /api/funnel-event. recordFunnelEvent never throws and
-    // treats a repeat as success, so neither call can fail a completion; the
-    // worst case is a missing data point. Awaited rather than fired-and-forgotten
-    // because a serverless invocation can be frozen the moment this action
-    // returns.
-    //
-    // These two steps are already derivable exactly from lesson_progress, so the
-    // funnel's COUNTS do not depend on them; what they add is the `measured`
-    // column, which is what tells a reader of /admin that a row is a real
-    // observation rather than an inference. `completedCount` is reused from
-    // awardAchievements above, and the >= 2 test is immune to the PostgREST
-    // 1000-row truncation in that query: a truncated read still reports at least
-    // 1000, which is still at least two.
-    await recordFunnelEvent({ step: "lesson_completed", userId: user.id });
-    if (completedCount >= 2)
-      await recordFunnelEvent({
-        step: "second_lesson_completed",
-        userId: user.id,
-      });
-  } else {
-    const { error } = await supabase
-      .from("lesson_progress")
-      .delete()
-      .eq("user_id", user.id)
-      .eq("lesson_id", lessonId);
-    if (error) return { error: error.message };
-  }
-
-  revalidatePath(`/guides/${deptSlug}`);
-  revalidatePath("/dashboard");
+  const clients = clientsFor(supabase);
+  const result = completed
+    ? await completeLesson(user, clients, { lessonId, answers, deptSlug })
+    : await uncompleteLesson(user, clients, { lessonId, deptSlug });
+  if (!result.ok) return { error: result.error };
   return { ok: true, completed };
 }
 

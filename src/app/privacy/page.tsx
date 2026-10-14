@@ -61,8 +61,8 @@ const SECTIONS: Section[] = [
           Send essential emails: email verification, welcome, password reset.
         </li>
         <li>
-          Send occasional learning reminders, like your next lesson or a streak
-          about to end, only if you turn them on, with the box at signup or the
+          Send occasional learning reminders about your next lesson, picked up
+          from where you left off, only if you turn them on, with the box at signup or the
           switch in Settings. Every one carries a one-click unsubscribe, and
           turning them off stops them.
         </li>

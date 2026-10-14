@@ -30,6 +30,9 @@ const VISITOR_KEY = "lf_vid";
  *  completion onto the server. Bounds the retry budget; never a reason to
  *  delete the completion. */
 const UNMIGRATED_KEY = "lf_guest_unmigrated";
+/** sessionStorage: set once <GuestMigration/> has migrated this tab, so it
+ *  doesn't re-run on every navigation. */
+export const MIGRATED_ONCE_KEY = "lf_guest_migrated";
 
 /** After this many refused re-posts we stop asking on every session. The local
  *  claim is still KEPT — the cap only stops one permanently-unverifiable lesson
@@ -153,6 +156,16 @@ export async function saveGuestLesson(
   else delete map[lessonId];
   writeMap(GUEST_KEY, map);
   emit();
+
+  // New guest progress since this tab last migrated (someone signed out, then
+  // kept reading), so the next account to sign in here must migrate again.
+  if (done) {
+    try {
+      sessionStorage.removeItem(MIGRATED_ONCE_KEY);
+    } catch {
+      /* storage blocked */
+    }
+  }
 
   const visitorId = getVisitorId();
   if (!visitorId) return false;

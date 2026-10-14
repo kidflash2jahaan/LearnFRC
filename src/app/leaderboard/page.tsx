@@ -127,7 +127,7 @@ export default async function LeaderboardPage() {
           </h1>
 
           <p className="nb-lede mt-[clamp(1rem,2vw,1.5rem)]">
-            One hundred XP a level, a weekly race that resets every Monday, and
+            One hundred XP a level, a race over the last seven days, and
             a team board so the whole pit can climb together. Reading is free
             and always was; the ranking is just the part that makes people
             finish.

@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
+  MIGRATED_ONCE_KEY,
   clearMigratedGuestLessons,
   flushPendingGuestProgress,
   getVisitorId,
@@ -12,8 +13,10 @@ import {
 } from "@/lib/guest-progress";
 
 /** Per-tab guard: at most one migration attempt per session, so this doesn't
- *  fire a request on every client-side navigation. */
-const ONCE_KEY = "lf_guest_migrated";
+ *  fire a request on every client-side navigation. A new guest completion
+ *  clears it (saveGuestLesson), so signing out, reading on, and signing in to
+ *  another account in the same tab still migrates. */
+const ONCE_KEY = MIGRATED_ONCE_KEY;
 
 const LOG = "[guest-migration]";
 

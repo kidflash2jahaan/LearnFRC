@@ -2,14 +2,13 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { getBookmarkedLessonIds, isEmailSubscribed } from "@/lib/queries";
+import type { Rhythm } from "@/lib/streaks";
 import {
-  achievementProgress,
-  computeRhythm,
-  isNudgeableCriteria,
-  pickNextUnlock,
-  type Rhythm,
-} from "@/lib/streaks";
-import type { Achievement } from "@/lib/types";
+  readCompletions,
+  readNextUnlock,
+  rhythmFromCompletions,
+  type NextUnlockPayload,
+} from "@/lib/app/progress";
 
 export const dynamic = "force-dynamic";
 
@@ -32,96 +31,13 @@ export const dynamic = "force-dynamic";
  * render a prop. See the hydration note in src/lib/streaks.ts.
  */
 
-/** One lesson_progress row, trimmed to what the rhythm and the id set need. */
-type ProgressRow = { lesson_id: string; completed_at: string | null };
-
-/**
- * Every completion row for a reader, paged.
- *
- * PostgREST caps a select at 1000 rows and does it SILENTLY: no error, no flag,
- * just a short array. A learner past 1000 lessons would have had the tail of
- * their history quietly dropped, which takes ticks off lessons they finished and
- * under-counts the rhythm. The corpus is not that big today, the loop costs one
- * extra round trip only when it actually needs one, and it will not rot.
+/*
+ * The reads and the rhythm math are shared with the app's
+ * GET /api/app/me/progress (src/lib/app/progress.ts), so the app's week strip,
+ * streak and next unlock are the same numbers this route sends the site.
  */
-async function readCompletions(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  userId: string
-): Promise<ProgressRow[]> {
-  const PAGE = 1000;
-  const out: ProgressRow[] = [];
-  for (let from = 0; ; from += PAGE) {
-    const { data, error } = await supabase
-      .from("lesson_progress")
-      .select("lesson_id, completed_at")
-      .eq("user_id", userId)
-      .order("completed_at", { ascending: true })
-      .range(from, from + PAGE - 1);
-    if (error) break;
-    const chunk = (data ?? []) as ProgressRow[];
-    out.push(...chunk);
-    if (chunk.length < PAGE) break;
-  }
-  return out;
-}
 
-export type NextUnlockPayload = {
-  name: string;
-  description: string;
-  icon: string;
-  progress: { current: number; target: number; unit: string };
-};
-
-/**
- * The nearest badge a learner can still reach, or null.
- *
- * Only lesson-count badges are eligible. See isNudgeableCriteria in
- * src/lib/streaks.ts for why a streak badge is deliberately never dangled.
- */
-async function readNextUnlock(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  userId: string,
-  lessonsDone: number
-): Promise<NextUnlockPayload | null> {
-  const [catalogRes, earnedRes] = await Promise.all([
-    supabase
-      .from("achievements")
-      .select("id, slug, name, description, icon, criteria, sort_order")
-      .order("sort_order"),
-    supabase.from("user_achievements").select("achievement_id").eq("user_id", userId),
-  ]);
-
-  const catalog = (catalogRes.data as Achievement[] | null) ?? [];
-  if (catalog.length === 0) return null;
-  const earned = new Set(
-    ((earnedRes.data as { achievement_id: string }[] | null) ?? []).map(
-      (r) => r.achievement_id
-    )
-  );
-
-  const candidates = catalog.map((a) => ({
-    a,
-    earned: earned.has(a.id),
-    progress: isNudgeableCriteria(a.criteria)
-      ? achievementProgress(a.criteria, {
-          lessons: lessonsDone,
-          // Not computable from a per-request progress read, and never shown:
-          // isNudgeableCriteria already excluded both of these types.
-          departments: 0,
-          streak: 0,
-        })
-      : null,
-  }));
-
-  const next = pickNextUnlock(candidates);
-  if (!next?.progress) return null;
-  return {
-    name: next.a.name,
-    description: next.a.description,
-    icon: next.a.icon,
-    progress: next.progress,
-  };
-}
+export type { NextUnlockPayload };
 
 export type MyProgressPayload = {
   authed: boolean;
@@ -160,21 +76,12 @@ export async function GET() {
   ]);
 
   // One read, two derivations: the id set the ticks need, and the timestamps the
-  // rhythm needs. lesson_progress is one row per completed lesson, so a distinct
-  // id set and a raw timestamp list are both correct reads of the same rows.
-  const completed = new Set<string>();
-  const completedAt: string[] = [];
-  for (const r of rows) {
-    if (r.lesson_id) completed.add(r.lesson_id);
-    if (r.completed_at) completedAt.push(r.completed_at);
-  }
-
-  const rhythm = computeRhythm({
-    completedAt,
-    createdAt: profile?.created_at ?? null,
-    // Server clock, once, here. Never in a component.
-    now: Date.now(),
-  });
+  // rhythm needs. Server clock, once, here. Never in a component.
+  const { completed, rhythm } = rhythmFromCompletions(
+    rows,
+    profile?.created_at ?? null,
+    Date.now()
+  );
 
   const payload: MyProgressPayload = {
     authed: true,

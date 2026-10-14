@@ -651,7 +651,10 @@ export async function getTeamByNumber(
       // off public surfaces, so this select must never ask for it. `full_name`
       // and `hide_name` were fetched here but never read — one careless
       // `{...p}` spread below would have leaked real names for a whole team.
-      .select("id, username, avatar_url, xp, created_at")
+      // `role` is the member's team role (student, mentor...), which the
+      // leaderboard and public profile already show; the app's team screen
+      // labels members with it.
+      .select("id, username, avatar_url, role, xp, created_at")
       .eq("team_number", teamNumber),
   ]);
   const rows = (profs as Profile[]) ?? [];
@@ -688,7 +691,7 @@ export async function getTeamByNumber(
       name: p.username || "Member",
       username: p.username,
       avatarUrl: p.avatar_url,
-      role: "member",
+      role: p.role || "student",
       xp: p.xp ?? 0,
       completed: counts[p.id] ?? 0,
       lastActive: last[p.id] ?? null,

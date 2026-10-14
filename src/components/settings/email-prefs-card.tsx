@@ -51,8 +51,8 @@ export function EmailPrefsCard({ initialOn }: { initialOn: boolean }) {
         Reminder emails
       </h3>
       <p className="nb-sub mt-2">
-        Now and then we can email you a reminder: your next lesson, or a streak
-        about to end. They&rsquo;re off unless you turn them on, and every one
+        Now and then we can email you a reminder about your next lesson,
+        picked up from where you left off. They&rsquo;re off unless you turn them on, and every one
         has a one-click unsubscribe. Account emails like verification and
         password resets still come either way.{" "}
         <Link href="/privacy" className="nb-link">

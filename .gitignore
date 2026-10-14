@@ -44,3 +44,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Native app build output (apple/)
+apple/.build/
+apple/**/xcuserdata/
+apple/**/*.xcuserstate

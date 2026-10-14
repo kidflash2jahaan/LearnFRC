@@ -2,14 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
-import {
-  getTeamByNumber,
-  getTeamSubteamCoverage,
-  getTeamMemberDeptProgress,
-  getReferralCount,
-} from "@/lib/queries";
+import { loadTeamSheet } from "@/lib/app/team";
 import { ShareButton } from "@/components/share-button";
-import { clampPct, pluralize } from "@/lib/utils";
+import { pluralize } from "@/lib/utils";
 import {
   SubteamBoard,
   SubteamMeter,
@@ -103,16 +98,20 @@ async function renderTeam(
   uid: string,
   username: string | null
 ) {
-  const [{ totalLessons, members }, referralCount] = await Promise.all([
-    getTeamByNumber(teamNumber),
-    getReferralCount(uid),
-  ]);
-  const totalCompleted = members.reduce((s, m) => s + m.completed, 0);
-  const totalNeeded = members.length * totalLessons;
-  const avgPct =
-    members.length && totalLessons
-      ? clampPct((totalCompleted / totalNeeded) * 100)
-      : 0;
+  // Shared with the app's GET /api/app/team (src/lib/app/team.ts), so the
+  // sheet here and the team screen in the app always show the same numbers.
+  const {
+    totalLessons,
+    members,
+    referralCount,
+    coverage,
+    deptProgress,
+    totalCompleted,
+    totalNeeded,
+    avgPct,
+    claimedSubteams: claimedCount,
+    lessonsCovered: distinctDone,
+  } = await loadTeamSheet(teamNumber, uid);
 
   const rosterMembers: RosterMember[] = members.map((m) => ({
     userId: m.userId,
@@ -135,10 +134,6 @@ async function renderTeam(
   // on. Only usernames and avatars cross the boundary: the coverage query
   // never opens the profiles table at all.
   const byId = new Map(rosterMembers.map((m) => [m.userId, m]));
-  const [coverage, deptProgress] = await Promise.all([
-    getTeamSubteamCoverage(members.map((m) => m.userId)),
-    getTeamMemberDeptProgress(members.map((m) => m.userId)),
-  ]);
   const progressMembers: ProgressMember[] = rosterMembers.map((m) => ({
     userId: m.userId,
     name: m.name,
@@ -168,11 +163,9 @@ async function renderTeam(
     }),
   }));
 
+  // `claimedCount` and `distinctDone` (distinct lessons the team has finished
+  // between them) come from the shared loader above.
   const gapRows = subteamRows.filter((r) => r.crew.length === 0);
-  const claimedCount = subteamRows.length - gapRows.length;
-  // Distinct lessons the team has finished between them, NOT the sum of the
-  // per-member counts, which double-counts a lesson two people both did.
-  const distinctDone = subteamRows.reduce((s, r) => s + r.teamCompleted, 0);
   const solo = members.length <= 1;
 
   const tally: { figure: string; label: string }[] = [

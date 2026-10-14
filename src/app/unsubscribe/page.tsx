@@ -63,7 +63,7 @@ export default async function UnsubscribePage({
           </h1>
           <p className="mt-4 text-[0.99rem] leading-relaxed text-graphite">
             {optIn
-              ? "Learning reminders will start again: your next lesson, and a nudge when a streak is about to end. You can turn them off again from any of those emails, or in your settings."
+              ? "Learning reminders will start again: your next lesson, picked up from where you left off. You can turn them off again from any of those emails, or in your settings."
               : "No more learning reminders will be sent to this address. Your account, your progress and your certificates are untouched, and you can still read every lesson."}
           </p>
 

@@ -7,6 +7,12 @@ export const dynamic = "force-dynamic";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const NO_STORE = { "Cache-Control": "no-store" };
 
+/** Errors in the `{ error, code }` shape every /api/app route uses, since the
+ *  app calls this route for guests too. Statuses are unchanged. */
+function err(status: number, code: string, error: string, headers?: HeadersInit) {
+  return NextResponse.json({ error, code }, { status, headers: { ...NO_STORE, ...headers } });
+}
+
 /**
  * Lesson progress for a reader with no account, keyed to the anonymous visitor
  * id.
@@ -60,7 +66,7 @@ export async function POST(req: Request) {
   try {
     body = await req.json();
   } catch {
-    return new NextResponse(null, { status: 400 });
+    return err(400, "validation", "Something went wrong. Try again.");
   }
 
   const visitor =
@@ -69,7 +75,7 @@ export async function POST(req: Request) {
       : "";
   const lessonId = typeof body.lessonId === "string" ? body.lessonId : "";
   if (!visitor || !UUID.test(lessonId))
-    return new NextResponse(null, { status: 400 });
+    return err(400, "validation", "Something went wrong. Try again.");
 
   const complete = body.complete !== false; // default true
   const answers = Array.isArray(body.answers)
@@ -81,7 +87,9 @@ export async function POST(req: Request) {
   // indistinguishable from success, so a throttled completion looked saved and
   // then vanished at signup.
   if (!(await rateLimit("guest-progress", 120, 3600)))
-    return new NextResponse(null, { status: 429, headers: NO_STORE });
+    return err(429, "rate_limited", "Too many attempts. Wait a minute and try again.", {
+      "Retry-After": "3600",
+    });
 
   const admin = createAdminClient();
 
@@ -100,7 +108,7 @@ export async function POST(req: Request) {
     .select("quiz")
     .eq("id", lessonId)
     .maybeSingle();
-  if (!lesson) return new NextResponse(null, { status: 404, headers: NO_STORE });
+  if (!lesson) return err(404, "not_found", "We couldn't find that lesson.");
 
   const quiz = (lesson.quiz as { answer: number }[] | null) ?? [];
   let quizPassed = false;
@@ -122,9 +130,10 @@ export async function POST(req: Request) {
         .eq("lesson_id", lessonId)
         .maybeSingle();
       if (!existing?.quiz_passed)
-        return NextResponse.json(
-          { error: "Answer every quiz question correctly to complete this lesson." },
-          { status: 422, headers: NO_STORE }
+        return err(
+          422,
+          "validation",
+          "Answer every quiz question correctly to complete this lesson."
         );
       quizPassed = true;
     }
@@ -137,7 +146,7 @@ export async function POST(req: Request) {
       { visitor, lesson_id: lessonId, quiz_passed: quizPassed },
       { onConflict: "visitor,lesson_id" }
     );
-  if (error) return new NextResponse(null, { status: 500, headers: NO_STORE });
+  if (error) return err(500, "server", "Couldn't save that. Try again.");
 
   return NextResponse.json({ saved: true }, { headers: NO_STORE });
 }

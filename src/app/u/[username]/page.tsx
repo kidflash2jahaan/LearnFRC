@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { ShareButton } from "@/components/profile/share-button";
 import { Ink } from "@/components/motion/primitives";
+import { getPublicRecord } from "@/lib/app/public-profile";
+import { levelForXp, tierFor } from "@/lib/app/levels";
 import { RankStamp } from "./_trophy-panel";
-import type { Profile } from "@/lib/types";
 
 /**
  * Somebody's public page, rebuilt as a record of work.
@@ -55,69 +55,31 @@ const ROLE_LABEL: Record<string, string> = {
   other: "Member",
 };
 
-/** Rank tiers earned by level. A name, not a colour: see RankStamp. */
-function tierFor(level: number): string {
-  if (level >= 25) return "Champion";
-  if (level >= 15) return "All-Star";
-  if (level >= 8) return "Veteran";
-  if (level >= 3) return "Contender";
-  return "Rookie";
-}
-
 export default async function PublicProfilePage({
   params,
 }: {
   params: Promise<{ username: string }>;
 }) {
   const { username } = await params;
-  // Service-role, NOT the request-scoped client. `profiles` and
-  // `user_achievements` are no longer SELECTable by the anon API role, which
-  // is what stops a stranger from paging every account off /rest/v1. A
-  // logged-out visitor's client IS the anon role, so this page has to read
-  // server-side to stay public and indexable.
-  //
-  // The service-role key bypasses RLS *and* column grants, so every select
-  // below is an EXPLICIT allow-list. Never `select("*")`, never `full_name`,
-  // `signup_ip`, `unsubscribe_token`, or anything else that isn't rendered:
-  // there is no second line of defence behind this key.
-  const supabase = createAdminClient();
+  // Server-side, service-role reads with explicit column allow-lists (never
+  // `full_name`), shared with the app's GET /api/app/u/{username}. A logged-out
+  // visitor's client IS the anon role, which can't read `profiles`, so this
+  // page has to read server-side to stay public and indexable. See
+  // src/lib/app/public-profile.ts.
+  const record = await getPublicRecord(username);
+  if (!record) notFound();
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("id, username, avatar_url, team_number, bio, role, xp, created_at")
-    .eq("username", username)
-    .maybeSingle();
-  if (!profile) notFound();
-
-  const p = profile as Profile;
+  const p = record.profile;
   // Public profile: identify by username only; real names are never public.
   const displayName = p.username || username;
-  const level = Math.floor(p.xp / 100) + 1;
+  const level = levelForXp(p.xp);
   const xpIntoLevel = p.xp % 100;
   const xpToNext = 100 - xpIntoLevel;
   const levelFraction = xpIntoLevel / 100;
   const tierName = tierFor(level);
 
-  // Real completed-lesson count (lesson_progress is RLS-private → admin client).
-  const { count: lessonsCount } = await supabase
-    .from("lesson_progress")
-    .select("*", { count: "exact", head: true })
-    .eq("user_id", p.id);
-  const lessons = lessonsCount ?? 0;
-
-  const { data: ua } = await supabase
-    .from("user_achievements")
-    .select("earned_at, achievements(slug, name, description, icon)")
-    .eq("user_id", p.id)
-    .order("earned_at", { ascending: false });
-
-  type Ach = { slug: string; name: string; description: string; icon: string };
-  const achievements = (ua ?? [])
-    .map((r) => {
-      const a = r.achievements as unknown;
-      return (Array.isArray(a) ? a[0] : a) as Ach | undefined;
-    })
-    .filter(Boolean) as Ach[];
+  const lessons = record.lessonCount;
+  const achievements = record.achievements;
 
   const joined = new Date(p.created_at).toLocaleDateString(undefined, {
     month: "short",

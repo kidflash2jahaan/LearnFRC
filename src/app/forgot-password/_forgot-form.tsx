@@ -37,7 +37,7 @@ export function ForgotForm({ defaultEmail }: { defaultEmail?: string }) {
         </p>
 
         <div className="nb-note mt-5">
-          <p className="nb-slug">expires in one hour</p>
+          <p className="nb-slug">works for one hour</p>
           <p className="mt-1.5 text-[0.95rem] leading-snug">
             Single use, so an old link in your inbox will not work. Nothing seen
             after ten minutes usually means the spam folder.

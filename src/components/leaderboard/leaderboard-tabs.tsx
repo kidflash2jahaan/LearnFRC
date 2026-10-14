@@ -101,7 +101,7 @@ export function LeaderboardTabs({
             title={BOARD_TITLE[tab]}
             note={
               tab === "week"
-                ? "Ranked by XP earned in the last 7 days. It resets every Monday, so a week of work beats a year of it."
+                ? "Ranked by XP earned in the last 7 days, so a week of work beats a year of it."
                 : "Ranked by every point of XP earned since the account was made."
             }
             entries={tab === "week" ? weekly : allTime}

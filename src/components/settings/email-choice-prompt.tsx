@@ -115,7 +115,8 @@ export function EmailChoicePrompt({ show }: { show: boolean }) {
       </p>
       <p className="mt-2 text-[0.95rem] leading-snug text-graphite">
         Reminders are now off unless you turn them on. Say yes and we&rsquo;ll
-        email you now and then about your next lesson or a streak about to end.
+        email you now and then about your next lesson, picked up from where
+        you left off.
         You can change it any time in{" "}
         <Link href="/settings#email" className="nb-link">
           Settings

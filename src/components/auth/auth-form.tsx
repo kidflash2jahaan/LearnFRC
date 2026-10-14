@@ -245,8 +245,7 @@ export function AuthForm({
             className="mt-0.5 size-4 shrink-0"
           />
           <span>
-            Email me the occasional reminder, like my next lesson or a streak
-            about to end. Optional, and you can change it in Settings. Here&rsquo;s
+            Email me the occasional reminder about my next lesson. Optional, and you can change it in Settings. Here&rsquo;s
             the{" "}
             <Link href="/privacy" className="nb-link">
               privacy policy

@@ -2,13 +2,13 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { cookies, headers } from "next/headers";
+import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { firstProfaneField } from "@/lib/profanity";
-import { hookSourceFor } from "@/lib/signup-source";
-import { attributeSignup, normalizeVia } from "@/lib/signup-attribution";
-import { isFreshSignup } from "@/lib/first-run";
+import {
+  registerAccount,
+  requestIp,
+  resolveSignInEmail,
+} from "@/lib/app/accounts";
 
 export type AuthState =
   | {
@@ -42,25 +42,11 @@ export async function signIn(
 
   const supabase = await createClient();
 
-  // Allow logging in with a username instead of an email.
-  let email = identifier;
-  if (!identifier.includes("@")) {
-    const uname = identifier.toLowerCase().replace(/[^a-z0-9_]/g, "");
-    const admin = createAdminClient();
-    // Service-role: the caller is signed OUT here, so `supabase` is the anon
-    // role, and anon can no longer SELECT `profiles` at all. Single-row lookup
-    // by exact username, `id` only: it resolves one handle the user already
-    // typed, so it can't be walked into a roster.
-    const { data: prof } = await admin
-      .from("profiles")
-      .select("id")
-      .eq("username", uname)
-      .maybeSingle();
-    if (!prof) return { error: "No account found with that username." };
-    const { data: u } = await admin.auth.admin.getUserById(prof.id as string);
-    email = u?.user?.email ?? "";
-    if (!email) return { error: "Couldn't sign you in. Try your email instead." };
-  }
+  // Allow logging in with a username instead of an email. Shared with the
+  // app's POST /api/app/auth/sign-in (src/lib/app/accounts.ts).
+  const resolved = await resolveSignInEmail(identifier);
+  if (!resolved.ok) return { error: resolved.error };
+  const { email } = resolved;
 
   const { error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) return { error: error.message };
@@ -77,155 +63,43 @@ export async function signUp(
   formData: FormData
 ): Promise<AuthState> {
   const email = String(formData.get("email") || "").trim();
-  const password = String(formData.get("password") || "");
-  const fullName = String(formData.get("full_name") || "").trim();
-  const usernameRaw = String(formData.get("username") || "").trim();
-  const teamNumber = String(formData.get("team_number") || "").trim();
-  // Reminder emails are opt-in: an unticked checkbox isn't submitted at all.
-  const emailOptIn = formData.get("email_opt_in") === "on";
   const next = String(formData.get("next") || "/dashboard");
-  // A `ref` is normally a referrer's username. Conversion hooks (lesson/article
-  // signup CTAs) instead pass a known hook token that names the surface. Those
-  // are recorded as a last-touch `source`, not treated as a referral.
-  const rawRef = String(formData.get("ref") || "").trim().toLowerCase();
-  const hookSource = hookSourceFor(rawRef);
-  const ref = hookSource ? "" : rawRef.replace(/[^a-z0-9_]/g, "");
-  // Which share surface produced this referral. Referral is by far the
-  // highest-converting channel we have, so knowing WHICH surface earned each
-  // one decides where to keep investing. Allow-listed, never free text.
-  const via = normalizeVia(formData.get("via") as string | null);
-
-  if (!email || !password)
-    return { error: "Email and password are required." };
-  if (password.length < 8)
-    return { error: "Password must be at least 8 characters." };
-
-  const username = usernameRaw.toLowerCase().replace(/[^a-z0-9_]/g, "");
-  if (!username || username.length < 3)
-    return {
-      error: "Choose a username: at least 3 characters (letters, numbers, _).",
-    };
-
-  // Block offensive usernames / names at creation time (local, no AI).
-  const badField = firstProfaneField({ username, full_name: fullName });
-  if (badField)
-    return {
-      error:
-        badField === "username"
-          ? "That username isn't allowed. Please choose another."
-          : "That name isn't allowed. Please use a different one.",
-    };
-
-  let teamNum: number | null = null;
-  if (teamNumber) {
-    teamNum = parseInt(teamNumber, 10);
-    if (Number.isNaN(teamNum) || teamNum < 1 || teamNum > 99999)
-      return { error: "Enter a valid FRC team number." };
-  }
-
-  const supabase = await createClient();
-
-  // Client IP (Vercel forwards it), used for the ban list and stored per-account
-  // so a repeat offender's whole IP can be banned by the scheduled scan.
-  const hdrs = await headers();
-  const signupIp =
-    (hdrs.get("x-forwarded-for") || "").split(",")[0].trim() ||
-    hdrs.get("x-real-ip") ||
-    null;
-
-  // Ban list: reject banned emails or banned IPs with a generic message.
-  {
-    const banAdmin = createAdminClient();
-    const [{ data: bannedEmail }, { data: bannedIp }] = await Promise.all([
-      banAdmin.from("banned_emails").select("email").eq("email", email.toLowerCase()).maybeSingle(),
-      signupIp
-        ? banAdmin.from("banned_ips").select("ip").eq("ip", signupIp).maybeSingle()
-        : Promise.resolve({ data: null as { ip: string } | null }),
-    ]);
-    if (bannedEmail || bannedIp)
-      return {
-        error: "This account can't be created. If you believe this is a mistake, contact support.",
-      };
-  }
-
-  // Friendly pre-check for username collision (avoids cryptic DB error).
-  // Service-role: signup runs signed OUT, and the anon role can no longer
-  // SELECT `profiles`. Exact-match, `id` only: a taken/not-taken answer for
-  // one handle, which the unique index would give away on submit anyway.
-  if (username) {
-    const { data: taken } = await createAdminClient()
-      .from("profiles")
-      .select("id")
-      .eq("username", username)
-      .maybeSingle();
-    if (taken) return { error: "That username is already taken." };
-  }
-
   const dest = safeNext(next);
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "";
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      emailRedirectTo: `${siteUrl}/auth/callback?next=${encodeURIComponent(dest)}`,
-      data: {
-        full_name: fullName || null,
-        username: username || null,
-        team_number: teamNum !== null ? String(teamNum) : null,
-      },
+
+  // The rules (ban list, profanity, username and team number, the
+  // already-registered check, reminder-email consent, attribution) live in
+  // src/lib/app/accounts.ts, shared with the app's POST /api/app/auth/sign-up.
+  const cookieStore = await cookies();
+  const result = await registerAccount(
+    {
+      email,
+      password: String(formData.get("password") || ""),
+      fullName: String(formData.get("full_name") || ""),
+      username: String(formData.get("username") || ""),
+      teamNumber: String(formData.get("team_number") || ""),
+      // Reminder emails are opt-in: an unticked checkbox isn't submitted at all.
+      emailOptIn: formData.get("email_opt_in") === "on",
+      ref: String(formData.get("ref") || ""),
+      via: String(formData.get("via") || ""),
     },
-  });
-  if (error) return { error: error.message };
-
-  // Supabase's signUp deliberately succeeds (no error, no email) when the email
-  // is already registered. It returns a user with an EMPTY identities array to
-  // avoid leaking which emails exist. Without this check the user is sent to a
-  // dead "check your inbox" screen for an email that never arrives. Detect it
-  // and route them to log in instead. Skip the profile update below so we don't
-  // clobber the existing account's source/settings.
-  const alreadyRegistered =
-    !!data.user &&
-    Array.isArray(data.user.identities) &&
-    data.user.identities.length === 0;
-  if (alreadyRegistered) {
-    redirect(`/login?notice=exists&email=${encodeURIComponent(email)}`);
-  }
-
-  // Record acquisition source (first-touch cookie set by <SourceCapture/>) and,
-  // if they came via a referral link, who referred them. The XP referral reward
-  // is still paid out only on email verification (see /auth/confirm).
-  // The profile row is created by a trigger. Self-referrals are blocked.
-  if (data.user) {
-    // The profile row comes from the handle_new_user trigger with the column
-    // default, email_opt_in = false (opt-in since 2026-10-12). Only a ticked
-    // box turns reminders on. Either way they saw the question, so the choice
-    // is recorded and the one-time prompt won't ask again. Service-role.
-    //
-    // Only for an account this request actually created, and only if it has
-    // never answered: Supabase hands back the existing user's id when someone
-    // signs up again with a registered but unconfirmed email, and without both
-    // guards a stranger could tick the box on somebody else's account.
-    if (isFreshSignup(data.user.created_at)) {
-      await createAdminClient()
-        .from("profiles")
-        .update({ email_opt_in: emailOptIn, email_choice_at: new Date().toISOString() })
-        .eq("id", data.user.id)
-        .is("email_choice_at", null);
-    }
-
-    const cookieStore = await cookies();
-    // Shared with the Google/OAuth path (/auth/callback); see
-    // src/lib/signup-attribution.ts. The reward itself is paid later, on email
-    // confirmation, which is what keeps it farm-resistant here.
-    await attributeSignup({
-      userId: data.user.id,
-      ref,
-      via,
+    {
+      auth: await createClient(),
+      emailRedirectTo: `${siteUrl}/auth/callback?next=${encodeURIComponent(dest)}`,
+      // Client IP (Vercel forwards it), used for the ban list and stored
+      // per-account so a repeat offender's whole IP can be banned.
+      signupIp: await requestIp(),
+      // First-touch source cookie set by <SourceCapture/>.
       srcCookie: cookieStore.get("lf_src")?.value || null,
-      signupIp,
-      hookSource,
-    });
-  }
+    }
+  );
+  if (!result.ok) return { error: result.error };
+
+  // Supabase reports success without sending anything for an email that's
+  // already registered. Send them to log in instead of a dead "check your
+  // inbox" screen.
+  if (result.status === "exists")
+    redirect(`/login?notice=exists&email=${encodeURIComponent(email)}`);
 
   // Email confirmation is required, so send them to a "check your inbox" screen.
   redirect(`/auth/verify-email?email=${encodeURIComponent(email)}`);

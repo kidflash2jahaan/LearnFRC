@@ -25,7 +25,7 @@ const SNAGS = [
   },
   {
     title: "The link says expired",
-    body: "Links last an hour and open once. If you asked twice, only the newest one works. Come back here and send another, the dead one stays dead.",
+    body: "Links last an hour and open once. If you asked twice, only the newest one works. Come back here and send another, because the old one won't open again.",
   },
   {
     // Kept to the same "subject, then verb" shape and the same length as the
