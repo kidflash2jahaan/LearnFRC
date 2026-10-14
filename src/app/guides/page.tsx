@@ -159,8 +159,10 @@ export default async function GuidesPage() {
               Free to read, all of it.
             </h2>
             <p className="mt-3 max-w-[34ch] text-[0.95rem] text-[rgba(245,246,242,0.85)]">
-              No account needed to read a lesson. Sign in when you want the
-              ticks, the streak and the department certificate.
+              No account needed to read a lesson or pass its quiz, and this
+              browser keeps your ticks. A free account carries them to every
+              device and adds XP, a leaderboard rank and the department
+              certificate.
             </p>
           </div>
 
