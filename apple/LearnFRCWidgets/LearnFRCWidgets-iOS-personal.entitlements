@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<!-- iPhone/iPad device builds signed with a free Personal Team. A free team can't use App
+     Groups, so the app and widgets don't share data (AppGroup.containerURL is nil and the
+     widgets show their empty state). With a paid team, delete the iphoneos override in
+     project.yml so device builds use the full entitlements again. -->
+<dict/>
+</plist>

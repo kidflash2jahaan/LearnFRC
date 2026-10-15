@@ -15,7 +15,8 @@ settings:
     SWIFT_VERSION: "6.0"
     MARKETING_VERSION: "1.0"
     CURRENT_PROJECT_VERSION: "1"
-    DEVELOPMENT_TEAM: ""
+    # Jahaan's free Personal Team, for installing on his own devices from Xcode.
+    DEVELOPMENT_TEAM: X9QP4MF9YR
     CODE_SIGN_STYLE: Automatic
     # Until a development team is set, Mac builds are signed ad hoc ("Sign to Run Locally").
     "CODE_SIGN_STYLE[sdk=macosx*]": Manual
@@ -60,6 +61,8 @@ targets:
         PRODUCT_NAME: LearnFRC
         # No team yet: Mac builds sign locally without the app group (see the file).
         "CODE_SIGN_ENTITLEMENTS[sdk=macosx*]": LearnFRC/LearnFRC-macOS-local.entitlements
+        # Free Personal Team: device builds can't use App Groups (see the file). Remove with a paid team.
+        "CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]": LearnFRC/LearnFRC-iOS-personal.entitlements
         "CODE_SIGN_STYLE[sdk=macosx*]": Manual
         "CODE_SIGN_IDENTITY[sdk=macosx*]": "-"
         GENERATE_INFOPLIST_FILE: YES
@@ -109,6 +112,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.learnfrc.app.widgets
         PRODUCT_NAME: LearnFRCWidgets
         "CODE_SIGN_ENTITLEMENTS[sdk=macosx*]": LearnFRCWidgets/LearnFRCWidgets-macOS-local.entitlements
+        "CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]": LearnFRCWidgets/LearnFRCWidgets-iOS-personal.entitlements
         "CODE_SIGN_STYLE[sdk=macosx*]": Manual
         "CODE_SIGN_IDENTITY[sdk=macosx*]": "-"
         GENERATE_INFOPLIST_FILE: YES
