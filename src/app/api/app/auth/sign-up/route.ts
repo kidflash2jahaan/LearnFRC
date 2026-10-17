@@ -1,5 +1,5 @@
 import { rateLimit } from "@/lib/rate-limit";
-import { registerAccount, requestIp } from "@/lib/app/accounts";
+import { appSignupSource, registerAccount, requestIp } from "@/lib/app/accounts";
 import { createTokenClient } from "@/lib/app/auth";
 import {
   apiError,
@@ -13,13 +13,6 @@ import {
 export const dynamic = "force-dynamic";
 
 const TEXT_KEYS = ["email", "password", "username", "fullName", "ref", "via", "platform"] as const;
-
-/** The acquisition source an app signup is recorded under (profiles.source). */
-const PLATFORM_SOURCE: Record<string, string> = {
-  ios: "iOS app",
-  ipados: "iPad app",
-  macos: "Mac app",
-};
 
 /**
  * POST /api/app/auth/sign-up
@@ -75,7 +68,7 @@ export async function POST(req: Request) {
         auth: createTokenClient(),
         emailRedirectTo: `${siteUrl}/auth/callback?next=${encodeURIComponent("/dashboard")}`,
         signupIp: await requestIp(),
-        srcCookie: PLATFORM_SOURCE[text("platform").toLowerCase()] ?? "LearnFRC app",
+        srcCookie: appSignupSource(text("platform")),
       }
     );
     if (!result.ok) return fromFailure(result);

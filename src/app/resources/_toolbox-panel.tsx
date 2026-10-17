@@ -1,18 +1,10 @@
 import type { CSSProperties } from "react";
+import type { ResourceLink } from "@/lib/app/resources";
 
-export type ShelfLink = { title: string; url: string };
-
-/** Strip protocol and www so the host reads as a label, not a URL.
-    Exported because the citations table on the page prints the same label, and
-    two copies of this would drift the moment one of them learned about a
-    subdomain the other did not. */
-export function hostLabel(url: string): string {
-  try {
-    return new URL(url).hostname.replace(/^www\./, "");
-  } catch {
-    return url;
-  }
-}
+/** A toolbox link with its printed host. The host label comes from hostLabel
+    in src/lib/app/resources.ts, the one copy the citations table and the app
+    also use, so the three can't drift. */
+export type ShelfLink = ResourceLink;
 
 /**
  * One shelf of the toolbox, drawn as a labelled parts bin.
@@ -99,7 +91,7 @@ export function ShelfBin({
                 {link.title}
                 <span className="sr-only"> (opens in a new tab)</span>
               </span>
-              <span className="nb-slug">{hostLabel(link.url)}</span>
+              <span className="nb-slug">{link.host}</span>
             </a>
           </li>
         ))}

@@ -1,11 +1,10 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getSession } from "@/lib/auth";
-import { sendEmail, feedbackEmailHtml, feedbackReplyHtml } from "@/lib/email";
+import { sendEmail, feedbackEmailHtml } from "@/lib/email";
 import { rateLimit } from "@/lib/rate-limit";
+import { replyToFeedbackAs } from "@/lib/app/admin-feedback";
 
 export type FeedbackState = { error?: string; success?: boolean } | undefined;
 export type ReplyState = { error?: string; success?: boolean } | undefined;
@@ -74,52 +73,25 @@ export async function sendFeedback(
 }
 
 /**
- * Admin-only: reply to a stored feedback submission. Emails the sender from the
- * verified LearnFRC domain and marks the item replied. Gated on isAdmin: this
- * is a public "use server" endpoint, so the authorization check is mandatory.
+ * Admin-only: reply to a stored feedback submission. The website's door onto
+ * replyToFeedbackAs (src/lib/app/admin-feedback.ts), shared with the app's
+ * POST /api/app/admin/feedback/{id}/reply: the admin check, the
+ * already-answered guard, the reply rate limit, the email and the write all
+ * live there, so the two doors can't drift.
  */
 export async function replyToFeedback(
   _prev: ReplyState,
   formData: FormData
 ): Promise<ReplyState> {
-  const { isAdmin } = await getSession();
-  if (!isAdmin) return { error: "Not authorized." };
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authorized." };
 
-  const id = String(formData.get("id") || "");
-  const body = String(formData.get("reply") || "").trim();
-  if (!id) return { error: "Missing message id." };
-  if (body.length < 2) return { error: "Write a reply first." };
-  if (body.length > 4000) return { error: "That reply is too long." };
-
-  const admin = createAdminClient();
-  const { data: row } = await admin
-    .from("feedback")
-    .select("id, from_email, message")
-    .eq("id", id)
-    .maybeSingle();
-  if (!row) return { error: "That message no longer exists." };
-  if (!row.from_email)
-    return { error: "No reply address was left on this message." };
-
-  const res = await sendEmail({
-    to: row.from_email as string,
-    subject: "Re: your message to LearnFRC",
-    html: feedbackReplyHtml({
-      reply: body,
-      original: (row.message as string) || null,
-    }),
+  const result = await replyToFeedbackAs(user, {
+    id: String(formData.get("id") || ""),
+    reply: String(formData.get("reply") || ""),
   });
-  if (!res.ok) return { error: "Couldn't send the reply. Try again." };
-
-  await admin
-    .from("feedback")
-    .update({
-      status: "replied",
-      reply_body: body,
-      replied_at: new Date().toISOString(),
-    })
-    .eq("id", id);
-
-  revalidatePath("/admin");
-  return { success: true };
+  return result.ok ? { success: true } : { error: result.error };
 }

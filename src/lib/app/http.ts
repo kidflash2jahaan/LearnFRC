@@ -15,6 +15,7 @@ export const NO_STORE = { "Cache-Control": "no-store" } as const;
 
 const STATUS: Record<AppErrorCode, number> = {
   unauthorized: 401,
+  forbidden: 403,
   validation: 400,
   rate_limited: 429,
   not_found: 404,
@@ -25,6 +26,13 @@ const STATUS: Record<AppErrorCode, number> = {
 /** A per-user success response. Never cached anywhere. */
 export function ok(body: unknown, status = 200): NextResponse {
   return NextResponse.json(body, { status, headers: NO_STORE });
+}
+
+/** A shared function's success without its `ok: true` marker, to send as a body. */
+export function successBody<T extends { ok: true }>(result: T): Omit<T, "ok"> {
+  const body: Partial<T> = { ...result };
+  delete body.ok;
+  return body as Omit<T, "ok">;
 }
 
 /** A public success response the CDN may cache for `sMaxAge` seconds. */
@@ -39,19 +47,19 @@ export function publicOk(body: unknown, sMaxAge: number, swr = sMaxAge * 5): Nex
 export function apiError(
   code: AppErrorCode,
   error: string,
-  opts: { status?: number; retryAfter?: number } = {}
+  opts: { status?: number; retryAfter?: number; field?: string } = {}
 ): NextResponse {
   const headers: Record<string, string> = { ...NO_STORE };
   if (code === "rate_limited") headers["Retry-After"] = String(opts.retryAfter ?? 60);
   return NextResponse.json(
-    { error, code },
+    opts.field ? { error, code, field: opts.field } : { error, code },
     { status: opts.status ?? STATUS[code], headers }
   );
 }
 
 /** Turn a shared function's failure into the matching HTTP response. */
 export function fromFailure(f: Failure): NextResponse {
-  return apiError(f.code, f.error, { retryAfter: f.retryAfter });
+  return apiError(f.code, f.error, { retryAfter: f.retryAfter, field: f.field });
 }
 
 export function unauthorized(): NextResponse {

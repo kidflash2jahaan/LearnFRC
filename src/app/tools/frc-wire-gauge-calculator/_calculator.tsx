@@ -256,7 +256,7 @@ export default function WireGaugeCalculator({
     const tgt = num(targetPct, 0);
     let recommendedGauge: number | null = null;
     for (const g of AWG_OPTIONS) {
-      if (g < circuit.minAwg) continue; // must be at least the legal minimum thickness
+      if (g > circuit.minAwg) continue; // legal gauges only: the minimum or thicker (smaller AWG)
       const rr = strandedWarm
         ? effectiveResistance(RESISTANCE_OHM_PER_1000FT[g], T, a, upHigh)
         : RESISTANCE_OHM_PER_1000FT[g];

@@ -1,5 +1,6 @@
 import "server-only";
 import { getProfile, getReferralCount } from "@/lib/queries";
+import { getSiteRole, type SiteRole } from "@/lib/auth";
 import { isPlaceholderUsername } from "@/lib/onboarding";
 import { needsUsernameSetup } from "@/lib/onboarding-server";
 import { describeRhythm, rhythmMicrocopy, type Rhythm, type RhythmCopy } from "@/lib/streaks";
@@ -31,12 +32,19 @@ export type MePayload = {
   isPlaceholderUsername: boolean;
   emailPrompt: boolean;
   referralCount: number;
+  /**
+   * The account's site authority, from getSiteRole (owner email or the
+   * `site_admins` row). For showing or hiding the admin rows only: every
+   * /api/app/admin/* route re-checks it on the server.
+   */
+  siteRole: SiteRole;
 };
 
 export async function loadMe(user: AppUser): Promise<MePayload> {
-  const [profile, referralCount] = await Promise.all([
+  const [profile, referralCount, siteRole] = await Promise.all([
     getProfile(user.id),
     getReferralCount(user.id),
+    getSiteRole(user.id, user.email),
   ]);
   return {
     user: { id: user.id, email: user.email ?? null },
@@ -45,6 +53,7 @@ export async function loadMe(user: AppUser): Promise<MePayload> {
     isPlaceholderUsername: isPlaceholderUsername(profile?.username),
     emailPrompt: shouldAskAboutEmail(profile),
     referralCount,
+    siteRole,
   };
 }
 

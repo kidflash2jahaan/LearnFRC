@@ -1,5 +1,6 @@
 import "server-only";
 import { cookies } from "next/headers";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import {
   getDepartments,
@@ -171,6 +172,10 @@ export type PlanLesson = {
   href: string;
   deptSlug: string;
   deptName: string;
+  /** The lesson's module and own slug, the two path segments after deptSlug.
+   *  The app's GET /api/app/start-plan sends them; the site reads `href`. */
+  moduleSlug: string;
+  slug: string;
   accent: string;
   done: boolean;
 };
@@ -187,9 +192,14 @@ export type StarterPlan = {
   lessons: PlanLesson[];
   /** The single next action. Null only when the whole plan is finished. */
   next: {
+    /** The lesson itself. Past the plan once all five are ticked (see step). */
+    id: string;
     title: string;
     href: string;
+    deptSlug: string;
     deptName: string;
+    moduleSlug: string;
+    slug: string;
     accent: string;
     /** Real read time from the word count — see the note in resolveReadMins. */
     readMins: number;
@@ -211,6 +221,8 @@ type OrderedLesson = {
   href: string;
   deptSlug: string;
   deptName: string;
+  moduleSlug: string;
+  slug: string;
   accent: string;
 };
 
@@ -226,6 +238,8 @@ function orderedLessons(dept: DeptWithModules): OrderedLesson[] {
         href: `/guides/${dept.slug}/${m.slug}/${l.slug}`,
         deptSlug: dept.slug,
         deptName: dept.name,
+        moduleSlug: m.slug,
+        slug: l.slug,
         accent,
       });
     }
@@ -242,9 +256,14 @@ function orderedLessons(dept: DeptWithModules): OrderedLesson[] {
  * but a truncated read here would mark finished lessons as unfinished and send
  * a veteran back to lesson one, and that bug has already shipped twice in this
  * codebase. Same loop as getWeeklyLeaderboard / getTeamByNumber in queries.ts.
+ *
+ * `supabase` acts as the learner, so RLS limits the read to their own rows:
+ * the website's cookie client, or the app's Bearer-token client.
  */
-async function completedLessonIdsPaged(userId: string): Promise<Set<string>> {
-  const supabase = await createClient();
+async function completedLessonIdsPaged(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<Set<string>> {
   const out = new Set<string>();
   const PAGE = 1000;
   for (let from = 0; ; from += PAGE) {
@@ -308,8 +327,11 @@ export async function getGoalOptions(): Promise<GoalOption[]> {
  * read), and a 25-minute price tag at the decision point is a reason to leave.
  * Derive from the word count instead, using the exact formula the lesson page
  * prints, so the number on the card is the number on the page.
+ *
+ * Exported for GET /api/app/start-plan (src/lib/app/start-plan.ts), which
+ * prints a read time on every row, not only on the next lesson.
  */
-async function resolveReadMins(lessonId: string): Promise<number> {
+export async function resolveReadMins(lessonId: string): Promise<number> {
   const body = await getLessonContent(lessonId).catch(() => null);
   const words = body?.content?.split(/\s+/).length ?? 0;
   return Math.max(1, Math.round(words / 200));
@@ -328,10 +350,17 @@ async function resolveReadMins(lessonId: string): Promise<number> {
  * Completed lessons stay in the plan as ticked rows rather than being replaced:
  * a plan that silently reshuffles under you never reads as progress, and the
  * five ticks are the whole point.
+ *
+ * ONE PLAN, TWO DOORS. /start and the dashboard call this with the signed-in
+ * user's id and let it read their progress through the cookie client. The
+ * app's GET /api/app/start-plan (src/lib/app/start-plan.ts) calls this same
+ * function and passes `progressClient`, its Bearer-token client, so the app
+ * and the site can never hand the same learner two different five lessons.
  */
 export async function getStarterPlan(
   userId: string | null,
-  goalId: string | null
+  goalId: string | null,
+  progressClient?: SupabaseClient
 ): Promise<StarterPlan | null> {
   const goal = goalById(goalId) ?? goalById(DEFAULT_GOAL_ID);
   if (!goal) return null;
@@ -343,7 +372,11 @@ export async function getStarterPlan(
     Promise.all(
       routeSlugs.map((s) => getDepartmentBySlug(s).catch(() => null))
     ),
-    userId ? completedLessonIdsPaged(userId) : Promise.resolve(new Set<string>()),
+    userId
+      ? (progressClient ? Promise.resolve(progressClient) : createClient()).then(
+          (client) => completedLessonIdsPaged(client, userId)
+        )
+      : Promise.resolve(new Set<string>()),
   ]);
 
   const live = depts.filter((d): d is DeptWithModules => !!d);
@@ -415,9 +448,13 @@ export async function getStarterPlan(
     lessons,
     next: nextLesson
       ? {
+          id: nextLesson.id,
           title: nextLesson.title,
           href: nextLesson.href,
+          deptSlug: nextLesson.deptSlug,
           deptName: nextLesson.deptName,
+          moduleSlug: nextLesson.moduleSlug,
+          slug: nextLesson.slug,
           accent: nextLesson.accent,
           readMins: await resolveReadMins(nextLesson.id),
           step: nextIndex + 1,

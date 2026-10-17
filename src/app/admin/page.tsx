@@ -2,12 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
-import { getAdminStats, getPendingEdits, getPendingSubmissions } from "@/lib/admin";
-import { getPendingApplicationCount } from "@/lib/admin-team";
-import { getAnalyticsAvailability } from "@/lib/vercel-analytics";
-import { getRetentionStats } from "@/lib/retention";
-import { getFunnelStats } from "@/lib/funnel";
-import { getFeedback } from "@/lib/feedback";
+import { loadAdminDashboard, type DashRow } from "@/lib/app/admin-dashboard";
+import { listFeedback } from "@/lib/app/admin-feedback";
 import { StatSheet, StatColumn, Stat } from "@/components/admin/stat-tile";
 import { CollapsiblePanel } from "@/components/admin/collapsible-panel";
 import { MiniList, MiniListPair, type MiniRow } from "@/components/admin/mini-list";
@@ -21,29 +17,6 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-const MONTHS = [
-  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-];
-
-/**
- * `2026-07-22T23:13:50Z` to `Jul 22` (or `Jul 22, 2026`).
- *
- * UTC and table-driven on purpose. The pageview coverage windows are computed
- * in UTC SQL-side, so rendering them in the runtime's local zone would print a
- * boundary a day off from the one the numbers actually use; and
- * `toLocaleDateString` returns different strings on different ICU builds. This
- * runs in a Server Component and the result is handed down as a plain string,
- * so nothing is recomputed on the client and hydration cannot disagree.
- */
-function utcDay(iso: string | null, withYear = false): string | null {
-  if (!iso) return null;
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return null;
-  const md = `${MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}`;
-  return withYear ? `${md}, ${d.getUTCFullYear()}` : md;
-}
-
 function timeAgo(iso: string): string {
   const d = Date.now() - new Date(iso).getTime();
   const m = Math.round(d / 60000);
@@ -54,23 +27,19 @@ function timeAgo(iso: string): string {
   return `${Math.round(h / 24)}d`;
 }
 
-/** Scale a list of values to 0-100 so the gauges are comparable within one list. */
-function withPct(rows: Omit<MiniRow, "pct">[]): MiniRow[] {
-  const max = Math.max(1, ...rows.map((r) => r.value));
-  return rows.map((r) => ({ ...r, pct: (r.value / max) * 100 }));
-}
-
 /**
- * Every surface that can earn a referral (the `?via=` allow-list), in journey
- * order. All four are rendered even at zero: a surface that shipped and earned
- * nothing is a finding, and it can only be read as one if the row is present.
+ * A shared dashboard row in the shape MiniList draws. The view-model sends
+ * null where there is nothing; the component wants the key left out.
  */
-const REFERRAL_SURFACES: { key: string; label: string }[] = [
-  { key: "lesson-milestone", label: "Lesson milestone" },
-  { key: "certificate", label: "Certificate" },
-  { key: "dashboard", label: "Dashboard" },
-  { key: "leaderboard", label: "Leaderboard" },
-];
+function mini(rows: DashRow[]): MiniRow[] {
+  return rows.map((r) => ({
+    label: r.label,
+    sub: r.sub ?? undefined,
+    value: r.value,
+    valueSuffix: r.valueSuffix ?? undefined,
+    pct: r.pct ?? undefined,
+  }));
+}
 
 /**
  * The quiet paragraph that says what a set of figures can and cannot be read
@@ -135,228 +104,48 @@ function NowRow({
   );
 }
 
+/** What a signed-in account without the admin role sees here. */
+function LockedDrawer() {
+  return (
+    <div className="nb-route nb-wrap flex min-h-[60dvh] items-center justify-center py-20">
+      <div className="nb-box nb-tilt-2 w-full max-w-lg p-[clamp(1.4rem,4vw,2.4rem)]">
+        <span className="nb-tape -top-3 left-[18%] rotate-[-3.2deg]" aria-hidden="true" />
+        <p className="nb-slug">access / denied</p>
+        <h1 className="mt-3 text-[clamp(1.9rem,1.3rem+2vw,2.8rem)]">
+          This drawer is locked.
+        </h1>
+        <p className="mt-4 text-graphite">
+          /admin holds the raw numbers for the whole site, so it is open to
+          administrators only. Nothing is wrong with your account.
+        </p>
+        <Link href="/dashboard" className="nb-btn mt-6">
+          Back to your dashboard
+        </Link>
+      </div>
+    </div>
+  );
+}
+
 export default async function AdminPage() {
-  const { user, isAdmin, isSuperAdmin } = await getSession();
+  const { user, isAdmin } = await getSession();
   if (!user) redirect("/login?next=/admin");
 
-  if (!isAdmin) {
-    return (
-      <div className="nb-route nb-wrap flex min-h-[60dvh] items-center justify-center py-20">
-        <div className="nb-box nb-tilt-2 w-full max-w-lg p-[clamp(1.4rem,4vw,2.4rem)]">
-          <span className="nb-tape -top-3 left-[18%] rotate-[-3.2deg]" aria-hidden="true" />
-          <p className="nb-slug">access / denied</p>
-          <h1 className="mt-3 text-[clamp(1.9rem,1.3rem+2vw,2.8rem)]">
-            This drawer is locked.
-          </h1>
-          <p className="mt-4 text-graphite">
-            /admin holds the raw numbers for the whole site, so it is open to
-            administrators only. Nothing is wrong with your account.
-          </p>
-          <Link href="/dashboard" className="nb-btn mt-6">
-            Back to your dashboard
-          </Link>
-        </div>
-      </div>
-    );
-  }
+  if (!isAdmin) return <LockedDrawer />;
 
-  const [
-    stats,
-    retention,
-    funnel,
-    pendingEdits,
-    pendingSubmissions,
-    feedback,
-    pendingApplications,
-  ] = await Promise.all([
-    getAdminStats(),
-    getRetentionStats(),
-    getFunnelStats(),
-    getPendingEdits(),
-    getPendingSubmissions(),
-    getFeedback(),
-    // Only a super admin sees the line this feeds, so a plain admin does not
-    // pay for the query at all. It rides in the same batch either way, so the
-    // person who does see it waits on nothing extra.
-    isSuperAdmin ? getPendingApplicationCount() : Promise.resolve(0),
+  // Every figure, label and footnote below comes from loadAdminDashboard
+  // (src/lib/app/admin-dashboard.ts), the same view-model the app's
+  // /api/app/admin/dashboard sends, so the two doors print the same sentence
+  // over the same number. Both shared functions re-check the role themselves.
+  const [dashResult, feedbackResult] = await Promise.all([
+    loadAdminDashboard(user),
+    listFeedback(user),
   ]);
-
-  // Computed here, not via the client module's openFeedbackCount helper:
-  // calling an export of a "use client" module from a Server Component throws.
-  const openFeedback = feedback.filter((f) => f.status !== "replied").length;
-  const completionsAll = stats.totals.completions + stats.guestCompletions;
-
-  // ── What the traffic numbers actually cover ──────────────────────
-  // `page_views` spans three eras and the figures read only the measured one
-  // (see AnalyticsCoverage in src/lib/admin.ts). Printing the window is the
-  // whole point of this block: a growth analysis read straight across the eras
-  // and got a ~100% activation rate out of rows that, by construction, exist
-  // only for people who had already completed a lesson. A reader who can see
-  // "since Jul 22" cannot make that mistake twice.
-  // Year included on purpose: the Vercel window opens 366 days back, so a
-  // bare "Sep 6" reads as TODAY and makes a year of page views look like one
-  // day's traffic. That is the exact misreading this block exists to stop.
-  const analyticsAvailability = getAnalyticsAvailability();
-  // Why the traffic figures cannot be believed, or null when they can.
-  //
-  // TWO WAYS TO FAIL, and only one of them used to be said out loud. Missing
-  // credentials was caught here; a token that is present but dead, a spent rate
-  // limit, or Web Analytics switched off on the project was not, because
-  // availability only ever checked whether the env vars exist. Every traffic
-  // query then failed, every traffic figure fell back to 0, and the panel
-  // printed "0 unique visitors" in stamp type with no note beside it. A zero
-  // that arrives that way is a placeholder, not a measurement, and this line is
-  // what makes the page say which one it is looking at.
-  const trafficUnmeasured = !analyticsAvailability.configured
-    ? analyticsAvailability.message
-    : stats.analytics.failure
-      ? stats.trafficFromLedger
-        ? // The headline pair is real, just not live. Say which is which
-          // rather than blanketing the whole band as unmeasured: a reader
-          // told to distrust every figure cannot use the two that are still
-          // trustworthy.
-          `${stats.analytics.failure.message} Unique visitors and page views above come from the banked monthly ledger, which is complete through the last closed month and is where these numbers are kept permanently. Everything else here that needs live traffic is unmeasured rather than zero: article and guide reads, the visitor line on the growth chart, and the Visitors half of the sources drawer.`
-        : `${stats.analytics.failure.message} Every traffic figure on this page is therefore unmeasured, not zero: unique visitors, page views, article and guide reads, the visitor line on the growth chart, and the Visitors half of the sources drawer.`
-      : null;
-  const viewsSince = utcDay(stats.analytics.viewsSince, true);
-  const visitorsSince = utcDay(stats.analytics.visitorsSince, true);
-  const coverageParts: string[] = [];
-  // BOTH traffic figures, not just page views. This used to date page views
-  // alone, which left "unique visitors" stamped undated directly under a band
-  // that says these are totals over the whole history of the site. They are not:
-  // they are the rolling year Vercel keeps, and the visitors stamp has no
-  // "since" of its own now that Vercel dates every visit it records.
-  if (viewsSince)
-    coverageParts.push(
-      `Page views and unique visitors are Vercel's, and Vercel keeps a rolling 366 days, so both of those cover ${viewsSince} onward rather than the whole history. Every figure read out of the database does go back to the first signup`
-    );
-  if (visitorsSince)
-    coverageParts.push(
-      `every per-person number (unique visitors, guide viewers, acquisition sources) since ${visitorsSince}, when the beacon began sending visitor ids`
-    );
-  const backfillFrom = utcDay(stats.analytics.backfillFrom, true);
-  const backfillTo = utcDay(stats.analytics.backfillTo, true);
-  const coverageNote = [
-    coverageParts.length > 0 ? `${coverageParts.join("; ")}.` : null,
-    stats.analytics.backfillViews > 0
-      ? `A further ${stats.analytics.backfillViews.toLocaleString()} rows${
-          backfillFrom && backfillTo ? ` (${backfillFrom} to ${backfillTo})` : ""
-        } reconstructed from lesson completions and labelled source=backfill are held out of every figure here and are not added in anywhere: they exist only for people who already finished a lesson, so any funnel built on them reads ~100% by construction.`
-      : null,
-  ]
-    .filter(Boolean)
-    .join(" ");
-
-  const lessonRows = withPct(
-    stats.topLessons.slice(0, 8).map((l) => ({ label: l.title, value: l.completions }))
-  );
-  const deptRows = withPct(
-    stats.topDepartments
-      .slice(0, 8)
-      .map((d) => ({ label: d.name, value: d.completions ?? 0 }))
-  );
-  const teamRows = withPct(
-    stats.teams.slice(0, 8).map((t) => ({
-      label: `#${t.teamNumber}`,
-      sub: `${t.members} ${t.members === 1 ? "member" : "members"}`,
-      value: t.completed,
-    }))
-  );
-  // One identifier per row, already built server-side: a handle, or a short id
-  // fragment for someone who never picked one. There is no second name to put
-  // in `sub` any more, and there should not be.
-  const recruiterRows = withPct(
-    stats.recruiters.slice(0, 8).map((r) => ({
-      label: r.label,
-      value: r.referrals,
-    }))
-  );
-  // Referral signups by the surface that earned them. Two deliberate choices:
-  //  - The four known surfaces are scaled against EACH OTHER, so the gauges
-  //    compare like with like.
-  //  - Referrals from before attribution existed get a labelled row with NO
-  //    gauge (pct omitted), pinned last. They are real signups, so dropping
-  //    them would understate the referral total, but they are not a surface,
-  //    and letting them into the scale would make the historical bucket look
-  //    like the winning channel forever.
-  const bySurface = new Map(stats.referralSurfaces.map((s) => [s.surface ?? "", s]));
-  const untrackedReferrals = bySurface.get("")?.signups ?? 0;
-  const attributedReferrals = stats.referralSurfaces
-    .filter((s) => s.surface)
-    .reduce((n, s) => n + s.signups, 0);
-  // Any surface key the server has started sending that REFERRAL_SURFACES does
-  // not know about yet is rendered under its raw key rather than dropped:
-  // otherwise adding a `via` value server-side would silently delete real
-  // signups from this drawer and stop the total reconciling with `referralUsers`.
-  const unknownSurfaces = stats.referralSurfaces
-    .map((s) => s.surface)
-    .filter((k): k is string => !!k && !REFERRAL_SURFACES.some((r) => r.key === k))
-    .map((key) => ({ key, label: key }));
-  const surfaceRows: MiniRow[] = [
-    ...withPct(
-      [...REFERRAL_SURFACES, ...unknownSurfaces]
-        .map(({ key, label }) => {
-          const s = bySurface.get(key);
-          return {
-            label,
-            sub: s && s.signups7d > 0 ? `${s.signups7d} this week` : undefined,
-            value: s?.signups ?? 0,
-          };
-        })
-        .sort((a, b) => b.value - a.value)
-    ),
-    ...(untrackedReferrals > 0
-      ? [{ label: "Before tracking", sub: "surface unknown", value: untrackedReferrals }]
-      : []),
-  ];
-
-  // ── Activation funnel ────────────────────────────────────────────
-  // NOT run through withPct(): the gauge must be each step's share of the FIRST
-  // step, which is what makes the list read as a funnel narrowing to a point.
-  // withPct() rescales to the largest row, which here is always step 1, the
-  // same answer today, but it would silently stop being a funnel the moment a
-  // step ever exceeded signups. pctOfStart says what it means.
-  const funnelRows: MiniRow[] = funnel.rows.map((r) => ({
-    label: r.label,
-    // The conversion INTO this step. Bases are mostly the previous row; see
-    // STEP_META in src/lib/funnel.ts for the one deliberate exception.
-    sub: r.baseLabel ? `${r.conversionPct}% of ${r.baseLabel}` : undefined,
-    value: r.count,
-    pct: r.pctOfStart,
-  }));
-  // Logged-out readers who reached a step before they had an account. Rendered
-  // only when there is something to show: an all-zero list on day one would be
-  // noise, and its absence is not a finding (the beacon simply has not fired).
-  const funnelAnonRows = withPct(
-    funnel.rows
-      .filter((r) => r.anonymous > 0)
-      .map((r) => ({ label: r.label, value: r.anonymous }))
-  );
-  // Kept SHORT on purpose: the chip is whitespace-nowrap, so a long badge
-  // cannot wrap and would push the drawer header sideways at 375px.
-  const funnelBadge = funnel.worstDrop
-    ? `-${funnel.worstDrop.lostPct}% ${funnel.worstDrop.label}`
-    : undefined;
-  // Which rows can be believed. This is the honesty valve for the whole drawer:
-  // 'Opened a lesson' and 'Attempted a quiz' have no source in the schema, so
-  // until the beacon fires they show the floor (= everyone who completed a
-  // lesson) and the funnel LOOKS like 100% of openers finish. Saying so is the
-  // difference between an instrument and a decoration.
-  const funnelNote =
-    funnel.rows.length === 0
-      ? null
-      : funnel.inferredSteps.length > 0
-        ? `${funnel.inferredSteps.join(" and ")} ${
-            funnel.inferredSteps.length === 1 ? "is" : "are"
-          } a floor, not a measurement. Nothing has ever recorded them, so the count shown is everyone who completed a lesson, because you cannot finish one without opening it and passing its quiz. They separate from the completed row the moment the beacon fires on a reader who opens a lesson and stops. Every other row is exact, back to the first signup.`
-        : `Every step measured directly, ${funnel.recorded.toLocaleString()} events recorded.`;
-
-  const articleRows = withPct(
-    stats.articleViews.slice(0, 10).map((a) => ({ label: a.title, value: a.views }))
-  );
-  const achievementRows = withPct(
-    stats.achievementBreakdown.slice(0, 12).map((a) => ({ label: a.name, value: a.earned }))
-  );
+  if (!dashResult.ok || !feedbackResult.ok) return <LockedDrawer />;
+  const dash = dashResult;
+  const feedback = feedbackResult.items;
+  const isSuperAdmin = dash.role === "superadmin";
+  const { now, notes, growth, funnel, sources, engagement, teams, activity } = dash;
+  const openFeedback = now.openFeedback;
 
   return (
     <div className="nb-route pb-24">
@@ -407,14 +196,14 @@ export default async function AdminPage() {
               </p>
               <div className="mt-1">
                 <NowRow
-                  value={stats.onlineNow}
+                  value={now.onlineNow}
                   label="people on the site right now"
                   hint="active in the last few minutes"
                 />
                 <NowRow
                   value={openFeedback}
                   label="messages waiting for a reply"
-                  hint={`${feedback.length.toLocaleString()} received in total`}
+                  hint={`${now.feedbackTotal.toLocaleString()} received in total`}
                 />
                 {/* Super admins only, and the one row in this card that is a
                     link. Applications are the single thing on the site that
@@ -423,11 +212,11 @@ export default async function AdminPage() {
                     super admin could miss. A plain admin does not get the row,
                     because a link to a page that turns you away is worse than
                     no link. */}
-                {isSuperAdmin ? (
+                {isSuperAdmin && now.pendingApplications !== null ? (
                   <NowRow
-                    value={pendingApplications}
+                    value={now.pendingApplications}
                     label={
-                      pendingApplications === 1
+                      now.pendingApplications === 1
                         ? "application waiting on you"
                         : "applications waiting on you"
                     }
@@ -436,11 +225,11 @@ export default async function AdminPage() {
                   />
                 ) : null}
                 <NowRow
-                  value={pendingEdits.length}
+                  value={now.pendingEdits}
                   label="content edits to review"
                 />
                 <NowRow
-                  value={pendingSubmissions.length}
+                  value={now.pendingSubmissions}
                   label="lesson submissions to review"
                 />
               </div>
@@ -468,60 +257,33 @@ export default async function AdminPage() {
               runs straight into 96,431. The `[&_b]` step-down is the same
               trade in the other direction, so the row still fits at 1024px. */}
           <div className="mt-9 grid grid-cols-2 gap-x-8 gap-y-9 lg:grid-cols-4 [&_b]:text-[clamp(2rem,1.2rem+2.4vw,3.4rem)]">
-            <p className="nb-stamp">
-              <b>{stats.uniqueVisitors.toLocaleString()}</b>
-              <span>
-                unique visitors{visitorsSince ? `, since ${visitorsSince}` : ""}
-              </span>
-            </p>
-            <p className="nb-stamp">
-              <b>{stats.pageViewsTotal.toLocaleString()}</b>
-              <span>
-                page views, {stats.articleViewsTotal.toLocaleString()} of them on articles
-              </span>
-            </p>
-            <p className="nb-stamp">
-              <b>{(stats.totals.users + stats.guestLearners).toLocaleString()}</b>
-              <span>
-                learners: {stats.totals.users.toLocaleString()} accounts
-                (including unverified) + {stats.guestLearners.toLocaleString()}{" "}
-                guest learners
-              </span>
-            </p>
-            <p className="nb-stamp">
-              <b>{completionsAll.toLocaleString()}</b>
-              <span>
-                lessons completed
-                {stats.guestCompletions > 0
-                  ? `, ${stats.guestCompletions.toLocaleString()} by guests`
-                  : ""}
-              </span>
-            </p>
+            {dash.stamps.map((stamp) => (
+              <p key={stamp.key} className="nb-stamp">
+                <b>{stamp.value.toLocaleString()}</b>
+                <span>{stamp.label}</span>
+              </p>
+            ))}
           </div>
         </div>
       </section>
 
-      {trafficUnmeasured ? (
+      {notes.traffic ? (
         <div className="nb-wrap mt-6">
           <div className="nb-note max-w-[70ch]">
-            <p className="nb-slug">
-              {stats.trafficFromLedger
-                ? "traffic is coming from the banked ledger"
-                : "traffic panels are not measuring"}
-            </p>
+            <p className="nb-slug">{notes.traffic.slug}</p>
             <p className="mt-2 text-[0.88rem] leading-relaxed text-graphite">
-              {trafficUnmeasured}
+              {notes.traffic.text}
             </p>
           </div>
         </div>
       ) : null}
 
-      {coverageNote ? (
+      {notes.coverage ? (
         <div className="nb-wrap mt-6">
           <div className="nb-note max-w-[70ch]">
             <p className="nb-slug">what those four numbers cover</p>
             <p className="mt-2 text-[0.88rem] leading-relaxed text-graphite">
-              {coverageNote}
+              {notes.coverage}
             </p>
           </div>
         </div>
@@ -541,80 +303,19 @@ export default async function AdminPage() {
         </div>
 
         <StatSheet>
-          <StatColumn slug="tally / reach">
-            {/* Same figure and same rule as the home page's public counter,
-                which carries this exact label. See @/lib/frc-team. */}
-            <Stat
-              label="FRC teams represented"
-              value={stats.totalUniqueTeams}
-              hint="distinct team numbers on profiles, placeholders excluded"
-            />
-            <Stat
-              label="Guest learners"
-              value={stats.guestLearners}
-              hint="learning without an account"
-            />
-            <Stat
-              label="Guide viewers"
-              value={stats.guideViewersTotal}
-              hint={`${stats.guideViewsTotal.toLocaleString()} guide views${
-                visitorsSince ? `, viewers since ${visitorsSince}` : ""
-              }`}
-            />
-            <Stat
-              label="Referred signups"
-              value={stats.referralUsers}
-              hint={`of ${stats.totals.users.toLocaleString()} accounts`}
-            />
-          </StatColumn>
-
-          <StatColumn slug="tally / learning">
-            <Stat
-              label="Activation"
-              value={retention.activationPct}
-              suffix="%"
-              hint={`${retention.activated.toLocaleString()} of ${retention.totalUsers.toLocaleString()} accounts finished a lesson`}
-            />
-            <Stat
-              label="Return rate"
-              value={retention.returnPct}
-              suffix="%"
-              hint="of activated accounts, active on a second day"
-            />
-            {/* The median is across every ACTIVATED account, not across the
-                power users beside it. Written as "median N lessons each" it
-                read as the typical power user's total, which it is not and is
-                nowhere near: 8 against 47 the day this was caught. The figure
-                is right, the sentence was not. */}
-            <Stat
-              label="Power users"
-              value={retention.powerUsers}
-              hint={`active on 5+ days; median ${retention.medianLessons} lessons across all activated`}
-            />
-            <Stat
-              label="Achievements earned"
-              value={stats.totals.achievementsEarned}
-              hint={`${stats.totalXP.toLocaleString()} XP awarded`}
-            />
-          </StatColumn>
-
-          <StatColumn slug="tally / the binder">
-            <Stat
-              label="Lessons published"
-              value={stats.totals.lessons}
-              hint={`across ${stats.totals.departments} departments`}
-            />
-            <Stat
-              label="Bookmarks kept"
-              value={stats.totals.bookmarks}
-              hint="lessons saved to read later"
-            />
-            <Stat
-              label="Email queue"
-              value={retention.lifecycleEligible}
-              hint={`${stats.totals.subscribers.toLocaleString()} subscribers, ${retention.optedOut.toLocaleString()} opted out`}
-            />
-          </StatColumn>
+          {dash.tally.map((column) => (
+            <StatColumn key={column.slug} slug={column.slug}>
+              {column.rows.map((r) => (
+                <Stat
+                  key={r.label}
+                  label={r.label}
+                  value={r.value}
+                  suffix={r.suffix ?? undefined}
+                  hint={r.hint ?? undefined}
+                />
+              ))}
+            </StatColumn>
+          ))}
         </StatSheet>
       </section>
 
@@ -632,25 +333,11 @@ export default async function AdminPage() {
           {/* The figures beside each line are TRUE 30-day-window totals
               (visitors = count(distinct) over the window), not a sum of the
               daily series. */}
-          <GrowthChart
-            daily={stats.daily}
-            totals={{
-              visitors: stats.uniqueVisitors30d,
-              signups: stats.signups30d,
-              completions: stats.completions30d,
-            }}
-          />
+          <GrowthChart daily={growth.daily} totals={growth.totals} />
           {/* The 30-day window straddles the day visitor ids started, so the
               visitor line legitimately sits at zero for its left-hand days.
               Saying so stops it reading as a traffic collapse. */}
-          {visitorsSince ? (
-            <Footnote>
-              Days before {visitorsSince} plot views but no visitors: the beacon
-              had not started sending visitor ids, so that stretch of the visitor
-              line is missing data, not a quiet week. The reconstructed backfill
-              is excluded here, so nothing plotted is synthetic.
-            </Footnote>
-          ) : null}
+          {growth.footnote ? <Footnote>{growth.footnote}</Footnote> : null}
         </CollapsiblePanel>
 
         {/* Directly under Growth because it answers the one question the
@@ -659,26 +346,20 @@ export default async function AdminPage() {
         <CollapsiblePanel
           title="Activation funnel"
           slug="drawer / funnel"
-          badge={funnelBadge}
+          badge={funnel.badge ?? undefined}
         >
-          <MiniList
-            rows={funnelRows}
-            empty="Funnel unavailable. Check the server logs for [funnel]."
-          />
+          <MiniList rows={mini(funnel.rows)} empty={funnel.empty} />
 
-          {funnelNote ? <Footnote>{funnelNote}</Footnote> : null}
+          {funnel.note ? <Footnote>{funnel.note}</Footnote> : null}
 
-          {funnelAnonRows.length > 0 ? (
+          {funnel.anonymousRows.length > 0 ? (
             <section
               aria-label="Before signup, anonymous readers"
               className="mt-6 min-w-0 border-t border-dashed border-rule pt-4"
             >
               <p className="nb-slug mb-2.5">before signup / anonymous readers</p>
-              <MiniList rows={funnelAnonRows} />
-              <Footnote>
-                Counted by device, not by person, and never joined to an account.
-                A reader who signs up starts a fresh row above.
-              </Footnote>
+              <MiniList rows={mini(funnel.anonymousRows)} />
+              <Footnote>{funnel.anonymousNote}</Footnote>
             </section>
           ) : null}
         </CollapsiblePanel>
@@ -686,12 +367,12 @@ export default async function AdminPage() {
         <div className="grid items-start lg:grid-cols-2 lg:gap-x-14">
           <CollapsiblePanel title="Where they come from" slug="drawer / sources">
             <SourceBreakdown
-              userWeek={stats.sources7d}
-              userAllTime={stats.sources}
-              visitorWeek={stats.visitorSources7d}
-              visitorAllTime={stats.visitorSources}
-              visitorTotal={stats.uniqueVisitors}
-              visitorWeekTotal={stats.uniqueVisitors7d}
+              userWeek={sources.users.week}
+              userAllTime={sources.users.allTime}
+              visitorWeek={sources.visitors.week}
+              visitorAllTime={sources.visitors.allTime}
+              visitorTotal={sources.visitors.allTimeTotal}
+              visitorWeekTotal={sources.visitors.weekTotal}
             />
             {/* The two halves of this control do NOT cover the same span, and
                 the toggle says "All-time" for both, so the difference has to be
@@ -699,27 +380,19 @@ export default async function AdminPage() {
                 which Vercel made permanently null, so it stopped rendering at
                 all and the mismatch went unlabelled. It is unconditional now,
                 because the mismatch is unconditional. */}
-            <Footnote>
-              &ldquo;All-time&rdquo; means two different spans here. On the Users
-              view it is every signup ever, out of the database. On the Visitors
-              view it is only as far back as Vercel still keeps, which is a
-              rolling 366 days
-              {viewsSince ? `, starting ${viewsSince}` : ""}. Differencing the
-              two would invent a gap that is really just the older half of the
-              site&rsquo;s history.
-            </Footnote>
+            <Footnote>{sources.footnote}</Footnote>
           </CollapsiblePanel>
 
           <CollapsiblePanel title="What gets read" slug="drawer / engagement">
             <MiniListPair
               left={{
                 title: "most-completed lessons",
-                rows: lessonRows,
+                rows: mini(engagement.lessons),
                 empty: "No completions yet.",
               }}
               right={{
                 title: "top departments",
-                rows: deptRows,
+                rows: mini(engagement.departments),
                 empty: "No completions yet.",
               }}
             />
@@ -729,12 +402,12 @@ export default async function AdminPage() {
             <MiniListPair
               left={{
                 title: "top teams",
-                rows: teamRows,
+                rows: mini(teams.teams),
                 empty: "No teams yet.",
               }}
               right={{
                 title: "top recruiters",
-                rows: recruiterRows,
+                rows: mini(teams.recruiters),
                 empty: "No referrals yet.",
               }}
             />
@@ -744,22 +417,19 @@ export default async function AdminPage() {
               className="mt-6 min-w-0 border-t border-dashed border-rule pt-4"
             >
               <p className="nb-slug mb-2.5">referral signups / by surface</p>
-              <MiniList rows={surfaceRows} empty="No referrals yet." />
-              {attributedReferrals === 0 && untrackedReferrals > 0 ? (
-                <Footnote>
-                  Per-surface attribution only starts now, so every referral so
-                  far is unattributed, not missing.
-                </Footnote>
+              <MiniList rows={mini(teams.surfaces)} empty="No referrals yet." />
+              {teams.surfacesFootnote ? (
+                <Footnote>{teams.surfacesFootnote}</Footnote>
               ) : null}
             </section>
           </CollapsiblePanel>
 
           <CollapsiblePanel title="Top articles" slug="drawer / articles">
-            <MiniList rows={articleRows} empty="No article views yet." />
+            <MiniList rows={mini(dash.articles)} empty="No article views yet." />
           </CollapsiblePanel>
 
           <CollapsiblePanel title="Achievements" slug="drawer / achievements">
-            <MiniList rows={achievementRows} empty="No achievements earned yet." />
+            <MiniList rows={mini(dash.achievements)} empty="No achievements earned yet." />
           </CollapsiblePanel>
 
           <CollapsiblePanel title="Recent activity" slug="drawer / activity">
@@ -768,22 +438,22 @@ export default async function AdminPage() {
                 <p className="nb-slug mb-2.5 border-b border-dashed border-rule pb-2">
                   newest members
                 </p>
-                {stats.recentSignups.length === 0 ? (
+                {activity.newestMembers.length === 0 ? (
                   <p className="nb-slug py-2">No signups yet.</p>
                 ) : (
                   <ul className="min-w-0">
-                    {stats.recentSignups.slice(0, 8).map((u) => (
+                    {activity.newestMembers.map((u, i) => (
                       <li
-                        key={u.id}
+                        key={`${u.createdAt}-${i}`}
                         className="nb-hair flex items-baseline justify-between gap-3 py-2 first:border-t-0 first:pt-0"
                       >
                         <span className="min-w-0 truncate text-[0.95rem]">
                           {u.username ? `@${u.username}` : "New member"}
-                          {u.team_number ? (
-                            <span className="nb-slug ml-2">#{u.team_number}</span>
+                          {u.teamNumber ? (
+                            <span className="nb-slug ml-2">#{u.teamNumber}</span>
                           ) : null}
                         </span>
-                        <span className="nb-slug shrink-0">{timeAgo(u.created_at)}</span>
+                        <span className="nb-slug shrink-0">{timeAgo(u.createdAt)}</span>
                       </li>
                     ))}
                   </ul>
@@ -794,11 +464,11 @@ export default async function AdminPage() {
                 <p className="nb-slug mb-2.5 border-b border-dashed border-rule pb-2">
                   recent completions
                 </p>
-                {stats.recentCompletions.length === 0 ? (
+                {activity.recentCompletions.length === 0 ? (
                   <p className="nb-slug py-2">No completions yet.</p>
                 ) : (
                   <ul className="min-w-0">
-                    {stats.recentCompletions.slice(0, 8).map((c, i) => (
+                    {activity.recentCompletions.map((c, i) => (
                       <li
                         key={`${c.user}-${c.at}-${i}`}
                         className="nb-hair flex items-baseline justify-between gap-3 py-2 first:border-t-0 first:pt-0"

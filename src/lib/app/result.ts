@@ -19,6 +19,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 export type AppErrorCode =
   | "unauthorized"
+  /** Signed in, but the account's site role can't do this (HTTP 403). Never
+      used for "signed out": the app treats a 401 as the session ending. */
+  | "forbidden"
   | "validation"
   | "rate_limited"
   | "not_found"
@@ -32,6 +35,9 @@ export type Failure = {
   error: string;
   /** Seconds, for a rate-limited failure: the length of the limit's window. */
   retryAfter?: number;
+  /** The input the failure is about, when it is about one (the website's
+      review form marks that control invalid; the app can do the same). */
+  field?: string;
 };
 
 export type Success<T extends object = object> = { ok: true } & T;

@@ -1,10 +1,14 @@
 import "server-only";
 import { headers } from "next/headers";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { firstProfaneField } from "@/lib/profanity";
 import { hookSourceFor } from "@/lib/signup-source";
-import { attributeSignup, normalizeVia } from "@/lib/signup-attribution";
+import {
+  attributeSignup,
+  normalizeVia,
+  payReferralReward,
+} from "@/lib/signup-attribution";
 import { isFreshSignup } from "@/lib/first-run";
 import { normalizeUsername } from "@/lib/app/profile";
 import { fail, type Result } from "@/lib/app/result";
@@ -12,7 +16,9 @@ import { fail, type Result } from "@/lib/app/result";
 /**
  * Sign-in lookup and sign-up rules, shared by the website's signIn / signUp
  * Server Actions (src/app/actions/auth.ts) and the app's
- * POST /api/app/auth/sign-in and POST /api/app/auth/sign-up.
+ * POST /api/app/auth/sign-in and POST /api/app/auth/sign-up. The post-sign-in
+ * work for Google (and any other OAuth provider) is here too, shared by the
+ * website's /auth/callback and the app's POST /api/app/auth/oauth-complete.
  */
 
 /** The client's IP as Vercel forwards it, or null. */
@@ -227,4 +233,85 @@ export async function registerAccount(
   }
 
   return { ok: true, status: "confirm_email" };
+}
+
+/* ------------------------------------------------------------------ */
+/*  Where an app signup came from                                      */
+/* ------------------------------------------------------------------ */
+
+/** The acquisition source an app signup is recorded under (profiles.source). */
+const APP_PLATFORM_SOURCE: Record<string, string> = {
+  ios: "iOS app",
+  ipados: "iPad app",
+  macos: "Mac app",
+};
+
+/**
+ * `profiles.source` for an account created from the app, by the `platform`
+ * the app sends (`ios`, `ipados`, `macos`). Anything else is "LearnFRC app".
+ * It stands in for the website's first-touch `lf_src` cookie, so a referral
+ * link or a conversion hook still wins over it (see attributeSignup). Used by
+ * POST /api/app/auth/sign-up and POST /api/app/auth/oauth-complete.
+ */
+export function appSignupSource(platform: string): string {
+  return APP_PLATFORM_SOURCE[platform.toLowerCase()] ?? "LearnFRC app";
+}
+
+/* ------------------------------------------------------------------ */
+/*  After an OAuth sign-in (Google)                                    */
+/* ------------------------------------------------------------------ */
+
+export type OAuthSignInContext = {
+  /** A referrer's username from the invite link (`?ref=`), unsanitised. */
+  ref: string | null;
+  /** Which share surface produced the referral (`?via=`). Allow-listed later. */
+  via: string | null;
+  /** First-touch source: the site's `lf_src` cookie, or the app's platform source. */
+  srcCookie: string | null;
+  signupIp: string | null;
+  /** Names the door in the error log, e.g. "auth/callback". */
+  door: string;
+};
+
+/**
+ * The work that runs once an OAuth provider has signed someone in, for the
+ * website's /auth/callback (after it trades the code for a session) and the
+ * app's POST /api/app/auth/oauth-complete (after the app's own Google sign-in).
+ *
+ * Only a brand-new account (isFreshSignup, the one definition of "new" in this
+ * codebase) is attributed: someone signing back in keeps the source they first
+ * arrived with, and attributeSignup also refuses to overwrite a source that is
+ * already set. Google has already verified the address, so a referral reward
+ * is paid straight away; payReferralReward pays at most once per account, so
+ * calling this on every sign-in is safe.
+ *
+ * Never fails. Analytics must never block a sign-in, so an attribution error
+ * is logged loudly (a silent failure here is how the last gap went unnoticed
+ * for three weeks) and the answer still comes back.
+ */
+export async function completeOAuthSignIn(
+  user: Pick<User, "id" | "created_at"> | null | undefined,
+  ctx: OAuthSignInContext
+): Promise<{ isNewAccount: boolean }> {
+  const isNewAccount = isFreshSignup(user?.created_at);
+
+  if (user && isNewAccount) {
+    try {
+      const { referredBy } = await attributeSignup({
+        userId: user.id,
+        ref: ctx.ref,
+        via: ctx.via,
+        srcCookie: ctx.srcCookie,
+        signupIp: ctx.signupIp,
+      });
+      // Google has already verified the address, so the reward is safe to pay
+      // now. Waiting on a confirmation click would wait forever: this flow
+      // never produces one.
+      if (referredBy) await payReferralReward(user.id);
+    } catch (e) {
+      console.error(`${ctx.door} attribution failed:`, e);
+    }
+  }
+
+  return { isNewAccount };
 }

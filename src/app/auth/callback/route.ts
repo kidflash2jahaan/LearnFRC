@@ -1,11 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import {
-  attributeSignup,
-  payReferralReward,
-  readSourceCookie,
-} from "@/lib/signup-attribution";
-import { isFreshSignup, postAuthDestination } from "@/lib/first-run";
+import { readSourceCookie } from "@/lib/signup-attribution";
+import { postAuthDestination } from "@/lib/first-run";
+import { completeOAuthSignIn } from "@/lib/app/accounts";
 
 /**
  * THE OAUTH DOOR, where Google puts people down.
@@ -25,7 +22,9 @@ import { isFreshSignup, postAuthDestination } from "@/lib/first-run";
  * same attribution the email path writes, through the same shared module, and
  * it pays the referral reward here because Google has already proved the
  * address is real. The email path has to wait for /auth/confirm to get that
- * same guarantee.
+ * same guarantee. That work is completeOAuthSignIn (src/lib/app/accounts.ts),
+ * shared with the app's POST /api/app/auth/oauth-complete, because the app's
+ * own Google sign-in never passes through this route.
  *
  * FIRST RUN. A brand-new account whose destination is the GENERIC dashboard is
  * sent to /start instead: one question, then a five-lesson plan. 45% of
@@ -68,37 +67,21 @@ export async function GET(request: Request) {
       );
     }
 
-    // Only a fresh account gets attributed. Someone signing back in has to
-    // keep the source they first arrived with. attributeSignup also refuses to
-    // overwrite a source that is already set, so this is belt and braces.
-    const user = data?.user;
-    isNew = isFreshSignup(user?.created_at);
-
-    if (user && isNew) {
-      const hdrs = request.headers;
-      const signupIp =
+    // Only a fresh account gets attributed (and paid its referral reward).
+    // Someone signing back in has to keep the source they first arrived with.
+    // Never throws: analytics must not block a sign-in.
+    const hdrs = request.headers;
+    const outcome = await completeOAuthSignIn(data?.user, {
+      ref: searchParams.get("ref"),
+      via: searchParams.get("via"),
+      srcCookie: readSourceCookie(hdrs.get("cookie")),
+      signupIp:
         (hdrs.get("x-forwarded-for") || "").split(",")[0].trim() ||
         hdrs.get("x-real-ip") ||
-        null;
-      try {
-        const { referredBy } = await attributeSignup({
-          userId: user.id,
-          ref: searchParams.get("ref"),
-          via: searchParams.get("via"),
-          srcCookie: readSourceCookie(hdrs.get("cookie")),
-          signupIp,
-        });
-        // Google has already verified the address, so the reward is safe to
-        // pay now. Waiting on a confirmation click would wait forever: this
-        // flow never produces one.
-        if (referredBy) await payReferralReward(user.id);
-      } catch (e) {
-        // Never block a sign-in on analytics. Log it loudly though, because a
-        // silent failure right here is exactly how the last gap went unnoticed
-        // for three weeks.
-        console.error("auth/callback attribution failed:", e);
-      }
-    }
+        null,
+      door: "auth/callback",
+    });
+    isNew = outcome.isNewAccount;
   }
 
   return NextResponse.redirect(

@@ -1,11 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getSession } from "@/lib/auth";
-import { getMyApplication } from "@/lib/admin-team";
-import { teamRoleLabel } from "@/lib/team-roles";
+import { createClient } from "@/lib/supabase/server";
+import { loadApplyState, type ApplyState } from "@/lib/app/admin-apply";
 import { ApplyForm } from "./_apply-form";
 import { WithdrawForm } from "./_withdraw-form";
-import { APPLICATIONS_OPEN } from "@/lib/applications";
+import { APPLICATIONS_OPEN, HEADS, JOBS, type ApplyMode } from "@/lib/applications";
 
 export const metadata: Metadata = {
   // `absolute` on purpose. The root template appends " · LearnFRC", and this
@@ -32,7 +31,7 @@ export const metadata: Metadata = {
  * on the page is whichever state card the visit lands on, so a card always
  * means "here is where you stand", never "here is a section".
  *
- * NO `export const dynamic`. `getSession()` reads cookies, which makes this
+ * NO `export const dynamic`. Reading the session reads cookies, which makes this
  * route dynamic on its own, exactly as it does on /settings and /dashboard.
  * Declaring it again would only say the same thing in a second place.
  *
@@ -62,87 +61,38 @@ function day(iso: string | null): string | null {
   return `${MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}, ${d.getUTCFullYear()}`;
 }
 
-/** The four jobs, in the order they take up time. Slug left, the work right. */
-const JOBS: { slug: string; text: string }[] = [
-  {
-    slug: "the feedback",
-    text: "Every message sent through the contact form lands in one inbox. Most want a short, specific answer. Some are a real bug report and need chasing down before you can reply.",
-  },
-  {
-    slug: "suggested edits",
-    text: "Anyone with an account can rewrite the markdown of a lesson. Somebody has to read the change, check it against the source it touches, and either merge it or say plainly why not.",
-  },
-  {
-    slug: "verifying lessons",
-    text: "Lessons are drafted with AI help and checked by hand. Marking one verified means you read it against the documents it cites, found it held up, and put your account behind that.",
-  },
-  {
-    slug: "the numbers",
-    text: "The same admin page I read: signups, lessons finished, where readers arrive from, which pages get opened and which ones never do.",
-  },
-];
-
-/**
- * The heading and the mono note over whichever block the visit lands on.
- *
- * Plain strings rather than JSX, so the apostrophe is the typographic one the
- * rest of the site uses rather than an HTML entity that would need escaping
- * around.
+/*
+ * The four jobs (JOBS) and the heading over each state (HEADS) live in
+ * src/lib/applications.ts, shared with the app's GET /api/app/apply.
  */
-const HEADS = {
-  "signed-out": {
-    title: "Applying needs an account",
-    slug: "free, and it takes a minute",
-  },
-  "on-the-team": {
-    title: "You’re already on the team",
-    slug: "nothing to apply for",
-  },
-  pending: { title: "Your application", slug: "waiting on a decision" },
-  "no-handle": {
-    title: "Pick a handle first",
-    slug: "one step, then the three questions",
-  },
-  again: { title: "Apply again", slug: "three questions, nothing else" },
-  new: { title: "Apply", slug: "three questions, nothing else" },
-} as const;
 
 export default async function ApplyPage() {
-  const { user, profile, isAdmin } = await getSession();
-  // Only fetched when it can change what renders. An admin has nothing to
-  // apply for, and a signed-out reader has no id to look one up by.
-  const application = user && !isAdmin ? await getMyApplication(user.id) : null;
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  // An accepted application whose account is no longer on the team is treated
-  // as no application at all: they were removed, and the record of the old
-  // acceptance is not an answer to "can I apply". Pending is the only status
-  // that blocks a new one, and the server enforces that independently.
+  // Where a signed-in account stands comes from loadApplyState
+  // (src/lib/app/admin-apply.ts), the same answer the app's GET /api/app/apply
+  // gives: on the team, pending, needs a handle, applying again, or new. An
+  // accepted application whose account is no longer on the team counts as no
+  // application at all, and pending is the only status that blocks a new one
+  // (the server enforces that independently). A handle is the only thing on an
+  // application that identifies a person, so the page asks for it before the
+  // form rather than warning about it beside a live Send button.
+  let state: ApplyState | null = null;
+  if (user) {
+    const result = await loadApplyState(user);
+    if (result.ok) state = result;
+  }
+  const mode: ApplyMode = state ? state.mode : "signed-out";
+  const application = state?.application ?? null;
   const open = application?.status === "pending" ? application : null;
   const closed =
     application?.status === "rejected" || application?.status === "withdrawn"
       ? application
       : null;
-
-  // A handle is the only thing on an application that identifies a person: the
-  // reviewer gets that, a team number and the role they picked, and nothing
-  // else. Without one the entry lands on the desk reading "no username yet",
-  // so the page asks for it before the form rather than warning about it
-  // beside a live Send button. Doing it here rather than inside the form also
-  // means there is no half-written draft to lose on the trip to /settings.
-  const handle = profile?.username ?? null;
-  const needsHandle = !!user && !isAdmin && !open && !handle;
-
-  const mode = !user
-    ? "signed-out"
-    : isAdmin
-      ? "on-the-team"
-      : open
-        ? "pending"
-        : needsHandle
-          ? "no-handle"
-          : closed
-            ? "again"
-            : "new";
+  const handle = state?.record.username ?? null;
   const head = HEADS[mode];
 
   return (
@@ -409,8 +359,8 @@ export default async function ApplyPage() {
             )}
 
             {/* `handle &&` above is how the type system sees what `mode`
-                already guarantees: "again" and "new" are only reachable once
-                `needsHandle` is false, which is exactly when a handle exists. */}
+                already guarantees: loadApplyState only answers "again" or
+                "new" for an account that has a handle. */}
             {!APPLICATIONS_OPEN ? (
               <p className="nb-note mt-6" role="status">
                 Applications are closed for now. Check back soon.
@@ -419,13 +369,13 @@ export default async function ApplyPage() {
             <div className="mt-6">
               <ApplyForm
                 username={handle}
-                teamNumber={profile?.team_number ?? null}
+                teamNumber={state?.record.teamNumber ?? null}
                 // The word, not the stored slug. `profiles.role` holds
                 // `other` for a fifth of accounts, and a strip that claims to
                 // be the whole record cannot print a value nobody would use
                 // about themselves. The desk and the owner's email read the
                 // same table.
-                teamRole={profile?.role ? teamRoleLabel(profile.role) : null}
+                teamRole={state?.record.teamRoleLabel ?? null}
                 again={!!closed}
               />
             </div>

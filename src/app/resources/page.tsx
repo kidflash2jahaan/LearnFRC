@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import type { CSSProperties } from "react";
-import { getDepartmentSources } from "@/lib/queries";
+import { loadResources, SOURCES_PER_DEPT } from "@/lib/app/resources";
 import { FeedbackForm } from "@/components/feedback-form";
-import { ShelfBin, hostLabel } from "./_toolbox-panel";
+import { ShelfBin } from "./_toolbox-panel";
 import { ShelfRail, type RailItem } from "./_shelf-rail";
 
 export const metadata: Metadata = {
@@ -11,95 +11,6 @@ export const metadata: Metadata = {
     "The essential FRC links: official docs, software, vendors, community, and learning resources, plus the sources behind every LearnFRC guide.",
   alternates: { canonical: "/resources" },
 };
-
-type Shelf = {
-  category: string;
-  /** One line saying what job this shelf is for. Printed under the heading. */
-  blurb: string;
-  links: { title: string; url: string }[];
-};
-
-/**
- * The toolbox, unchanged in content from the version before the rebuild.
- *
- * What is gone is the per-shelf colour and icon that used to sit beside each
- * heading. A shelf is identified by its name and its mono slug in this system,
- * the same way a department is, so five accent hues would have been five
- * meanings the palette does not have.
- */
-const CURATED: Shelf[] = [
-  {
-    category: "Official FIRST",
-    blurb: "The manual, season materials, and game tools straight from FIRST.",
-    links: [
-      {
-        title: "FIRST Robotics Competition",
-        url: "https://www.firstinspires.org/robotics/frc",
-      },
-      {
-        title: "FRC Game & Season Materials",
-        url: "https://www.firstinspires.org/resource-library/frc/competition-manual-qa-system",
-      },
-      {
-        title: "FRC Driver Station & Game Tools",
-        url: "https://docs.wpilib.org/en/stable/docs/zero-to-robot/step-2/frc-game-tools.html",
-      },
-    ],
-  },
-  {
-    category: "Software & Programming",
-    blurb:
-      "WPILib and the vision, path, and trajectory tools your code leans on.",
-    links: [
-      { title: "WPILib Documentation", url: "https://docs.wpilib.org" },
-      { title: "PathPlanner", url: "https://pathplanner.dev" },
-      { title: "Choreo (trajectory tool)", url: "https://choreo.autos" },
-      { title: "PhotonVision", url: "https://docs.photonvision.org" },
-      {
-        title: "Limelight Documentation",
-        url: "https://docs.limelightvision.io",
-      },
-    ],
-  },
-  {
-    category: "CAD & Design",
-    blurb: "Model the robot before you cut metal. Free CAD, built for FRC.",
-    links: [
-      { title: "Onshape", url: "https://www.onshape.com" },
-      {
-        // MKCad was the FRC Onshape parts library for years and the name is
-        // still what mentors say out loud, but mkcad.com lapsed and now
-        // resolves to a domain-resale page. FRCDesign.org is the successor
-        // and carries the same library, so the link points there and the
-        // old name stays in the label for anyone searching for it.
-        title: "FRCDesign.org, the Onshape FRC parts library (formerly MKCad)",
-        url: "https://frcdesign.org",
-      },
-    ],
-  },
-  {
-    category: "Hardware & Vendors",
-    blurb: "Where the motors, gearboxes, and structure come from.",
-    links: [
-      { title: "REV Robotics", url: "https://www.revrobotics.com" },
-      {
-        title: "CTR Electronics (Phoenix)",
-        url: "https://store.ctr-electronics.com",
-      },
-      { title: "AndyMark", url: "https://www.andymark.com" },
-      { title: "WestCoast Products (WCP)", url: "https://wcproducts.com" },
-    ],
-  },
-  {
-    category: "Community & Data",
-    blurb: "Forums and match data, the collective brain of the FRC world.",
-    links: [
-      { title: "Chief Delphi (forums)", url: "https://www.chiefdelphi.com" },
-      { title: "The Blue Alliance", url: "https://www.thebluealliance.com" },
-      { title: "Statbotics", url: "https://www.statbotics.io" },
-    ],
-  },
-];
 
 /**
  * Hand angle per bin, in shelf order.
@@ -110,29 +21,9 @@ const CURATED: Shelf[] = [
  */
 const BIN_TILT = ["-0.35deg", "0.28deg", "-0.2deg", "0.32deg", "-0.26deg"];
 
-/**
- * How many citations to print per department.
- *
- * The catalogue cites 168 sources across 11 departments. Printed in full that
- * is a 179-row table, roughly 7,700px of it, and it buries everything under it
- * for a list nobody scrolls to the end of. Six per department answers the
- * question this section exists for ("is this written from anything real, and
- * what") in a block you can take in at a glance, and every group prints its
- * true total beside the name so the trim is stated rather than hidden.
- */
-const SOURCES_PER_DEPT = 6;
-
-/** Mono identifier for a shelf, e.g. `software-programming`. */
-function shelfSlug(category: string): string {
-  return category
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
-}
-
 /** Anchor id, so the rail and the bins agree on the jump target. */
-function shelfId(category: string): string {
-  return `shelf-${shelfSlug(category)}`;
+function shelfId(slug: string): string {
+  return `shelf-${slug}`;
 }
 
 /**
@@ -149,18 +40,21 @@ function shelfId(category: string): string {
  * that is what a bibliography is, and because the question it answers is a
  * lookup ("what are the electrical guides built on") rather than a read.
  *
- * Server Component. Same single cached catalogue fetch as before.
+ * Server Component. Same single cached catalogue fetch as before. The shelves,
+ * the citations and every count come from loadResources
+ * (src/lib/app/resources.ts), which GET /api/app/resources also serves, so the
+ * app's Resources screen lists exactly what this page lists.
  */
 export default async function ResourcesPage() {
-  const departments = await getDepartmentSources();
+  const {
+    shelves,
+    departments: withSources,
+    totals: { links: totalLinks, sources: totalSources },
+  } = await loadResources();
 
-  const totalLinks = CURATED.reduce((sum, s) => sum + s.links.length, 0);
-  const withSources = (departments ?? []).filter((d) => d.sources.length > 0);
-  const totalSources = withSources.reduce((sum, d) => sum + d.sources.length, 0);
-
-  const railItems: RailItem[] = CURATED.map((shelf) => ({
-    id: shelfId(shelf.category),
-    label: shelf.category,
+  const railItems: RailItem[] = shelves.map((shelf) => ({
+    id: shelfId(shelf.slug),
+    label: shelf.name,
     count: shelf.links.length,
   }));
 
@@ -173,7 +67,7 @@ export default async function ResourcesPage() {
       <section className="nb-wrap grid items-start gap-[clamp(1.6rem,4vw,3.4rem)] pb-[clamp(2.2rem,4.5vw,3.4rem)] pt-[clamp(2.2rem,5vw,4rem)] min-[900px]:grid-cols-[minmax(0,1.4fr)_minmax(0,0.9fr)]">
         <div>
           <p className="nb-marker">
-            reference / {totalLinks} links / {CURATED.length} shelves
+            reference / {totalLinks} links / {shelves.length} shelves
           </p>
 
           <h1 className="max-w-[17ch]">
@@ -200,20 +94,20 @@ export default async function ResourcesPage() {
           <nav aria-label="Shelves in this page">
             <p className="nb-slug border-b-2 border-ink pb-2">on the shelves</p>
             <ul>
-              {CURATED.map((shelf, i) => (
+              {shelves.map((shelf, i) => (
                 <li
-                  key={shelf.category}
+                  key={shelf.slug}
                   className="border-b border-dashed border-rule"
                 >
                   <a
-                    href={`#${shelfId(shelf.category)}`}
+                    href={`#${shelfId(shelf.slug)}`}
                     className="group flex min-h-11 items-baseline gap-3 py-2.5"
                   >
                     <span className="nb-slug shrink-0 font-bold text-blue">
                       {String(i + 1).padStart(2, "0")}
                     </span>
                     <span className="min-w-0 flex-1 font-semibold leading-snug decoration-blue decoration-2 underline-offset-4 group-hover:text-blue group-hover:underline">
-                      {shelf.category}
+                      {shelf.name}
                     </span>
                     <span className="nb-slug shrink-0">
                       {shelf.links.length}
@@ -260,13 +154,13 @@ export default async function ResourcesPage() {
           </div>
 
           <div className="grid min-w-0 gap-[clamp(1.1rem,2.4vw,1.7rem)]">
-            {CURATED.map((shelf, i) => (
+            {shelves.map((shelf, i) => (
               <ShelfBin
-                key={shelf.category}
-                id={shelfId(shelf.category)}
+                key={shelf.slug}
+                id={shelfId(shelf.slug)}
                 index={i}
-                slug={shelfSlug(shelf.category)}
-                category={shelf.category}
+                slug={shelf.slug}
+                category={shelf.name}
                 blurb={shelf.blurb}
                 links={shelf.links}
                 tilt={BIN_TILT[i % BIN_TILT.length]}
@@ -376,7 +270,7 @@ export default async function ResourcesPage() {
                         </a>
                       </td>
                       <td className="nb-slug whitespace-nowrap py-0 align-middle">
-                        {hostLabel(source.url)}
+                        {source.host}
                       </td>
                     </tr>
                   ))}
