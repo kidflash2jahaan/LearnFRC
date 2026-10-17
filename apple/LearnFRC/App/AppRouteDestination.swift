@@ -79,7 +79,7 @@ extension View {
 private struct VerticalBarCompression: ViewModifier {
     func body(content: Content) -> some View {
         #if os(iOS)
-        if #available(iOS 27.1, *) {
+        if DuoAPIs.areAvailable, #available(iOS 27.1, *) {
             content.toolbarVerticalCompressionBehavior(.prefersToolbarItems)
         } else {
             content

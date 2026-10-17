@@ -409,7 +409,7 @@ extension GeometryProxy {
     /// Duo's vertical bar. Nil before iOS 27.1 and on the Mac, whose 27.0 SDK lacks them.
     var lfContainerMargins: EdgeInsets? {
         #if os(iOS)
-        if #available(iOS 27.1, *) {
+        if #available(iOS 27.1, *), DuoAPIs.areAvailable {
             return contentMargins(for: .container)
         }
         #endif

@@ -1,4 +1,5 @@
 import SwiftUI
+import Darwin
 
 // The fold of a foldable iPhone, for layout.
 //
@@ -243,7 +244,7 @@ extension FoldInfo {
     /// The system's division region for `proxy`, in its coordinates or global ones.
     private static func systemRegion(in proxy: GeometryProxy, global: Bool) -> FoldInfo? {
         #if os(iOS)
-        if #available(iOS 27.1, *) {
+        if #available(iOS 27.1, *), DuoAPIs.areAvailable {
             // One hinge on iPhone Duo; should a device ever report more, the widest band wins.
             let regions = proxy.reservedRegions(kind: .division, options: .includeInactive)
             guard let region = regions.max(by: { $0.frame.width * $0.frame.height < $1.frame.width * $1.frame.height }) else {
@@ -328,7 +329,7 @@ private struct HingeReader: ViewModifier {
 
     func body(content: Content) -> some View {
         #if os(iOS)
-        if #available(iOS 27.1, *) {
+        if DuoAPIs.areAvailable, #available(iOS 27.1, *) {
             content.onHingeChange { _, context in
                 hinge = context.hinge.map(FoldInfo.Hinge.init)
             }
@@ -517,7 +518,7 @@ extension ToolbarContent {
     @ToolbarContentBuilder
     func lfAxisBehavior(_ behavior: LFToolbarAxis) -> some ToolbarContent {
         #if os(iOS)
-        if #available(iOS 27.1, *) {
+        if DuoAPIs.areAvailable, #available(iOS 27.1, *) {
             axisBehavior(behavior.system)
         } else {
             self
@@ -549,7 +550,7 @@ extension EnvironmentValues {
     /// .navigationBarDrawer(displayMode: .always), prompt:)`.
     var lfVerticalBarEdge: HorizontalEdge? {
         #if os(iOS)
-        if #available(iOS 27.1, *) {
+        if #available(iOS 27.1, *), DuoAPIs.areAvailable {
             return toolbarVerticalEdge
         }
         #endif
@@ -661,3 +662,31 @@ private struct FoldPreviewPage: View {
     FoldPreviewPage().previewFold(.previewLaptop)
 }
 #endif
+
+// MARK: - Is the Duo API really there?
+
+/// Whether this device's iOS actually has the iPhone Duo APIs. iOS 27.1 is the Duo's own
+/// release, and iOS 27.2 on other iPhones has a higher version number but not these APIs. So
+/// `#available(iOS 27.1, *)` alone passes there, the first call jumps to a symbol that was
+/// never loaded, and the app dies at launch (an iPhone 17 Pro Max on iOS 27.2 did exactly
+/// that). Every 27.1 call checks this as well, and it checks the very symbols the app calls.
+enum DuoAPIs {
+    static let areAvailable: Bool = {
+        #if os(iOS)
+        guard #available(iOS 27.1, *) else { return false }
+        // RTLD_DEFAULT: search every image the process has loaded.
+        let everywhere = UnsafeMutableRawPointer(bitPattern: -2)
+        let symbols = [
+            "$s7SwiftUI13GeometryProxyV15reservedRegions4kind7options23layoutDirectionBehaviorSayAA14ReservedRegionVGAI4KindV_AI12QueryOptionsVAA06LayoutjK0OtF",
+            "$s7SwiftUI13GeometryProxyVAAE14contentMargins3for5edgesAA10EdgeInsetsVAA18ContentMarginGuideV_AA0I0O3SetVtF",
+            "$s7SwiftUI14ToolbarContentPAAE12axisBehavioryQrAA0c8ItemAxisF0VF",
+            "$s7SwiftUI17EnvironmentValuesVAAE19toolbarVerticalEdgeAA010HorizontalG0OSgvg",
+            "$s7SwiftUI4ViewPAAE13onHingeChange9isEnabled_QrSb_yAA06DeviceE7ContextV_AGtctF",
+            "$s7SwiftUI4ViewPAAE34toolbarVerticalCompressionBehavioryQrAA07ToolbarefG0VF",
+        ]
+        return symbols.allSatisfy { dlsym(everywhere, $0) != nil }
+        #else
+        return false
+        #endif
+    }()
+}
