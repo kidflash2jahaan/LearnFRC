@@ -115,8 +115,10 @@ final class AppModel {
             case .guest, .deleted:
                 // Team sheets name teammates; this session's copies go with the account.
                 await CommunityCache.shared.forgetTeams()
-            case .signedIn:
-                break
+                // Admin data is memory only and belongs to the account that fetched it.
+                AdminStore.shared.reset()
+            case .signedIn(let userID, _):
+                await AdminStore.shared.sync(userID: userID, force: true)
             }
             await self?.progress.handle(change)
         }
@@ -204,7 +206,8 @@ final class AppModel {
         async let referenceRefresh: Void = reference.refresh()
         async let progressRefresh: Void = progress.refresh(force: true)
         async let meRefresh: Void = account.refreshMe(force: true)
-        _ = await (catalogRefresh, referenceRefresh, progressRefresh, meRefresh)
+        async let adminRefresh: Void = AdminStore.shared.sync(userID: account.userID, force: true)
+        _ = await (catalogRefresh, referenceRefresh, progressRefresh, meRefresh, adminRefresh)
         progress.catalogDidChange()
     }
 
@@ -327,10 +330,10 @@ final class AppModel {
     /// The tab a route belongs to.
     static func tab(for route: AppRoute) -> AppTab {
         switch route {
-        case .department, .module, .lesson, .article, .path, .videos, .certificate: .learn
+        case .department, .module, .lesson, .article, .path, .videos, .certificate, .tools, .tool, .resources: .learn
         case .glossaryTerm: .search
         case .profile, .team, .leaderboard, .achievements: .community
-        case .settings, .bookmarks: .profile
+        case .settings, .bookmarks, .admin, .adminFeedback, .adminTeam, .apply: .profile
         }
     }
 
@@ -373,5 +376,7 @@ extension View {
             .environment(model.account)
             .environment(model.progress)
             .environment(model.connectivity)
+            .environment(AdminStore.shared)
+            .environment(\.adminNavigator, AdminNavigator { AppRoute($0) })
     }
 }

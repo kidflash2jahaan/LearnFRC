@@ -76,15 +76,16 @@ struct SettingsView: View {
 
     /// The whole page: iPhone, iPad, and the Mac's main window.
     private var page: some View {
-        AccountPage(maxWidth: 780, resetKey: authKey, place: .route(.settings)) { _ in
+        AccountPage(maxWidth: 780, resetKey: authKey, place: .route(.settings), fold: .spread) { page in
             VStack(alignment: .leading, spacing: 0) {
                 switch account.state {
                 case .signedIn(let me):
-                    signedIn(me)
+                    signedIn(me, pages: page.pages)
                 case .guest:
-                    guest
+                    guest(pages: page.pages)
                 case .loading:
                     loading
+                        .foldLeadingPage(page.pages)
                 }
             }
         }
@@ -92,58 +93,67 @@ struct SettingsView: View {
 
     // MARK: Signed in
 
+    /// Your record and your profile, then how the app reaches you and how you sign in. On an
+    /// open iPhone Duo those are the two pages: the record on the left, the rest on the right.
     @ViewBuilder
-    private func signedIn(_ me: Me) -> some View {
-        AccountHeader(
-            marker: "settings / your own record",
-            title: accountMarked("Your details, and ", "who can see them", "."),
-            lede: "Everything here is yours to change. Saving updates your public profile, the leaderboard and your team's roster at the same time."
-        )
+    private func signedIn(_ me: Me, pages: FoldColumns?) -> some View {
+        FoldPages(pages) {
+            VStack(alignment: .leading, spacing: 0) {
+                AccountHeader(
+                    marker: "settings / your own record",
+                    title: accountMarked("Your details, and ", "who can see them", "."),
+                    lede: "Everything here is yours to change. Saving updates your public profile, the leaderboard and your team's roster at the same time."
+                )
 
-        SettingsIdentityCard(me: me, xp: max(progress.xp, me.profile.xp))
-            .padding(.top, 26)
+                SettingsIdentityCard(me: me, xp: max(progress.xp, me.profile.xp))
+                    .padding(.top, 26)
 
-        if let username = me.profile.username {
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: 12) { publicPageButtons(username) }
-                VStack(alignment: .leading, spacing: 12) { publicPageButtons(username) }
+                if let username = me.profile.username {
+                    ViewThatFits(in: .horizontal) {
+                        HStack(spacing: 12) { publicPageButtons(username) }
+                        VStack(alignment: .leading, spacing: 12) { publicPageButtons(username) }
+                    }
+                    .padding(.top, 18)
+                }
+
+                section(spacing: 24) {
+                    AccountSectionHeading(title: "Profile", slug: "your full name is never shown publicly")
+                    if me.isProvisional {
+                        AccountNote("offline", "Your profile loads when this device is back online. Nothing you change elsewhere is lost.")
+                    } else {
+                        SettingsProfileForm(me: me)
+                            .id(me.user.id)
+                    }
+                }
             }
-            .padding(.top, 18)
-        }
+        } trailing: {
+            VStack(alignment: .leading, spacing: 0) {
+                // The right-hand page starts level with the left one.
+                section(spacing: 18, top: pages == nil ? 48 : 0) {
+                    AccountSectionHeading(title: "Reminders", slug: "all of them off unless you say so")
+                    SettingsEmailRemindersCard(me: me)
+                        .id(me.user.id)
+                    SettingsDailyReminderCard()
+                }
 
-        section(spacing: 24) {
-            AccountSectionHeading(title: "Profile", slug: "your full name is never shown publicly")
-            if me.isProvisional {
-                AccountNote("offline", "Your profile loads when this device is back online. Nothing you change elsewhere is lost.")
-            } else {
-                SettingsProfileForm(me: me)
-                    .id(me.user.id)
+                section(spacing: 18) {
+                    AccountSectionHeading(title: "Appearance")
+                    SettingsAppearanceCard()
+                }
+
+                section(spacing: 22) {
+                    AccountSectionHeading(title: "Sign-in", slug: "the same for the app and learnfrc.com")
+                    SettingsSessionSection(me: me)
+                    SettingsPasswordCard()
+                }
+
+                SettingsDeleteAccountBox(onDeleted: { justDeleted = true })
+                    .padding(.top, 36)
+
+                section(spacing: 0) {
+                    SettingsAboutSection()
+                }
             }
-        }
-
-        section(spacing: 18) {
-            AccountSectionHeading(title: "Reminders", slug: "all of them off unless you say so")
-            SettingsEmailRemindersCard(me: me)
-                .id(me.user.id)
-            SettingsDailyReminderCard()
-        }
-
-        section(spacing: 18) {
-            AccountSectionHeading(title: "Appearance")
-            SettingsAppearanceCard()
-        }
-
-        section(spacing: 22) {
-            AccountSectionHeading(title: "Sign-in", slug: "the same for the app and learnfrc.com")
-            SettingsSessionSection(me: me)
-            SettingsPasswordCard()
-        }
-
-        SettingsDeleteAccountBox(onDeleted: { justDeleted = true })
-            .padding(.top, 36)
-
-        section(spacing: 0) {
-            SettingsAboutSection()
         }
     }
 
@@ -162,36 +172,44 @@ struct SettingsView: View {
 
     // MARK: Guest
 
+    /// What an account is for, then the device's own settings. On an open iPhone Duo, the
+    /// account on the left page and the device on the right.
     @ViewBuilder
-    private var guest: some View {
-        AccountHeader(
-            marker: "settings / this device",
-            title: justDeleted ? "Your account is deleted." : "Settings",
-            lede: justDeleted
-                ? "Everything tied to it is gone from learnfrc.com. The guides and articles never needed an account, so keep reading whenever you like."
-                : "You're reading as a guest. Reminders and appearance live on this device. An account adds a profile, certificates and your team's page."
-        )
+    private func guest(pages: FoldColumns?) -> some View {
+        FoldPages(pages) {
+            VStack(alignment: .leading, spacing: 0) {
+                AccountHeader(
+                    marker: "settings / this device",
+                    title: justDeleted ? "Your account is deleted." : "Settings",
+                    lede: justDeleted
+                        ? "Everything tied to it is gone from learnfrc.com. The guides and articles never needed an account, so keep reading whenever you like."
+                        : "You're reading as a guest. Reminders and appearance live on this device. An account adds a profile, certificates and your team's page."
+                )
 
-        if justSignedOut && !justDeleted {
-            signedOutNote.padding(.top, 26)
-        }
+                if justSignedOut && !justDeleted {
+                    signedOutNote.padding(.top, 26)
+                }
 
-        if !justDeleted {
-            guestCard.padding(.top, 26)
-        }
+                if !justDeleted {
+                    guestCard.padding(.top, 26)
+                }
+            }
+        } trailing: {
+            VStack(alignment: .leading, spacing: 0) {
+                section(spacing: 18, top: pages == nil ? 48 : 0) {
+                    AccountSectionHeading(title: "Reminders", slug: "off unless you say so")
+                    SettingsDailyReminderCard()
+                }
 
-        section(spacing: 18) {
-            AccountSectionHeading(title: "Reminders", slug: "off unless you say so")
-            SettingsDailyReminderCard()
-        }
+                section(spacing: 18) {
+                    AccountSectionHeading(title: "Appearance")
+                    SettingsAppearanceCard()
+                }
 
-        section(spacing: 18) {
-            AccountSectionHeading(title: "Appearance")
-            SettingsAppearanceCard()
-        }
-
-        section(spacing: 0) {
-            SettingsAboutSection()
+                section(spacing: 0) {
+                    SettingsAboutSection()
+                }
+            }
         }
     }
 
@@ -340,9 +358,9 @@ struct SettingsView: View {
 
     // MARK: Pieces
 
-    private func section<Content: View>(spacing: CGFloat, @ViewBuilder _ content: () -> Content) -> some View {
+    private func section<Content: View>(spacing: CGFloat, top: CGFloat = 48, @ViewBuilder _ content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: spacing) { content() }
-            .padding(.top, 48)
+            .padding(.top, top)
     }
 
     @ViewBuilder
@@ -408,6 +426,25 @@ private struct SettingsPreviewHost: View {
     SettingsPreviewHost()
         .appEnvironment(.preview)
         .environment(\.colorScheme, .dark)
+}
+
+#Preview("Settings, iPhone Duo open", traits: .fixedLayout(width: DuoPreview.innerContent.width, height: 2000)) {
+    SettingsPreviewHost()
+        .appEnvironment(.preview)
+        .previewFold(.previewBook)
+}
+
+#Preview("Settings, iPhone Duo open, guest, night", traits: .fixedLayout(width: DuoPreview.innerContent.width, height: 1400)) {
+    SettingsPreviewHost()
+        .appEnvironment(.preview(signedIn: false))
+        .previewFold(.previewFlat)
+        .environment(\.colorScheme, .dark)
+}
+
+#Preview("Settings, iPhone Duo cover", traits: .duoCover) {
+    SettingsPreviewHost()
+        .appEnvironment(.preview)
+        .previewFold(.previewClosed)
 }
 
 #if os(macOS)

@@ -23,11 +23,35 @@ enum AppRoute: Hashable, Codable, Sendable {
     case achievements
     /// The signed-in user's (or this device's) bookmarked lessons, like learnfrc.com/bookmarks.
     case bookmarks
+    /// The FRC calculators index (learnfrc.com/tools).
+    case tools
+    /// One calculator, by its website slug (learnfrc.com/tools/<slug>, e.g. "frc-gear-ratio-calculator").
+    case tool(String)
+    /// The resources shelf (learnfrc.com/resources).
+    case resources
+    /// The admin panel (learnfrc.com/admin). Admins; the server checks the role on every call.
+    case admin
+    /// The feedback inbox (the Feedback drawer on learnfrc.com/admin). Admins.
+    case adminFeedback
+    /// The admin team desk (learnfrc.com/admin/team). Super admins.
+    case adminTeam
+    /// Help run it (learnfrc.com/apply).
+    case apply
 
     /// The glossary catalogue (learnfrc.com/glossary, `GlossaryView`): the glossary-term route
     /// with an empty slug, which `GlossaryTermView` shows as the catalogue. Kept as a
     /// glossary-term route (not a new case) so routes already saved on devices still decode.
     static var glossaryIndex: AppRoute { .glossaryTerm("") }
+
+    /// The route for an admin screen (`AdminNavigator`).
+    init(_ destination: AdminDestination) {
+        switch destination {
+        case .dashboard: self = .admin
+        case .feedback: self = .adminFeedback
+        case .team: self = .adminTeam
+        case .apply: self = .apply
+        }
+    }
 }
 
 // MARK: - The app's own URL scheme
@@ -40,6 +64,7 @@ enum AppRoute: Hashable, Codable, Sendable {
 ///     learnfrc://u/<username>         learnfrc://certificate/<uuid>
 ///     learnfrc://team  learnfrc://leaderboard  learnfrc://settings  learnfrc://videos  learnfrc://achievements
 ///     learnfrc://bookmarks
+///     learnfrc://admin  learnfrc://admin/feedback  learnfrc://admin/team  learnfrc://apply
 ///
 /// Two links aren't routes: `learnfrc://home` and `learnfrc://continue` (see `AppModel.handle(url:)`).
 extension AppRoute {
@@ -63,6 +88,13 @@ extension AppRoute {
         case .videos: components.host = "videos"
         case .achievements: components.host = "achievements"
         case .bookmarks: components.host = "bookmarks"
+        case .tools: components.host = "tools"
+        case .tool(let slug): components.host = "tools"; components.path = "/" + slug
+        case .resources: components.host = "resources"
+        case .admin: components.host = "admin"
+        case .adminFeedback: components.host = "admin"; components.path = "/feedback"
+        case .adminTeam: components.host = "admin"; components.path = "/team"
+        case .apply: components.host = "apply"
         }
         return components.url ?? URL(string: "\(Self.scheme)://home")!
     }
@@ -86,6 +118,15 @@ extension AppRoute {
         case "videos": self = .videos
         case "achievements": self = .achievements
         case "bookmarks": self = .bookmarks
+        case "tools": self = value.map { $0.isEmpty ? .tools : .tool($0) } ?? .tools
+        case "resources": self = .resources
+        case "admin":
+            switch value?.lowercased() {
+            case "team": self = .adminTeam
+            case "feedback": self = .adminFeedback
+            default: self = .admin
+            }
+        case "apply": self = .apply
         default: return nil
         }
     }

@@ -11,6 +11,12 @@ import SwiftUI
 /// destination (the field sits in the toolbar), or pushed. To open it from a menu command,
 /// shortcut, link or App Intent, call `AppModel.requestSearch(_:)`: the request waits in the
 /// window's `WindowNavigation` and this screen fills in the words and focuses the field.
+///
+/// On iPhone Duo's open screen held upright it's a spread: the results on the left page and
+/// the one picked, laid out in full, on the right page (`SearchPreviewCard`), each page
+/// scrolling on its own. A result on the left shows on the right; the card's button opens it.
+/// With nothing to show, the right page has the glossary card of the day. Next to the
+/// vertical bar the field sits in a drawer that's always out (`searchFieldInView`).
 struct SearchView: View {
     private let initialQuery: String?
 
@@ -29,6 +35,9 @@ struct SearchView: View {
 
     @State private var model = SearchModel()
     @State private var didRestore = false
+    /// The result shown on the right page of a spread (`SearchHit.id`). When it isn't among
+    /// the results showing, the first one is.
+    @State private var previewID: String?
     /// The last search worth coming back to after a relaunch: one submitted, picked from the
     /// page, asked for by a link, or left with results showing. Never every keystroke, so
     /// text that landed in the field by mistake isn't written to disk. The words being typed
@@ -57,33 +66,30 @@ struct SearchView: View {
     private var results: SearchResults { model.results }
 
     var body: some View {
-        ScrollViewReader { proxy in
-            ScrollView {
-                Group {
-                    if model.hasQuery {
-                        resultsPage
-                    } else {
-                        idlePage
+        FoldReader { proxy, fold in
+            let margins = proxy.lfPageMargins
+            if let band = Self.spreadBand(fold, width: proxy.size.width, margins: margins) {
+                spread(band: band, margins: margins)
+            } else {
+                pageScroll {
+                    Group {
+                        if model.hasQuery {
+                            resultsPage(previewing: false)
+                        } else {
+                            idlePage
+                        }
                     }
+                    .padding(.top, 8)
+                    .padding(.bottom, 56)
+                    .searchPage(margins: margins)
                 }
-                .padding(.top, 8)
-                .padding(.bottom, 56)
-                .searchPage()
-                .id("search-top")
-            }
-            // The Mac rebuilds the tab on every switch: the page comes back where it was left,
-            // with the same words and scope (restored from `memory` when it appears).
-            .remembersScroll(.root)
-            .onChange(of: model.scope) { _, scope in
-                proxy.scrollTo("search-top", anchor: .top)
-                navigation?.memory.set(scope, for: Self.scopeMemoryKey)
             }
         }
         .scrollDismissesKeyboard(.immediately)
         .paperBackground()
         .navigationTitle("Search")
         .toolbarTitleDisplayMode(.inline)
-        .searchable(text: $model.query, prompt: Text("Lessons, articles, terms"))
+        .searchFieldInView(text: $model.query, prompt: Text("Lessons, articles, terms"))
         .searchFocused($fieldFocused)
         .onSubmit(of: .search, submit)
         .onChange(of: model.query) { _, newValue in
@@ -112,6 +118,103 @@ struct SearchView: View {
     }
 
     private var screenTab: AppTab? { tabFallback.tab(tab, navigation: navigation) }
+
+    // MARK: - The page and the spread
+
+    /// The scrolling page (the left page on a spread): it comes back where it was left, and
+    /// goes to the top when the scope changes.
+    private func pageScroll<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        let page = content()
+        return ScrollViewReader { proxy in
+            ScrollView {
+                page
+                    .id("search-top")
+            }
+            // The Mac rebuilds the tab on every switch: the page comes back where it was left,
+            // with the same words and scope (restored from `memory` when it appears).
+            .remembersScroll(.root)
+            .onChange(of: model.scope) { _, scope in
+                proxy.scrollTo("search-top", anchor: .top)
+                navigation?.memory.set(scope, for: Self.scopeMemoryKey)
+            }
+        }
+    }
+
+    /// The fold's band when it splits the page into two pages wide enough to read, in the
+    /// page's coordinates (a crease top to bottom, iPhone Duo held upright); nil elsewhere.
+    private static func spreadBand(_ fold: FoldInfo, width: CGFloat, margins: LF.PageMargins) -> CGRect? {
+        guard width <= LF.Metrics.maxContentWidth,
+              fold.columns(from: margins.leading, to: width - margins.trailing) != nil else { return nil }
+        return fold.band
+    }
+
+    /// Two pages, each scrolling on its own: the list on the left, the pick on the right.
+    private func spread(band: CGRect, margins: LF.PageMargins) -> some View {
+        HStack(spacing: 0) {
+            pageScroll {
+                Group {
+                    if model.hasQuery {
+                        resultsPage(previewing: true)
+                    } else {
+                        idleLeftPage
+                    }
+                }
+                .padding(.top, 8)
+                .padding(.bottom, 56)
+                .padding(.leading, margins.leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .frame(width: band.minX)
+
+            Color.clear
+                .frame(width: band.width)
+                .accessibilityHidden(true)
+
+            rightPage
+                .frame(maxWidth: .infinity)
+                .padding(.trailing, margins.trailing)
+        }
+    }
+
+    /// The right page: the result picked on the left, or the card of the day.
+    private var rightPage: some View {
+        let hit = model.hasQuery && indexStore.index != nil ? previewHit : nil
+        return ZStack(alignment: .top) {
+            ScrollView {
+                Group {
+                    if let hit {
+                        SearchPreviewCard(hit: hit, isCompleted: isCompleted(hit))
+                    } else {
+                        cardOfTheDay
+                    }
+                }
+                .padding(.top, 8)
+                .padding(.bottom, 56)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            // Each pick opens at its top, and the change is a fade (not motion, so it stays
+            // under Reduce Motion).
+            .id(hit?.id ?? "drawer")
+            .transition(.opacity)
+        }
+        .animation(LF.Motion.hover, value: hit?.id)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(hit == nil ? "Card of the day" : "Preview")
+    }
+
+    /// The hits the left page lists, in its order.
+    private var listedHits: [SearchHit] {
+        guard model.scope == .all else { return results.hits(in: model.scope) }
+        let hits = otherHits
+        return (results.topHit.map { [$0] } ?? []) + Array(hits.glossary.prefix(3)) + Array(hits.guides.prefix(6)) + Array(hits.articles.prefix(4))
+    }
+
+    /// The result on the right page: the one picked, while it's still listed, else the first.
+    private var previewHit: SearchHit? {
+        let hits = listedHits
+        if let previewID, let picked = hits.first(where: { $0.id == previewID }) { return picked }
+        return hits.first
+    }
 
     /// Where the words being typed wait in the window's `memory`.
     private static let memoryKey = "search.query"
@@ -222,6 +325,15 @@ struct SearchView: View {
         VStack(alignment: .leading, spacing: 38) {
             recentsOrSuggestions
             cardOfTheDay
+            browse
+        }
+    }
+
+    /// The idle page's left page on a spread: the card of the day has the right page.
+    private var idleLeftPage: some View {
+        VStack(alignment: .leading, spacing: 38) {
+            masthead
+            recentsOrSuggestions
             browse
         }
     }
@@ -521,7 +633,9 @@ struct SearchView: View {
 
     // MARK: - Results page
 
-    private var resultsPage: some View {
+    /// - Parameter previewing: the left page of a spread, where a result shows on the right
+    ///   page instead of opening, and every result is a row.
+    private func resultsPage(previewing: Bool) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             resultsHeader
             if indexStore.index == nil {
@@ -529,6 +643,9 @@ struct SearchView: View {
                     .padding(.top, 28)
             } else if results.isEmpty, model.isCurrent {
                 noMatch
+                    .padding(.top, 28)
+            } else if previewing {
+                previewList
                     .padding(.top, 28)
             } else if model.scope == .all {
                 allResults
@@ -538,6 +655,85 @@ struct SearchView: View {
                     .padding(.top, 28)
             }
         }
+    }
+
+    // MARK: The spread's list
+
+    /// Every result as a row, in sections like the single page. A row shows its result on the
+    /// right page; the one showing is marked.
+    @ViewBuilder
+    private var previewList: some View {
+        let shown = previewHit?.id
+        if model.scope == .all {
+            let hits = otherHits
+            VStack(alignment: .leading, spacing: 36) {
+                if let top = results.topHit {
+                    SearchList(items: [top]) { hit in previewRow(hit, shown: shown, top: true) }
+                }
+                previewSection(.glossary, hits: hits.glossary, limit: 3, shown: shown)
+                previewSection(.guides, hits: hits.guides, limit: 6, shown: shown)
+                previewSection(.articles, hits: hits.articles, limit: 4, shown: shown)
+            }
+        } else {
+            let hits = results.hits(in: model.scope)
+            if hits.isEmpty {
+                scopedResults(model.scope)
+            } else {
+                VStack(alignment: .leading, spacing: 0) {
+                    SearchList(items: hits) { hit in previewRow(hit, shown: shown, top: false) }
+                    if results.count(model.scope) > hits.count {
+                        FieldHint("Showing the best \(hits.count) of \(results.count(model.scope)). Add a word to narrow it down.")
+                            .padding(.top, 14)
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func previewSection(_ scope: SearchScope, hits: [SearchHit], limit: Int, shown: String?) -> some View {
+        if !hits.isEmpty {
+            VStack(alignment: .leading, spacing: 0) {
+                SearchSectionHeader(title: scope.title, count: results.count(scope))
+                SearchList(items: Array(hits.prefix(limit))) { hit in previewRow(hit, shown: shown, top: false) }
+                let topHere = results.topHit.map { $0.document.kind.scope == scope } ?? false
+                showAll(scope, shown: min(limit, hits.count) + (topHere ? 1 : 0))
+            }
+        }
+    }
+
+    private func previewRow(_ hit: SearchHit, shown: String?, top: Bool) -> some View {
+        let document = hit.document
+        let completed = isCompleted(hit)
+        let isShown = hit.id == shown
+        return Button {
+            previewID = hit.id
+            Haptics.select()
+        } label: {
+            SearchResultRow(
+                slug: top ? "top hit / \(document.slug)" : document.slug,
+                title: hit.title.attributed,
+                crumb: document.crumb,
+                alias: hit.matchedAlias?.attributed,
+                snippet: (hit.snippet ?? (document.kind == .glossary ? SearchHighlight(text: document.detail, ranges: []) : nil))?.attributed,
+                snippetLines: 2,
+                minutes: document.kind == .lesson ? document.minutes : nil,
+                hasVideo: document.hasVideo,
+                isCompleted: completed,
+                systemImage: document.kind == .department ? document.systemImage : nil,
+                showsChevron: false
+            )
+            .background(isShown ? LF.Palette.rowWash : Color.clear)
+            .overlay(alignment: .leading) {
+                if isShown {
+                    Rectangle().fill(LF.Palette.blue).frame(width: 3)
+                }
+            }
+        }
+        .buttonStyle(.searchRow)
+        .accessibilityLabel(SearchAccessibility.label(for: hit, isCompleted: completed, prefix: top ? "Top hit" : nil))
+        .accessibilityHint("Shows it on the right page")
+        .accessibilityAddTraits(isShown ? .isSelected : [])
     }
 
     private var resultsHeader: some View {
@@ -867,3 +1063,21 @@ private struct SearchBrowseItem: Identifiable {
     }
     .appEnvironment(.preview)
 }
+
+#if DEBUG
+#Preview("Results, Duo book", traits: .duoBook) {
+    NavigationStack {
+        SearchView(query: "pid")
+    }
+    .appEnvironment(.preview)
+    .previewFold(.previewBook)
+}
+
+#Preview("Search, Duo cover", traits: .duoCover) {
+    NavigationStack {
+        SearchView()
+    }
+    .appEnvironment(.preview)
+    .previewFold(.previewClosed)
+}
+#endif

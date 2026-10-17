@@ -17,6 +17,15 @@ import YouTubePlayerKit
 /// beside the text as it scrolls. The layout is worked out from the window's width in the
 /// same pass that lays the page out, so the first layout is already the final one.
 ///
+/// iPhone Duo's open screen gets two more (`FoldReader`, Design/Fold.swift):
+/// - Held upright (book, or open flat): a spread. The header and the text take the left page
+///   and the margin takes the right one, with the gutter exactly on the crease. The same
+///   layout flat and bent, so nothing reflows as the hinge moves.
+/// - Held sideways and bent (laptop): the page reads in the top half and the bottom half holds
+///   the controls (`LessonFlexDeck`): the floating bar's slip, read aloud, the headings, and
+///   the quiz's answers while the quiz is on screen. A video that's playing pins to the top
+///   half instead, with the lesson scrolling in the bottom half.
+///
 /// Previous and next lessons open in place, so Back still returns to wherever the reader
 /// came from. The move goes through the window's path: the screen swaps the `.lesson` on top
 /// of its tab (`WindowNavigation.showLesson(_:replacing:)`) and then follows its own
@@ -124,24 +133,45 @@ struct LessonView: View {
     /// place, its answers) is filed under it, and links from the page push onto it.
     private var screenTab: AppTab? { tabFallback.tab(tab, navigation: navigation) }
 
-    /// The page's layout for a window this wide.
+    /// The page's layout for the space it has and the fold through it.
     ///
-    /// Read from a `GeometryReader` while the page is laid out, not measured afterwards and
-    /// kept in `@State`: a width that arrived after the first layout changed the gutter, the
-    /// text reflowed in the same frame, and the scroll view's geometry changed twice in one
-    /// frame (SwiftUI dropped the second change, "OnScrollGeometryChange tried to update
-    /// multiple times per frame", and the safe-area update with it).
-    private func pageLayout(width: CGFloat) -> PageLayout {
+    /// Read from a `GeometryReader` (`FoldReader`) while the page is laid out, not measured
+    /// afterwards and kept in `@State`: a width that arrived after the first layout changed
+    /// the gutter, the text reflowed in the same frame, and the scroll view's geometry changed
+    /// twice in one frame (SwiftUI dropped the second change, "OnScrollGeometryChange tried to
+    /// update multiple times per frame", and the safe-area update with it).
+    private func pageLayout(_ proxy: GeometryProxy, fold: FoldInfo) -> PageLayout {
+        let width = proxy.size.width.rounded(.down)
+        let margins = proxy.lfPageMargins
         // Two columns from `wideFrom` up, and back to one only below `narrowBelow`, so a
         // width hovering at the line (a resize, a bar appearing) can't flip it back and forth.
         let twoColumns = widePage ? width >= Self.narrowBelow : width >= Self.wideFrom
+        // A crease top to bottom with a page's worth each side: the spread. The sheet starts at
+        // the leading margin (the page frame only centres past 1280pt, wider than any fold).
+        let book = width <= LF.Metrics.maxContentWidth
+            ? fold.columns(from: margins.leading, to: width - margins.trailing)
+            : nil
+        // A crease side to side, bent, with room above and below: the laptop halves.
+        var halves: PageLayout.Halves?
+        if book == nil, fold.isLaptop, let band = fold.band {
+            let bottom = proxy.size.height - band.maxY
+            if band.minY >= Self.minimumHalf, bottom >= Self.minimumHalf {
+                halves = PageLayout.Halves(top: band.minY, band: band.height, bottom: bottom)
+            }
+        }
         return PageLayout(
             width: width,
+            margins: margins,
             twoColumns: twoColumns,
             // Never at the accessibility type sizes: the margin would be a column of single words.
-            isWide: twoColumns && !typeSize.isAccessibilitySize
+            isWide: book == nil && twoColumns && !typeSize.isAccessibilitySize,
+            book: book,
+            halves: halves
         )
     }
+
+    /// The least either half of a laptop-posture screen needs before the lesson splits on it.
+    private static let minimumHalf: CGFloat = 200
 
     /// Phones and narrow split views: the toolbar keeps only the bookmark and the menu.
     /// The size class, not the measured width, so the toolbar can't change what it measures.
@@ -204,9 +234,9 @@ struct LessonView: View {
     // MARK: The page
 
     private func page(_ location: LessonLocation) -> some View {
-        GeometryReader { geometry in
-            let layout = pageLayout(width: geometry.size.width.rounded(.down))
-            scrollingPage(location, layout: layout)
+        FoldReader { proxy, fold in
+            let layout = pageLayout(proxy, fold: fold)
+            halves(location, layout: layout)
                 // Remembers the decision for the hysteresis next time. The decision already
                 // used this value, so storing it changes nothing on the page.
                 .onChange(of: layout.twoColumns, initial: true) { _, twoColumns in
@@ -215,13 +245,72 @@ struct LessonView: View {
         }
     }
 
-    private func scrollingPage(_ location: LessonLocation, layout: PageLayout) -> some View {
+    /// The scrolling page, and in laptop posture the half it shares the screen with: the deck
+    /// below it, or the playing video above it. The scroll view keeps its place in the tree in
+    /// every posture, so the hinge moving never sends the reader back to the top.
+    private func halves(_ location: LessonLocation, layout: PageLayout) -> some View {
+        let videoID = catalog.lessonBody(location.id)?.youtubeID ?? location.lesson.youtubeID
+        let watching = layout.halves != nil && videoPlayer != nil && videoID != nil
+        let deck = layout.halves != nil && !watching
+        return VStack(spacing: 0) {
+            if let halves = layout.halves, watching, let videoID {
+                LessonPinnedVideo(videoID: videoID, lessonTitle: location.lesson.title, player: $videoPlayer)
+                    .padding(.leading, layout.margins.leading)
+                    .padding(.trailing, layout.margins.trailing)
+                    .padding(.vertical, 10)
+                    .frame(height: halves.top)
+                Color.clear
+                    .frame(height: halves.band)
+                    .accessibilityHidden(true)
+            }
+            scrollingPage(location, layout: layout, showsBar: !deck, videoElsewhere: watching)
+                .frame(height: layout.halves.map { watching ? $0.bottom : $0.top })
+                .environment(\.lessonQuizPadRequested, deck)
+            if let halves = layout.halves, deck {
+                // The crease, then room for the deck (drawn over it, below).
+                Color.clear
+                    .frame(height: halves.band + halves.bottom)
+                    .accessibilityHidden(true)
+            }
+        }
+        .overlayPreferenceValue(QuizPadPreference.self, alignment: .bottom) { pad in
+            if let halves = layout.halves, deck {
+                flexDeck(location, pad: pad, margins: layout.margins)
+                    .frame(height: halves.bottom)
+            }
+        }
+        .animation(reduceMotion ? nil : LF.Motion.settle, value: layout.halves != nil)
+        .animation(reduceMotion ? nil : LF.Motion.settle, value: watching)
+    }
+
+    private func flexDeck(_ location: LessonLocation, pad: QuizPadModel?, margins: LF.PageMargins) -> some View {
+        let lessonBody = catalog.lessonBody(location.id)
+        return LessonFlexDeck(
+            metrics: metrics,
+            isCompleted: progress.isCompleted(location.id),
+            quizCount: lessonBody?.quiz.count ?? 0,
+            signedIn: account.isSignedIn,
+            reader: reader,
+            canReadAloud: lessonBody != nil,
+            headings: lessonBody.map { LessonMarkdownView.headings(in: $0.content) } ?? [],
+            pad: pad,
+            margins: margins,
+            onQuiz: { scroll(to: Self.quizAnchor) },
+            onNext: { continueOn(from: location) },
+            onReadAloud: { toggleReading(location) },
+            onStopReading: { reader.stop() },
+            onJump: { scroll(to: $0) }
+        )
+    }
+
+    private func scrollingPage(_ location: LessonLocation, layout: PageLayout, showsBar: Bool, videoElsewhere: Bool) -> some View {
         ScrollViewReader { proxy in
             ScrollView {
                 LessonPageFrame(maxWidth: LF.Metrics.maxContentWidth) {
-                    sheet(location, layout: layout)
-                        .padding(.horizontal, layout.gutter)
-                        .padding(.top, layout.isWide ? 28 : 18)
+                    sheet(location, layout: layout, videoElsewhere: videoElsewhere)
+                        .padding(.leading, layout.margins.leading)
+                        .padding(.trailing, layout.margins.trailing)
+                        .padding(.top, layout.isWide || layout.book != nil ? 28 : 18)
                         .padding(.bottom, 56)
                 }
                 // Where the page was left, for a rebuilt page to scroll back to. An overlay,
@@ -248,16 +337,25 @@ struct LessonView: View {
             .task(id: location.id) { await resumeScroll(location.id, proxy: proxy) }
             .paperBackground()
             .safeAreaInset(edge: .bottom, spacing: 0) {
-                LessonFloatingBar(
-                    metrics: metrics,
-                    isCompleted: progress.isCompleted(location.id),
-                    quizCount: catalog.lessonBody(location.id)?.quiz.count ?? 0,
-                    signedIn: account.isSignedIn,
-                    hasNext: true,
-                    dismissed: $barDismissed,
-                    onQuiz: { scroll(to: Self.quizAnchor) },
-                    onNext: { continueOn(from: location) }
-                )
+                // In laptop posture the deck below has the bar's slip instead.
+                if showsBar {
+                    LessonFloatingBar(
+                        metrics: metrics,
+                        isCompleted: progress.isCompleted(location.id),
+                        quizCount: catalog.lessonBody(location.id)?.quiz.count ?? 0,
+                        signedIn: account.isSignedIn,
+                        hasNext: true,
+                        dismissed: $barDismissed,
+                        // On a spread the bar stays on the left page, clear of the crease.
+                        leadingInset: layout.book == nil ? LF.Metrics.gutter : layout.margins.leading,
+                        // The gutter, plus the slip's 3pt shadow, short of the band.
+                        trailingInset: layout.book == nil ? LF.Metrics.gutter : LF.Metrics.gutter + 4,
+                        onQuiz: { scroll(to: Self.quizAnchor) },
+                        onNext: { continueOn(from: location) }
+                    )
+                    .frame(width: layout.book.map { layout.margins.leading + $0.leading + LF.Metrics.gutter })
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
             }
             .onChange(of: scrollRequest) { _, request in
                 guard let request else { return }
@@ -269,48 +367,68 @@ struct LessonView: View {
     }
 
     @ViewBuilder
-    private func sheet(_ location: LessonLocation, layout: PageLayout) -> some View {
+    private func sheet(_ location: LessonLocation, layout: PageLayout, videoElsewhere: Bool) -> some View {
         let lessonBody = catalog.lessonBody(location.id)
-        VStack(alignment: .leading, spacing: 0) {
-            LessonHeaderView(
-                location: location,
-                position: catalog.position(of: location.id),
-                readingMinutes: lessonBody.map { LessonText.readingMinutes($0.content) },
-                isCompleted: progress.isCompleted(location.id),
-                isPending: progress.isPending(location.id),
-                hasQuiz: !(lessonBody?.quiz.isEmpty ?? false),
-                isWide: layout.isWide,
-                metrics: metrics,
-                onOpen: open,
-                onFinish: { scroll(to: Self.quizAnchor) }
-            )
-
-            if layout.isWide {
-                LessonWideRow(metrics: metrics, railWidth: railWidth) {
-                    rail(location, body: lessonBody)
-                } article: {
-                    article(location, body: lessonBody, layout: layout)
+        if let book = layout.book {
+            // The spread: header and text on the left page, the margin on the right one.
+            LessonBookRow(columns: book, metrics: metrics) {
+                VStack(alignment: .leading, spacing: 0) {
+                    header(location, body: lessonBody, isWide: false, factsInPairs: true)
+                    article(location, body: lessonBody, layout: layout, videoElsewhere: videoElsewhere)
+                        .padding(.top, 34)
                 }
-                .padding(.top, 44)
-            } else {
-                article(location, body: lessonBody, layout: layout)
-                    .padding(.top, 34)
+            } rail: {
+                rail(location, body: lessonBody)
+            }
+        } else {
+            VStack(alignment: .leading, spacing: 0) {
+                header(location, body: lessonBody, isWide: layout.isWide, factsInPairs: false)
+
+                if layout.isWide {
+                    LessonWideRow(metrics: metrics, railWidth: railWidth) {
+                        rail(location, body: lessonBody)
+                    } article: {
+                        article(location, body: lessonBody, layout: layout, videoElsewhere: videoElsewhere)
+                    }
+                    .padding(.top, 44)
+                } else {
+                    article(location, body: lessonBody, layout: layout, videoElsewhere: videoElsewhere)
+                        .padding(.top, 34)
+                }
             }
         }
     }
 
+    private func header(_ location: LessonLocation, body lessonBody: LessonBody?, isWide: Bool, factsInPairs: Bool) -> some View {
+        LessonHeaderView(
+            location: location,
+            position: catalog.position(of: location.id),
+            readingMinutes: lessonBody.map { LessonText.readingMinutes($0.content) },
+            isCompleted: progress.isCompleted(location.id),
+            isPending: progress.isPending(location.id),
+            hasQuiz: !(lessonBody?.quiz.isEmpty ?? false),
+            isWide: isWide,
+            factsInPairs: factsInPairs,
+            metrics: metrics,
+            onOpen: open,
+            onFinish: { scroll(to: Self.quizAnchor) }
+        )
+    }
+
     // MARK: The article column
 
-    private func article(_ location: LessonLocation, body: LessonBody?, layout: PageLayout) -> some View {
+    private func article(_ location: LessonLocation, body: LessonBody?, layout: PageLayout, videoElsewhere: Bool) -> some View {
         let department = location.department
         let next = catalog.nextLesson(after: location.id)
         let deptProgress = progress.departmentProgress(department)
         let signedIn = account.isSignedIn
         let isGuest = account.isGuest
         let videoID = body?.youtubeID ?? location.lesson.youtubeID
-        let isWide = layout.isWide
-        let width = layout.width
-        let gap: CGFloat = isWide ? 48 : 40
+        // The margin has the takeaways and the department meter, so the text doesn't repeat them.
+        let isWide = layout.hasRail
+        // What the column decisions below read: the window, or the left page of a spread.
+        let width = layout.columnWidth
+        let gap: CGFloat = layout.isWide ? 48 : 40
 
         return VStack(alignment: .leading, spacing: 0) {
             if let videoID {
@@ -318,6 +436,7 @@ struct LessonView: View {
                     videoID: videoID,
                     lessonTitle: location.lesson.title,
                     player: $videoPlayer,
+                    isPlayingElsewhere: videoElsewhere,
                     onPlay: { reader.stop() }
                 )
                 .padding(.bottom, 34)
@@ -338,6 +457,8 @@ struct LessonView: View {
                     LessonVerifiedBadge(verifiedAt: verifiedAt)
                         .padding(.top, gap)
                 }
+
+                AdminVerifyLessonControl(lessonID: location.id)
 
                 LessonProvenanceView(sources: body.resources, lessonURL: location.webURL, isWide: width >= 700)
                     .padding(.top, body.verifiedAt == nil ? gap : 12)
@@ -559,6 +680,8 @@ struct LessonView: View {
                     compact: isCompactBar
                 )
             }
+            // Words: never squeezed into iPhone Duo's 84pt vertical bar.
+            .lfAxisBehavior(.horizontalOnly)
             #endif
 
             ToolbarItemGroup(placement: .primaryAction) {
@@ -571,6 +694,8 @@ struct LessonView: View {
                 }
                 moreMenu(location)
             }
+            // Icons: into iPhone Duo's vertical bar wherever it shows.
+            .lfAxisBehavior(.verticalPreferred)
         }
     }
 
@@ -856,16 +981,34 @@ struct LessonView: View {
     }
 }
 
-/// The page's layout for one window width (`LessonView.pageLayout(width:)`).
+/// The page's layout for the space it has (`LessonView.pageLayout(_:fold:)`).
 private struct PageLayout {
+    /// The heights of iPhone Duo's halves in laptop posture, top to bottom.
+    struct Halves: Equatable {
+        var top: CGFloat
+        var band: CGFloat
+        var bottom: CGFloat
+    }
+
     /// The window's width in whole points.
     let width: CGFloat
+    /// The page's side margins: the gutter, or the system's next to iPhone Duo's vertical bar.
+    let margins: LF.PageMargins
     /// Wide enough for the margin beside the text (with hysteresis).
     let twoColumns: Bool
-    /// Two columns and a type size that leaves the margin readable.
+    /// Two columns and a type size that leaves the margin readable (iPad, Mac).
     let isWide: Bool
+    /// iPhone Duo held upright: the left page (header and text), the crease, the right page
+    /// (the margin).
+    let book: FoldColumns?
+    /// iPhone Duo held sideways and bent: the page above the crease, the deck below it.
+    let halves: Halves?
 
-    var gutter: CGFloat { LF.Metrics.gutter(for: width) }
+    /// The margin is on screen (beside the text, or on the right page).
+    var hasRail: Bool { isWide || book != nil }
+    /// The width the text's column decisions read (two columns of links, the wide footer):
+    /// the window's, or on a spread the left page's.
+    var columnWidth: CGFloat { book?.leading ?? width }
 }
 
 /// Offers the lesson to Handoff while it's the screen on show in its window
@@ -959,6 +1102,69 @@ private struct LessonColumnsLayout: Layout {
     }
 }
 
+// MARK: - The spread
+
+/// iPhone Duo's open screen held upright: the header and text on the left page, the crease,
+/// and the margin on the right page, pinned as the text scrolls (`LessonStickyColumn`). The
+/// site's 2pt ink margin rule runs down the right page's inner edge, between the two, for the
+/// full height of the row.
+private struct LessonBookRow<Page: View, Rail: View>: View {
+    let columns: FoldColumns
+    let metrics: LessonScrollMetrics
+    @ViewBuilder var page: Page
+    @ViewBuilder var rail: Rail
+
+    private let ruleGap: CGFloat = 20
+
+    var body: some View {
+        LessonBookColumnsLayout(columns: columns) {
+            page
+            LessonStickyColumn(metrics: metrics) {
+                rail
+            }
+            .padding(.leading, ruleGap)
+            .overlay(alignment: .leading) {
+                Rectangle()
+                    .fill(LF.Palette.ink)
+                    .frame(width: LF.Metrics.stroke)
+                    .accessibilityHidden(true)
+            }
+        }
+    }
+}
+
+/// The left page (first subview) exactly `columns.leading` wide, and the right page (second)
+/// from the far side of the crease to the sheet's edge. One pass, like `LessonColumnsLayout`:
+/// the row is as tall as the taller page, and the right page is offered that whole height so
+/// its sticky margin has the full run to travel.
+private struct LessonBookColumnsLayout: Layout {
+    let columns: FoldColumns
+
+    private var railX: CGFloat { columns.leading + columns.gap }
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        guard subviews.count == 2 else { return .zero }
+        let width = proposal.width ?? railX + columns.trailing
+        let page = subviews[0].sizeThatFits(ProposedViewSize(width: columns.leading, height: nil))
+        let rail = subviews[1].sizeThatFits(ProposedViewSize(width: max(0, width - railX), height: nil))
+        return CGSize(width: width, height: max(page.height, rail.height))
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        guard subviews.count == 2 else { return }
+        subviews[0].place(
+            at: bounds.origin,
+            anchor: .topLeading,
+            proposal: ProposedViewSize(width: columns.leading, height: nil)
+        )
+        subviews[1].place(
+            at: CGPoint(x: bounds.minX + railX, y: bounds.minY),
+            anchor: .topLeading,
+            proposal: ProposedViewSize(width: max(0, bounds.width - railX), height: bounds.height)
+        )
+    }
+}
+
 // MARK: - Previews
 
 #Preview("iPhone, video lesson", traits: .fixedLayout(width: 393, height: 2600)) {
@@ -1016,3 +1222,29 @@ private struct LessonColumnsLayout: Layout {
     .appEnvironment(.preview)
     .dynamicTypeSize(.accessibility1)
 }
+
+#if DEBUG
+#Preview("Duo, book", traits: .duoBook) {
+    NavigationStack {
+        LessonView(lessonID: PreviewData.lessonBody.id)
+    }
+    .appEnvironment(.preview)
+    .previewFold(.previewBook)
+}
+
+#Preview("Duo, laptop", traits: .duoLaptop) {
+    NavigationStack {
+        LessonView(lessonID: PreviewData.lessonBody.id)
+    }
+    .appEnvironment(.preview)
+    .previewFold(.previewLaptop)
+}
+
+#Preview("Duo, cover", traits: .duoCover) {
+    NavigationStack {
+        LessonView(lessonID: PreviewData.lessonBody.id)
+    }
+    .appEnvironment(.preview)
+    .previewFold(.previewClosed)
+}
+#endif

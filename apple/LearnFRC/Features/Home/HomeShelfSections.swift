@@ -1,7 +1,7 @@
 import SwiftUI
 
 // The quieter sections lower on Home: the free-account card for guests, the bookmarked
-// lessons, the one question that picks a path, and the newest articles.
+// lessons and the newest articles. The one question and its plan are in HomeStartPlan.swift.
 
 // MARK: - Free account (guests)
 
@@ -42,81 +42,6 @@ struct HomeGuestAccountCard: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.top, 18)
-        }
-    }
-}
-
-// MARK: - One question
-
-/// The site's `/start` question as a list: pick what you do on the team, get the curated
-/// path for it. Shown to guests and to accounts with nothing finished yet.
-struct HomeStartGoals: View {
-    let goals: [StartGoal]
-
-    @ScaledMetric(relativeTo: .body) private var iconWidth: CGFloat = 28
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HomeSectionHeader(
-                marker: "one question / then you're in",
-                title: "What do you do on your team?",
-                detail: "Pick the closest one and get a path through the departments that matter for it. Everything else stays open."
-            )
-            VStack(spacing: 0) {
-                DashedRule()
-                ForEach(goals) { goal in
-                    NavigationLink(value: AppRoute.path(goal.pathSlug)) {
-                        let icon = Image(systemName: IconNames.systemImage(forLucide: goal.iconName, fallback: "book"))
-                            .font(.body.weight(.semibold))
-                            .foregroundStyle(LF.Palette.ink)
-                            .frame(width: iconWidth)
-                            .accessibilityHidden(true)
-                        let arrow = Image(systemName: "arrow.right")
-                            .font(.subheadline.weight(.bold))
-                            .foregroundStyle(LF.Palette.blue)
-                            .accessibilityHidden(true)
-                        let text = VStack(alignment: .leading, spacing: 2) {
-                            Text(goal.label)
-                                .font(LF.Fonts.body(16.5, weight: .bold, relativeTo: .headline))
-                                .foregroundStyle(LF.Palette.ink)
-                            Text(goal.blurb)
-                                .font(LF.Fonts.body(14.5, relativeTo: .subheadline))
-                                .foregroundStyle(LF.Palette.graphite)
-                        }
-                        .multilineTextAlignment(.leading)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        Group {
-                            // At the accessibility sizes the icon and arrow share a line above
-                            // the words, which then get the row's whole width: between them the
-                            // words had a column too narrow for "Scouting" or "electrical".
-                            if dynamicTypeSize.isAccessibilitySize {
-                                VStack(alignment: .leading, spacing: 8) {
-                                    HStack {
-                                        icon
-                                        Spacer(minLength: 12)
-                                        arrow
-                                    }
-                                    text
-                                }
-                            } else {
-                                HStack(alignment: .center, spacing: 14) {
-                                    icon
-                                    text
-                                    arrow
-                                }
-                            }
-                        }
-                        .padding(.vertical, 13)
-                        .padding(.trailing, 4)
-                    }
-                    .buttonStyle(.inkRow)
-                    .accessibilityLabel("\(goal.label). \(goal.blurb)")
-                    .accessibilityHint("Opens a learning path")
-                    DashedRule()
-                }
-            }
-            .padding(.top, 14)
         }
     }
 }
@@ -274,7 +199,6 @@ struct HomeRecentArticles: View {
                 HomeGuestAccountCard(lessonsOnDevice: 3, onCreateAccount: {}, onSignIn: {})
                 HomeBookmarksShelf(lessons: [PreviewData.location(PreviewData.codeAndTableLessonBody.id),
                                              PreviewData.location(PreviewData.budgetLessonBody.id)])
-                HomeStartGoals(goals: PreviewData.startGoals)
                 HomeRecentArticles(articles: Array(PreviewData.articles.prefix(3)))
             }
             .padding(LF.Metrics.gutter)
@@ -290,7 +214,6 @@ struct HomeRecentArticles: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 34) {
                 HomeGuestAccountCard(lessonsOnDevice: 0, onCreateAccount: {}, onSignIn: {})
-                HomeStartGoals(goals: PreviewData.startGoals)
                 HomeRecentArticles(articles: Array(PreviewData.articles.prefix(3)))
             }
             .padding(28)

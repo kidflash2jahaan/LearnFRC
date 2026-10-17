@@ -5,12 +5,14 @@ import SwiftUI
 /// Runs top to bottom as one binder page, like the site's dashboard:
 /// - the masthead (who's here, a one-line tally, one pen note),
 /// - the one-time "Want reminder emails?" card when the account hasn't answered,
-/// - the one lesson to open (the first-run loop when nothing is finished yet),
+/// - the one lesson to open (the first-run loop when nothing is finished yet), or, once the
+///   site's one question is answered, the five-lesson plan for that answer until it's done
+///   (learnfrc.com/start, `HomeStartPlan.swift`),
 /// - the weekly goal from the server's `rhythm` and `rhythmCopy`, with the seven-day strip,
 /// - the next badge, the tally, the team snippet, and the newest articles.
 ///
 /// Guests get the same page warmly: the loop, an on-device week, what an account adds, the
-/// question that picks a path. On iPad and Mac the page splits into two columns.
+/// question that picks a plan. On iPad and Mac the page splits into two columns.
 ///
 /// The shell wraps this in the Home tab's `NavigationStack` and registers `AppRoute`
 /// destinations; every link here is a `NavigationLink(value: AppRoute)`.
@@ -21,7 +23,9 @@ struct HomeView: View {
     @Environment(AccountStore.self) private var account
     @Environment(ReferenceStore.self) private var reference
     @Environment(Connectivity.self) private var connectivity
+    @Environment(StartPlanStore.self) private var injectedStartPlan: StartPlanStore?
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.fold) private var windowFold
 
     private let teamSource: HomeTeamSource
     private let onSignIn: (() -> Void)?
@@ -46,21 +50,51 @@ struct HomeView: View {
         self.onCreateAccount = onCreateAccount
     }
 
-    private var layout: HomeLayout {
-        HomeLayout(width: width, largeType: dynamicTypeSize.isAccessibilitySize)
+    var body: some View {
+        // The fold and the margins come from outside the scroll view, where the page measures
+        // its room; the width is still the one the scroll view offers (see below).
+        FoldReader { geometry, fold in
+            let layout = HomeLayout(width: width, largeType: dynamicTypeSize.isAccessibilitySize,
+                                    margins: geometry.lfPageMargins, fold: fold)
+            ScrollViewReader { proxy in
+                scrollView(proxy, layout: layout)
+            }
+        }
+        // Nothing on Home takes typing, so the keyboard never insets it: on iPad a keyboard
+        // inset once outlived the sign-in sheet and left a blank band under the last card.
+        #if os(iOS)
+        .ignoresSafeArea(.keyboard, edges: .bottom)
+        #endif
+        .navigationTitle("Home")
+        #if os(iOS)
+        .navigationBarTitleDisplayMode(.inline)
+        // The wordmark replaces the title; on iPhone Duo's inner screen held upright it moves
+        // from the middle of the bar, over the crease, to the leading edge.
+        .toolbar(removing: windowFold.isVertical ? .title : nil)
+        #endif
+        .toolbar { toolbar }
+        .closesShareSheetsOnNavigation()
+        .task(id: teamTaskKey) { await loadTeam(force: false) }
+        .task(id: startPlanTaskKey) { await loadStartPlan() }
+        .onChange(of: account.userID) { old, new in
+            emailPhase = .asking
+            // The plan's ticks belonged to the account that was signed in.
+            if old != nil, old != new { startPlan.dropAccountTicks() }
+        }
     }
 
-    var body: some View {
+    private func scrollView(_ proxy: ScrollViewProxy, layout: HomeLayout) -> some View {
         ScrollView {
             Group {
                 if width > 0 {
-                    page(layout)
+                    page(layout, proxy: proxy)
                 } else {
                     Color.clear.frame(height: 1)
                 }
             }
-            .padding(.horizontal, layout.gutter)
-            .padding(.top, layout.isWide ? 30 : 16)
+            .padding(.leading, layout.margins.leading)
+            .padding(.trailing, layout.margins.trailing)
+            .padding(.top, HomeLayout.topPadding(wide: layout.isWide))
             .padding(.bottom, 48)
             .frame(maxWidth: .infinity)
             // Report exactly the offered width, so a block that rounds a fraction of a point
@@ -73,29 +107,18 @@ struct HomeView: View {
         // Comes back where it was left when the Mac builds the tab again.
         .remembersScroll(.root)
         .paperBackground()
-        // Nothing on Home takes typing, so the keyboard never insets it: on iPad a keyboard
-        // inset once outlived the sign-in sheet and left a blank band under the last card.
-        #if os(iOS)
-        .ignoresSafeArea(.keyboard, edges: .bottom)
-        #endif
         .refreshable { await refresh() }
-        .navigationTitle("Home")
-        #if os(iOS)
-        .navigationBarTitleDisplayMode(.inline)
-        #endif
-        .toolbar { toolbar }
-        .closesShareSheetsOnNavigation()
-        .task(id: teamTaskKey) { await loadTeam(force: false) }
-        .onChange(of: account.userID) { emailPhase = .asking }
     }
 
     // MARK: Toolbar
 
     @ToolbarContentBuilder private var toolbar: some ToolbarContent {
         #if os(iOS)
-        ToolbarItem(placement: .principal) {
+        ToolbarItem(placement: windowFold.isVertical ? .topBarLeading : .principal) {
             LearnFRCWordmark(size: 19.5)
         }
+        .sharedBackgroundVisibility(.hidden)
+        .lfAxisBehavior(.horizontalOnly)
         #else
         ToolbarItem(placement: .primaryAction) {
             Button {
@@ -113,13 +136,14 @@ struct HomeView: View {
     // MARK: Page
 
     @ViewBuilder
-    private func page(_ layout: HomeLayout) -> some View {
-        VStack(alignment: .leading, spacing: layout.stackSpacing) {
+    private func page(_ layout: HomeLayout, proxy: ScrollViewProxy) -> some View {
+        HomeStackLayout(spacing: layout.stackSpacing, avoiding: layout.bandAcross) {
             if account.isLoading {
                 loadingPage
+                    .frame(maxWidth: layout.pages?.leading ?? .infinity, alignment: .leading)
             } else {
                 masthead(layout)
-                statusNote
+                statusNote(layout)
                 if layout.isWide {
                     HomeColumnsLayout(
                         mainWidth: layout.mainWidth,
@@ -127,10 +151,10 @@ struct HomeView: View {
                         columnSpacing: layout.columnSpacing,
                         spacing: layout.stackSpacing
                     ) {
-                        twoColumns(layout)
+                        twoColumns(layout, proxy: proxy)
                     }
                 } else {
-                    singleColumn(layout)
+                    singleColumn(layout, proxy: proxy)
                 }
             }
         }
@@ -140,10 +164,12 @@ struct HomeView: View {
     /// iPad and Mac: the lesson and the week on the left, everything about the account and
     /// the team on the right, and the shelves (bookmarks, the start question, the articles)
     /// in whichever column is shorter, so the page ends level rather than with a long run
-    /// of empty paper beside one column.
+    /// of empty paper beside one column. On iPhone Duo's inner screen held upright the two
+    /// columns are its two pages, meeting either side of the crease.
     @ViewBuilder
-    private func twoColumns(_ layout: HomeLayout) -> some View {
-        leadCard(large: layout.mainWidth >= 600, wideSteps: layout.mainWidth >= 640)
+    private func twoColumns(_ layout: HomeLayout, proxy: ScrollViewProxy) -> some View {
+        leadCard(large: layout.mainWidth >= 600, wideSteps: layout.mainWidth >= 640, proxy: proxy)
+            .id(HomeAnchor.lead)
             .homeColumn(.main)
         weekCard(wide: layout.mainWidth >= 560)
             .homeColumn(.main)
@@ -159,7 +185,7 @@ struct HomeView: View {
             .homeColumn(.side)
         bookmarks
             .homeColumn(.either)
-        startGoals
+        startGoals(wide: layout.mainWidth >= 600, proxy: proxy)
             .homeColumn(.either)
         articles
             .homeColumn(.either)
@@ -167,10 +193,11 @@ struct HomeView: View {
 
     /// iPhone (and narrow windows): one column, most important first.
     @ViewBuilder
-    private func singleColumn(_ layout: HomeLayout) -> some View {
+    private func singleColumn(_ layout: HomeLayout, proxy: ScrollViewProxy) -> some View {
         let width = layout.contentWidth
         emailCard
-        leadCard(large: width >= 600, wideSteps: width >= 640 && !layout.largeType)
+        leadCard(large: width >= 600, wideSteps: width >= 640 && !layout.largeType, proxy: proxy)
+            .id(HomeAnchor.lead)
         weekCard(wide: width >= 560 && !layout.largeType)
         bookmarks
         guestAccountCard
@@ -187,7 +214,7 @@ struct HomeView: View {
             tally(columns: width >= 330 ? 3 : 2)
             teamCard
         }
-        startGoals
+        startGoals(wide: width >= 600 && !layout.largeType, proxy: proxy)
         articles
     }
 
@@ -227,12 +254,70 @@ struct HomeView: View {
         "\(progress.progressRevision)|\(completed)|\(progress.pendingLessonIDs.count)"
     }
 
+    // MARK: Start plan
+
+    private var startPlan: StartPlanStore { injectedStartPlan ?? .shared }
+
+    private var startAnswers: [HomeStartAnswer] {
+        HomeStartAnswer.all(reference: reference, catalog: catalog)
+    }
+
+    /// The saved answer, while the site still offers it (its `readStartGoalId` drops an id it
+    /// no longer knows). Before the reference data arrives, the saved one stands.
+    private var startGoalID: String? {
+        guard let id = startPlan.goalID else { return nil }
+        return reference.startGoals.isEmpty || reference.startGoal(id: id) != nil ? id : nil
+    }
+
+    /// The plan in the lead card's place: from the moment an answer is saved until every
+    /// lesson on it is done. Nil when there's no answer, the question is open again, or the
+    /// plan is finished (Home goes back to the usual next lesson then).
+    private var startPlanPhase: HomeStartPlanSection.Phase? {
+        guard let goalID = startGoalID, !startPlan.isChanging else { return nil }
+        if let plan = startPlan.plan, plan.goal.id == goalID {
+            if startPlan.isFinished(plan, progress: progress) { return nil }
+            return .ready(HomeStartPlanModel(plan: plan, store: startPlan, catalog: catalog, progress: progress, reference: reference))
+        }
+        if !startPlan.isLoading, let error = startPlan.lastError { return .failed(error.message) }
+        return .loading
+    }
+
+    private var startPathSlug: String {
+        if let plan = startPlan.plan, plan.goal.id == startGoalID { return plan.pathSlug }
+        return startGoalID.flatMap { reference.startGoal(id: $0)?.pathSlug } ?? ""
+    }
+
+    private var startPathTitle: String {
+        if let plan = startPlan.plan, plan.goal.id == startGoalID, !plan.pathTitle.isEmpty { return plan.pathTitle }
+        return reference.path(slug: startPathSlug)?.title ?? ""
+    }
+
+    /// The account's handle for "You're set, maya." (Home never prints a full name).
+    private var startHandle: String? {
+        guard let me, !me.needsUsernameSetup, let username = me.profile.username, !username.isEmpty else { return nil }
+        return username
+    }
+
+    private var startPlanTaskKey: String {
+        "\(startGoalID ?? "-")|\(connectivity.isOnline)|\(catalog.isLoaded)|\(account.isLoading)"
+    }
+
     // MARK: Masthead
 
     @ViewBuilder
     private func masthead(_ layout: HomeLayout) -> some View {
-        let note = HomeMastheadNote(text: penNote, wide: layout.isWide)
-        if layout.isWide {
+        let note = HomeMastheadNote(text: penNote, wide: layout.isWide && layout.pages == nil)
+        if let pages = layout.pages {
+            // iPhone Duo's two pages: the greeting on the leading page, the pen note on the
+            // trailing one.
+            HStack(alignment: .bottom, spacing: pages.gap) {
+                mastheadText(layout)
+                    .frame(width: pages.leading, alignment: .leading)
+                note
+                    .padding(.bottom, 6)
+                    .frame(width: pages.trailing, alignment: .bottomLeading)
+            }
+        } else if layout.isWide {
             HStack(alignment: .bottom, spacing: 40) {
                 mastheadText(layout)
                 Spacer(minLength: 0)
@@ -282,19 +367,23 @@ struct HomeView: View {
 
     // MARK: Status
 
-    @ViewBuilder private var statusNote: some View {
+    @ViewBuilder
+    private func statusNote(_ layout: HomeLayout) -> some View {
         let pending = progress.pendingLessonIDs.count
+        let maxWidth = min(640, layout.pages?.leading ?? 640)
         if !connectivity.isOnline {
             HomeStatusNote(
                 systemImage: "wifi.slash",
                 text: pending > 0
                     ? "Offline. \(HomeCopy.count(pending, "lesson")) saved here, and \(pending == 1 ? "it syncs" : "they sync") when you're back online."
-                    : "Offline. Lessons and quizzes still work, and anything you finish syncs when you're back online."
+                    : "Offline. Lessons and quizzes still work, and anything you finish syncs when you're back online.",
+                maxWidth: maxWidth
             )
         } else if pending > 0 {
             HomeStatusNote(
                 systemImage: "arrow.triangle.2.circlepath",
-                text: "\(HomeCopy.count(pending, "lesson")) saved here, syncing with learnfrc.com."
+                text: "\(HomeCopy.count(pending, "lesson")) saved here, syncing with learnfrc.com.",
+                maxWidth: maxWidth
             )
         }
     }
@@ -309,8 +398,21 @@ struct HomeView: View {
     }
 
     @ViewBuilder
-    private func leadCard(large: Bool, wideSteps: Bool) -> some View {
-        if !catalog.isLoaded {
+    private func leadCard(large: Bool, wideSteps: Bool, proxy: ScrollViewProxy) -> some View {
+        if startPlan.isChanging, !startAnswers.isEmpty {
+            // "Change the route": the question comes back where the plan was.
+            startPicker(wide: large, proxy: proxy)
+        } else if let phase = startPlanPhase {
+            HomeStartPlanSection(
+                phase: phase,
+                pathSlug: startPathSlug,
+                pathTitle: startPathTitle,
+                handle: startHandle,
+                wide: large,
+                onChange: { changeStartGoal(proxy) },
+                onRetry: { retryStartPlan() }
+            )
+        } else if !catalog.isLoaded {
             HomeCatalogPlaceholder(loading: catalog.isRefreshing || catalog.lastError == nil)
         } else if completed == 0 {
             HomeFirstRunCard(location: progress.continueLesson, isGuest: !isSignedIn, wide: wideSteps)
@@ -382,10 +484,31 @@ struct HomeView: View {
         }
     }
 
-    @ViewBuilder private var startGoals: some View {
-        if completed == 0, !reference.startGoals.isEmpty {
-            HomeStartGoals(goals: reference.startGoals.filter { !$0.pathSlug.isEmpty })
+    /// The one question, for anyone with nothing finished and no answer saved yet: the whole
+    /// question, or the one-line card once it's been put away with "Skip for now". Once
+    /// answered, the plan takes the lead card's place instead (`leadCard`).
+    @ViewBuilder
+    private func startGoals(wide: Bool, proxy: ScrollViewProxy) -> some View {
+        if completed == 0, startGoalID == nil, !startPlan.isChanging, !startAnswers.isEmpty {
+            if startPlan.isSkipped {
+                HomeStartPrompt { startPlan.unskip() }
+            } else {
+                startPicker(wide: wide, proxy: proxy)
+            }
         }
+    }
+
+    private func startPicker(wide: Bool, proxy: ScrollViewProxy) -> some View {
+        HomeStartPicker(
+            answers: startAnswers,
+            handle: startHandle,
+            lessonCount: catalog.allLessons.count,
+            departmentCount: catalog.departments.count,
+            wide: wide,
+            onChoose: { chooseStartGoal($0, proxy: proxy) },
+            onBrowse: { browseGuides() },
+            onSkip: { skipStartQuestion() }
+        )
     }
 
     /// The lessons set aside with the bookmark, once there are any.
@@ -423,17 +546,84 @@ struct HomeView: View {
         model.selectedTab = .profile
     }
 
+    /// Saves the answer for a year and shows its plan where the lead card was.
+    private func chooseStartGoal(_ goal: StartGoal, proxy: ScrollViewProxy) {
+        Haptics.select()
+        let store = startPlan
+        let signedIn = isSignedIn
+        // Saved now, so the question leaves and the plan takes the lead card's place in this
+        // update; the page goes up to it once it's laid out, then the plan fills in below its
+        // top edge, so the scroll stays put.
+        store.answer(goal.id)
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(60))
+            LF.Motion.perform(LF.Motion.settle) {
+                proxy.scrollTo(HomeAnchor.lead, anchor: .top)
+            }
+            // Home's own load usually has it already (the answer changed its task key); this
+            // covers answering the same goal again after a plan that didn't come back.
+            await store.loadPlanIfNeeded(signedIn: signedIn)
+        }
+    }
+
+    private func changeStartGoal(_ proxy: ScrollViewProxy) {
+        startPlan.beginChange()
+        LF.Motion.perform(LF.Motion.settle) {
+            proxy.scrollTo(HomeAnchor.lead, anchor: .top)
+        }
+    }
+
+    /// "Skip for now": back to the plan when changing an answer, else the question folds up.
+    private func skipStartQuestion() {
+        if startPlan.isChanging {
+            startPlan.endChange()
+        } else {
+            startPlan.skip()
+        }
+    }
+
+    private func retryStartPlan() {
+        let store = startPlan
+        let signedIn = isSignedIn
+        Task { await store.retry(signedIn: signedIn) }
+    }
+
+    /// "Browse all N departments": the Guides tab, at its department wall.
+    private func browseGuides() {
+        model.popToRoot(.learn)
+        model.selectedTab = .learn
+    }
+
+    private func loadStartPlan() async {
+        guard !account.isLoading else { return }
+        startPlan.expireIfNeeded()
+        let known = catalog.isLoaded ? Set(catalog.allLessons.map(\.id)) : nil
+        await startPlan.loadPlanIfNeeded(signedIn: isSignedIn, knownLessons: known)
+    }
+
     private func refresh() async {
         let model = self.model
+        let startPlan = self.startPlan
+        let signedIn = isSignedIn
         async let everything: Void = model.refreshAll()
+        // The plan's rows never reshuffle (finished lessons stay as ticked rows), so asking
+        // again only brings the site's ticks and any change to the route.
+        async let plan: Void = startPlan.retry(signedIn: signedIn)
         await loadTeam(force: true)
         await everything
+        await plan
     }
 
     private func loadTeam(force: Bool) async {
         guard case .live = teamSource, let me else { return }
         await teamModel.load(teamNumber: me.profile.teamNumber, online: connectivity.isOnline, force: force, stamp: progressStamp)
     }
+}
+
+/// In-page jumps on Home.
+enum HomeAnchor: Hashable {
+    /// The lead card: the plan, the question while it's being changed, or the next lesson.
+    case lead
 }
 
 // MARK: - Masthead pieces
@@ -534,6 +724,7 @@ private struct HomeMastheadNote: View {
 private struct HomeStatusNote: View {
     let systemImage: String
     let text: String
+    var maxWidth: CGFloat = 640
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 9) {
@@ -548,7 +739,7 @@ private struct HomeStatusNote: View {
         }
         .padding(.horizontal, 13)
         .padding(.vertical, 10)
-        .frame(maxWidth: 640, alignment: .leading)
+        .frame(maxWidth: maxWidth, alignment: .leading)
         .background {
             HandShape(.s).strokeBorder(LF.Palette.rule, style: StrokeStyle(lineWidth: LF.Metrics.hairline, dash: [3, 3]))
         }
@@ -627,6 +818,30 @@ private struct HomePreviewHost: View {
         .environment(\.colorScheme, .light)
 }
 
+#Preview("Guest, start plan, iPhone", traits: .fixedLayout(width: 393, height: 2600)) {
+    HomePreviewHost(model: .preview(signedIn: false, phase: .new))
+        .environment(StartPlanStore.preview(goal: "code", plan: HomeStartPreviewData.plan))
+        .environment(\.colorScheme, .light)
+}
+
+#Preview("New account, start plan, iPad", traits: .fixedLayout(width: 1180, height: 1700)) {
+    HomePreviewHost(model: .preview(phase: .new))
+        .environment(StartPlanStore.preview(goal: "code", plan: HomeStartPreviewData.plan))
+        .environment(\.colorScheme, .light)
+}
+
+#Preview("Guest, changing the answer, iPhone", traits: .fixedLayout(width: 393, height: 2600)) {
+    HomePreviewHost(model: .preview(signedIn: false, phase: .new))
+        .environment(StartPlanStore.preview(goal: "code", plan: HomeStartPreviewData.plan, changing: true))
+        .environment(\.colorScheme, .dark)
+}
+
+#Preview("Guest, question skipped, iPhone", traits: .fixedLayout(width: 393, height: 2600)) {
+    HomePreviewHost(model: .preview(signedIn: false, phase: .new))
+        .environment(StartPlanStore.preview(skipped: true))
+        .environment(\.colorScheme, .light)
+}
+
 #Preview("Guest, iPhone, dark", traits: .fixedLayout(width: 393, height: 2600)) {
     HomePreviewHost(model: .preview(signedIn: false, phase: .building))
         .environment(\.colorScheme, .dark)
@@ -667,3 +882,27 @@ private struct HomePreviewHost: View {
         .dynamicTypeSize(.accessibility2)
         .environment(\.colorScheme, .light)
 }
+
+#if DEBUG
+#Preview("Signed in, Duo book", traits: .fixedLayout(width: 867, height: 1800)) {
+    HomePreviewHost(model: .preview(phase: .building))
+        .previewFold(.previewBook)
+        .environment(\.colorScheme, .light)
+}
+
+#Preview("Guest, Duo book, large type", traits: .fixedLayout(width: 867, height: 3000)) {
+    HomePreviewHost(model: .preview(signedIn: false, phase: .new))
+        .previewFold(.previewFlat)
+        .dynamicTypeSize(.accessibility3)
+}
+
+#Preview("Signed in, Duo laptop", traits: .duoLaptop) {
+    HomePreviewHost(model: .preview(phase: .building))
+        .previewFold(.previewLaptop)
+}
+
+#Preview("Signed in, Duo cover", traits: .fixedLayout(width: 382, height: 1400)) {
+    HomePreviewHost(model: .preview(phase: .building))
+        .previewFold(.previewClosed)
+}
+#endif

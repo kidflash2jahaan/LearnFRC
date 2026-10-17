@@ -56,6 +56,8 @@ struct SettingsIdentityCard: View {
             AccountFlowLayout(spacing: 8) {
                 TagView(p.roleKind == .other ? "Team member" : p.roleKind.displayName)
                 TagView(p.tier)
+                // The site's filled "admin" tag, for site admins only (it's empty otherwise).
+                AdminIdentityTag()
             }
         }
         .padding(LF.Metrics.cardPadding)

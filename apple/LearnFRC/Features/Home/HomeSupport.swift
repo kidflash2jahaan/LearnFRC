@@ -90,20 +90,115 @@ struct HomeLayout: Equatable {
     var width: CGFloat
     /// Accessibility text sizes stack everything into one column.
     var largeType: Bool
+    /// The page's leading and trailing margins (asymmetric next to iPhone Duo's vertical bar).
+    var margins: LF.PageMargins
+    /// iPhone Duo's two pages across the content, with the inner screen held upright: the
+    /// columns meet either side of the crease. Nil everywhere else.
+    var pages: FoldColumns?
+    /// iPhone Duo held sideways: where the crease's band runs across the page, from the top of
+    /// the page's content as it rests before any scrolling. Nil everywhere else.
+    var bandAcross: ClosedRange<CGFloat>?
+
+    /// The space above the page's content, inside the scroll view.
+    static func topPadding(wide: Bool) -> CGFloat { wide ? 30 : 16 }
+
+    init(width: CGFloat, largeType: Bool, margins: LF.PageMargins? = nil, fold: FoldInfo = .none) {
+        self.width = width
+        self.largeType = largeType
+        let margins = margins ?? LF.Metrics.pageMargins(for: width)
+        self.margins = margins
+        let fits = width - margins.total <= LF.Metrics.maxContentWidth
+        let pages = fits ? fold.columns(from: margins.leading, to: width - margins.trailing) : nil
+        self.pages = pages
+        if fold.isHorizontal, let band = fold.band {
+            // The page's content starts at the top of the scroll view at rest, under its padding.
+            let top = Self.topPadding(wide: false)
+            bandAcross = (band.minY - top)...(band.maxY - top)
+        } else {
+            bandAcross = nil
+        }
+    }
 
     var gutter: CGFloat { LF.Metrics.gutter(for: width) }
     /// The page's content width (`nb-wrap`).
-    var contentWidth: CGFloat { max(0, min(width - gutter * 2, LF.Metrics.maxContentWidth)) }
-    /// Two columns on iPad, Mac and big phones in landscape.
-    var isWide: Bool { contentWidth >= 760 && !largeType }
-    var columnSpacing: CGFloat { contentWidth >= 1000 ? 40 : 28 }
+    var contentWidth: CGFloat { max(0, min(width - margins.total, LF.Metrics.maxContentWidth)) }
+    /// Two columns on iPad, Mac and big phones in landscape, and on iPhone Duo's two pages
+    /// (each page is phone-width, so at any text size).
+    var isWide: Bool { pages != nil || (contentWidth >= 760 && !largeType) }
+    var columnSpacing: CGFloat { pages?.gap ?? (contentWidth >= 1000 ? 40 : 28) }
     /// The narrower right-hand column.
-    var sideWidth: CGFloat { min(440, max(300, (contentWidth - columnSpacing) * 0.39)) }
-    var mainWidth: CGFloat { isWide ? contentWidth - columnSpacing - sideWidth : contentWidth }
+    var sideWidth: CGFloat { pages?.trailing ?? min(440, max(300, (contentWidth - columnSpacing) * 0.39)) }
+    var mainWidth: CGFloat {
+        if let pages { return pages.leading }
+        return isWide ? contentWidth - columnSpacing - sideWidth : contentWidth
+    }
     /// Space between stacked sections.
     var stackSpacing: CGFloat { isWide ? 36 : 30 }
-    /// The h1 on the masthead.
-    var headlineSize: CGFloat { contentWidth >= 900 ? 50 : (contentWidth >= 600 ? 42 : 34) }
+    /// The h1 on the masthead, sized for the column it's in.
+    var headlineSize: CGFloat {
+        let room = pages?.leading ?? contentWidth
+        return room >= 900 ? 50 : (room >= 600 ? 42 : 34)
+    }
+}
+
+/// Home's sections down the page, like a `VStack`, with one allowance for iPhone Duo held
+/// sideways: a section that would lie across the crease's band as the page rests starts just
+/// below it instead, so the fold falls between two sections rather than through a card.
+/// Only when that leaves a modest gap (never for the first section, never more than about a
+/// card's worth of paper); a section with nothing to show takes no space and no spacing.
+struct HomeStackLayout: Layout {
+    var spacing: CGFloat
+    /// The band, in this stack's own coordinates.
+    var avoiding: ClosedRange<CGFloat>?
+
+    /// The most empty paper the stack leaves above the band to keep a section off it.
+    private static let largestGap: CGFloat = 220
+
+    private func arrange(width: CGFloat?, subviews: Subviews) -> (origins: [CGFloat?], heights: [CGFloat], height: CGFloat) {
+        var origins: [CGFloat?] = []
+        var heights: [CGFloat] = []
+        var y: CGFloat = 0
+        var placed = 0
+        var pushed = false
+        for subview in subviews {
+            let height = subview.sizeThatFits(ProposedViewSize(width: width, height: nil)).height
+            guard height > 0 else {
+                origins.append(nil)
+                heights.append(0)
+                continue
+            }
+            var top = placed == 0 ? y : y + spacing
+            if let band = avoiding, !pushed, placed > 0,
+               top < band.upperBound, top + height > band.lowerBound,
+               band.upperBound - top <= Self.largestGap {
+                top = band.upperBound
+                pushed = true
+            }
+            origins.append(top)
+            heights.append(height)
+            y = top + height
+            placed += 1
+        }
+        return (origins, heights, y)
+    }
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let arranged = arrange(width: proposal.width, subviews: subviews)
+        let width = proposal.width ?? subviews.map { $0.sizeThatFits(.unspecified).width }.max() ?? 0
+        return CGSize(width: width, height: arranged.height)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let arranged = arrange(width: bounds.width, subviews: subviews)
+        for index in subviews.indices {
+            if let y = arranged.origins[index] {
+                subviews[index].place(at: CGPoint(x: bounds.minX, y: bounds.minY + y), anchor: .topLeading,
+                                      proposal: ProposedViewSize(width: bounds.width, height: arranged.heights[index]))
+            } else {
+                subviews[index].place(at: bounds.origin, anchor: .topLeading, proposal: .zero)
+            }
+        }
+    }
 }
 
 // MARK: - Type

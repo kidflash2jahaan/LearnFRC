@@ -153,7 +153,9 @@ private struct QuizRetakeTag: View {
 /// - selected: blue edge and wash, blue letter.
 /// - correct (banked): blue edge and wash, a solid blue badge with a check.
 /// - wrong: a heavy 3pt ink edge, a solid ink badge with a cross, and the text struck through.
-private struct QuizOptionRow: View {
+///
+/// The answer sheet and the laptop-posture answer pad (`QuizAnswerPad`) both use it.
+struct QuizOptionRow: View {
     let letter: String
     let text: String
     let state: QuizSheet.OptionState

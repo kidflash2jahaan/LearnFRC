@@ -66,11 +66,16 @@ struct CertificateView: View {
                 if let department {
                     if let me = account.me, me.isProvisional, isComplete(department) {
                         CommunityEmptyNote("certificate / waiting for your account", "This certificate carries the name on your account, and the app hasn't loaded it yet. Connect to the internet and \(CommunityCopy.refreshHintInSentence).")
+                            .foldLeadingPage(layout.pages)
                             .padding(.top, 28)
                     } else if let content {
-                        earned(content, department: department, layout: layout)
+                        if let pages = layout.pages {
+                            earnedSpread(content, pages: pages)
+                        } else {
+                            earned(content, department: department, layout: layout)
+                        }
                     } else if isComplete(department) {
-                        finishedAsGuest(department)
+                        finishedAsGuest(department, pages: layout.pages)
                     } else {
                         notYet(department, layout: layout)
                     }
@@ -79,6 +84,7 @@ struct CertificateView: View {
                         Button("Open the guides") { app.selectedTab = .learn }
                             .buttonStyle(.inkGhostSmall)
                     }
+                    .foldLeadingPage(layout.pages)
                     .padding(.top, 28)
                 } else {
                     VStack(alignment: .leading, spacing: 16) {
@@ -86,6 +92,7 @@ struct CertificateView: View {
                         SkeletonBlock(height: 40, width: 300)
                         SkeletonBlock(height: 220).padding(.top, 12)
                     }
+                    .foldLeadingPage(layout.pages)
                     .padding(.top, 28)
                     .accessibilityElement(children: .ignore)
                     .accessibilityLabel("Loading the certificate")
@@ -153,7 +160,7 @@ struct CertificateView: View {
             actions(content)
                 .padding(.top, layout.isWide ? 28 : 16)
 
-            CertificateArtwork(content: content, mode: .screen(width: min(layout.width - layout.gutter * 2, 896)), stampLands: true)
+            CertificateArtwork(content: content, mode: .screen(width: min(layout.columnWidth, 896)), stampLands: true)
                 .frame(maxWidth: 896)
                 .frame(maxWidth: .infinity)
                 .padding(.top, 26)
@@ -172,6 +179,29 @@ struct CertificateView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.top, 24)
         }
+    }
+
+    /// An open iPhone Duo: the certificate on the left page; sharing, saving and the
+    /// challenge on the right.
+    private func earnedSpread(_ content: CertificateContent, pages: FoldColumns) -> some View {
+        FoldPages(pages) {
+            CertificateArtwork(content: content, mode: .screen(width: pages.leading), stampLands: true)
+        } trailing: {
+            VStack(alignment: .leading, spacing: 0) {
+                actions(content)
+                Text("share it as an image, or save the PDF to print it")
+                    .font(LF.Fonts.mono(12.5, relativeTo: .caption))
+                    .foregroundStyle(LF.Palette.graphite)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 14)
+                if let username = account.profile?.username {
+                    challenge(content, username: username)
+                        .padding(.top, 32)
+                }
+            }
+            .padding(.top, 12)
+        }
+        .padding(.top, 28)
     }
 
     private func actions(_ content: CertificateContent) -> some View {
@@ -281,9 +311,8 @@ struct CertificateView: View {
         let lessons = catalog.lessons(in: department)
         let next = lessons.first { !progress.isCompleted($0.lesson.id) } ?? lessons.first
 
-        return VStack(alignment: .leading, spacing: 0) {
+        let intro = VStack(alignment: .leading, spacing: 0) {
             SectionLabel("dept / \(department.slug)")
-                .padding(.top, layout.isWide ? 36 : 18)
             Text(counts.total == 0
                  ? "This department has no lessons yet."
                  : "\(CommunityFormat.count(remaining, "lesson")) left to sign this one off.")
@@ -293,49 +322,83 @@ struct CertificateView: View {
                 .padding(.top, 14)
             CommunityLede("Finish every lesson in \(department.name) and this page turns into a certificate with your name on it, ready to share or save as a PDF for the pit wall or a college application.")
                 .padding(.top, 18)
+        }
 
-            NotebookCard(tilt: .preset(0), tape: true, padding: layout.isRegular ? 28 : 22) {
-                if layout.isRegular {
-                    HStack(alignment: .center, spacing: 36) {
-                        PendingStampView(percent: percent)
-                            .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
-                        progressBlock(counts: counts, percent: percent, next: next, department: department)
+        return Group {
+            if let pages = layout.pages {
+                // An open iPhone Duo: what's left on the left page, the progress card on the right.
+                FoldPages(pages) {
+                    VStack(alignment: .leading, spacing: 0) {
+                        intro
+                        notYetMarker
                     }
-                } else {
-                    // The stamp is a fixed-size graphic (its figure is printed beside it too), so
-                    // its type stops growing at xxxLarge and it never pushes the card past the
-                    // page's edge at the accessibility sizes.
+                } trailing: {
+                    VStack(alignment: .leading, spacing: 0) {
+                        notYetCard(counts: counts, percent: percent, next: next, department: department, layout: layout.trailingPage)
+                            .padding(.top, 12)
+                        guestNote
+                    }
+                }
+                .padding(.top, 36)
+            } else {
+                VStack(alignment: .leading, spacing: 0) {
+                    intro
+                        .padding(.top, layout.isWide ? 36 : 18)
+                    notYetCard(counts: counts, percent: percent, next: next, department: department, layout: layout)
+                        .padding(.top, 34)
+                    notYetMarker
+                    guestNote
+                }
+            }
+        }
+    }
+
+    private func notYetCard(counts: (done: Int, total: Int), percent: Int, next: LessonLocation?, department: Department, layout: CommunityLayout) -> some View {
+        NotebookCard(tilt: .preset(0), tape: true, padding: layout.isRegular ? 28 : 22) {
+            if layout.isRegular {
+                HStack(alignment: .center, spacing: 36) {
                     PendingStampView(percent: percent)
                         .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 6)
                     progressBlock(counts: counts, percent: percent, next: next, department: department)
-                        .padding(.top, 22)
                 }
+            } else {
+                // The stamp is a fixed-size graphic (its figure is printed beside it too), so
+                // its type stops growing at xxxLarge and it never pushes the card past the
+                // page's edge at the accessibility sizes.
+                PendingStampView(percent: percent)
+                    .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 6)
+                progressBlock(counts: counts, percent: percent, next: next, department: department)
+                    .padding(.top, 22)
             }
-            .overlay(alignment: .bottomTrailing) {
-                TapeStrip(angle: 2.8).offset(x: -52, y: 12)
+        }
+        .overlay(alignment: .bottomTrailing) {
+            TapeStrip(angle: 2.8).offset(x: -52, y: 12)
+        }
+        .frame(maxWidth: 740, alignment: .leading)
+    }
+
+    private var notYetMarker: some View {
+        MarkerText("one certificate per department, not per lesson")
+            .padding(.top, 24)
+            .padding(.leading, 4)
+    }
+
+    @ViewBuilder
+    private var guestNote: some View {
+        if account.isGuest {
+            NoteCallout {
+                SlugText("certificates / need an account")
+                Text("A certificate carries your name, so it lives on an account. The lessons you finish on this device move into it when you sign in.")
+                    .lfProse(15.5, lineHeight: 1.45)
+                    .fixedSize(horizontal: false, vertical: true)
+                Button("Sign in or make an account") { app.selectedTab = .profile }
+                    .buttonStyle(.inkGhostSmall)
+                    .padding(.top, 6)
             }
             .frame(maxWidth: 740, alignment: .leading)
-            .padding(.top, 34)
-
-            MarkerText("one certificate per department, not per lesson")
-                .padding(.top, 24)
-                .padding(.leading, 4)
-
-            if account.isGuest {
-                NoteCallout {
-                    SlugText("certificates / need an account")
-                    Text("A certificate carries your name, so it lives on an account. The lessons you finish on this device move into it when you sign in.")
-                        .lfProse(15.5, lineHeight: 1.45)
-                        .fixedSize(horizontal: false, vertical: true)
-                    Button("Sign in or make an account") { app.selectedTab = .profile }
-                        .buttonStyle(.inkGhostSmall)
-                        .padding(.top, 6)
-                }
-                .frame(maxWidth: 740, alignment: .leading)
-                .padding(.top, 30)
-            }
+            .padding(.top, 30)
         }
     }
 
@@ -372,17 +435,20 @@ struct CertificateView: View {
 
     // MARK: Finished on this device, no account
 
-    private func finishedAsGuest(_ department: Department) -> some View {
-        VStack(alignment: .leading, spacing: 24) {
+    private func finishedAsGuest(_ department: Department, pages: FoldColumns?) -> some View {
+        // An open iPhone Duo: the stamp on the left page, the ask on the right.
+        FoldPages(pages, spacing: 24) {
             StampView("Finished", caption: "dept / \(department.slug)", footnote: "on this device")
                 .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
                 .padding(.top, 34)
                 .padding(.leading, 8)
+        } trailing: {
             CommunitySignInCard(
                 slug: "certificate / sign in",
                 title: "You've finished every lesson in \(department.name).",
                 message: "A certificate carries your name, so it needs an account. Sign in or make one and the lessons you finished here move into it, then this page turns into your certificate."
             )
+            .padding(.top, pages == nil ? 0 : 34)
         }
     }
 }
@@ -438,4 +504,20 @@ extension PreviewCommunity {
         CertificateView(departmentID: PreviewData.department.id)
     }
     .environment(\.colorScheme, .light)
+}
+
+#Preview("Certificate earned, iPhone Duo open", traits: .fixedLayout(width: DuoPreview.innerContent.width, height: 1000)) {
+    CommunityPreviewHost(model: PreviewCommunity.certificateModel()) {
+        CertificateView(departmentID: PreviewData.businessDepartment.id)
+    }
+    .previewFold(.previewBook)
+    .environment(\.colorScheme, .light)
+}
+
+#Preview("Certificate not yet, iPhone Duo open, night", traits: .fixedLayout(width: DuoPreview.innerContent.width, height: 900)) {
+    CommunityPreviewHost(model: .preview(signedIn: false)) {
+        CertificateView(departmentID: PreviewData.department.id)
+    }
+    .previewFold(.previewFlat)
+    .environment(\.colorScheme, .dark)
 }

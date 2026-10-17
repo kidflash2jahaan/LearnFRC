@@ -94,39 +94,62 @@ struct LeaderboardView: View {
         CommunityPage(refresh: { await reload() }, place: .route(.leaderboard)) { layout, _ in
             masthead(layout)
                 .communityColumn(layout)
-                .padding(.top, layout.isWide ? 36 : 18)
+                .padding(.top, layout.isWide || layout.isSpread ? 36 : 18)
 
             if let totals {
                 LeaderboardTotalsBand(totals: totals, layout: layout)
                     .padding(.top, layout.sectionGap)
             }
 
-            VStack(alignment: .leading, spacing: 0) {
-                if let username = account.profile?.username, !(account.me?.isProvisional ?? true) {
-                    LeaderboardInviteCard(username: username, referralCount: account.me?.referralCount ?? 0)
-                        .padding(.bottom, layout.sectionGap)
+            Group {
+                if let pages = layout.pages {
+                    // An open iPhone Duo. The heading and the tabs on the left page, beside the
+                    // invite (or, for a guest, how XP works); under them the podium on the left
+                    // page and the table level with it on the right. The table never sits
+                    // across the fold.
+                    VStack(alignment: .leading, spacing: 0) {
+                        FoldPages(pages) {
+                            boardTitle
+                        } trailing: {
+                            if let invite = inviteCard {
+                                invite
+                            } else {
+                                xpNote(ruled: false)
+                            }
+                        }
+                        FoldPages(pages) {
+                            boardBody(layout.leadingPage, part: .lead)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            // How XP works goes under the podium when the invite took the top
+                            // of the right page, so the left page isn't left empty beside a
+                            // long table.
+                            if inviteCard != nil {
+                                xpNote(ruled: true)
+                                    .padding(.top, layout.sectionGap)
+                            }
+                        } trailing: {
+                            boardBody(layout.trailingPage, part: .table)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .padding(.top, 30)
+                    }
+                } else {
+                    VStack(alignment: .leading, spacing: 0) {
+                        if let invite = inviteCard {
+                            invite
+                                .padding(.bottom, layout.sectionGap)
+                        }
+                        boardTitle
+
+                        // Full column width, so its right edge lines up with the cards and rules around it.
+                        boardBody(layout, part: .all)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.top, 22)
+
+                        xpNote(ruled: true)
+                            .padding(.top, layout.sectionGap)
+                    }
                 }
-                CommunitySectionHeader(
-                    "The full board",
-                    sub: "Three ways to read it: the last seven days, everything ever earned, and the team standing. Your own row is washed blue and barred in the margin wherever you land."
-                ) {
-                    MarkerText("the weekly one is the winnable one", angle: 1.4)
-                        .frame(maxWidth: 220, alignment: .leading)
-                }
-
-                // A group named once; each tab keeps its own name and selected state.
-                InkTabStrip(selection: boardSelection, tabs: Board.allCases.map { (value: $0, title: $0.title) })
-                    .accessibilityElement(children: .contain)
-                    .accessibilityLabel("Leaderboard views")
-                    .padding(.top, 22)
-
-                // Full column width, so its right edge lines up with the cards and rules around it.
-                boardBody(layout)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.top, 22)
-
-                xpNote
-                    .padding(.top, layout.sectionGap)
             }
             .communityColumn(layout)
             .padding(.top, layout.sectionGap)
@@ -145,11 +168,43 @@ struct LeaderboardView: View {
         .onDisappear { kept?.forgetIfLeft(Self.boardThing, Self.rankingThing) }
     }
 
+    /// The referral ask, for a signed-in learner with a handle.
+    private var inviteCard: LeaderboardInviteCard? {
+        guard let username = account.profile?.username, !(account.me?.isProvisional ?? true) else { return nil }
+        return LeaderboardInviteCard(username: username, referralCount: account.me?.referralCount ?? 0)
+    }
+
+    /// The heading over the board and its three tabs.
+    @ViewBuilder
+    private var boardTitle: some View {
+        CommunitySectionHeader(
+            "The full board",
+            sub: "Three ways to read it: the last seven days, everything ever earned, and the team standing. Your own row is washed blue and barred in the margin wherever you land."
+        ) {
+            MarkerText("the weekly one is the winnable one", angle: 1.4)
+                .frame(maxWidth: 220, alignment: .leading)
+        }
+
+        // A group named once; each tab keeps its own name and selected state.
+        InkTabStrip(selection: boardSelection, tabs: Board.allCases.map { (value: $0, title: $0.title) })
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel("Leaderboard views")
+            .padding(.top, 22)
+    }
+
     // MARK: Masthead
 
     @ViewBuilder
     private func masthead(_ layout: CommunityLayout) -> some View {
-        if layout.isWide {
+        if let pages = layout.pages {
+            // An open iPhone Duo: the masthead on the left page, the standings card on the
+            // right, split exactly on the fold.
+            FoldPages(pages) {
+                mastheadText
+            } trailing: {
+                standing.padding(.top, 12)
+            }
+        } else if layout.isWide {
             HStack(alignment: .top, spacing: 48) {
                 mastheadText
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -235,20 +290,24 @@ struct LeaderboardView: View {
 
     // MARK: Board
 
+    /// The board, or the part of it for one page of a spread: the lead (the podium, or the
+    /// team ranking's controls, and every loading and error state) or the table.
     @ViewBuilder
-    private func boardBody(_ layout: CommunityLayout) -> some View {
+    private func boardBody(_ layout: CommunityLayout, part: LeaderboardBoardPart) -> some View {
         let state = current
         VStack(alignment: .leading, spacing: 18) {
-            if state.isStale {
+            if state.isStale, part != .table {
                 CommunityLoadNote(state: state) { Task { await load(board.source, force: true) } }
             }
             if let sheet = state.value {
                 switch board {
                 case .teams:
-                    LeaderboardTeamBoard(sheet: sheet, ranking: rankingSelection, myTeam: myTeam, isSignedIn: account.isSignedIn, layout: layout)
+                    LeaderboardTeamBoard(sheet: sheet, ranking: rankingSelection, myTeam: myTeam, isSignedIn: account.isSignedIn, layout: layout, part: part)
                 case .week, .allTime:
-                    LeaderboardLearnerBoard(sheet: sheet, isWeekly: board == .week, myUsername: myUsername, layout: layout)
+                    LeaderboardLearnerBoard(sheet: sheet, isWeekly: board == .week, myUsername: myUsername, layout: layout, part: part)
                 }
+            } else if part == .table {
+                EmptyView()
             } else if state.error != nil {
                 CommunityLoadNote(state: state) { Task { await load(board.source, force: true) } }
             } else {
@@ -263,9 +322,10 @@ struct LeaderboardView: View {
         }
     }
 
-    private var xpNote: some View {
+    /// How XP works, ruled off from the board above it (or not, at the top of a page).
+    private func xpNote(ruled: Bool) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            InkRule()
+            if ruled { InkRule() }
             NoteCallout {
                 SlugText("how xp works")
                 Text("Finish a lesson and pass its quiz to earn XP, plus 25 for each teammate who joins through your link. Nothing on this board is for sale. Pick a department and start with whichever one your team is worst at.")
@@ -276,7 +336,7 @@ struct LeaderboardView: View {
                     .padding(.top, 6)
             }
             .frame(maxWidth: 740, alignment: .leading)
-            .padding(.top, 28)
+            .padding(.top, ruled ? 28 : 0)
         }
     }
 
@@ -487,7 +547,14 @@ struct LeaderboardTotalsBand: View {
 
     var body: some View {
         Group {
-            if layout.isWide {
+            if let pages = layout.pages {
+                // An open iPhone Duo: the words on the left page, the figures on the right.
+                FoldPages(pages) {
+                    heading
+                } trailing: {
+                    figures
+                }
+            } else if layout.isWide {
                 HStack(alignment: .bottom, spacing: 40) {
                     heading.frame(maxWidth: .infinity, alignment: .leading)
                     figures.frame(maxWidth: 480)
@@ -500,7 +567,7 @@ struct LeaderboardTotalsBand: View {
             }
         }
         .communityColumn(layout)
-        .padding(.vertical, layout.isWide ? 48 : 34)
+        .padding(.vertical, layout.isWide || layout.isSpread ? 48 : 34)
         .frame(maxWidth: .infinity)
         .communityBand()
     }
@@ -589,12 +656,23 @@ struct LeaderboardInviteCard: View {
 
 // MARK: - Learner boards
 
+/// Which part of a board to draw: all of it, or one page's share of a spread on an open
+/// iPhone Duo (the lead on the left page, the table on the right).
+enum LeaderboardBoardPart: Hashable, Sendable {
+    case all
+    /// What comes before the table: the podium, or the team ranking's controls and line.
+    case lead
+    /// The ruled table alone.
+    case table
+}
+
 /// The weekly or all-time board: three plinths, then ranks four and down as a ruled table.
 struct LeaderboardLearnerBoard: View {
     let sheet: BoardSheet
     let isWeekly: Bool
     var myUsername: String?
     let layout: CommunityLayout
+    var part: LeaderboardBoardPart = .all
 
     @Environment(AppModel.self) private var app
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -608,25 +686,29 @@ struct LeaderboardLearnerBoard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             if sheet.learners.isEmpty {
-                CommunityEmptyNote(
-                    "board / empty",
-                    isWeekly
-                        ? "Nobody has earned XP in the last seven days yet. Finish one lesson and the top of this board is yours."
-                        : "No learners on the board yet."
-                ) {
-                    Button("Read lesson one") { app.selectedTab = .learn }
-                        .buttonStyle(.inkGhostSmall)
+                if part != .table {
+                    CommunityEmptyNote(
+                        "board / empty",
+                        isWeekly
+                            ? "Nobody has earned XP in the last seven days yet. Finish one lesson and the top of this board is yours."
+                            : "No learners on the board yet."
+                    ) {
+                        Button("Read lesson one") { app.selectedTab = .learn }
+                            .buttonStyle(.inkGhostSmall)
+                    }
                 }
             } else {
-                CommunitySub(isWeekly
-                    ? "Ranked by XP earned in the last seven days, so a week of work beats a year of it."
-                    : "Ranked by every point of XP earned since the account was made.")
-                podium
-                    .padding(.top, layout.isRegular ? 48 : 28)
+                if part != .table {
+                    CommunitySub(isWeekly
+                        ? "Ranked by XP earned in the last seven days, so a week of work beats a year of it."
+                        : "Ranked by every point of XP earned since the account was made.")
+                    podium
+                        .padding(.top, layout.isRegular ? 48 : 28)
+                }
                 let rest = Array(sheet.learners.dropFirst(3))
-                if !rest.isEmpty {
+                if !rest.isEmpty, part != .lead {
                     table(rest)
-                        .padding(.top, 36)
+                        .padding(.top, part == .table ? 0 : 36)
                 }
             }
         }
@@ -792,6 +874,7 @@ struct LeaderboardTeamBoard: View {
     var myTeam: Int?
     var isSignedIn: Bool
     let layout: CommunityLayout
+    var part: LeaderboardBoardPart = .all
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @ScaledMetric(relativeTo: .caption) private var unit: CGFloat = 1
@@ -800,28 +883,34 @@ struct LeaderboardTeamBoard: View {
 
     var body: some View {
         if sheet.teams.isEmpty {
-            CommunityEmptyNote("board / empty", "No teams on the board yet. Put your team number in settings and yours is the first.") {
-                if isSignedIn {
-                    AccountSettingsLink("Add your team number")
-                        .buttonStyle(.inkGhostSmall)
+            if part != .table {
+                CommunityEmptyNote("board / empty", "No teams on the board yet. Put your team number in settings and yours is the first.") {
+                    if isSignedIn {
+                        AccountSettingsLink("Add your team number")
+                            .buttonStyle(.inkGhostSmall)
+                    }
                 }
             }
         } else {
             VStack(alignment: .leading, spacing: 0) {
-                InkTabStrip(selection: $ranking, tabs: [(.total, "total xp"), (.perMember, "xp per member")])
-                    .accessibilityElement(children: .contain)
-                    .accessibilityLabel("Team ranking method")
-                CommunitySub(perMember
-                    ? "Ranked by XP per member, so a team of 10 can beat a team of 100. Teams under \(sheet.minMembers) members are left off: below that, one person's score is the whole ranking."
-                    : "Ranked by the combined XP of everyone signed up with that team number.")
-                    .padding(.top, 16)
-                let rows = perMember ? sheet.teamsPerMember : sheet.teams
-                if rows.isEmpty {
-                    CommunityEmptyNote("board / empty", "No team has \(sheet.minMembers) or more members signed up yet, so there is nothing to rank. Get your teammates to add your team number in settings and yours shows up here.")
-                        .padding(.top, 22)
-                } else {
-                    table(rows)
-                        .padding(.top, 26)
+                if part != .table {
+                    InkTabStrip(selection: $ranking, tabs: [(.total, "total xp"), (.perMember, "xp per member")])
+                        .accessibilityElement(children: .contain)
+                        .accessibilityLabel("Team ranking method")
+                    CommunitySub(perMember
+                        ? "Ranked by XP per member, so a team of 10 can beat a team of 100. Teams under \(sheet.minMembers) members are left off: below that, one person's score is the whole ranking."
+                        : "Ranked by the combined XP of everyone signed up with that team number.")
+                        .padding(.top, 16)
+                }
+                if part != .lead {
+                    let rows = perMember ? sheet.teamsPerMember : sheet.teams
+                    if rows.isEmpty {
+                        CommunityEmptyNote("board / empty", "No team has \(sheet.minMembers) or more members signed up yet, so there is nothing to rank. Get your teammates to add your team number in settings and yours shows up here.")
+                            .padding(.top, part == .table ? 0 : 22)
+                    } else {
+                        table(rows)
+                            .padding(.top, part == .table ? 0 : 26)
+                    }
                 }
             }
         }
@@ -936,4 +1025,16 @@ struct LeaderboardTeamBoard: View {
 #Preview("Leaderboard, offline with a saved copy", traits: .fixedLayout(width: 393, height: 852)) {
     CommunityPreviewHost(client: .previewing(failing: true, cached: true)) { LeaderboardView() }
     .environment(\.colorScheme, .light)
+}
+
+#Preview("Leaderboard, iPhone Duo open", traits: .fixedLayout(width: DuoPreview.innerContent.width, height: 2400)) {
+    CommunityPreviewHost { LeaderboardView() }
+        .previewFold(.previewBook)
+        .environment(\.colorScheme, .light)
+}
+
+#Preview("Leaderboard, iPhone Duo open, teams, night", traits: .fixedLayout(width: DuoPreview.innerContent.width, height: 1800)) {
+    CommunityPreviewHost { LeaderboardView(board: .teams) }
+        .previewFold(.previewFlat)
+        .environment(\.colorScheme, .dark)
 }

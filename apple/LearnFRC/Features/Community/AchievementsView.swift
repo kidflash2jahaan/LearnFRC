@@ -19,27 +19,32 @@ struct AchievementsView: View {
     var body: some View {
         CommunityPage(refresh: { await app.refreshAll() }, place: .route(.achievements)) { layout, _ in
             VStack(alignment: .leading, spacing: 0) {
-                masthead(layout)
-                    .padding(.top, layout.isWide ? 36 : 18)
-
-                if account.isGuest {
-                    NoteCallout {
-                        SlugText("badges / need an account")
-                        Text("Badges are kept on an account. The lessons you finish on this device still count toward them, and they move into your account when you sign in.")
-                            .lfProse(16, lineHeight: 1.45)
-                            .fixedSize(horizontal: false, vertical: true)
-                        Button("Sign in or make an account") { app.selectedTab = .profile }
-                            .buttonStyle(.inkGhostSmall)
-                            .padding(.top, 6)
+                if let pages = layout.pages {
+                    // An open iPhone Duo: the masthead on the left page, the next badge on the
+                    // right; below, one card a page on each row.
+                    FoldPages(pages) {
+                        VStack(alignment: .leading, spacing: 0) {
+                            masthead(layout)
+                            guestNote
+                        }
+                    } trailing: {
+                        if let next = progress.nextUnlock {
+                            AchievementsNextUnlockCard(next: next)
+                                .padding(.top, 12)
+                        }
                     }
-                    .frame(maxWidth: 740, alignment: .leading)
-                    .padding(.top, 28)
-                }
+                    .padding(.top, 36)
+                } else {
+                    masthead(layout)
+                        .padding(.top, layout.isWide ? 36 : 18)
 
-                if let next = progress.nextUnlock {
-                    AchievementsNextUnlockCard(next: next)
-                        .frame(maxWidth: 560, alignment: .leading)
-                        .padding(.top, 32)
+                    guestNote
+
+                    if let next = progress.nextUnlock {
+                        AchievementsNextUnlockCard(next: next)
+                            .frame(maxWidth: 560, alignment: .leading)
+                            .padding(.top, 32)
+                    }
                 }
 
                 badgeGrid(layout)
@@ -51,6 +56,23 @@ struct AchievementsView: View {
             .communityColumn(layout)
         }
         .communityNavigationTitle("Badges")
+    }
+
+    @ViewBuilder
+    private var guestNote: some View {
+        if account.isGuest {
+            NoteCallout {
+                SlugText("badges / need an account")
+                Text("Badges are kept on an account. The lessons you finish on this device still count toward them, and they move into your account when you sign in.")
+                    .lfProse(16, lineHeight: 1.45)
+                    .fixedSize(horizontal: false, vertical: true)
+                Button("Sign in or make an account") { app.selectedTab = .profile }
+                    .buttonStyle(.inkGhostSmall)
+                    .padding(.top, 6)
+            }
+            .frame(maxWidth: 740, alignment: .leading)
+            .padding(.top, 28)
+        }
     }
 
     // MARK: Masthead
@@ -102,12 +124,23 @@ struct AchievementsView: View {
     }
 
     /// Two or more across; one per row on a phone at the accessibility sizes, where half
-    /// the width breaks a badge's name mid-word.
+    /// the width breaks a badge's name mid-word. On an open iPhone Duo, one card a page.
     private func columns(_ layout: CommunityLayout) -> [GridItem] {
+        if let pages = layout.pages {
+            return Self.pageColumns(pages)
+        }
         if typeSize.isAccessibilitySize && !layout.isRegular {
             return [GridItem(.flexible(), spacing: 14, alignment: .top)]
         }
         return [GridItem(.adaptive(minimum: layout.isRegular ? 236 : 160, maximum: 360), spacing: 14, alignment: .top)]
+    }
+
+    /// A grid column for each page of a spread, with the fold's band between them.
+    static func pageColumns(_ pages: FoldColumns) -> [GridItem] {
+        [
+            GridItem(.fixed(pages.leading), spacing: pages.gap, alignment: .top),
+            GridItem(.fixed(pages.trailing), spacing: 0, alignment: .top),
+        ]
     }
 
     // MARK: Certificates
@@ -139,7 +172,8 @@ struct AchievementsView: View {
                     CountText("\(signedOff)", unit: "of \(departments.count) signed off", size: 22)
                 }
             }
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: layout.isRegular ? 260 : 300, maximum: 420), spacing: 14, alignment: .top)], alignment: .leading, spacing: 14) {
+            .foldLeadingPage(layout.pages)
+            LazyVGrid(columns: layout.pages.map(Self.pageColumns) ?? [GridItem(.adaptive(minimum: layout.isRegular ? 260 : 300, maximum: 420), spacing: 14, alignment: .top)], alignment: .leading, spacing: 14) {
                 ForEach(departments) { item in
                     NavigationLink(value: AppRoute.certificate(item.department.id)) {
                         CommunityCertificateTile(
@@ -345,4 +379,10 @@ struct CommunityCertificateTile: View {
 #Preview("Badges, iPad, dark", traits: .fixedLayout(width: 834, height: 1300)) {
     CommunityPreviewHost(model: .preview(phase: .goalMet)) { AchievementsView() }
         .environment(\.colorScheme, .dark)
+}
+
+#Preview("Badges, iPhone Duo open", traits: .fixedLayout(width: DuoPreview.innerContent.width, height: 1800)) {
+    CommunityPreviewHost(model: .preview(phase: .building)) { AchievementsView() }
+        .previewFold(.previewBook)
+        .environment(\.colorScheme, .light)
 }

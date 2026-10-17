@@ -1,19 +1,23 @@
 import SwiftUI
 
 /// The Learn tab: the contents page of the binder (learnfrc.com/guides), plus the
-/// routes, the video library and the articles.
+/// routes, the video library, the articles, the calculators and the resources shelf.
 ///
 /// Read top to bottom it answers one question, which department to open: a short
 /// masthead, the totals on the one blue band, the wall of eleven department cards
 /// with each person's progress, the five routes for anyone who'd rather be told an
-/// order, then the videos and articles, and the note for someone who still isn't sure.
+/// order, then the videos and articles, the tools and resources (the site's "Tools" and
+/// "Resources" in its navigation), and the note for someone who still isn't sure.
 struct LearnView: View {
     @Environment(AppModel.self) private var model
     @Environment(CatalogStore.self) private var catalog
     @Environment(ReferenceStore.self) private var reference
     @Environment(ProgressStore.self) private var progress
     @Environment(AccountStore.self) private var account
+    @Environment(ResourcesStore.self) private var injectedResources: ResourcesStore?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private var resources: ResourcesStore { injectedResources ?? .shared }
 
     private var departments: [Department] { catalog.departments }
     private var totalModules: Int { departments.reduce(0) { $0 + $1.modules.count } }
@@ -22,15 +26,19 @@ struct LearnView: View {
 
     var body: some View {
         LearnScrollPage(title: "Guides", refresh: { await model.refreshAll() }, place: .root) { layout, proxy in
-            masthead(layout, proxy)
-                .learnColumn(layout)
-                .padding(.top, 20)
-
             if departments.isEmpty {
-                emptyState(layout)
+                masthead(layout.column, proxy)
+                    .learnColumn(layout)
+                    .padding(.top, 20)
+                emptyState(layout.column)
                     .learnColumn(layout)
                     .padding(.top, 32)
+            } else if let pages = layout.pages {
+                twoPages(layout, pages: pages, proxy: proxy)
             } else {
+                masthead(layout, proxy)
+                    .learnColumn(layout)
+                    .padding(.top, 20)
                 tally(layout)
                     .learnBand()
                     .padding(.top, 36)
@@ -53,6 +61,8 @@ struct LearnView: View {
                 }
             }
         }
+        // The resources card prints the shelf's link count; the cached copy is enough (no network).
+        .task { await resources.loadCache() }
         #if os(macOS)
         .toolbar {
             ToolbarItem {
@@ -67,6 +77,46 @@ struct LearnView: View {
             }
         }
         #endif
+    }
+
+    // MARK: Two pages
+
+    /// iPhone Duo's inner screen held upright: the hero and the routes on the leading page,
+    /// the department wall as one column on the trailing page, so the whole screen is used and
+    /// nothing sits on the crease. The blue band still runs edge to edge, its words on one page
+    /// and its figures on the other.
+    @ViewBuilder
+    private func twoPages(_ layout: LearnLayout, pages: FoldColumns, proxy: ScrollViewProxy) -> some View {
+        let leading = LearnLayout.page(pages.leading)
+        let trailing = LearnLayout.page(pages.trailing)
+        LearnSpread(pages: pages) {
+            VStack(alignment: .leading, spacing: 0) {
+                masthead(leading, proxy)
+                if !reference.paths.isEmpty {
+                    routes(leading)
+                        .padding(.top, 56)
+                        .id(LearnAnchor.routes)
+                }
+            }
+        } trailing: {
+            wall(trailing)
+        }
+        .learnColumn(layout, spread: true)
+        .padding(.top, 20)
+
+        tally(layout)
+            .learnBand()
+            .padding(.top, 56)
+
+        moreWaysIn(layout)
+            .learnColumn(layout, spread: true)
+            .padding(.top, 56)
+
+        if let gettingStarted {
+            closingNote(gettingStarted, layout.column)
+                .learnColumn(layout)
+                .padding(.top, 56)
+        }
     }
 
     // MARK: Masthead
@@ -139,8 +189,27 @@ struct LearnView: View {
                 LearnSlabFigure(value: totalModules.formatted(), label: "modules")
                 LearnSlabFigure(value: totalLessons.formatted(), label: "lessons")
             }
+            let stackedFigures = VStack(alignment: .leading, spacing: 18) {
+                LearnSlabFigure(value: departments.count.formatted(), label: "departments")
+                LearnSlabFigure(value: totalModules.formatted(), label: "modules")
+                LearnSlabFigure(value: totalLessons.formatted(), label: "lessons")
+            }
             Group {
-                if layout.isWide {
+                if let pages = layout.pages {
+                    // The words on the leading page, the figures on the trailing one. The slab
+                    // pads its trailing edge by the card padding, which the trailing page gives up.
+                    let inset = max(0, LF.Metrics.cardPadding - layout.margins.trailing)
+                    LearnSpread(pages: FoldColumns(leading: pages.leading, gap: pages.gap,
+                                                   trailing: max(0, pages.trailing - inset)),
+                                alignment: .bottom) {
+                        heading
+                    } trailing: {
+                        ViewThatFits(in: .horizontal) {
+                            figures
+                            stackedFigures
+                        }
+                    }
+                } else if layout.isWide {
                     HStack(alignment: .bottom, spacing: 40) {
                         heading.frame(maxWidth: .infinity, alignment: .leading)
                         figures
@@ -150,20 +219,16 @@ struct LearnView: View {
                         heading
                         ViewThatFits(in: .horizontal) {
                             figures
-                            VStack(alignment: .leading, spacing: 18) {
-                                LearnSlabFigure(value: departments.count.formatted(), label: "departments")
-                                LearnSlabFigure(value: totalModules.formatted(), label: "modules")
-                                LearnSlabFigure(value: totalLessons.formatted(), label: "lessons")
-                            }
+                            stackedFigures
                         }
                     }
                 }
             }
-            // The slab already pads by the card padding; top that up to the page gutter
+            // The slab already pads by the card padding; top that up to the page margins
             // so the band's text lines up with every other section.
             .frame(maxWidth: LF.Metrics.maxContentWidth, alignment: .leading)
-            .padding(.horizontal, max(0, layout.gutter - LF.Metrics.cardPadding))
-            .frame(maxWidth: .infinity)
+            .padding(layout.bandInsets)
+            .frame(maxWidth: .infinity, alignment: layout.pages == nil ? .center : .leading)
             .padding(.vertical, layout.isRegular ? 26 : 18)
         }
     }
@@ -246,9 +311,16 @@ struct LearnView: View {
         let videos = catalog.videoLessons.count
         let articles = catalog.articles.count
         let minutes = catalog.articles.reduce(0) { $0 + $1.readMins }
+        let tools = ToolCatalog.all.count
+        let links = resources.page?.totalLinks ?? 0
         return VStack(alignment: .leading, spacing: 0) {
-            InkRule()
+            if let pages = layout.pages {
+                LearnSpreadRule(pages: pages)
+            } else {
+                InkRule()
+            }
             LearnSectionHeader(kicker: "more ways in", title: "Watch it, or read around it.")
+                .frame(maxWidth: layout.pages?.leading ?? .infinity, alignment: .leading)
                 .padding(.top, 28)
 
             let cards = Group {
@@ -271,19 +343,53 @@ struct LearnView: View {
                     .buttonStyle(.notebookCard)
                 }
             }
+            // The site's "Tools" and "Resources", each opened on its own page's masthead.
+            let reference = Group {
+                NavigationLink(value: AppRoute.tools) {
+                    shelfCard(kicker: "tools",
+                              title: "The numbers, worked out.",
+                              body: "\(LearnFormat.spelledCount(tools)) calculators for the questions that stop a build night. Every default comes from an official FIRST page or a vendor spec sheet, and the source is printed next to the number.",
+                              count: tools, unit: tools == 1 ? "calculator" : "calculators", index: 2)
+                }
+                .buttonStyle(.notebookCard)
+                .accessibilityHint("Opens Tools")
+                NavigationLink(value: AppRoute.resources) {
+                    shelfCard(kicker: "resources",
+                              title: "Everything a build season makes you look up.",
+                              body: "The official docs, the software your code depends on, the vendors you order from, and the two forums where the answers actually are.",
+                              count: links > 0 ? links : nil, unit: links == 1 ? "link" : "links", index: 0)
+                }
+                .buttonStyle(.notebookCard)
+                .accessibilityHint("Opens Resources")
+            }
             Group {
-                if layout.isRegular {
-                    HStack(alignment: .top, spacing: 24) { cards }
-                        .fixedSize(horizontal: false, vertical: true)
+                if let pages = layout.pages {
+                    // What to watch and read on the leading page, the reference shelves on the
+                    // trailing one.
+                    LearnSpread(pages: pages) {
+                        VStack(alignment: .leading, spacing: 24) { cards }
+                    } trailing: {
+                        VStack(alignment: .leading, spacing: 24) { reference }
+                    }
+                } else if layout.isRegular {
+                    VStack(alignment: .leading, spacing: 24) {
+                        HStack(alignment: .top, spacing: 24) { cards }
+                            .fixedSize(horizontal: false, vertical: true)
+                        HStack(alignment: .top, spacing: 24) { reference }
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 } else {
-                    VStack(alignment: .leading, spacing: 24) { cards }
+                    VStack(alignment: .leading, spacing: 24) {
+                        cards
+                        reference
+                    }
                 }
             }
             .padding(.top, 28)
         }
     }
 
-    private func shelfCard(kicker: String, title: String, body: String, count: Int, unit: String, index: Int) -> some View {
+    private func shelfCard(kicker: String, title: String, body: String, count: Int?, unit: String, index: Int) -> some View {
         NotebookCard(tilt: .preset(index), lift: true) {
             VStack(alignment: .leading, spacing: 0) {
                 SlugText(kicker)
@@ -304,12 +410,12 @@ struct LearnView: View {
                 // "open" across from the count while both fit, under it once they don't.
                 ViewThatFits(in: .horizontal) {
                     HStack(alignment: .firstTextBaseline) {
-                        CountText(count, unit: unit)
+                        if let count { CountText(count, unit: unit) }
                         Spacer()
                         SlugText("open", color: LF.Palette.ink)
                     }
                     VStack(alignment: .leading, spacing: 8) {
-                        CountText(count, unit: unit)
+                        if let count { CountText(count, unit: unit) }
                         SlugText("open", color: LF.Palette.ink)
                     }
                 }
@@ -374,6 +480,8 @@ enum LearnAnchor: Hashable {
     case department(String)
     case desk(String)
     case top
+    /// The top of a screen's companion page on iPhone Duo (`LearnScrollPage`).
+    case companionTop
 }
 
 // MARK: - Previews
@@ -399,3 +507,23 @@ enum LearnAnchor: Hashable {
         .appEnvironment(LearnPreviewCatalog.model())
         .environment(\.colorScheme, .dark)
 }
+
+#if DEBUG
+#Preview("Guides, Duo book", traits: .duoBook) {
+    NavigationStack { LearnView() }
+        .appEnvironment(LearnPreviewCatalog.model())
+        .previewFold(.previewBook)
+}
+
+#Preview("Guides, Duo book, whole page", traits: .fixedLayout(width: 867, height: 3400)) {
+    NavigationStack { LearnView() }
+        .appEnvironment(LearnPreviewCatalog.model())
+        .previewFold(.previewFlat)
+}
+
+#Preview("Guides, Duo cover", traits: .duoCover) {
+    NavigationStack { LearnView() }
+        .appEnvironment(LearnPreviewCatalog.model(signedIn: false))
+        .previewFold(.previewClosed)
+}
+#endif

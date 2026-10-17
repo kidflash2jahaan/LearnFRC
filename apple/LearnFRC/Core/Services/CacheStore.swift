@@ -25,6 +25,8 @@ actor CacheStore {
         case queue = "queue.json"
         /// The signed-in user's `/me`, so the app opens signed in while offline.
         case me = "me.json"
+        /// learnfrc.com/resources as data (`GET /api/app/resources`). Not personal.
+        case resources = "resources.json"
     }
 
     /// A cached value and when it was fetched.

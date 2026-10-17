@@ -156,6 +156,10 @@ struct LessonFloatingBar: View {
     let signedIn: Bool
     let hasNext: Bool
     @Binding var dismissed: Bool
+    /// Space beside the bar. The gutter on both sides, except on iPhone Duo's open screen,
+    /// where the lesson keeps the bar on its left page, clear of the crease.
+    var leadingInset: CGFloat = LF.Metrics.gutter
+    var trailingInset: CGFloat = LF.Metrics.gutter
     let onQuiz: () -> Void
     let onNext: () -> Void
 
@@ -180,6 +184,11 @@ struct LessonFloatingBar: View {
     }
 
     private var subtitle: String {
+        Self.subtitle(isCompleted: isCompleted, quizCount: quizCount, signedIn: signedIn)
+    }
+
+    /// The line under "Finish this lesson" or "Lesson complete" (also the laptop deck's).
+    static func subtitle(isCompleted: Bool, quizCount: Int, signedIn: Bool) -> String {
         if isCompleted { return "saved, keep the run going" }
         let reward = signedIn ? "10+ XP" : "saved on this device"
         if quizCount > 0 { return "\(quizCount) question\(LessonText.plural(quizCount)) / \(reward)" }
@@ -214,11 +223,12 @@ struct LessonFloatingBar: View {
         .padding(.trailing, 4)
         .padding(.vertical, 6)
         .notebookSurface()
-        .padding(.horizontal, LF.Metrics.gutter)
+        .padding(.leading, leadingInset)
+        .padding(.trailing, trailingInset)
         .padding(.bottom, 10)
         // Never wider than the window, whatever the text size: a bar that overflowed would
         // widen the inset, and with it the whole page under it.
-        .modifier(LessonOfferedWidthModifier(maxWidth: 620 + 2 * LF.Metrics.gutter))
+        .modifier(LessonOfferedWidthModifier(maxWidth: 620 + leadingInset + trailingInset))
         // It floats over the text it's a shortcut from, so it stops growing at the first
         // accessibility size rather than cover most of a phone screen.
         .dynamicTypeSize(...DynamicTypeSize.accessibility1)

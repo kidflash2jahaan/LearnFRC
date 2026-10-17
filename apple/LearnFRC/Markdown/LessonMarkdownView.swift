@@ -116,6 +116,8 @@ struct LessonMarkdownView: View {
         case "videos": return .videos
         case "achievements": return .achievements
         case "bookmarks": return .bookmarks
+        case "tools": return second.map { $0.isEmpty ? .tools : .tool($0) } ?? .tools
+        case "resources": return .resources
         case "settings": return .settings
         case "teams", "team": return .team
         default: return nil

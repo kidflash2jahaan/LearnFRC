@@ -46,9 +46,17 @@ enum SystemServices {
     /// instead of bouncing to Safari), and `learnfrc://continue` for the cached progress and
     /// the stored session (so it opens the reader's lesson, not the Guides wall). A link that
     /// arrives while another is waiting wins.
+    ///
+    /// Continue with Google's callback (`learnfrc://auth-callback`) is not a link: the web
+    /// sign-in sheet waiting for it receives it directly. One arriving here (a stray or forged
+    /// link) is dropped without a navigation, a browser or a session exchange.
     static func open(_ url: URL) {
         guard let model else { return }
         let link = DeepLink.parse(url)
+        if link == .authCallback {
+            Log.auth.info("Ignored an auth callback that arrived as a link")
+            return
+        }
         guard model.isReady(for: link) else {
             let turn = model.beginLink()
             Task {

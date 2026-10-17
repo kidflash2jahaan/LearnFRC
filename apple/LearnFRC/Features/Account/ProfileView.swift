@@ -27,15 +27,16 @@ struct ProfileView: View {
     }
 
     var body: some View {
-        AccountPage(maxWidth: 1080, resetKey: authKey, avoidsKeyboard: false, place: .root) { width in
+        AccountPage(maxWidth: 1080, resetKey: authKey, avoidsKeyboard: false, place: .root, fold: .spread) { page in
             VStack(alignment: .leading, spacing: 0) {
                 switch account.state {
                 case .signedIn(let me):
-                    signedIn(me, width: width)
+                    signedIn(me, page: page)
                 case .guest:
-                    guest(width: width)
+                    guest(page: page)
                 case .loading:
                     loading
+                        .foldLeadingPage(page.pages)
                 }
             }
         }
@@ -61,49 +62,96 @@ struct ProfileView: View {
     // MARK: Signed in
 
     @ViewBuilder
-    private func signedIn(_ me: Me, width: CGFloat) -> some View {
+    private func signedIn(_ me: Me, page: AccountPageLayout) -> some View {
         let figures = ProfileFigures(me: me, progress: progress, catalog: catalog)
+        let width = page.width
 
-        SectionLabel("your record")
-
-        Group {
-            if width >= 860 {
-                HStack(alignment: .top, spacing: 40) {
+        if let pages = page.pages {
+            // An open iPhone Duo: the record on the left page; what you can change, the
+            // certificates and the badges on the right.
+            SectionLabel("your record")
+            FoldPages(pages) {
+                VStack(alignment: .leading, spacing: 0) {
                     ProfileMemberCard(me: me, figures: figures)
-                    ProfileChangeBox(me: me).frame(width: 320)
+                    ProfileBookmarksLink()
+                        .padding(.top, 36)
+                    provisionalNote(me)
+                    onFile(me, figures, wide: false)
+                        .padding(.top, 52)
                 }
-            } else {
-                VStack(alignment: .leading, spacing: 30) {
-                    ProfileMemberCard(me: me, figures: figures)
-                    ProfileChangeBox(me: me)
+            } trailing: {
+                VStack(alignment: .leading, spacing: 0) {
+                    changeColumn(me)
+                    ProfileCertificates(wide: false)
+                        .padding(.top, 52)
+                    ProfileBadgeChecklist(wide: false)
+                        .padding(.top, 52)
+                    ApplyLinkRow(topPadding: 44)
                 }
             }
+            .padding(.top, 18)
+        } else {
+            SectionLabel("your record")
+
+            Group {
+                if width >= 860 {
+                    HStack(alignment: .top, spacing: 40) {
+                        ProfileMemberCard(me: me, figures: figures)
+                        changeColumn(me).frame(width: 320)
+                    }
+                } else {
+                    VStack(alignment: .leading, spacing: 30) {
+                        ProfileMemberCard(me: me, figures: figures)
+                        changeColumn(me)
+                    }
+                }
+            }
+            .padding(.top, 18)
+
+            ProfileBookmarksLink()
+                .padding(.top, 36)
+
+            provisionalNote(me)
+
+            onFile(me, figures, wide: width >= 640)
+                .padding(.top, 52)
+
+            ProfileCertificates(wide: width >= 760)
+                .padding(.top, 52)
+
+            ProfileBadgeChecklist(wide: width >= 760)
+                .padding(.top, 52)
+
+            ApplyLinkRow(topPadding: 44)
         }
-        .padding(.top, 18)
+    }
 
-        ProfileBookmarksLink()
-            .padding(.top, 36)
+    /// What you can change, and under it the site admin box (admins only; it takes no room
+    /// for anyone else).
+    private func changeColumn(_ me: Me) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ProfileChangeBox(me: me)
+            AdminYouSection(topPadding: 24)
+        }
+    }
 
+    @ViewBuilder
+    private func provisionalNote(_ me: Me) -> some View {
         if me.isProvisional {
             AccountNote("offline", "Showing what this device knows. Your name, team and badges fill in when you're back online.")
                 .padding(.top, 24)
         }
+    }
 
+    private func onFile(_ me: Me, _ figures: ProfileFigures, wide: Bool) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             AccountSectionHeading(title: "Everything on file")
             AccountSubText("Every figure this account holds, printed once. Nothing here is shared with anyone unless you send them your handle.")
                 .frame(maxWidth: 600, alignment: .leading)
                 .padding(.top, 10)
-            ProfileSpecSheet(rows: specRows(me, figures), wide: width >= 640)
+            ProfileSpecSheet(rows: specRows(me, figures), wide: wide)
                 .padding(.top, 18)
         }
-        .padding(.top, 52)
-
-        ProfileCertificates(wide: width >= 760)
-            .padding(.top, 52)
-
-        ProfileBadgeChecklist(wide: width >= 760)
-            .padding(.top, 52)
     }
 
     private func specRows(_ me: Me, _ f: ProfileFigures) -> [ProfileSpecSheet.Row] {
@@ -142,13 +190,12 @@ struct ProfileView: View {
     // MARK: Guest
 
     @ViewBuilder
-    private func guest(width: CGFloat) -> some View {
-        AccountHeader(
+    private func guest(page: AccountPageLayout) -> some View {
+        let header = AccountHeader(
             marker: "you, on this device",
             title: "You're reading as a guest.",
             lede: "Nothing here needs an account. Lessons you finish are kept on this device. An account keeps them everywhere, prints your certificates and puts you on your team's page."
         )
-
         let tally = ProfileGuestTally(lessons: progress.completedTotal, rhythm: progress.rhythm)
         let actions = VStack(alignment: .leading, spacing: 0) {
             SectionLabel("what the account holds")
@@ -161,23 +208,45 @@ struct ProfileView: View {
             .padding(.top, 22)
         }
 
-        Group {
-            if width >= 820 {
-                HStack(alignment: .top, spacing: 48) {
-                    tally.frame(width: 340)
-                    actions
+        if let pages = page.pages {
+            // An open iPhone Duo: what this device kept on the left page, what an account
+            // adds on the right.
+            FoldPages(pages) {
+                VStack(alignment: .leading, spacing: 0) {
+                    header
+                    tally.padding(.top, 30)
                 }
-            } else {
-                VStack(alignment: .leading, spacing: 36) {
-                    tally
+            } trailing: {
+                VStack(alignment: .leading, spacing: 0) {
                     actions
+                    ProfileBookmarksLink()
+                        .padding(.top, 44)
+                    ApplyLinkRow(topPadding: 36)
                 }
             }
-        }
-        .padding(.top, 30)
+        } else {
+            header
 
-        ProfileBookmarksLink()
-            .padding(.top, 44)
+            Group {
+                if page.width >= 820 {
+                    HStack(alignment: .top, spacing: 48) {
+                        tally.frame(width: 340)
+                        actions
+                    }
+                } else {
+                    VStack(alignment: .leading, spacing: 36) {
+                        tally
+                        actions
+                    }
+                }
+            }
+            .padding(.top, 30)
+
+            ProfileBookmarksLink()
+                .padding(.top, 44)
+
+            ApplyLinkRow(topPadding: 36)
+        }
     }
 
     @ViewBuilder
@@ -999,5 +1068,18 @@ private struct ProfilePreviewHost: View {
 #Preview("Profile, guest, iPad, night", traits: .fixedLayout(width: 1024, height: 900)) {
     ProfilePreviewHost()
         .appEnvironment(.preview(signedIn: false))
+        .environment(\.colorScheme, .dark)
+}
+
+#Preview("Profile, iPhone Duo open", traits: .fixedLayout(width: DuoPreview.innerContent.width, height: 2400)) {
+    ProfilePreviewHost()
+        .appEnvironment(.preview(phase: .goalMet))
+        .previewFold(.previewBook)
+}
+
+#Preview("Profile, iPhone Duo open, guest, night", traits: .fixedLayout(width: DuoPreview.innerContent.width, height: 1100)) {
+    ProfilePreviewHost()
+        .appEnvironment(.preview(signedIn: false))
+        .previewFold(.previewFlat)
         .environment(\.colorScheme, .dark)
 }

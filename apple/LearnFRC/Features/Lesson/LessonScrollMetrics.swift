@@ -27,6 +27,9 @@ final class LessonScrollMetrics {
     private(set) var hasReachedQuiz = false
     /// The lesson's title has scrolled under the bar, so the bar shows it instead.
     private(set) var showsBarTitle = false
+    /// Some of the quiz or sign-off card is on screen right now (not above it, not below it).
+    /// In laptop posture the answer pad in the bottom half shows only while it is.
+    private(set) var isQuizOnScreen = false
 
     /// Bottom of the title in content coordinates.
     @ObservationIgnored private var titleBottom: CGFloat = .greatestFiniteMagnitude
@@ -83,6 +86,7 @@ final class LessonScrollMetrics {
         isPastOpening = false
         hasReachedQuiz = false
         showsBarTitle = false
+        isQuizOnScreen = false
         titleBottom = .greatestFiniteMagnitude
         quizFrame = .null
     }
@@ -92,12 +96,15 @@ final class LessonScrollMetrics {
         set(\.showsBarTitle, scrolledY > titleBottom - 8)
         if quizFrame.isNull || screenHeight == 0 {
             set(\.hasReachedQuiz, false)
+            set(\.isQuizOnScreen, false)
         } else {
             // As soon as the card's top comes up past the bottom edge (under the tab bar, still
             // below the floating bar), so the bar is gone before the card could reach it. Worked
             // out from the scroll position alone, never from the bar's own height, so the bar
             // coming or going can't flip it back.
             set(\.hasReachedQuiz, quizFrame.minY < scrolledY + screenHeight)
+            // A real overlap, not a hairline at either edge.
+            set(\.isQuizOnScreen, quizFrame.minY < scrolledY + screenHeight - 24 && quizFrame.maxY > scrolledY + 24)
         }
     }
 

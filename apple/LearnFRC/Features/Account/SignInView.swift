@@ -1,11 +1,12 @@
 import SwiftUI
 
-/// Sign in with an email or a username and a password (the site's `/login`).
+/// Sign in with Google, or with an email or a username and a password (the site's `/login`).
 ///
 /// A headline, the sign-in sheet (flat, taped, because a tilted text field reads badly),
 /// and beside it on wide windows (under it on narrow ones) what the account holds.
-/// Usernames go through `POST /api/app/auth/sign-in`; emails sign in with Supabase
-/// directly. Google sign-in isn't in the app yet, and the sheet says so plainly.
+/// Continue with Google sits at the top of the sheet, like the site's
+/// (`ProviderSignInButtons`); usernames go through `POST /api/app/auth/sign-in`; emails sign
+/// in with Supabase directly.
 ///
 ///     SignInView()                                         // in any NavigationStack
 ///     SignInView(identifier: email, notice: .exists)       // after sign-up found the email
@@ -31,6 +32,8 @@ struct SignInView: View {
     @State private var identifierError: String?
     @State private var passwordError: String?
     @State private var isSubmitting = false
+    /// Continue with Google is running (its sheet, then the sign-in).
+    @State private var isUsingProvider = false
     @FocusState private var focus: Field?
 
     private let notice: Notice?
@@ -59,30 +62,23 @@ struct SignInView: View {
         self.onSignedIn = onSignedIn
     }
 
-    private var busy: Bool { isSubmitting }
+    private var busy: Bool { isSubmitting || isUsingProvider }
 
     var body: some View {
-        AccountPage(maxWidth: 1000) { width in
-            VStack(alignment: .leading, spacing: 0) {
-                AccountHeader(
-                    marker: "returning",
-                    title: "Sign in and pick the binder back up.",
-                    lede: "Your progress, your certificates and your team are attached to the account, not the device. Sign in on any iPhone, iPad or Mac, or on learnfrc.com, and they follow you."
-                )
-
-                if width >= 760 {
-                    HStack(alignment: .top, spacing: 48) {
-                        sheet.frame(width: 432)
-                        aside.padding(.top, 6)
+        AccountPage(maxWidth: 1000, fold: .spread) { page in
+            if let pages = page.pages {
+                // A sheet across an open iPhone Duo: the form on the left page, what the
+                // account holds on the right.
+                FoldPages(pages) {
+                    VStack(alignment: .leading, spacing: 0) {
+                        header
+                        sheet.padding(.top, 28)
                     }
-                    .padding(.top, 32)
-                } else {
-                    VStack(alignment: .leading, spacing: 40) {
-                        sheet
-                        aside
-                    }
-                    .padding(.top, 28)
+                } trailing: {
+                    aside
                 }
+            } else {
+                single(width: page.width)
             }
         }
         .navigationTitle("Sign in")
@@ -92,6 +88,34 @@ struct SignInView: View {
         #if os(macOS)
         .defaultFocus($focus, identifier.isEmpty ? .identifier : .password)
         #endif
+    }
+
+    private var header: some View {
+        AccountHeader(
+            marker: "returning",
+            title: "Sign in and pick the binder back up.",
+            lede: "Your progress, your certificates and your team are attached to the account, not the device. Sign in on any iPhone, iPad or Mac, or on learnfrc.com, and they follow you."
+        )
+    }
+
+    private func single(width: CGFloat) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            header
+
+            if width >= 760 {
+                HStack(alignment: .top, spacing: 48) {
+                    sheet.frame(width: 432)
+                    aside.padding(.top, 6)
+                }
+                .padding(.top, 32)
+            } else {
+                VStack(alignment: .leading, spacing: 40) {
+                    sheet
+                    aside
+                }
+                .padding(.top, 28)
+            }
+        }
     }
 
     // MARK: The sheet
@@ -106,6 +130,11 @@ struct SignInView: View {
                 }
                 if let error {
                     FieldError(error)
+                }
+
+                ProviderSignInButtons(isWorking: $isUsingProvider, error: $error) {
+                    password = ""
+                    finishSignedIn()
                 }
 
                 AccountField(
@@ -145,15 +174,13 @@ struct SignInView: View {
                 }
 
                 Button(action: submit) {
-                    Text(busy ? "Signing you in" : "Sign in")
+                    Text(isSubmitting ? "Signing you in" : "Sign in")
                 }
                 .buttonStyle(InkButtonStyle(.primary, fullWidth: true))
                 .keyboardShortcut(.defaultAction)
                 .disabled(busy)
-                .accessibilityHint(busy ? "Working" : "")
+                .accessibilityHint(isSubmitting ? "Working" : "")
                 .padding(.top, Self.gapAboveSignIn - Self.fieldSpacing)
-
-                googleNote
 
                 VStack(alignment: .leading, spacing: 14) {
                     DashedRule()
@@ -196,13 +223,6 @@ struct SignInView: View {
         case .confirmed:
             AccountNote("confirmed", "Once the link in your email has opened learnfrc.com, sign in here with the same email and password.")
         }
-    }
-
-    private var googleNote: some View {
-        AccountNote(
-            "google sign-in",
-            "Coming to the app later. If you made your account with Google on learnfrc.com, keep using the website for now. It's the same account, so nothing you finish there is lost."
-        )
     }
 
     @ViewBuilder
@@ -252,6 +272,12 @@ struct SignInView: View {
 
     // MARK: Submit
 
+    /// Signed in, by either door: the flow closes the sheet itself; on its own this screen
+    /// goes back.
+    private func finishSignedIn() {
+        if let onSignedIn { onSignedIn() } else { dismiss() }
+    }
+
     private func submit() {
         guard !busy else { return }
         identifierError = nil
@@ -274,7 +300,7 @@ struct SignInView: View {
                 Haptics.success()
                 accountAnnounce("Signed in.")
                 password = ""
-                if let onSignedIn { onSignedIn() } else { dismiss() }
+                finishSignedIn()
             } catch {
                 self.error = error.accountMessage
                 focus = .password
@@ -305,4 +331,10 @@ struct SignInView: View {
     NavigationStack { SignInView() }
         .appEnvironment(.preview(signedIn: false))
         .environment(\.colorScheme, .dark)
+}
+
+#Preview("Sign in, iPhone Duo open", traits: .fixedLayout(width: DuoPreview.innerContent.width, height: 1100)) {
+    NavigationStack { SignInView() }
+        .appEnvironment(.preview(signedIn: false))
+        .previewFold(.previewBook)
 }

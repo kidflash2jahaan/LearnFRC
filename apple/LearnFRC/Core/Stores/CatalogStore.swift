@@ -163,6 +163,15 @@ final class CatalogStore {
         case "teams": return .team
         case "settings": return .settings
         case "videos": return .videos
+        case "tools": return parts.count >= 2 ? .tool(parts[1]) : .tools
+        case "resources": return .resources
+        case "admin":
+            switch parts.count >= 2 ? parts[1].lowercased() : "" {
+            case "team": return .adminTeam
+            case "feedback": return .adminFeedback
+            default: return .admin
+            }
+        case "apply": return .apply
         default: return nil
         }
     }

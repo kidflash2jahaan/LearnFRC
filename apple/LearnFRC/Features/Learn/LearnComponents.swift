@@ -10,14 +10,56 @@ import SwiftUI
 /// How wide the page is, measured once at the top of each Learn screen, so sections
 /// can switch between the phone layout and the wider iPad and Mac ones by real width
 /// (a split-view iPad or a narrow Mac window counts as narrow).
+///
+/// On iPhone Duo it also knows the page's margins (asymmetric next to the vertical bar) and
+/// where the fold crosses the page. Open upright (book, or flat) the inner screen is two
+/// pages either side of a crease: `pages` gives their widths, every `learnColumn` keeps to
+/// the leading page, and a section that uses both pages spreads itself on purpose
+/// (`learnColumn(_:spread:)`, `LearnSpread`, `LearnFoldColumns`), so nothing sits on the crease.
 struct LearnLayout: Equatable, Sendable {
+    /// Where on the screen this layout's content sits.
+    enum Role: Equatable, Sendable {
+        /// The whole screen: the usual single scroll view.
+        case page
+        /// The leading page of a screen split on iPhone Duo's fold (`LearnScrollPage`'s
+        /// companion takes the trailing one). Each page scrolls on its own.
+        case leadingPage
+        /// The trailing page of a split screen: the companion.
+        case trailingPage
+        /// The top half of a screen held sideways and bent like a laptop (the half that
+        /// stands up): a calculator's readout, or an article's text.
+        case topHalf
+        /// The bottom half of a laptop-posture screen (the half on the table): a calculator's
+        /// inputs, or an article's sections and links.
+        case bottomHalf
+
+        /// One half of a laptop-posture screen.
+        var isHalf: Bool { self == .topHalf || self == .bottomHalf }
+    }
+
     var width: CGFloat
+    /// The page's leading and trailing margins (`LF.Metrics.pageMargins(for:container:)`).
+    var margins: LF.PageMargins
+    /// The fold in the page's own coordinates: only where it crosses the page, without the
+    /// hinge, so the page lays out the same from flat to book. `.none` almost everywhere.
+    var fold: FoldInfo
+    var role: Role
+
+    init(width: CGFloat, margins: LF.PageMargins? = nil, fold: FoldInfo = .none, role: Role = .page) {
+        self.width = width
+        self.margins = margins ?? LF.Metrics.pageMargins(for: width)
+        var across = fold.acrossOnly
+        across.hinge = nil
+        across.isActive = false
+        self.fold = across
+        self.role = role
+    }
 
     /// The site's `--gut`, clamped between 16 and 54.
     var gutter: CGFloat { LF.Metrics.gutter(for: width) }
 
     /// The column the content actually gets (`nb-wrap` stops at 1280).
-    var contentWidth: CGFloat { max(0, min(width - gutter * 2, LF.Metrics.maxContentWidth)) }
+    var contentWidth: CGFloat { max(0, min(width - margins.total, LF.Metrics.maxContentWidth)) }
 
     /// Rows go three-column, figures go four-up, cards go two-up.
     var isRegular: Bool { contentWidth >= 700 }
@@ -27,16 +69,58 @@ struct LearnLayout: Equatable, Sendable {
 
     /// The site's twelve-column department wall.
     var isWall: Bool { contentWidth >= 1000 }
+
+    /// The two pages of iPhone Duo's inner screen held upright, measured across the content
+    /// column: the leading page ends where the fold's band starts, the gap is the band (the
+    /// crease and its system margins), the trailing page starts where it ends. Nil on every
+    /// other screen, on the Duo held sideways, and in one pane of a split screen.
+    var pages: FoldColumns? {
+        guard role == .page, width - margins.total <= LF.Metrics.maxContentWidth else { return nil }
+        return fold.columns(from: margins.leading, to: width - margins.trailing)
+    }
+
+    /// The layout for the content of one page of `pages` (a column `width` wide, no margins
+    /// of its own), so the sections inside it choose their phone or regular forms by its width.
+    static func page(_ width: CGFloat) -> LearnLayout {
+        LearnLayout(width: width, margins: LF.PageMargins(leading: 0, trailing: 0))
+    }
+
+    /// The layout a section gets inside `learnColumn(self)`: the leading page while the
+    /// screen is two pages (that's all the room a section that doesn't spread has), else this
+    /// layout. Build a section with it and pad it with the page's own layout:
+    ///
+    ///     masthead(layout.column).learnColumn(layout)
+    var column: LearnLayout {
+        guard let pages else { return self }
+        return .page(pages.leading)
+    }
+
+    /// The layouts for the two pages, when there are two.
+    var leadingPage: LearnLayout? { pages.map { .page($0.leading) } }
+    var trailingPage: LearnLayout? { pages.map { .page($0.trailing) } }
+
+    /// Lines a full-bleed band's text up with the page margins (`SlabView` already pads by
+    /// the card padding).
+    var bandInsets: EdgeInsets {
+        EdgeInsets(top: 0, leading: max(0, margins.leading - LF.Metrics.cardPadding),
+                   bottom: 0, trailing: max(0, margins.trailing - LF.Metrics.cardPadding))
+    }
 }
 
 extension View {
-    /// One section of a Learn page: capped at `nb-wrap`'s 1280, padded by the gutter,
+    /// One section of a Learn page: capped at `nb-wrap`'s 1280, padded by the page margins,
     /// centred in wide windows.
-    func learnColumn(_ layout: LearnLayout, maxWidth: CGFloat = LF.Metrics.maxContentWidth) -> some View {
-        self
-            .frame(maxWidth: maxWidth, alignment: .leading)
-            .padding(.horizontal, layout.gutter)
-            .frame(maxWidth: .infinity)
+    ///
+    /// On iPhone Duo's two pages it keeps to the leading page unless `spread` says the section
+    /// lays itself out across both (with `LearnLayout.pages`), so nothing lands on the crease.
+    func learnColumn(_ layout: LearnLayout, maxWidth: CGFloat = LF.Metrics.maxContentWidth, spread: Bool = false) -> some View {
+        let pages = layout.pages
+        let cap = pages.map { spread ? maxWidth : min(maxWidth, $0.leading) } ?? maxWidth
+        return self
+            .frame(maxWidth: cap, alignment: .leading)
+            .padding(.leading, layout.margins.leading)
+            .padding(.trailing, layout.margins.trailing)
+            .frame(maxWidth: .infinity, alignment: pages == nil ? .center : .leading)
     }
 
     /// A full-width blue band (`SlabView`) kept to the page's own column. The band's fill
@@ -64,6 +148,124 @@ private struct LearnMeasure: ViewModifier {
     }
 }
 
+// MARK: - Two pages
+
+/// One section spread across iPhone Duo's two pages: the first view on the leading page,
+/// the second on the trailing page, the band between them empty. Use it inside a
+/// `learnColumn(layout, spread: true)`, with `layout.pages`.
+struct LearnSpread<Leading: View, Trailing: View>: View {
+    let pages: FoldColumns
+    var alignment: VerticalAlignment = .top
+    @ViewBuilder var leading: Leading
+    @ViewBuilder var trailing: Trailing
+
+    var body: some View {
+        HStack(alignment: alignment, spacing: pages.gap) {
+            leading.frame(width: pages.leading, alignment: .topLeading)
+            trailing.frame(width: pages.trailing, alignment: .topLeading)
+        }
+    }
+}
+
+/// A section's opening ink rule on iPhone Duo's two pages: one rule on each page, broken
+/// at the band.
+struct LearnSpreadRule: View {
+    let pages: FoldColumns
+
+    var body: some View {
+        HStack(spacing: pages.gap) {
+            InkRule().frame(width: pages.leading)
+            InkRule().frame(width: pages.trailing)
+        }
+        .accessibilityHidden(true)
+    }
+}
+
+/// Items in two columns that line up with iPhone Duo's pages, the band between them empty.
+/// `.rows` fills them like a grid (first on the left, second on the right, rows as tall as
+/// their taller item); `.balanced` puts each item at the foot of whichever column is shorter,
+/// so the two pages end close together. Each item is offered its own page's width.
+struct LearnFoldColumns: Layout {
+    enum Fill: Sendable {
+        case rows
+        case balanced
+    }
+
+    var pages: FoldColumns
+    var fill: Fill = .rows
+    var spacing: CGFloat = 24
+
+    private struct Placement {
+        let index: Int
+        let origin: CGPoint
+        let size: CGSize
+    }
+
+    private func arrange(_ subviews: Subviews) -> (placements: [Placement], height: CGFloat) {
+        let widths = [pages.leading, pages.trailing]
+        let xs = [0, pages.leading + pages.gap]
+        var placements: [Placement] = []
+        switch fill {
+        case .rows:
+            var y: CGFloat = 0
+            var index = 0
+            var rows = 0
+            while index < subviews.count {
+                let pair = Array(index..<min(index + 2, subviews.count))
+                let sizes = pair.enumerated().map { column, item in
+                    subviews[item].sizeThatFits(ProposedViewSize(width: widths[column], height: nil))
+                }
+                let height = sizes.map(\.height).max() ?? 0
+                if height > 0 {
+                    if rows > 0 { y += spacing }
+                    for (column, item) in pair.enumerated() {
+                        placements.append(Placement(index: item, origin: CGPoint(x: xs[column], y: y),
+                                                    size: CGSize(width: widths[column], height: sizes[column].height)))
+                    }
+                    y += height
+                    rows += 1
+                }
+                index += 2
+            }
+            return (placements, y)
+        case .balanced:
+            var heights: [CGFloat] = [0, 0]
+            var counts = [0, 0]
+            for index in subviews.indices {
+                let column = heights[0] <= heights[1] ? 0 : 1
+                let height = subviews[index].sizeThatFits(ProposedViewSize(width: widths[column], height: nil)).height
+                guard height > 0 else { continue }
+                let y = heights[column] + (counts[column] > 0 ? spacing : 0)
+                placements.append(Placement(index: index, origin: CGPoint(x: xs[column], y: y),
+                                            size: CGSize(width: widths[column], height: height)))
+                heights[column] = y + height
+                counts[column] += 1
+            }
+            return (placements, max(heights[0], heights[1]))
+        }
+    }
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        CGSize(width: pages.leading + pages.gap + pages.trailing, height: arrange(subviews).height)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let placed = arrange(subviews)
+        var shown = Set<Int>()
+        for placement in placed.placements {
+            shown.insert(placement.index)
+            subviews[placement.index].place(
+                at: CGPoint(x: bounds.minX + placement.origin.x, y: bounds.minY + placement.origin.y),
+                anchor: .topLeading,
+                proposal: ProposedViewSize(width: placement.size.width, height: nil)
+            )
+        }
+        for index in subviews.indices where !shown.contains(index) {
+            subviews[index].place(at: bounds.origin, anchor: .topLeading, proposal: .zero)
+        }
+    }
+}
+
 // MARK: - Page scaffold
 
 /// A Learn screen: paper ground that scrolls with the content, the width in hand for
@@ -73,17 +275,33 @@ private struct LearnMeasure: ViewModifier {
 /// These are reading pages, so the keyboard doesn't inset them unless the page asks
 /// (`avoidsKeyboard`, for a page with a search field): on iPad a keyboard inset once
 /// outlived the sign-in sheet and left a blank band under the last card.
-struct LearnScrollPage<Content: View>: View {
+///
+/// A screen can hand over a companion: what belongs beside the page rather than in it (an
+/// article's index, a calculator's readout, the chosen module's lessons). On iPhone Duo's
+/// inner screen held upright the content takes the leading page and the companion the
+/// trailing one, each scrolling on its own (`companionAxes` `.horizontal`); bent like a laptop
+/// the companion takes one half and the content the other (`.vertical`, with
+/// `laptopCompanionEdge`: a calculator's readout on the standing half above its inputs, an
+/// article's sections on the flat half below its text). Everywhere else the companion isn't
+/// drawn and the content shows everything, so the screen checks `layout.role` to leave out
+/// what the companion is showing. Pass no axes when there's nothing for a companion to show.
+struct LearnScrollPage<Content: View, Companion: View>: View {
     let title: String
     var refresh: (@MainActor () async -> Void)?
     var avoidsKeyboard: Bool
     /// Which screen this is, so its scroll position comes back when the Mac builds the tab
     /// again (`remembersScroll`). Nil keeps nothing.
     var place: ScreenPlace?
+    /// The splits the companion takes (see the type's notes). Empty: no companion.
+    var companionAxes: Axis.Set
+    /// Which half the companion takes in laptop posture.
+    var laptopCompanionEdge: VerticalEdge
     @ViewBuilder let content: (LearnLayout, ScrollViewProxy) -> Content
+    @ViewBuilder let companion: (LearnLayout) -> Companion
 
     @State private var pastHeader = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.fold) private var windowFold
 
     init(
         title: String,
@@ -91,34 +309,52 @@ struct LearnScrollPage<Content: View>: View {
         avoidsKeyboard: Bool = false,
         place: ScreenPlace? = nil,
         @ViewBuilder content: @escaping (LearnLayout, ScrollViewProxy) -> Content
+    ) where Companion == EmptyView {
+        self.title = title
+        self.refresh = refresh
+        self.avoidsKeyboard = avoidsKeyboard
+        self.place = place
+        self.companionAxes = []
+        self.laptopCompanionEdge = .top
+        self.content = content
+        self.companion = { _ in EmptyView() }
+    }
+
+    init(
+        title: String,
+        refresh: (@MainActor () async -> Void)? = nil,
+        avoidsKeyboard: Bool = false,
+        place: ScreenPlace? = nil,
+        companionAxes: Axis.Set = .horizontal,
+        laptopCompanionEdge: VerticalEdge = .top,
+        @ViewBuilder content: @escaping (LearnLayout, ScrollViewProxy) -> Content,
+        @ViewBuilder companion: @escaping (LearnLayout) -> Companion
     ) {
         self.title = title
         self.refresh = refresh
         self.avoidsKeyboard = avoidsKeyboard
         self.place = place
+        self.companionAxes = companionAxes
+        self.laptopCompanionEdge = laptopCompanionEdge
         self.content = content
+        self.companion = companion
     }
 
     var body: some View {
-        GeometryReader { geometry in
+        FoldReader { geometry, fold in
+            let split = LearnPaneSplit(size: geometry.size, margins: geometry.lfPageMargins,
+                                       fold: fold, axes: companionAxes, laptopEdge: laptopCompanionEdge)
             ScrollViewReader { proxy in
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 0) {
-                        content(LearnLayout(width: geometry.size.width), proxy)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.bottom, 64)
+                // Both panes are always there, so the main scroll view keeps its identity (its
+                // place, a focused field) as the hinge or the keyboard changes the split.
+                LearnPanesLayout(main: split.main, companion: split.companion) {
+                    mainPane(split.mainLayout, proxy: proxy)
+                    companionPane(split.companionLayout)
                 }
-                .onScrollGeometryChange(for: Bool.self) { scroll in
-                    scroll.contentOffset.y + scroll.contentInsets.top > 110
-                } action: { _, isPast in
-                    pastHeader = isPast
-                }
-                .remembersScroll(place)
-                .modifier(LearnRefreshable(refresh: refresh))
-                .paperBackground()
             }
         }
+        // The spine between two pages: plain paper, so the pages read as two sheets.
+        .background { PaperBackground(ruled: false) }
         .closesShareSheetsOnNavigation()
         #if os(iOS)
         .ignoresSafeArea(avoidsKeyboard ? [] : .keyboard, edges: .bottom)
@@ -126,17 +362,124 @@ struct LearnScrollPage<Content: View>: View {
         .navigationTitle(title)
         #if os(iOS)
         .toolbarTitleDisplayMode(.inline)
+        // On iPhone Duo's inner screen held upright the middle of the bar is over the crease,
+        // so the title goes to the bar's leading edge (and the system's own title, which
+        // would sit beside it, is left out).
+        .toolbar(removing: windowFold.isVertical ? .title : nil)
         .toolbar {
-            ToolbarItem(placement: .principal) {
+            ToolbarItem(placement: windowFold.isVertical ? .topBarLeading : .principal) {
+                // Like the system's own bar titles, it stops growing at the accessibility sizes,
+                // where the bar has no room for it.
                 Text(title)
                     .font(.headline)
                     .lineLimit(1)
+                    .dynamicTypeSize(...DynamicTypeSize.accessibility1)
                     .opacity(pastHeader ? 1 : 0)
                     .animation(reduceMotion ? nil : LF.Motion.hover, value: pastHeader)
                     .accessibilityHidden(!pastHeader)
             }
+            .sharedBackgroundVisibility(.hidden)
+            .lfAxisBehavior(.horizontalOnly)
         }
         #endif
+    }
+
+    private func mainPane(_ layout: LearnLayout, proxy: ScrollViewProxy) -> some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                content(layout, proxy)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.bottom, 64)
+        }
+        .onScrollGeometryChange(for: Bool.self) { scroll in
+            scroll.contentOffset.y + scroll.contentInsets.top > 110
+        } action: { _, isPast in
+            pastHeader = isPast
+        }
+        .remembersScroll(place)
+        .modifier(LearnRefreshable(refresh: refresh))
+        .paperBackground()
+    }
+
+    @ViewBuilder
+    private func companionPane(_ layout: LearnLayout?) -> some View {
+        if let layout {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    companion(layout)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.bottom, layout.role.isHalf ? 16 : 48)
+            }
+            .paperBackground()
+            .transition(.opacity)
+        } else {
+            Color.clear
+                .accessibilityHidden(true)
+        }
+    }
+}
+
+/// Where `LearnScrollPage`'s two panes go for this size and fold.
+private struct LearnPaneSplit {
+    var main: CGRect
+    var mainLayout: LearnLayout
+    var companion: CGRect?
+    var companionLayout: LearnLayout?
+
+    /// The shortest half worth giving a laptop-posture companion, and the shortest half worth
+    /// scrolling the content in. Below these (the keyboard up in laptop posture takes the
+    /// bottom half) the screen goes back to one page.
+    private static let minimumCompanion: CGFloat = 200
+    private static let minimumContent: CGFloat = 300
+
+    init(size: CGSize, margins: LF.PageMargins, fold: FoldInfo, axes: Axis.Set, laptopEdge: VerticalEdge) {
+        let whole = LearnLayout(width: size.width, margins: margins, fold: fold)
+        main = CGRect(origin: .zero, size: size)
+        mainLayout = whole
+
+        guard !axes.isEmpty, let band = fold.band else { return }
+        if axes.contains(.horizontal), fold.isVertical,
+           fold.columns(from: margins.leading, to: size.width - margins.trailing) != nil {
+            main = CGRect(x: 0, y: 0, width: band.minX, height: size.height)
+            mainLayout = LearnLayout(width: band.minX, margins: LF.PageMargins(leading: margins.leading, trailing: 0),
+                                     role: .leadingPage)
+            companion = CGRect(x: band.maxX, y: 0, width: max(0, size.width - band.maxX), height: size.height)
+            companionLayout = LearnLayout(width: max(0, size.width - band.maxX),
+                                          margins: LF.PageMargins(leading: 0, trailing: margins.trailing),
+                                          role: .trailingPage)
+        } else if axes.contains(.vertical), fold.isLaptop {
+            let top = CGRect(x: 0, y: 0, width: size.width, height: band.minY)
+            let bottom = CGRect(x: 0, y: band.maxY, width: size.width, height: max(0, size.height - band.maxY))
+            let (companionHalf, contentHalf) = laptopEdge == .top ? (top, bottom) : (bottom, top)
+            guard companionHalf.height >= Self.minimumCompanion, contentHalf.height >= Self.minimumContent else { return }
+            companion = companionHalf
+            companionLayout = LearnLayout(width: size.width, margins: margins,
+                                          role: laptopEdge == .top ? .topHalf : .bottomHalf)
+            main = contentHalf
+            mainLayout = LearnLayout(width: size.width, margins: margins,
+                                     role: laptopEdge == .top ? .bottomHalf : .topHalf)
+        }
+    }
+}
+
+/// Places `LearnScrollPage`'s main pane and its companion (nothing at all when it has none).
+private struct LearnPanesLayout: Layout {
+    var main: CGRect
+    var companion: CGRect?
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        proposal.replacingUnspecifiedDimensions()
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        guard subviews.count == 2 else { return }
+        subviews[0].place(at: CGPoint(x: bounds.minX + main.minX, y: bounds.minY + main.minY),
+                          anchor: .topLeading, proposal: ProposedViewSize(main.size))
+        let other = companion ?? .zero
+        subviews[1].place(at: CGPoint(x: bounds.minX + other.minX, y: bounds.minY + other.minY),
+                          anchor: .topLeading, proposal: ProposedViewSize(other.size))
     }
 }
 
@@ -845,6 +1188,13 @@ enum LearnFormat {
         #else
         "Pull down to check learnfrc.com"
         #endif
+    }
+
+    /// "Six", the way the site spells a small count at the start of a sentence ("Six
+    /// calculators for ..."); digits past ten.
+    static func spelledCount(_ n: Int) -> String {
+        let words = ["No", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten"]
+        return words.indices.contains(n) ? words[n] : n.formatted()
     }
 
     static func plural(_ n: Int, _ one: String, _ many: String) -> String {

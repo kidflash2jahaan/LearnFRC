@@ -90,42 +90,77 @@ struct ModuleView: View {
         let next = index < modules.count - 1 ? modules[index + 1] : nil
         let extras = extras?.moduleID == module.id ? extras : nil
 
-        return LearnScrollPage(title: module.title, refresh: { await model.refreshAll() }, place: .route(.module(moduleID))) { layout, _ in
+        return LearnScrollPage(title: module.title, refresh: { await model.refreshAll() },
+                               place: .route(.module(moduleID))) { layout, _ in
             tabDivider(module, department, label: label, layout: layout)
                 .learnColumn(layout)
                 .padding(.top, 18)
 
-            lessons(module, layout: layout)
-                .learnColumn(layout)
-                .padding(.top, 44)
-
-            pagination(department, prev: prev, next: next, layout: layout)
-                .learnColumn(layout)
-                .padding(.top, 34)
-
-            if let extras, !extras.terms.isEmpty {
-                jargon(extras.terms, layout: layout)
+            if layout.role == .leadingPage {
+                // iPhone Duo's leading page: the module and where it sits among the others.
+                // Its lessons, the way on, and the articles are on the next page.
+                if modules.count > 1 {
+                    departmentIndex(department, current: module, labels: labels)
+                        .learnColumn(layout)
+                        .padding(.top, 48)
+                }
+                if let extras, !extras.terms.isEmpty {
+                    jargon(extras.terms, layout: layout)
+                        .learnColumn(layout)
+                        .padding(.top, 48)
+                }
+                if let extras, !extras.twins.isEmpty {
+                    twins(extras.twins, module: module, department: department)
+                        .learnColumn(layout)
+                        .padding(.top, 40)
+                }
+            } else {
+                lessons(module, layout: layout)
                     .learnColumn(layout)
-                    .padding(.top, 48)
-            }
+                    .padding(.top, 44)
 
-            if let extras, !extras.twins.isEmpty {
-                twins(extras.twins, module: module, department: department)
+                pagination(department, prev: prev, next: next, layout: layout)
                     .learnColumn(layout)
-                    .padding(.top, 40)
-            }
+                    .padding(.top, 34)
 
-            if let extras, !extras.articles.isEmpty {
-                longerReads(extras.articles, layout: layout)
-                    .learnColumn(layout)
-                    .padding(.top, 48)
-            }
+                if let extras, !extras.terms.isEmpty {
+                    jargon(extras.terms, layout: layout)
+                        .learnColumn(layout)
+                        .padding(.top, 48)
+                }
 
-            if modules.count > 1 {
-                departmentIndex(department, current: module, labels: labels)
-                    .learnColumn(layout)
-                    .padding(.top, 52)
+                if let extras, !extras.twins.isEmpty {
+                    twins(extras.twins, module: module, department: department)
+                        .learnColumn(layout)
+                        .padding(.top, 40)
+                }
+
+                if let extras, !extras.articles.isEmpty {
+                    longerReads(extras.articles, layout: layout)
+                        .learnColumn(layout)
+                        .padding(.top, 48)
+                }
+
+                if modules.count > 1 {
+                    departmentIndex(department, current: module, labels: labels)
+                        .learnColumn(layout)
+                        .padding(.top, 52)
+                }
             }
+        } companion: { layout in
+            // iPhone Duo's trailing page: the lessons behind this tab, the modules either
+            // side, and the articles that go deeper.
+            VStack(alignment: .leading, spacing: 0) {
+                lessons(module, layout: layout)
+                pagination(department, prev: prev, next: next, layout: layout)
+                    .padding(.top, 34)
+                if let extras, !extras.articles.isEmpty {
+                    longerReads(extras.articles, layout: layout)
+                        .padding(.top, 48)
+                }
+            }
+            .learnColumn(layout)
+            .padding(.top, 18)
         }
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
@@ -587,3 +622,11 @@ struct ModuleView: View {
         .appEnvironment(.preview)
         .environment(\.colorScheme, .dark)
 }
+
+#if DEBUG
+#Preview("Module, Duo book", traits: .fixedLayout(width: 867, height: 2000)) {
+    NavigationStack { ModuleView(moduleID: PreviewData.module.id) }
+        .appEnvironment(.preview)
+        .previewFold(.previewBook)
+}
+#endif

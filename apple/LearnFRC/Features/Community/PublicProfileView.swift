@@ -72,6 +72,7 @@ struct PublicProfileView: View {
         case .some(.some(let profile)):
             if state.isStale {
                 CommunityLoadNote(state: state) { Task { await load(force: true) } }
+                    .foldLeadingPage(layout.pages)
                     .communityColumn(layout)
                     .padding(.top, 12)
             }
@@ -81,6 +82,7 @@ struct PublicProfileView: View {
         case .none:
             if state.error != nil {
                 CommunityLoadNote(state: state) { Task { await load(force: true) } }
+                    .foldLeadingPage(layout.pages)
                     .communityColumn(layout)
                     .padding(.top, 28)
             } else {
@@ -107,6 +109,7 @@ struct PublicProfileView: View {
             .padding(.top, 20)
         }
         .frame(maxWidth: 680, alignment: .leading)
+        .foldLeadingPage(layout.pages)
         .communityColumn(layout)
         .padding(.top, 28)
     }
@@ -124,6 +127,7 @@ struct PublicProfileView: View {
         }
         .frame(maxWidth: 928)
         .frame(maxWidth: .infinity)
+        .foldLeadingPage(layout.pages)
         .communityColumn(layout)
         .padding(.top, 28)
         .accessibilityElement(children: .ignore)
@@ -180,24 +184,52 @@ struct PublicRecordSheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            recordCard
-                .frame(maxWidth: 928)
-                .frame(maxWidth: .infinity)
+            if let pages = layout.pages {
+                // An open iPhone Duo: the record card on the left page, the rank stamp on the
+                // right, the figures two to a page, the badges list on the right page.
+                FoldPages(pages) {
+                    recordCard(layout.leadingPage, withStamp: false)
+                } trailing: {
+                    PublicRankStamp(profile: profile)
+                        .padding(.top, 24)
+                        .padding(.leading, 6)
+                }
                 .communityColumn(layout)
-                .padding(.top, layout.isWide ? 40 : 22)
+                .padding(.top, 40)
 
-            figuresBand
-                .padding(.top, layout.sectionGap)
+                figuresBand
+                    .padding(.top, layout.sectionGap)
 
-            badges
+                FoldPages(pages) {
+                    VStack(alignment: .leading, spacing: 0) {
+                        badgesHeader
+                        badgesFooter
+                    }
+                } trailing: {
+                    badgesList(layout.trailingPage, top: 0)
+                }
                 .communityColumn(layout)
                 .padding(.top, layout.sectionGap)
+            } else {
+                recordCard(layout, withStamp: true)
+                    .frame(maxWidth: 928)
+                    .frame(maxWidth: .infinity)
+                    .communityColumn(layout)
+                    .padding(.top, layout.isWide ? 40 : 22)
+
+                figuresBand
+                    .padding(.top, layout.sectionGap)
+
+                badges
+                    .communityColumn(layout)
+                    .padding(.top, layout.sectionGap)
+            }
         }
     }
 
     // MARK: The card
 
-    private var recordCard: some View {
+    private func recordCard(_ layout: CommunityLayout, withStamp: Bool) -> some View {
         NotebookCard(tilt: .preset(2), tape: true, padding: layout.isWide ? 32 : 22) {
             SlugText("learnfrc / record of work")
                 .padding(.bottom, 10)
@@ -205,14 +237,16 @@ struct PublicRecordSheet: View {
                 .overlay(alignment: .bottom) { DashedRule() }
 
             Group {
-                if layout.isWide {
+                if !withStamp {
+                    identity(layout)
+                } else if layout.isWide {
                     HStack(alignment: .top, spacing: 36) {
-                        identity.frame(maxWidth: .infinity, alignment: .leading)
+                        identity(layout).frame(maxWidth: .infinity, alignment: .leading)
                         PublicRankStamp(profile: profile)
                     }
                 } else {
                     VStack(alignment: .leading, spacing: 26) {
-                        identity
+                        identity(layout)
                         PublicRankStamp(profile: profile)
                     }
                 }
@@ -232,7 +266,7 @@ struct PublicRecordSheet: View {
         }
     }
 
-    private var identity: some View {
+    private func identity(_ layout: CommunityLayout) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             Text("@\(profile.username)")
                 .font(LF.Fonts.display(layout.isWide ? 52 : 38, relativeTo: .largeTitle))
@@ -291,12 +325,28 @@ struct PublicRecordSheet: View {
             (profile.lessonCount.formatted(), profile.lessonCount == 1 ? "lesson" : "lessons"),
             (profile.achievements.count.formatted(), profile.achievements.count == 1 ? "badge" : "badges"),
         ]
-        let columns = layout.isWide
+        let columns = layout.isWide && !layout.isSpread
             ? Array(repeating: GridItem(.flexible(), spacing: 32, alignment: .topLeading), count: 4)
             : Array(repeating: GridItem(.flexible(), spacing: 24, alignment: .topLeading), count: 2)
-        return LazyVGrid(columns: columns, alignment: .leading, spacing: 26) {
-            ForEach(items, id: \.1) { item in
-                CommunitySlabFigure(item.0, caption: item.1, size: layout.isWide ? 56 : 42)
+        let size: CGFloat = layout.isWide ? 56 : 42
+        return Group {
+            if let pages = layout.pages {
+                // Two to a page, so no figure sits across the fold.
+                FoldPages(pages) {
+                    LazyVGrid(columns: columns, alignment: .leading, spacing: 26) {
+                        ForEach(items.prefix(2), id: \.1) { CommunitySlabFigure($0.0, caption: $0.1, size: size) }
+                    }
+                } trailing: {
+                    LazyVGrid(columns: columns, alignment: .leading, spacing: 26) {
+                        ForEach(items.dropFirst(2), id: \.1) { CommunitySlabFigure($0.0, caption: $0.1, size: size) }
+                    }
+                }
+            } else {
+                LazyVGrid(columns: columns, alignment: .leading, spacing: 26) {
+                    ForEach(items, id: \.1) { item in
+                        CommunitySlabFigure(item.0, caption: item.1, size: size)
+                    }
+                }
             }
         }
         .communityColumn(layout)
@@ -309,29 +359,44 @@ struct PublicRecordSheet: View {
 
     private var badges: some View {
         VStack(alignment: .leading, spacing: 0) {
-            CommunitySectionHeader("Badges earned", sub: "Each one is signed off by a quiz, not by time spent on the page.") {
-                if !profile.achievements.isEmpty {
-                    CountText(profile.achievements.count, unit: profile.achievements.count == 1 ? "badge" : "badges")
+            badgesHeader
+            badgesList(layout, top: 22)
+            badgesFooter
+        }
+    }
+
+    private var badgesHeader: some View {
+        CommunitySectionHeader("Badges earned", sub: "Each one is signed off by a quiz, not by time spent on the page.") {
+            if !profile.achievements.isEmpty {
+                CountText(profile.achievements.count, unit: profile.achievements.count == 1 ? "badge" : "badges")
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func badgesList(_ layout: CommunityLayout, top: CGFloat) -> some View {
+        if profile.achievements.isEmpty {
+            CommunityEmptyNote("nothing signed off yet", isMine
+                ? "Your first badge lands with your first finished lesson. The whole catalogue is open, and it needs no account to read."
+                : "The first badges land after a handful of lessons. The same catalogue is open to you, and it needs no account to read."
+            ) {
+                Button("Open the guides") { app.selectedTab = .learn }
+                    .buttonStyle(.inkGhostSmall)
+            }
+            .padding(.top, top)
+        } else {
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(profile.achievements) { badge in
+                    badgeRow(badge, layout: layout)
+                    DashedRule()
                 }
             }
-            if profile.achievements.isEmpty {
-                CommunityEmptyNote("nothing signed off yet", isMine
-                    ? "Your first badge lands with your first finished lesson. The whole catalogue is open, and it needs no account to read."
-                    : "The first badges land after a handful of lessons. The same catalogue is open to you, and it needs no account to read."
-                ) {
-                    Button("Open the guides") { app.selectedTab = .learn }
-                        .buttonStyle(.inkGhostSmall)
-                }
-                .padding(.top, 22)
-            } else {
-                VStack(alignment: .leading, spacing: 0) {
-                    ForEach(profile.achievements) { badge in
-                        badgeRow(badge)
-                        DashedRule()
-                    }
-                }
-                .padding(.top, 20)
-            }
+            .padding(.top, max(0, top - 2))
+        }
+    }
+
+    private var badgesFooter: some View {
+        VStack(alignment: .leading, spacing: 0) {
             Text("Everything on this page came out of \(lessonTotal) free lessons. No account is needed to read them.")
                 .lfProse(15.5, color: LF.Palette.graphite)
                 .fixedSize(horizontal: false, vertical: true)
@@ -348,7 +413,7 @@ struct PublicRecordSheet: View {
         catalogLessonCount > 0 ? catalogLessonCount.formatted() : "hundreds of"
     }
 
-    private func badgeRow(_ badge: PublicAchievement) -> some View {
+    private func badgeRow(_ badge: PublicAchievement, layout: CommunityLayout) -> some View {
         let description = catalog.achievement(slug: badge.slug)?.description ?? ""
         return Group {
             if layout.isRegular {
@@ -463,4 +528,10 @@ struct PublicRankStamp: View {
 #Preview("Profile, nobody", traits: .fixedLayout(width: 393, height: 852)) {
     CommunityPreviewHost { PublicProfileView(username: "not_a_person") }
     .environment(\.colorScheme, .light)
+}
+
+#Preview("Profile, iPhone Duo open", traits: .fixedLayout(width: DuoPreview.innerContent.width, height: 1600)) {
+    CommunityPreviewHost { PublicProfileView(username: "kai_cad") }
+        .previewFold(.previewBook)
+        .environment(\.colorScheme, .light)
 }

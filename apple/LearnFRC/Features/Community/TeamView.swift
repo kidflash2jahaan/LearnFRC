@@ -73,6 +73,7 @@ struct TeamView: View {
                 title: "Your team's sheet lives in your account.",
                 message: "Sign in and add your team number. Everyone who signs up with the same number lands on one sheet: who's on what, how far each of them has got, and which subteams nobody has picked up yet."
             )
+            .foldLeadingPage(layout.pages)
             .communityColumn(layout)
             .padding(.top, 28)
         case .signedIn(let me):
@@ -80,6 +81,7 @@ struct TeamView: View {
                 if let team = payload.team {
                     if state.isStale {
                         CommunityLoadNote(state: state) { Task { await load(force: true) } }
+                            .foldLeadingPage(layout.pages)
                             .communityColumn(layout)
                             .padding(.top, 12)
                     }
@@ -92,15 +94,18 @@ struct TeamView: View {
                     )
                 } else {
                     TeamNumberMissingCard(subteamCount: catalog.departments.count)
+                        .foldLeadingPage(layout.pages)
                         .communityColumn(layout)
                         .padding(.top, 28)
                 }
             } else if me.profile.teamNumber == nil && !me.isProvisional && state.hasSettled {
                 TeamNumberMissingCard(subteamCount: catalog.departments.count)
+                    .foldLeadingPage(layout.pages)
                     .communityColumn(layout)
                     .padding(.top, 28)
             } else if state.error != nil {
                 CommunityLoadNote(state: state) { Task { await load(force: true) } }
+                    .foldLeadingPage(layout.pages)
                     .communityColumn(layout)
                     .padding(.top, 28)
             } else {
@@ -118,6 +123,7 @@ struct TeamView: View {
             SkeletonBlock(height: 18, width: 240)
             SkeletonBlock(height: 160).padding(.top, 20)
         }
+        .foldLeadingPage(layout.pages)
         .communityColumn(layout)
         .padding(.top, 28)
         .accessibilityElement(children: .ignore)
@@ -266,48 +272,104 @@ struct TeamSheetContent: View {
         VStack(alignment: .leading, spacing: 0) {
             masthead
                 .communityColumn(layout)
-                .padding(.top, layout.isWide ? 36 : 18)
+                .padding(.top, layout.isWide || layout.isSpread ? 36 : 18)
 
-            CommunityTally(items: tally, layout: layout)
+            tallyRow
                 .communityColumn(layout)
                 .padding(.top, layout.sectionGap)
 
-            if sheet.isSolo, let username {
-                TeamInvitePanel(username: username, teamNumber: number, inviteURL: sheet.team.inviteURL, referralCount: referralCount, solo: true, layout: layout)
-                    .communityColumn(layout)
-                    .padding(.top, layout.sectionGap)
-            }
-
-            coverage
-                .communityColumn(layout)
-                .padding(.top, layout.sectionGap)
-                .id("subteams")
-
-            roster
-                .communityColumn(layout)
-                .padding(.top, layout.sectionGap)
-
-            if !sheet.team.members.isEmpty {
-                VStack(alignment: .leading, spacing: 22) {
-                    CommunitySectionHeader("Each person's progress", sub: "How far everyone is in every department. Each little bar is one department; open a name to see where they are and what's next.")
-                    MemberProgressList(members: sheet.team.members, layout: layout)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                .communityColumn(layout)
-                .padding(.top, layout.sectionGap)
-            }
-
-            if !sheet.isSolo || username == nil {
-                Group {
-                    if let username {
-                        TeamInvitePanel(username: username, teamNumber: number, inviteURL: sheet.team.inviteURL, referralCount: referralCount, solo: false, layout: layout)
-                    } else {
-                        TeamUnattributedInvite(teamNumber: number)
+            if let pages = layout.pages {
+                // An open iPhone Duo: the subteams on the left page; the people, their
+                // progress and the invite on the right. Nothing sits across the fold.
+                FoldPages(pages) {
+                    VStack(alignment: .leading, spacing: 0) {
+                        if sheet.isSolo, let username {
+                            TeamInvitePanel(username: username, teamNumber: number, inviteURL: sheet.team.inviteURL, referralCount: referralCount, solo: true, layout: layout.leadingPage)
+                                .padding(.bottom, layout.sectionGap)
+                        }
+                        coverage(layout.leadingPage)
+                            .id("subteams")
+                    }
+                } trailing: {
+                    VStack(alignment: .leading, spacing: 0) {
+                        roster(layout.trailingPage)
+                        if hasProgress {
+                            progressSection(layout.trailingPage)
+                                .padding(.top, layout.sectionGap)
+                        }
+                        if hasClosingInvite {
+                            closingInvite(layout.trailingPage)
+                                .padding(.top, layout.sectionGap)
+                        }
                     }
                 }
                 .communityColumn(layout)
                 .padding(.top, layout.sectionGap)
+            } else {
+                if sheet.isSolo, let username {
+                    TeamInvitePanel(username: username, teamNumber: number, inviteURL: sheet.team.inviteURL, referralCount: referralCount, solo: true, layout: layout)
+                        .communityColumn(layout)
+                        .padding(.top, layout.sectionGap)
+                }
+
+                coverage(layout)
+                    .communityColumn(layout)
+                    .padding(.top, layout.sectionGap)
+                    .id("subteams")
+
+                roster(layout)
+                    .communityColumn(layout)
+                    .padding(.top, layout.sectionGap)
+
+                if hasProgress {
+                    progressSection(layout)
+                        .communityColumn(layout)
+                        .padding(.top, layout.sectionGap)
+                }
+
+                if hasClosingInvite {
+                    closingInvite(layout)
+                        .communityColumn(layout)
+                        .padding(.top, layout.sectionGap)
+                }
             }
+        }
+    }
+
+    /// The four figures; on an open iPhone Duo, two on each page.
+    @ViewBuilder
+    private var tallyRow: some View {
+        if let pages = layout.pages {
+            FoldPages(pages) {
+                CommunityTally(items: Array(tally.prefix(2)), layout: layout.leadingPage)
+            } trailing: {
+                CommunityTally(items: Array(tally.dropFirst(2)), layout: layout.trailingPage)
+            }
+        } else {
+            CommunityTally(items: tally, layout: layout)
+        }
+    }
+
+    /// Each person's progress shows once there's anyone on the roster.
+    private var hasProgress: Bool { !sheet.team.members.isEmpty }
+    /// The invite at the foot of the sheet (a solo sheet has it at the top instead).
+    private var hasClosingInvite: Bool { !sheet.isSolo || username == nil }
+
+    /// Each person's progress, department by department.
+    private func progressSection(_ layout: CommunityLayout) -> some View {
+        VStack(alignment: .leading, spacing: 22) {
+            CommunitySectionHeader("Each person's progress", sub: "How far everyone is in every department. Each little bar is one department; open a name to see where they are and what's next.")
+            MemberProgressList(members: sheet.team.members, layout: layout)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    @ViewBuilder
+    private func closingInvite(_ layout: CommunityLayout) -> some View {
+        if let username {
+            TeamInvitePanel(username: username, teamNumber: number, inviteURL: sheet.team.inviteURL, referralCount: referralCount, solo: false, layout: layout)
+        } else {
+            TeamUnattributedInvite(teamNumber: number)
         }
     }
 
@@ -315,7 +377,14 @@ struct TeamSheetContent: View {
 
     @ViewBuilder
     private var masthead: some View {
-        if layout.isWide {
+        if let pages = layout.pages {
+            // An open iPhone Duo: the masthead on the left page, the pit card on the right.
+            FoldPages(pages) {
+                mastheadText
+            } trailing: {
+                TeamCrewPanel(sheet: sheet).padding(.top, 12)
+            }
+        } else if layout.isWide {
             HStack(alignment: .top, spacing: 48) {
                 mastheadText.frame(maxWidth: .infinity, alignment: .leading)
                 TeamCrewPanel(sheet: sheet).frame(width: min(400, layout.width * 0.38)).padding(.top, 12)
@@ -373,7 +442,7 @@ struct TeamSheetContent: View {
 
     // MARK: Coverage
 
-    private var coverage: some View {
+    private func coverage(_ layout: CommunityLayout) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             CommunitySectionHeader(
                 "Subteam coverage",
@@ -392,7 +461,7 @@ struct TeamSheetContent: View {
 
     // MARK: Roster
 
-    private var roster: some View {
+    private func roster(_ layout: CommunityLayout) -> some View {
         VStack(alignment: .leading, spacing: 22) {
             CommunitySectionHeader(
                 sheet.isSolo ? "Where you are at" : "Who is furthest along",
@@ -1015,4 +1084,16 @@ struct CommunityFlowLayout: Layout {
 #Preview("Guest", traits: .fixedLayout(width: 393, height: 852)) {
     CommunityPreviewHost(model: .preview(signedIn: false)) { TeamView() }
     .environment(\.colorScheme, .light)
+}
+
+#Preview("Team, iPhone Duo open", traits: .fixedLayout(width: DuoPreview.innerContent.width, height: 2600)) {
+    CommunityPreviewHost { TeamView() }
+        .previewFold(.previewBook)
+        .environment(\.colorScheme, .light)
+}
+
+#Preview("Team, iPhone Duo open, solo, night", traits: .fixedLayout(width: DuoPreview.innerContent.width, height: 2200)) {
+    CommunityPreviewHost(client: .previewing(team: PreviewCommunity.soloTeam)) { TeamView() }
+        .previewFold(.previewFlat)
+        .environment(\.colorScheme, .dark)
 }

@@ -9,7 +9,8 @@ import SwiftUI
 /// | Go | Home, Guides, Community, You (the sidebar's order) | ⌘1 to ⌘4 |
 /// | Go | Back | ⌘[ |
 /// | Go | Continue Lesson | ⇧⌘L |
-/// | Go | Videos, Glossary, Bookmarks, Leaderboard, Badges, My Team | |
+/// | Go | Videos, Glossary, Tools, Resources, Bookmarks, Leaderboard, Badges, My Team | |
+/// | Go | Admin (site admins), Admin team (super admins); nothing for anyone else | |
 /// | Lesson | Next Lesson / Previous Lesson | ⌥⌘→ / ⌥⌘← |
 /// | Lesson | Bookmark Lesson / Remove Bookmark | ⌘D |
 /// | Lesson | Open on learnfrc.com, Copy Link | |
@@ -148,11 +149,15 @@ private struct GoMenuItems: View {
 
         Button("Videos") { target.perform { $0.open(.videos) } }
         Button("Glossary") { target.perform { $0.open(.glossaryIndex) } }
+        Button("Tools") { target.perform { $0.open(.tools) } }
+        Button("Resources") { target.perform { $0.open(.resources) } }
         Button("Bookmarks") { target.perform { $0.open(.bookmarks) } }
         Button("Leaderboard") { target.perform { $0.open(.leaderboard) } }
         Button("Badges") { target.perform { $0.open(.achievements) } }
         Button("My Team") { target.perform { $0.open(.team) } }
             .disabled(!model.account.isSignedIn)
+
+        AdminMenuItems { destination in target.perform { $0.open(AppRoute(destination)) } }
     }
 }
 

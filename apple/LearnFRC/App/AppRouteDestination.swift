@@ -39,6 +39,13 @@ struct AppRouteDestination: View {
         case .videos: VideosView()
         case .achievements: AchievementsView()
         case .bookmarks: BookmarksView()
+        case .tools: ToolsView()
+        case .tool(let slug): ToolView(slug: slug)
+        case .resources: ResourcesView()
+        case .admin: AdminDashboardView()
+        case .adminFeedback: AdminFeedbackView()
+        case .adminTeam: AdminTeamView()
+        case .apply: ApplyView()
         }
     }
 }
@@ -49,8 +56,37 @@ extension View {
     /// stack's environment, and `isShowing(_:in:)` and `push(_:in:)` need it.
     func appRouteDestinations(tab: AppTab? = nil) -> some View {
         navigationDestination(for: AppRoute.self) {
-            AppRouteDestination(route: $0).environment(\.navigationTab, tab)
+            AppRouteDestination(route: $0)
+                .verticalBarKeepsScreenActions()
+                .environment(\.navigationTab, tab)
+                .environment(\.adminNavigator, AdminNavigator { AppRoute($0) })
         }
+    }
+
+    /// How iPhone Duo's vertical bar (iOS 27.1) shares its room when a screen's own buttons
+    /// and the five tabs don't all fit, as on the cover screen in landscape: the screen's
+    /// buttons stay (back, and a lesson's Save and More) and the tab bar folds down to the
+    /// selected tab, which still opens the others. Someone reading a lesson there reaches for
+    /// Save more than for another tab. It's what the bar did on its own in testing, set on
+    /// purpose here; the system resolves it from the top of each stack, so every tab root and
+    /// every pushed screen carries it. `.prefersTabBar` made no difference in that space: with
+    /// a back button the bar never had room for all five tabs.
+    func verticalBarKeepsScreenActions() -> some View {
+        modifier(VerticalBarCompression())
+    }
+}
+
+private struct VerticalBarCompression: ViewModifier {
+    func body(content: Content) -> some View {
+        #if os(iOS)
+        if #available(iOS 27.1, *) {
+            content.toolbarVerticalCompressionBehavior(.prefersToolbarItems)
+        } else {
+            content
+        }
+        #else
+        content
+        #endif
     }
 }
 
@@ -75,6 +111,13 @@ extension AppRoute {
         case .videos: "Videos"
         case .achievements: "Badges"
         case .bookmarks: "Bookmarks"
+        case .tools: "Tools"
+        case .tool: "Tool"
+        case .resources: "Resources"
+        case .admin: "Admin"
+        case .adminFeedback: "Feedback"
+        case .adminTeam: "Admin team"
+        case .apply: "Help run it"
         }
     }
 }

@@ -185,7 +185,8 @@ struct CoreSelfCheckView: View {
             .department(PreviewData.department.id), .module(PreviewData.module.id), .lesson(PreviewData.lesson.id),
             .article("frc-brownout"), .glossaryTerm("wpilib"), .path("game-day-ready"), .profile("kai_cad"),
             .team, .leaderboard, .settings, .certificate(PreviewData.department.id), .videos, .achievements,
-            .bookmarks,
+            .bookmarks, .tools, .tool("frc-gear-ratio-calculator"), .resources,
+            .admin, .adminFeedback, .adminTeam, .apply,
         ]
         let broken = routes.filter { AppRoute(deepLink: $0.deepLinkURL) != $0 }
         add("Deep links round trip", broken.isEmpty, broken.isEmpty ? "\(routes.count) routes, e.g. \(routes[2].deepLinkURL.absoluteString)" : "\(broken)")

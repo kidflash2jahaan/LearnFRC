@@ -12,6 +12,9 @@ import SwiftUI
 /// those outside events itself (`handlesExternalEvents`), so they never open a new window.
 /// Whatever `WindowNavigation` holds is what the window shows: a tab's stack is always
 /// built from, and writes back to, that tab's path.
+///
+/// The window also reads its fold and hinge (iPhone Duo, iOS 27.1) and hands them to every
+/// screen and sheet in it as `\.fold` (`providesWindowFold()`, Design/Fold.swift).
 struct RootView: View {
     @Environment(AppModel.self) private var model
     @Environment(AccountStore.self) private var account
@@ -59,6 +62,9 @@ struct RootView: View {
             // don't move the window: the screen already on show, a page that opens in the
             // browser, a link still waiting for the cache.
             .onOpenURL { url in
+                // Continue with Google's callback belongs to the web sign-in sheet waiting for
+                // it; it never moves the window or closes the sign-in sheet.
+                guard !DeepLink.isAuthCallback(url) else { return }
                 model.activate(navigation)
                 stepAside()
                 SystemServices.open(url)
@@ -105,6 +111,9 @@ struct RootView: View {
             .onChange(of: scenePhase) { _, phase in
                 if phase == .active { Task { await model.sceneBecameActive() } }
             }
+            // The window's fold and hinge (`\.fold`) for every screen and sheet in it. Outermost,
+            // so the sheets presented above (sign-in, the setup step) get it too.
+            .providesWindowFold()
     }
 
     /// iPhone and iPad: the system tab view, or the username gate in its place. Mac: its own
@@ -132,6 +141,12 @@ struct RootView: View {
     private var isGated: Bool { account.needsUsernameSetup }
 
     #if os(iOS)
+    /// On iPhone Duo (iOS 27.1) the same tab view becomes the system's vertical bar, icons only,
+    /// on the cover screen and on the inner screen held upright, and the usual floating tab bar
+    /// held sideways. It never becomes a sidebar there (the Duo is a phone), and the app adds no
+    /// navigation column of its own for the wide inner screen: the bar is the Duo's navigation,
+    /// and a second column would fight it. How the bar shares its room with a screen's own
+    /// buttons is set per screen (`verticalBarKeepsScreenActions()`).
     private var tabs: some View {
         @Bindable var navigation = navigation
         return TabView(selection: $navigation.selectedTab) {
@@ -221,6 +236,7 @@ struct RootView: View {
         @Bindable var navigation = navigation
         return NavigationStack(path: $navigation[stack: tab]) {
             tabRoot(tab)
+                .verticalBarKeepsScreenActions()
                 .appRouteDestinations(tab: tab)
         }
         .environment(\.navigationTab, tab)

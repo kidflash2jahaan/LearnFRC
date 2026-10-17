@@ -131,6 +131,10 @@ struct Me: Codable, Hashable, Sendable, Identifiable {
     /// Show the one-time "Want reminder emails?" card.
     let emailPrompt: Bool
     let referralCount: Int
+    /// The account's site role as `/api/app/me` reports it: "member", "admin" or "superadmin".
+    /// Display only (`AdminStore.adopt`); every admin route checks the role again. Nil from an
+    /// older site, or when this came from the device alone.
+    let siteRole: String?
     /// True when this came from the session alone (offline, never fetched). Not part of the route.
     let isProvisional: Bool
 
@@ -138,7 +142,7 @@ struct Me: Codable, Hashable, Sendable, Identifiable {
 
     init(
         user: User, profile: Profile, needsUsernameSetup: Bool, isPlaceholderUsername: Bool = false,
-        emailPrompt: Bool = false, referralCount: Int = 0, isProvisional: Bool = false
+        emailPrompt: Bool = false, referralCount: Int = 0, siteRole: String? = nil, isProvisional: Bool = false
     ) {
         self.user = user
         self.profile = profile
@@ -146,11 +150,12 @@ struct Me: Codable, Hashable, Sendable, Identifiable {
         self.isPlaceholderUsername = isPlaceholderUsername
         self.emailPrompt = emailPrompt
         self.referralCount = referralCount
+        self.siteRole = siteRole
         self.isProvisional = isProvisional
     }
 
     private enum CodingKeys: String, CodingKey {
-        case user, profile, needsUsernameSetup, isPlaceholderUsername, emailPrompt, referralCount, isProvisional
+        case user, profile, needsUsernameSetup, isPlaceholderUsername, emailPrompt, referralCount, siteRole, isProvisional
     }
 
     init(from decoder: any Decoder) throws {
@@ -170,6 +175,7 @@ struct Me: Codable, Hashable, Sendable, Identifiable {
             isPlaceholderUsername: c.flexibleBool(forKey: .isPlaceholderUsername) ?? false,
             emailPrompt: c.flexibleBool(forKey: .emailPrompt) ?? false,
             referralCount: c.flexibleInt(forKey: .referralCount) ?? 0,
+            siteRole: c.flexibleString(forKey: .siteRole),
             isProvisional: c.flexibleBool(forKey: .isProvisional) ?? false
         )
     }
@@ -192,7 +198,8 @@ struct Me: Codable, Hashable, Sendable, Identifiable {
             needsUsernameSetup: profile.username == nil,
             isPlaceholderUsername: profile.username == self.profile.username ? isPlaceholderUsername : false,
             emailPrompt: emailPrompt && profile.emailChoiceAt == nil,
-            referralCount: referralCount
+            referralCount: referralCount,
+            siteRole: siteRole
         )
     }
 
@@ -206,7 +213,8 @@ struct Me: Codable, Hashable, Sendable, Identifiable {
         )
         return Me(
             user: user, profile: updated, needsUsernameSetup: needsUsernameSetup,
-            isPlaceholderUsername: isPlaceholderUsername, emailPrompt: false, referralCount: referralCount
+            isPlaceholderUsername: isPlaceholderUsername, emailPrompt: false, referralCount: referralCount,
+            siteRole: siteRole
         )
     }
 }
@@ -269,10 +277,12 @@ struct SignUpRequest: Codable, Hashable, Sendable {
     var emailOptIn: Bool
     var ref: String?
     var via: String?
+    /// `ios`, `ipados` or `macos` (`AppConfig.platformID`): recorded as the signup source.
+    var platform: String?
 
     init(
         email: String, password: String, username: String, fullName: String? = nil, teamNumber: Int? = nil,
-        emailOptIn: Bool = false, ref: String? = nil, via: String? = nil
+        emailOptIn: Bool = false, ref: String? = nil, via: String? = nil, platform: String? = nil
     ) {
         self.email = email
         self.password = password
@@ -282,6 +292,7 @@ struct SignUpRequest: Codable, Hashable, Sendable {
         self.emailOptIn = emailOptIn
         self.ref = ref
         self.via = via
+        self.platform = platform
     }
 }
 

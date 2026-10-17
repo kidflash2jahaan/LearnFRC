@@ -32,7 +32,7 @@ struct LearnModuleLog: View {
     }
 
     /// Prerequisite modules read `pre`; the rest are numbered 1..N.
-    private var numbers: [UUID: String] {
+    static func numbers(in department: Department) -> [UUID: String] {
         var labels: [UUID: String] = [:]
         var n = 0
         for module in department.modules {
@@ -47,7 +47,7 @@ struct LearnModuleLog: View {
     }
 
     var body: some View {
-        let numbers = numbers
+        let numbers = Self.numbers(in: department)
         VStack(alignment: .leading, spacing: 0) {
             ForEach(department.modules) { module in
                 moduleSection(module, number: numbers[module.id] ?? "")
@@ -176,7 +176,7 @@ struct LearnModuleLog: View {
 
             VStack(alignment: .leading, spacing: 0) {
                 ForEach(Array(module.lessons.enumerated()), id: \.element.id) { index, lesson in
-                    lessonRow(lesson, label: "\(isPre ? "P" : number).\(index + 1)")
+                    LearnModuleLessonRow(lesson: lesson, label: "\(isPre ? "P" : number).\(index + 1)")
                 }
             }
             .padding(.top, 6)
@@ -185,10 +185,28 @@ struct LearnModuleLog: View {
         .padding(.bottom, 22)
     }
 
-    /// The tick, the lesson's number and title, and its minutes on the right. At the
-    /// accessibility sizes the minutes go under the title and the number above it, so the
-    /// title isn't squeezed into a column two letters wide.
-    private func lessonRow(_ lesson: LessonSummary, label: String) -> some View {
+    private func toggle(_ id: UUID) {
+        Haptics.select()
+        LF.Motion.perform(LF.Motion.arrive) {
+            var modules = openModules
+            if modules.contains(id) { modules.remove(id) } else { modules.insert(id) }
+            open = modules
+            openDepartment = department.id
+        }
+    }
+}
+
+/// One lesson in a module's list: the tick, the lesson's number and title, and its minutes on
+/// the right. At the accessibility sizes the minutes go under the title and the number above
+/// it, so the title isn't squeezed into a column two letters wide.
+struct LearnModuleLessonRow: View {
+    let lesson: LessonSummary
+    let label: String
+
+    @Environment(ProgressStore.self) private var progress
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    var body: some View {
         let done = progress.isCompleted(lesson.id)
         let pending = progress.isPending(lesson.id)
         let number = SlugText(label, color: LF.Palette.blue, weight: .bold)
@@ -201,7 +219,7 @@ struct LearnModuleLog: View {
                 .fixedSize(horizontal: false, vertical: true)
         }
         let minutes = lesson.estimatedMinutes > 0 ? "\(lesson.estimatedMinutes) min" : nil
-        return NavigationLink(value: AppRoute.lesson(lesson.id)) {
+        NavigationLink(value: AppRoute.lesson(lesson.id)) {
             Group {
                 if dynamicTypeSize.isAccessibilitySize {
                     VStack(alignment: .leading, spacing: 6) {
@@ -246,15 +264,170 @@ struct LearnModuleLog: View {
         .accessibilityLabel("Lesson \(label): \(lesson.title)")
         .accessibilityValue(LearnFormat.lessonState(done: done, pending: pending, minutes: lesson.estimatedMinutes))
     }
+}
 
-    private func toggle(_ id: UUID) {
-        Haptics.select()
-        LF.Motion.perform(LF.Motion.arrive) {
-            var modules = openModules
-            if modules.contains(id) { modules.remove(id) } else { modules.insert(id) }
-            open = modules
-            openDepartment = department.id
+// MARK: - Two pages
+
+/// The department's modules as a list to choose from, on iPhone Duo's leading page: picking
+/// one shows its lessons on the next page (`LearnModulePage`). Each row is the log's header,
+/// the stamped number, the title with its count and the meter, and the chosen one is marked
+/// three ways (a blue bar, a wash and "lessons on the next page"), so the state never rests
+/// on colour alone.
+struct LearnModuleIndex: View {
+    let department: Department
+    let selected: UUID?
+    let onSelect: (Module) -> Void
+
+    @Environment(ProgressStore.self) private var progress
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    var body: some View {
+        let numbers = LearnModuleLog.numbers(in: department)
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(department.modules) { module in
+                InkRule()
+                row(module, number: numbers[module.id] ?? "")
+            }
+            InkRule()
         }
+    }
+
+    private func row(_ module: Module, number: String) -> some View {
+        let isSelected = module.id == selected
+        let counts = progress.moduleProgress(module)
+        let percent = counts.total > 0 ? Int((Double(counts.done) / Double(counts.total) * 100).rounded()) : 0
+        let isPre = module.isPrerequisite
+        let numberBox = LearnStampedBox(side: 44) {
+            Text(isPre ? "pre" : LearnFormat.ordinal(Int(number) ?? 0))
+                .font(LF.Fonts.mono(14, weight: .bold, relativeTo: .callout))
+                .monospacedDigit()
+                .foregroundStyle(LF.Palette.ink)
+        }
+        let titleBlock = VStack(alignment: .leading, spacing: 5) {
+            if isPre {
+                TagView("start here")
+            }
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                LearnWholeWords(text: module.title) { string in
+                    Text(string)
+                        .font(LF.Fonts.display(19, relativeTo: .title3))
+                        .tracking(-0.47)
+                        .foregroundStyle(LF.Palette.ink)
+                        .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                if counts.total > 0 && counts.done >= counts.total {
+                    PenCheckMark(size: 13)
+                }
+            }
+            SlugText("\(isPre ? "recommended first, " : "")\(counts.done) of \(LearnFormat.plural(counts.total, "lesson", "lessons")), \(percent)%")
+                .multilineTextAlignment(.leading)
+                .fixedSize(horizontal: false, vertical: true)
+            if isSelected {
+                SlugText("lessons on the next page", color: LF.Palette.blue, weight: .bold)
+                    .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        let arrow = Image(systemName: "chevron.forward")
+            .font(.footnote.weight(.bold))
+            .foregroundStyle(isSelected ? LF.Palette.blue : LF.Palette.graphite)
+            .accessibilityHidden(true)
+
+        return Button {
+            onSelect(module)
+        } label: {
+            Group {
+                if dynamicTypeSize.isAccessibilitySize {
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack(alignment: .center) {
+                            numberBox
+                            Spacer(minLength: 12)
+                            arrow
+                        }
+                        titleBlock
+                    }
+                } else {
+                    HStack(alignment: .center, spacing: 12) {
+                        numberBox
+                        titleBlock
+                        arrow
+                    }
+                }
+            }
+            .padding(.vertical, 15)
+            .padding(.leading, 12)
+            .padding(.trailing, 6)
+            .background(isSelected ? LF.Palette.rowWash : Color.clear)
+            .overlay(alignment: .leading) {
+                if isSelected {
+                    Rectangle().fill(LF.Palette.blue).frame(width: LF.Metrics.heavyStroke)
+                }
+            }
+            .frame(minHeight: LF.Metrics.tap)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(LearnWashButtonStyle())
+        .accessibilityLabel("\(isPre ? "Start here: \(module.title)" : "Module \(number): \(module.title)"), \(counts.done) of \(LearnFormat.plural(counts.total, "lesson", "lessons")) done")
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+        .accessibilityHint(isSelected ? "Its lessons are on the next page" : "Shows its lessons on the next page")
+    }
+}
+
+/// One module's lessons as a page of their own: iPhone Duo's trailing page beside the
+/// department's list of modules (`LearnModuleIndex`). Where the module sits, its name, how
+/// far in the reader is, the overview, the way to the module's own page, and the lessons.
+struct LearnModulePage: View {
+    let department: Department
+    let module: Module
+
+    @Environment(ProgressStore.self) private var progress
+
+    var body: some View {
+        let number = LearnModuleLog.numbers(in: department)[module.id] ?? ""
+        let isPre = module.isPrerequisite
+        let counts = progress.moduleProgress(module)
+        VStack(alignment: .leading, spacing: 0) {
+            SectionLabel(isPre ? "start here, before the numbered modules" : "module \(number) of \(department.modules.count)")
+            LearnWholeWords(text: module.title) { string in
+                Text(string)
+                    .lfTitle(.h2)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(.top, 12)
+            MeterView(value: counts.total > 0 ? Double(counts.done) / Double(counts.total) : 0,
+                      label: "\(counts.done) of \(LearnFormat.plural(counts.total, "lesson", "lessons")) done",
+                      valueText: "\(counts.done)/\(counts.total)")
+                .padding(.top, 16)
+            if let overview = module.overview, !overview.isEmpty {
+                Text(overview)
+                    .lfProse(15.5, lineHeight: 1.5, color: LF.Palette.graphite)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .learnMeasure(62)
+                    .padding(.top, 16)
+            }
+            NavigationLink(value: AppRoute.module(module.id)) {
+                LearnLinkLabel(title: "Read the module overview", systemImage: "arrow.right")
+            }
+            .buttonStyle(.plain)
+            .padding(.top, 4)
+
+            if module.lessons.isEmpty {
+                LearnNotice(kicker: "nothing filed here yet",
+                            message: "This module has no published lessons yet. The rest of the department is ready to read.")
+                    .padding(.top, 14)
+            } else {
+                VStack(alignment: .leading, spacing: 0) {
+                    InkRule()
+                    ForEach(Array(module.lessons.enumerated()), id: \.element.id) { index, lesson in
+                        LearnModuleLessonRow(lesson: lesson, label: "\(isPre ? "P" : number).\(index + 1)")
+                    }
+                }
+                .padding(.top, 10)
+            }
+        }
+        .accessibilityElement(children: .contain)
     }
 }
 

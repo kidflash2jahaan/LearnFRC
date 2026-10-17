@@ -44,47 +44,57 @@ struct GlossaryView: View {
     var body: some View {
         let terms = filtered
         let sections = Self.sections(terms)
-        ScrollViewReader { proxy in
-            ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    masthead
-                    if reference.glossary.isEmpty {
-                        notLoaded
-                            .padding(.top, 30)
-                    } else {
-                        InkRule()
-                            .padding(.top, 26)
-                        filters(sections: sections, proxy: proxy)
-                            .padding(.top, 24)
-                        countLine(terms.count)
-                            .padding(.top, 26)
-                        if terms.isEmpty {
-                            noMatch
-                                .padding(.top, 24)
+        FoldReader { geometry, fold in
+            let margins = geometry.lfPageMargins
+            // iPhone Duo held upright: the masthead and the filters go a block to each page,
+            // and the cards a column to each (`SearchAdaptiveGrid`).
+            let spread = fold.searchSpread(width: geometry.size.width, margins: margins)
+            let leftPage = spread?.band?.minX
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 0) {
+                        masthead(spread: spread)
+                        if reference.glossary.isEmpty {
+                            notLoaded
+                                .frame(maxWidth: leftPage ?? .infinity, alignment: .leading)
+                                .padding(.top, 30)
                         } else {
-                            catalogue(sections)
+                            InkRule()
+                                .padding(.top, 26)
+                            filters(sections: sections, proxy: proxy, spread: spread)
+                                .padding(.top, 24)
+                            countLine(terms.count)
+                                .padding(.top, 26)
+                            if terms.isEmpty {
+                                noMatch
+                                    .frame(maxWidth: leftPage ?? .infinity, alignment: .leading)
+                                    .padding(.top, 24)
+                            } else {
+                                catalogue(sections)
+                            }
                         }
                     }
+                    .padding(.top, 8)
+                    .padding(.bottom, 56)
+                    .searchPage(margins: margins)
                 }
-                .padding(.top, 8)
-                .padding(.bottom, 56)
-                .searchPage()
+                // The Mac rebuilds the tab on every switch: the catalogue comes back where it was
+                // left, with its filter (below).
+                .remembersScroll(Self.place)
             }
-            // The Mac rebuilds the tab on every switch: the catalogue comes back where it was
-            // left, with its filter (below).
-            .remembersScroll(Self.place)
         }
         .scrollDismissesKeyboard(.immediately)
         .paperBackground()
         .navigationTitle("Glossary")
         .toolbarTitleDisplayMode(.inline)
-        .searchable(text: $query, prompt: Text("A term, an acronym, or a phrase"))
+        .searchFieldInView(text: $query, prompt: Text("A term, an acronym, or a phrase"))
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 ShareLink(item: AppConfig.webBase.appending(path: "glossary")) {
                     Label("Share the glossary", systemImage: "square.and.arrow.up")
                 }
             }
+            .lfAxisBehavior(.verticalPreferred)
         }
         .closesShareSheetsOnNavigation()
         .onAppear(perform: restoreFilter)
@@ -143,10 +153,17 @@ struct GlossaryView: View {
 
     // MARK: Masthead
 
-    private var masthead: some View {
+    private func masthead(spread: FoldInfo?) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             SectionLabel("the card catalogue")
-            if dynamicTypeSize.isAccessibilitySize {
+            if let spread {
+                // The title on the left page, the margin note on the right one.
+                FoldSplitLayout(fold: spread) {
+                    mastheadText
+                    MarkerText("look it up mid-argument, that\u{2019}s what it\u{2019}s for", size: 22, angle: -1.4)
+                        .padding(.top, 34)
+                }
+            } else if dynamicTypeSize.isAccessibilitySize {
                 mastheadNarrow
             } else {
                 SearchWidthSwitch(minWidth: Self.wideContent) {
@@ -164,6 +181,7 @@ struct GlossaryView: View {
             }
             if !reference.glossary.isEmpty {
                 tally
+                    .frame(maxWidth: spread?.band?.minX ?? .infinity, alignment: .leading)
                     .padding(.top, 22)
             }
         }
@@ -217,18 +235,24 @@ struct GlossaryView: View {
 
     // MARK: Filters
 
-    private func filters(sections: [GlossarySection], proxy: ScrollViewProxy) -> some View {
-        VStack(alignment: .leading, spacing: 22) {
-            VStack(alignment: .leading, spacing: 8) {
-                SlugText("filter / category")
-                    .accessibilityAddTraits(.isHeader)
-                chips
-            }
-            VStack(alignment: .leading, spacing: 8) {
-                SlugText("jump to a letter")
-                    .accessibilityAddTraits(.isHeader)
-                letterRail(sections: sections, proxy: proxy)
-            }
+    /// On a spread the categories take the left page and the letters the right, both wrapped.
+    private func filters(sections: [GlossarySection], proxy: ScrollViewProxy, spread: FoldInfo?) -> some View {
+        let categoryFilter = VStack(alignment: .leading, spacing: 8) {
+            SlugText("filter / category")
+                .accessibilityAddTraits(.isHeader)
+            chips(wrapped: spread != nil)
+        }
+        let letterFilter = VStack(alignment: .leading, spacing: 8) {
+            SlugText("jump to a letter")
+                .accessibilityAddTraits(.isHeader)
+            letterRail(sections: sections, proxy: proxy, wrapped: spread != nil)
+        }
+        return FoldSplitLayout(
+            fold: spread ?? .none,
+            fallback: AnyLayout(VStackLayout(alignment: .leading, spacing: 22))
+        ) {
+            categoryFilter
+            letterFilter
         }
     }
 
@@ -239,10 +263,12 @@ struct GlossaryView: View {
         return ordered.filter { used.contains($0) }
     }
 
-    /// Wraps on a wide window; one sideways-scrolling row on a phone.
+    /// Wraps on a wide window and on a page of a spread; one sideways-scrolling row on a phone.
     @ViewBuilder
-    private var chips: some View {
-        if dynamicTypeSize.isAccessibilitySize {
+    private func chips(wrapped: Bool) -> some View {
+        if wrapped {
+            SearchFlowLayout(spacing: 8, lineSpacing: 2) { chipList }
+        } else if dynamicTypeSize.isAccessibilitySize {
             chipScroller
         } else {
             SearchWidthSwitch(minWidth: Self.wideContent) {
@@ -290,7 +316,7 @@ struct GlossaryView: View {
     /// wrapped onto as many lines as it takes on a wide window, one sideways-scrolling strip on
     /// a phone and at the accessibility sizes.
     @ViewBuilder
-    private func letterRail(sections: [GlossarySection], proxy: ScrollViewProxy) -> some View {
+    private func letterRail(sections: [GlossarySection], proxy: ScrollViewProxy, wrapped: Bool) -> some View {
         let available = Set(sections.map(\.letter))
         let letters = GlossaryRules.alphabet + (available.contains("#") ? ["#"] : [])
         let keys = ForEach(letters, id: \.self) { letter in
@@ -302,7 +328,9 @@ struct GlossaryView: View {
         }
         .scrollIndicators(.hidden)
         .scrollClipDisabled()
-        if dynamicTypeSize.isAccessibilitySize {
+        if wrapped {
+            SearchFlowLayout(spacing: 8, lineSpacing: 8) { keys }
+        } else if dynamicTypeSize.isAccessibilitySize {
             strip
         } else {
             SearchWidthSwitch(minWidth: Self.wideContent) {

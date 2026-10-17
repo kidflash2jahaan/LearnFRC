@@ -18,6 +18,10 @@ struct DepartmentView: View {
     @Environment(\.isPresented) private var isPresented
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
+    /// The module whose lessons the trailing page shows on iPhone Duo's inner screen. Nil
+    /// until one is picked: the module with the next lesson in it, or the first.
+    @State private var chosenModule: UUID?
+
     init(departmentID: UUID) {
         self.departmentID = departmentID
     }
@@ -69,7 +73,10 @@ struct DepartmentView: View {
 
     private func content(_ department: Department) -> some View {
         let standing = standing(of: department)
-        return LearnScrollPage(title: department.name, refresh: { await model.refreshAll() }, place: .route(.department(departmentID))) { layout, _ in
+        let chosen = chosenModule(in: department, standing: standing)
+        return LearnScrollPage(title: department.name, refresh: { await model.refreshAll() },
+                               place: .route(.department(departmentID)),
+                               companionAxes: chosen != nil || hasMargin(department) ? .horizontal : []) { layout, proxy in
             masthead(department, standing: standing, layout: layout)
                 .learnColumn(layout)
                 .padding(.top, 18)
@@ -81,13 +88,32 @@ struct DepartmentView: View {
             progressStack(department, standing: standing, layout: layout)
                 .learnColumn(layout)
 
-            pathAndMargin(department, layout: layout)
+            pathAndMargin(department, layout: layout, chosen: chosen, proxy: proxy)
                 .learnColumn(layout)
                 .padding(.top, 44)
 
             signOff(department, standing: standing, layout: layout)
                 .learnColumn(layout)
                 .padding(.top, 52)
+        } companion: { layout in
+            // iPhone Duo's trailing page: the chosen module's lessons, then the field notes,
+            // which are the department's margin anyway.
+            VStack(alignment: .leading, spacing: 0) {
+                Color.clear
+                    .frame(height: 0)
+                    .id(LearnAnchor.companionTop)
+                if let chosen {
+                    LearnModulePage(department: department, module: chosen)
+                        .id(chosen.id)
+                        .transition(.opacity)
+                }
+                if hasMargin(department) {
+                    LearnFieldNotes(department: department)
+                        .padding(.top, 44)
+                }
+            }
+            .learnColumn(layout)
+            .padding(.top, 18)
         }
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
@@ -98,6 +124,23 @@ struct DepartmentView: View {
             }
         }
         .learnHandoff(department.webURL, place: .route(.department(departmentID)))
+    }
+
+    /// The module shown on the trailing page: the one picked, else the one holding the next
+    /// lesson, else the first.
+    private func chosenModule(in department: Department, standing: Standing) -> Module? {
+        if let id = chosenModule, let module = department.modules.first(where: { $0.id == id }) {
+            return module
+        }
+        if let next = standing.next, let module = department.modules.first(where: { $0.id == next.module.id }) {
+            return module
+        }
+        return department.modules.first
+    }
+
+    private func hasMargin(_ department: Department) -> Bool {
+        !department.whatYoullLearn.isEmpty || !department.tools.isEmpty
+            || !department.prerequisites.isEmpty || !department.sources.isEmpty
     }
 
     // MARK: Masthead
@@ -330,31 +373,52 @@ struct DepartmentView: View {
     // MARK: The path and the margin
 
     @ViewBuilder
-    private func pathAndMargin(_ department: Department, layout: LearnLayout) -> some View {
-        let path = VStack(alignment: .leading, spacing: 0) {
-            LearnSectionHeader(kicker: "the path", title: "Modules and lessons")
-            LearnModuleLog(department: department, layout: layout)
-                .padding(.top, 22)
-        }
-        let hasMargin = !department.whatYoullLearn.isEmpty || !department.tools.isEmpty
-            || !department.prerequisites.isEmpty || !department.sources.isEmpty
+    private func pathAndMargin(_ department: Department, layout: LearnLayout, chosen: Module?, proxy: ScrollViewProxy) -> some View {
+        let hasMargin = hasMargin(department)
 
-        if layout.isWide && hasMargin {
-            HStack(alignment: .top, spacing: 44) {
-                path.frame(maxWidth: .infinity, alignment: .leading)
-                LearnFieldNotes(department: department)
-                    .frame(width: min(320, layout.contentWidth * 0.3))
-                    .padding(.top, 8)
+        if layout.role == .leadingPage {
+            // iPhone Duo's leading page: the modules to choose from. The chosen one's lessons
+            // and the field notes are on the next page.
+            VStack(alignment: .leading, spacing: 0) {
+                LearnSectionHeader(kicker: "the path", title: "Modules and lessons")
+                LearnModuleIndex(department: department, selected: chosen?.id) { module in
+                    choose(module, proxy: proxy)
+                }
+                .padding(.top, 22)
             }
         } else {
-            VStack(alignment: .leading, spacing: 44) {
-                path
-                if hasMargin {
+            let path = VStack(alignment: .leading, spacing: 0) {
+                LearnSectionHeader(kicker: "the path", title: "Modules and lessons")
+                LearnModuleLog(department: department, layout: layout)
+                    .padding(.top, 22)
+            }
+            if layout.isWide && hasMargin {
+                HStack(alignment: .top, spacing: 44) {
+                    path.frame(maxWidth: .infinity, alignment: .leading)
                     LearnFieldNotes(department: department)
-                        .frame(maxWidth: 640, alignment: .leading)
+                        .frame(width: min(320, layout.contentWidth * 0.3))
+                        .padding(.top, 8)
+                }
+            } else {
+                VStack(alignment: .leading, spacing: 44) {
+                    path
+                    if hasMargin {
+                        LearnFieldNotes(department: department)
+                            .frame(maxWidth: 640, alignment: .leading)
+                    }
                 }
             }
         }
+    }
+
+    /// Shows `module`'s lessons on the trailing page, from its top.
+    private func choose(_ module: Module, proxy: ScrollViewProxy) {
+        guard module.id != chosenModule else { return }
+        Haptics.select()
+        LF.Motion.perform(LF.Motion.arrive) {
+            chosenModule = module.id
+        }
+        proxy.scrollTo(LearnAnchor.companionTop, anchor: .top)
     }
 
     // MARK: Sign-off
@@ -529,3 +593,18 @@ struct LearnFieldNotes: View {
         .appEnvironment(.preview)
         .environment(\.colorScheme, .dark)
 }
+
+#if DEBUG
+#Preview("Department, Duo book", traits: .fixedLayout(width: 867, height: 2400)) {
+    NavigationStack { DepartmentView(departmentID: PreviewData.department.id) }
+        .appEnvironment(.preview)
+        .previewFold(.previewBook)
+}
+
+#Preview("Department, Duo book, dark", traits: .duoBook) {
+    NavigationStack { DepartmentView(departmentID: PreviewData.businessDepartment.id) }
+        .appEnvironment(.preview(signedIn: false, phase: .new))
+        .previewFold(.previewBook)
+        .environment(\.colorScheme, .dark)
+}
+#endif

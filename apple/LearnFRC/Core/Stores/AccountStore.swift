@@ -23,6 +23,15 @@ enum AccountChange: Hashable, Sendable {
     case deleted(userID: UUID)
 }
 
+/// How Continue with Google ended (`AccountStore.signInWithGoogle`).
+enum OAuthSignInOutcome: Hashable, Sendable {
+    /// Signed in. `isNewAccount` is the site's answer (`POST /api/app/auth/oauth-complete`):
+    /// the account was made by this sign-in. False when the site couldn't be asked.
+    case signedIn(isNewAccount: Bool)
+    /// The person closed the sheet or turned Google down. Show nothing.
+    case cancelled
+}
+
 /// Sign in, sign up, the signed-in profile and every account setting. Rules
 /// (username, ban list, team number, email consent, deletion) live on the
 /// website; this store calls `/api/app/*` and Supabase Auth.
@@ -46,6 +55,10 @@ final class AccountStore {
     @ObservationIgnored private var guestNotified = false
     @ObservationIgnored private var establishing: (userID: UUID, task: Task<Void, Never>)?
     @ObservationIgnored private var changeChain: Task<Void, Never>?
+    /// Closed while Continue with Google is running: the session lands (and Auth says
+    /// `.signedIn`) before the site has run its post-sign-in work, and nothing else may
+    /// start on the account until it has (`signInWithGoogle`).
+    @ObservationIgnored private var oauthGate: SignInGate?
     /// When each account on this device last skipped the profile setup step (user id to date).
     /// One entry covers both asks, like the site's one skip cookie.
     private var setupStepSkips: [String: Date] =
@@ -191,6 +204,9 @@ final class AccountStore {
             }
         case .signedIn:
             if let session {
+                // A Google sign-in's session arrives here first; it waits for the site's
+                // post-sign-in work, so the other stores (guest progress moving in) start after.
+                if let oauthGate { await oauthGate.wait() }
                 await establish(userID: session.user.id, email: session.user.email, isNewSignIn: true)
             }
         case .signedOut:
@@ -290,6 +306,77 @@ final class AccountStore {
         }
     }
 
+    /// Continue with Google, the site's button on its sign-in and sign-up forms.
+    ///
+    /// `present` shows Supabase's Google page in the system web sign-in sheet and returns the
+    /// `learnfrc://auth-callback` URL it ends on (a view passes its `webAuthenticationSession`).
+    /// The code in that URL becomes the session (`SupabaseService.signInWithOAuth`). Then the
+    /// site runs what its own Google callback runs (`POST /api/app/auth/oauth-complete`: signup
+    /// attribution and any pending referral reward for a brand-new account), and only then
+    /// does everything a normal sign-in does follow: `/me`, guest progress moving in, widgets,
+    /// and the username gate or the profile setup step the account needs. `ref` and `via` are
+    /// an invite's, from the sign-up screen.
+    ///
+    /// Throws a plain sentence when it fails; returns `.cancelled`, with nothing to show, when
+    /// the person closed the sheet.
+    @discardableResult
+    func signInWithGoogle(
+        ref: String? = nil,
+        via: String? = nil,
+        present: @MainActor @Sendable (_ url: URL) async throws -> URL
+    ) async throws -> OAuthSignInOutcome {
+        guard let supabase else { throw fail(.network) }
+        isWorking = true
+        defer { isWorking = false }
+        let gate = SignInGate()
+        oauthGate = gate
+        // However this ends, nothing is left waiting.
+        defer {
+            gate.open()
+            if oauthGate === gate { oauthGate = nil }
+        }
+
+        let session: Session
+        do {
+            guard let signedIn = try await supabase.signInWithOAuth(.google, present: present) else {
+                return .cancelled
+            }
+            session = signedIn
+        } catch {
+            throw fail(APIError.from(error))
+        }
+        lastError = nil
+        let isNewAccount = await completeOAuthSignIn(userID: session.user.id, ref: ref, via: via)
+        gate.open()
+        await establish(userID: session.user.id, email: session.user.email, isNewSignIn: true)
+        return .signedIn(isNewAccount: isNewAccount)
+    }
+
+    /// The site's post-sign-in work for an OAuth account. Like the site's Google callback, it
+    /// never blocks the sign-in: a failure is logged and the person carries on. If the network
+    /// blinked, it tries once more a few seconds later (the route is safe to repeat), so an
+    /// invite's referral isn't lost to one dropped request.
+    private func completeOAuthSignIn(userID: UUID, ref: String?, via: String?) async -> Bool {
+        guard let api else { return false }
+        let platform = AppConfig.platformID
+        do {
+            return try await api.completeOAuthSignIn(ref: ref, via: via, platform: platform)
+        } catch {
+            let error = APIError.from(error)
+            Log.auth.error("oauth-complete failed: \(error.message, privacy: .public)")
+            guard error == .network || error == .server else { return false }
+            Task { [weak self] in
+                try? await Task.sleep(for: .seconds(4))
+                guard let self, self.userID == userID else { return }
+                if (try? await api.completeOAuthSignIn(ref: ref, via: via, platform: platform)) != nil {
+                    // A referral reward lands as XP on the account.
+                    await self.refreshMe(force: true)
+                }
+            }
+            return false
+        }
+    }
+
     /// Creates an account through the site's rules. The person confirms by email
     /// (the link opens learnfrc.com), then signs in here.
     func signUp(
@@ -314,7 +401,8 @@ final class AccountStore {
             let outcome = try await api.signUp(SignUpRequest(
                 email: email, password: password, username: username,
                 fullName: (name?.isEmpty ?? true) ? nil : name,
-                teamNumber: teamNumber, emailOptIn: emailOptIn, ref: ref, via: via
+                teamNumber: teamNumber, emailOptIn: emailOptIn, ref: ref, via: via,
+                platform: AppConfig.platformID
             ))
             lastError = nil
             return outcome
@@ -367,6 +455,9 @@ final class AccountStore {
             state = .signedIn(fresh)
             freshMeUserID = fresh.user.id
             lastError = nil
+            // The role /me reports saves members the admin summary check (display only;
+            // every admin route checks it again).
+            AdminStore.shared.adopt(siteRole: fresh.siteRole, for: fresh.user.id)
             await cache.save(fresh, to: .me)
         } catch {
             let error = APIError.from(error)
@@ -557,5 +648,27 @@ final class AccountStore {
             activeUserID = nil
             freshMeUserID = nil
         }
+    }
+}
+
+/// A one-way gate: `wait()` returns once `open()` has been called, straight away if it already
+/// has. Holds the Auth `.signedIn` event for a Google sign-in until the site's post-sign-in
+/// work is done (`AccountStore.signInWithGoogle`).
+@MainActor
+private final class SignInGate {
+    private var isOpen = false
+    private var waiters: [CheckedContinuation<Void, Never>] = []
+
+    func wait() async {
+        guard !isOpen else { return }
+        await withCheckedContinuation { waiters.append($0) }
+    }
+
+    func open() {
+        guard !isOpen else { return }
+        isOpen = true
+        let waiting = waiters
+        waiters = []
+        for waiter in waiting { waiter.resume() }
     }
 }

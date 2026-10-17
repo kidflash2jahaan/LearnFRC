@@ -19,6 +19,14 @@ struct CommunityLayout: Equatable, Sendable {
     /// rank stamp) holds a word or two a line there and shrank handles to half size, so
     /// mastheads stay in one column however wide the window is.
     var isLargeText = false
+    /// The page's own margins (`GeometryProxy.lfPageMargins`): asymmetric beside iPhone Duo's
+    /// vertical bar. Nil uses the site's gutter on both sides.
+    var pageMargins: LF.PageMargins?
+    /// The two pages of an open iPhone Duo's inner screen, measured from the column's leading
+    /// edge (`communityColumn`): the leading page, the fold's band, the trailing page. Nil on
+    /// every other screen. Screens lay out as two pages whenever it's set, at every text
+    /// size: each page is about a phone wide, which every community screen already fits.
+    var pages: FoldColumns?
 
     /// Mastheads split into two columns; podiums stand side by side.
     var isWide: Bool { width >= 760 && !isLargeText }
@@ -27,8 +35,46 @@ struct CommunityLayout: Equatable, Sendable {
     /// Tables show every column (lessons on the leaderboard).
     var isFull: Bool { width >= 700 }
     var gutter: CGFloat { LF.Metrics.gutter(for: width) }
+    /// The leading and trailing margins around the column.
+    var margins: LF.PageMargins { pageMargins ?? LF.PageMargins(leading: gutter, trailing: gutter) }
+    /// The column's width (inside the margins, under the site's 1280pt wrap).
+    var columnWidth: CGFloat { max(0, min(width, LF.Metrics.maxContentWidth) - margins.total) }
     /// Section spacing, a little looser on big windows.
-    var sectionGap: CGFloat { isWide ? 56 : 40 }
+    var sectionGap: CGFloat { isWide || pages != nil ? 56 : 40 }
+
+    /// Two pages, one each side of the fold.
+    var isSpread: Bool { pages != nil }
+
+    /// The layout for something that sits on one page of a spread, `width` wide: it chooses
+    /// its narrow arrangements, as on a phone, and has no fold of its own.
+    func page(_ width: CGFloat) -> CommunityLayout {
+        CommunityLayout(width: width, isLargeText: isLargeText, pageMargins: LF.PageMargins(leading: 0, trailing: 0))
+    }
+
+    /// The layout for the leading page, or this one when there's no fold.
+    var leadingPage: CommunityLayout { pages.map { page($0.leading) } ?? self }
+    /// The layout for the trailing page, or this one when there's no fold.
+    var trailingPage: CommunityLayout { pages.map { page($0.trailing) } ?? self }
+
+    /// Reads the page's width, margins and fold.
+    init(width: CGFloat, isLargeText: Bool = false, pageMargins: LF.PageMargins? = nil, pages: FoldColumns? = nil) {
+        self.width = width
+        self.isLargeText = isLargeText
+        self.pageMargins = pageMargins
+        self.pages = pages
+    }
+
+    init(_ proxy: GeometryProxy, fold: FoldInfo, isLargeText: Bool) {
+        let margins = proxy.lfPageMargins
+        let width = proxy.size.width
+        var pages: FoldColumns?
+        // A column under the 1280pt wrap starts at the leading margin, so the fold's pages
+        // can be measured from there (an iPhone Duo is 867pt wide; nothing wider folds).
+        if width <= LF.Metrics.maxContentWidth {
+            pages = fold.columns(from: margins.leading, to: width - margins.trailing)
+        }
+        self.init(width: width, isLargeText: isLargeText, pageMargins: margins, pages: pages)
+    }
 }
 
 /// The scrolling sheet every community screen sits on: paper ruled with the grid, a
@@ -50,12 +96,13 @@ struct CommunityPage<Content: View>: View {
     }
 
     var body: some View {
-        // The width is read in the same layout pass, so a wide window never flashes the phone layout.
-        GeometryReader { geometry in
+        // The width and the fold are read in the same layout pass, so a wide window never
+        // flashes the phone layout.
+        FoldReader { geometry, fold in
             ScrollViewReader { proxy in
                 ScrollView {
                     VStack(alignment: .leading, spacing: 0) {
-                        content(CommunityLayout(width: geometry.size.width, isLargeText: typeSize.isAccessibilitySize), proxy)
+                        content(CommunityLayout(geometry, fold: fold, isLargeText: typeSize.isAccessibilitySize), proxy)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.top, 8)
@@ -78,11 +125,13 @@ struct CommunityPage<Content: View>: View {
 
 extension View {
     /// One column of page content: capped at the site's 1280pt wrap (or narrower), centred,
-    /// with the site's fluid gutter.
+    /// inside the page's margins (the site's fluid gutter, or the system's margin beside
+    /// iPhone Duo's vertical bar).
     func communityColumn(_ layout: CommunityLayout, maxWidth: CGFloat = LF.Metrics.maxContentWidth) -> some View {
         self
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, layout.gutter)
+            .padding(.leading, layout.margins.leading)
+            .padding(.trailing, layout.margins.trailing)
             .frame(maxWidth: maxWidth)
             .frame(maxWidth: .infinity)
     }

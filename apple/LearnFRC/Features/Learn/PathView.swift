@@ -58,36 +58,70 @@ struct PathView: View {
         let started = routeLessons.contains { progress.isCompleted($0.id) }
         let next = routeLessons.first { !progress.isCompleted($0.id) }
 
+        let figures: [(label: String, value: String, unit: String?)] = [
+            ("stops", path.steps.count.formatted(), nil),
+            ("departments", uniqueDepartments.count.formatted(), nil),
+            ("skills at the end", path.outcomes.count.formatted(), nil),
+            ("hours of reading", hours.formatted(), nil),
+        ]
+
         return LearnScrollPage(title: path.title, refresh: { await model.refreshAll() }, place: .route(.path(slug))) { layout, proxy in
-            masthead(path, number: number, stops: stops, layout: layout, proxy: proxy,
-                     resume: started ? next : nil)
-                .learnColumn(layout)
+            if let pages = layout.pages {
+                // iPhone Duo's inner screen held upright: the route and the way in on the
+                // leading page, its figures and the order to read it in on the trailing page.
+                let leading = LearnLayout.page(pages.leading)
+                let trailing = LearnLayout.page(pages.trailing)
+                LearnSpread(pages: pages) {
+                    VStack(alignment: .leading, spacing: 0) {
+                        masthead(path, number: number, stops: stops, layout: leading, proxy: proxy,
+                                 resume: started ? next : nil)
+                        if let first = stops.first {
+                            wayIn(path, first: first, last: stops.last ?? first, layout: leading)
+                                .padding(.top, 48)
+                        }
+                    }
+                } trailing: {
+                    VStack(alignment: .leading, spacing: 0) {
+                        LearnFigureRule(figures: figures, layout: trailing)
+                        itinerary(path, stops: stops, tracked: tracked, layout: trailing)
+                            .padding(.top, 40)
+                    }
+                }
+                .learnColumn(layout, spread: true)
                 .padding(.top, 20)
 
-            LearnFigureRule(figures: [
-                ("stops", path.steps.count.formatted(), nil),
-                ("departments", uniqueDepartments.count.formatted(), nil),
-                ("skills at the end", path.outcomes.count.formatted(), nil),
-                ("hours of reading", hours.formatted(), nil),
-            ], layout: layout)
-            .learnColumn(layout)
-            .padding(.top, 30)
-
-            itinerary(path, stops: stops, tracked: tracked, layout: layout)
-                .learnColumn(layout)
-                .padding(.top, 48)
-
-            if !path.outcomes.isEmpty {
-                outcomes(path, layout: layout)
-                    .learnBand()
-                    .padding(.top, 52)
-                    .id(LearnAnchor.outcomes)
-            }
-
-            if let first = stops.first {
-                wayIn(path, first: first, last: stops.last ?? first, layout: layout)
+                if !path.outcomes.isEmpty {
+                    outcomes(path, layout: layout)
+                        .learnBand()
+                        .padding(.top, 52)
+                        .id(LearnAnchor.outcomes)
+                }
+            } else {
+                masthead(path, number: number, stops: stops, layout: layout, proxy: proxy,
+                         resume: started ? next : nil)
                     .learnColumn(layout)
-                    .padding(.top, 52)
+                    .padding(.top, 20)
+
+                LearnFigureRule(figures: figures, layout: layout)
+                    .learnColumn(layout)
+                    .padding(.top, 30)
+
+                itinerary(path, stops: stops, tracked: tracked, layout: layout)
+                    .learnColumn(layout)
+                    .padding(.top, 48)
+
+                if !path.outcomes.isEmpty {
+                    outcomes(path, layout: layout)
+                        .learnBand()
+                        .padding(.top, 52)
+                        .id(LearnAnchor.outcomes)
+                }
+
+                if let first = stops.first {
+                    wayIn(path, first: first, last: stops.last ?? first, layout: layout)
+                        .learnColumn(layout)
+                        .padding(.top, 52)
+                }
             }
         }
         .toolbar {
@@ -272,7 +306,17 @@ struct PathView: View {
                 }
             }
             Group {
-                if layout.isWide {
+                if let pages = layout.pages {
+                    // The words on the leading page, the list on the trailing one. The slab pads
+                    // its trailing edge by the card padding, which the trailing page gives up.
+                    let inset = max(0, LF.Metrics.cardPadding - layout.margins.trailing)
+                    LearnSpread(pages: FoldColumns(leading: pages.leading, gap: pages.gap,
+                                                   trailing: max(0, pages.trailing - inset))) {
+                        lead
+                    } trailing: {
+                        list
+                    }
+                } else if layout.isWide {
                     HStack(alignment: .top, spacing: 48) {
                         lead.frame(width: layout.contentWidth * 0.38, alignment: .leading)
                         list.frame(maxWidth: .infinity, alignment: .leading)
@@ -285,8 +329,8 @@ struct PathView: View {
                 }
             }
             .frame(maxWidth: LF.Metrics.maxContentWidth, alignment: .leading)
-            .padding(.horizontal, max(0, layout.gutter - LF.Metrics.cardPadding))
-            .frame(maxWidth: .infinity)
+            .padding(layout.bandInsets)
+            .frame(maxWidth: .infinity, alignment: layout.pages == nil ? .center : .leading)
             .padding(.vertical, layout.isRegular ? 28 : 20)
         }
     }
@@ -462,3 +506,11 @@ extension View {
         .appEnvironment(.preview(signedIn: false))
         .environment(\.colorScheme, .dark)
 }
+
+#if DEBUG
+#Preview("Path, Duo book, whole page", traits: .fixedLayout(width: 867, height: 2600)) {
+    NavigationStack { PathView(slug: PreviewData.path.slug) }
+        .appEnvironment(LearnPreviewCatalog.model())
+        .previewFold(.previewBook)
+}
+#endif

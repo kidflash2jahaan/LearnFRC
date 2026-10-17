@@ -19,7 +19,8 @@ struct PasswordResetView: View {
     private let snags: [(slug: String, text: String)] = [
         ("not arrived", "Mail is queued, not instant. Give it a couple of minutes, then search your inbox for LearnFRC rather than scrolling, because a new message doesn't always land at the top."),
         ("expired", "Links last an hour and open once. If you asked twice, only the newest one works. Come back here and send another, because the old one won't open again."),
-        ("google", "Then there's no password on the account to reset. Google sign-in is coming to the app later; until then, use Continue with Google on learnfrc.com."),
+        // The site's words for the third snag (`src/app/forgot-password/page.tsx`).
+        ("google", "Then there's no password on the account to reset and no email is coming. Use Continue with Google on the sign-in sheet and you're in."),
     ]
 
     init(email: String = "", onBackToSignIn: (() -> Void)? = nil) {
@@ -28,37 +29,20 @@ struct PasswordResetView: View {
     }
 
     var body: some View {
-        AccountPage(maxWidth: 1000) { width in
-            VStack(alignment: .leading, spacing: 0) {
-                AccountHeader(
-                    marker: "locked out",
-                    title: "Mail yourself a way back in.",
-                    lede: "One field, and a link that lets you pick a new password on learnfrc.com. Your progress, certificates and team all stay exactly where they are."
-                )
-
-                HStack(alignment: .top, spacing: 44) {
-                    slip.frame(maxWidth: 432)
-                    if width >= 820 {
-                        penNote.frame(width: 240).padding(.top, 24)
+        AccountPage(maxWidth: 1000, fold: .spread) { page in
+            if let pages = page.pages {
+                // An open iPhone Duo: the slip on the left page, what to check on the right.
+                FoldPages(pages) {
+                    VStack(alignment: .leading, spacing: 0) {
+                        header
+                        slip.padding(.top, 28)
+                        penNote.padding(.top, 24)
                     }
+                } trailing: {
+                    snagList
                 }
-                .padding(.top, 28)
-                if width < 820 {
-                    penNote.padding(.top, 24)
-                }
-
-                VStack(alignment: .leading, spacing: 0) {
-                    InkRule()
-                    Text("Nothing in the inbox?")
-                        .lfTitle(.h2)
-                        .padding(.top, 22)
-                    AccountSubText("Work down these three. The last one is the one that catches people out, and no amount of resending fixes it.")
-                        .frame(maxWidth: 560, alignment: .leading)
-                        .padding(.top, 8)
-                    AccountDefinitionList(items: snags)
-                        .padding(.top, 10)
-                }
-                .padding(.top, 44)
+            } else {
+                single(width: page.width)
             }
         }
         .navigationTitle("Reset password")
@@ -68,6 +52,48 @@ struct PasswordResetView: View {
         #if os(macOS)
         .defaultFocus($focus, .email)
         #endif
+    }
+
+    private var header: some View {
+        AccountHeader(
+            marker: "locked out",
+            title: "Mail yourself a way back in.",
+            lede: "One field, and a link that lets you pick a new password on learnfrc.com. Your progress, certificates and team all stay exactly where they are."
+        )
+    }
+
+    private var snagList: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            InkRule()
+            Text("Nothing in the inbox?")
+                .lfTitle(.h2)
+                .padding(.top, 22)
+            AccountSubText("Work down these three. The last one is the one that catches people out, and no amount of resending fixes it.")
+                .frame(maxWidth: 560, alignment: .leading)
+                .padding(.top, 8)
+            AccountDefinitionList(items: snags)
+                .padding(.top, 10)
+        }
+    }
+
+    private func single(width: CGFloat) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            header
+
+            HStack(alignment: .top, spacing: 44) {
+                slip.frame(maxWidth: 432)
+                if width >= 820 {
+                    penNote.frame(width: 240).padding(.top, 24)
+                }
+            }
+            .padding(.top, 28)
+            if width < 820 {
+                penNote.padding(.top, 24)
+            }
+
+            snagList
+                .padding(.top, 44)
+        }
     }
 
     @ViewBuilder

@@ -78,7 +78,7 @@ struct UsernameSetupView: View {
     static let teamRequiredMessage = "Enter your team number, or choose Skip for now."
 
     var body: some View {
-        AccountPage(maxWidth: 640) { width in
+        AccountPage(maxWidth: 640) { page in
             VStack(alignment: .leading, spacing: 0) {
                 if required {
                     // The site's hard stop on /dashboard, word for word.
@@ -87,11 +87,11 @@ struct UsernameSetupView: View {
                         title: "Pick the handle your team will see.",
                         lede: "It becomes your profile address and the name on the leaderboard. Nothing else on the account works until it is set."
                     )
-                    card(width: width).padding(.top, 28)
+                    card(width: page.width).padding(.top, 28)
                     signedInAs.padding(.top, 28)
                 } else {
                     // The site's skippable card has no heading over it; its own title leads.
-                    card(width: width).padding(.top, 14)
+                    card(width: page.width).padding(.top, 14)
                 }
             }
         }

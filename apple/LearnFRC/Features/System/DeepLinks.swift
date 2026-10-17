@@ -27,6 +27,11 @@ enum DeepLink: Hashable, Sendable {
     case web(URL)
     /// Not a LearnFRC link at all. Open it in the browser (or ignore it).
     case external(URL)
+    /// Continue with Google's callback (`learnfrc://auth-callback?code=...`,
+    /// `AppConfig.oauthCallbackURL`). It shares the scheme but isn't a link: the system web
+    /// sign-in sheet that started the flow catches it and hands it to Supabase. Arriving any
+    /// other way (a stray or forged link) it opens nothing, changes no tab and signs no one in.
+    case authCallback
 
     /// Slug-addressed catalog links.
     enum CatalogLink: Hashable, Sendable {
@@ -40,6 +45,7 @@ enum DeepLink: Hashable, Sendable {
     static let webHosts: Set<String> = ["learnfrc.com", "www.learnfrc.com"]
 
     /// True when the app can show this link itself (everything but `.web` and `.external`).
+    /// `.authCallback` counts: the app owns it, and it never goes to the browser.
     var isInApp: Bool {
         switch self {
         case .web, .external: false
@@ -62,6 +68,7 @@ extension DeepLink {
             if let host = url.host(percentEncoded: false)?.lowercased(), !host.isEmpty {
                 segments.insert(host, at: 0)
             }
+            if segments.first?.lowercased() == authCallbackSegment { return .authCallback }
             return classify(segments, query: query, original: url, isWeb: false)
         }
 
@@ -81,6 +88,15 @@ extension DeepLink {
 
         return .external(url)
     }
+
+    /// Continue with Google's callback (`learnfrc://auth-callback`), which is never navigation.
+    /// `RootView`'s `onOpenURL` and `SystemServices.open(_:)` check this before anything else.
+    static func isAuthCallback(_ url: URL) -> Bool {
+        parse(url) == .authCallback
+    }
+
+    /// The first segment of `AppConfig.oauthCallbackURL` (its host): `auth-callback`.
+    private static let authCallbackSegment = AppConfig.oauthCallbackURL.host(percentEncoded: false)?.lowercased() ?? "auth-callback"
 
     /// Parses a string link (`"learnfrc://lesson/..."`, `"https://learnfrc.com/..."` or `"/guides/..."`).
     static func parse(_ string: String) -> DeepLink? {
@@ -186,6 +202,18 @@ extension DeepLink {
             return .route(.achievements)
         case "bookmarks":
             return .route(.bookmarks)
+        case "tools":
+            return .route(slug.map { $0.isEmpty ? .tools : .tool($0) } ?? .tools)
+        case "resources":
+            return .route(.resources)
+        case "admin":
+            switch slug {
+            case "team": return .route(.adminTeam)
+            case "feedback": return .route(.adminFeedback)
+            default: return .route(.admin)
+            }
+        case "apply":
+            return .route(.apply)
 
         case "login", "signin", "sign-in", "signup", "sign-up":
             return .tab(.profile)
@@ -317,6 +345,9 @@ extension AppModel {
     /// with nowhere to go). Pass the `generation` from `beginLink()` when the call is made
     /// later than the link arrived (from a `Task`), so the order is the order links came in.
     func followWhenReady(_ link: DeepLink, original: URL? = nil, generation: Int? = nil) async -> URL? {
+        // Not a link (Google's sign-in callback): nothing to wait for, and no turn taken from a
+        // link that is waiting.
+        if case .authCallback = link { return nil }
         let turn = generation ?? beginLink()
         if !isReady(for: link) {
             if case .continueLesson = link {
@@ -339,6 +370,7 @@ extension AppModel {
     /// gives way to this one.
     @discardableResult
     func follow(_ link: DeepLink) -> Bool {
+        if case .authCallback = link { return true }
         _ = beginLink()
         return perform(link)
     }
@@ -365,6 +397,9 @@ extension AppModel {
             return true
         case .search(let query):
             requestSearch(query)
+            return true
+        case .authCallback:
+            // Handled by being ignored: the sign-in sheet that's waiting for it already has it.
             return true
         case .catalog, .web, .external:
             return false

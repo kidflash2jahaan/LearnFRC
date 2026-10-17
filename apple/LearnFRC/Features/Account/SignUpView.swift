@@ -1,10 +1,12 @@
 import SwiftUI
 
-/// Create an account (the site's `/signup`): full name, email, username, optional team
-/// number, password, and the reminder-email box, unticked, with the site's exact words.
-/// Everything goes through `POST /api/app/auth/sign-up`, so the ban list, profanity check,
+/// Create an account (the site's `/signup`): Continue with Google at the top, like the site's
+/// (`ProviderSignInButtons`, carrying the invite), then full name, email, username, optional
+/// team number, password, and the reminder-email box, unticked, with the site's exact words.
+/// The form goes through `POST /api/app/auth/sign-up`, so the ban list, profanity check,
 /// username rules and email consent are the website's. Afterwards the person confirms by
-/// email (the link opens learnfrc.com) and signs in here.
+/// email (the link opens learnfrc.com) and signs in here. A Google account is in at once,
+/// and picks its username next (the gate, or the profile setup step for a made-up handle).
 ///
 ///     SignUpView()                                        // in any NavigationStack
 ///     SignUpView(referrer: "maya_builds", via: "team-invite")
@@ -27,6 +29,8 @@ struct SignUpView: View {
     @State private var error: String?
     @State private var fieldErrors: [Field: String] = [:]
     @State private var isSubmitting = false
+    /// Continue with Google is running (its sheet, then the sign-in).
+    @State private var isUsingProvider = false
     @State private var sentTo: String?
     @State private var existingEmail: String?
     @FocusState private var focus: Field?
@@ -76,29 +80,50 @@ struct SignUpView: View {
     // MARK: The form page
 
     private var form: some View {
-        AccountPage(maxWidth: 1000) { width in
-            VStack(alignment: .leading, spacing: 0) {
-                header
-
-                let wide = width >= 900
-                HStack(alignment: .top, spacing: 44) {
-                    rosterCard.frame(maxWidth: 576)
-                    if wide {
-                        penNote.frame(width: 240).padding(.top, 70)
+        AccountPage(maxWidth: 1000, fold: .spread) { page in
+            if let pages = page.pages {
+                // An open iPhone Duo: the roster entry on the left page; the note, the
+                // figures and what the account opens on the right.
+                FoldPages(pages) {
+                    VStack(alignment: .leading, spacing: 0) {
+                        header
+                        rosterCard.padding(.top, 28)
+                    }
+                } trailing: {
+                    VStack(alignment: .leading, spacing: 0) {
+                        penNote
+                        stamps.padding(.top, 36)
+                        contents(wide: false).padding(.top, 48)
                     }
                 }
-                .padding(.top, 28)
-                if !wide {
-                    penNote.padding(.top, 22)
-                }
-
-                stamps.padding(.top, 48)
-                contents(wide: width >= 620).padding(.top, 48)
+            } else {
+                formSingle(width: page.width)
             }
         }
         #if os(macOS)
         .defaultFocus($focus, .fullName)
         #endif
+    }
+
+    private func formSingle(width: CGFloat) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            header
+
+            let wide = width >= 900
+            HStack(alignment: .top, spacing: 44) {
+                rosterCard.frame(maxWidth: 576)
+                if wide {
+                    penNote.frame(width: 240).padding(.top, 70)
+                }
+            }
+            .padding(.top, 28)
+            if !wide {
+                penNote.padding(.top, 22)
+            }
+
+            stamps.padding(.top, 48)
+            contents(wide: width >= 620).padding(.top, 48)
+        }
     }
 
     @ViewBuilder
@@ -125,6 +150,13 @@ struct SignUpView: View {
             VStack(alignment: .leading, spacing: 18) {
                 if let error {
                     FieldError(error)
+                }
+
+                ProviderSignInButtons(isWorking: $isUsingProvider, error: $error, referrer: referrer, via: via) {
+                    password = ""
+                    // In the sign-in sheet, the sheet closes on the account change; pushed on
+                    // its own, this screen goes back.
+                    if onSignIn == nil { dismiss() }
                 }
 
                 AccountField(
@@ -188,7 +220,7 @@ struct SignUpView: View {
                 }
             }
             .padding(.top, 20)
-            .disabled(isSubmitting)
+            .disabled(isSubmitting || isUsingProvider)
         }
         .accountKeyboardBar($focus, order: [.fullName, .email, .username, .team, .password])
         .sensoryFeedback(.error, trigger: error) { old, new in old == nil && new != nil }
@@ -318,7 +350,7 @@ struct SignUpView: View {
     // MARK: Submit
 
     private func submit() {
-        guard !isSubmitting else { return }
+        guard !isSubmitting, !isUsingProvider else { return }
         error = nil
         var errors: [Field: String] = [:]
         let emailValue = email.accountTrimmed
@@ -457,45 +489,71 @@ struct SignUpCheckInboxView: View {
     ]
 
     var body: some View {
-        AccountPage(maxWidth: 1000) { width in
-            VStack(alignment: .leading, spacing: 0) {
-                AccountHeader(
-                    marker: "account made, inbox not yet proven",
-                    title: "The link is in your inbox. Go and open it.",
-                    lede: "One tap confirms the address is yours. The link opens learnfrc.com; after that, come back here and sign in with the same email and password."
-                )
-
-                SlabView {
-                    SlugText("sent to", color: LF.Palette.onBlue.opacity(0.85))
-                    Text(email)
-                        .font(LF.Fonts.mono(24, weight: .bold, relativeTo: .title))
-                        .foregroundStyle(LF.Palette.onBlue)
-                        .lineLimit(3)
-                        .minimumScaleFactor(0.7)
-                        .textSelection(.enabled)
-                        .padding(.top, 4)
-                    HStack(spacing: 24) {
-                        SlugText("one tap, no code to copy", color: LF.Palette.onBlue.opacity(0.85))
-                        SlugText("works on any device", color: LF.Palette.onBlue.opacity(0.85))
+        AccountPage(maxWidth: 1000, fold: .spread) { page in
+            if let pages = page.pages {
+                // An open iPhone Duo: where the link went and what to do on the left page,
+                // what to check when it doesn't arrive on the right.
+                FoldPages(pages) {
+                    VStack(alignment: .leading, spacing: 0) {
+                        header
+                        sentTo.padding(.top, 28)
+                        actions.padding(.top, 32)
                     }
-                    .padding(.top, 12)
+                } trailing: {
+                    checklist
                 }
+            } else {
+                single(width: page.width)
+            }
+        }
+    }
+
+    private var header: some View {
+        AccountHeader(
+            marker: "account made, inbox not yet proven",
+            title: "The link is in your inbox. Go and open it.",
+            lede: "One tap confirms the address is yours. The link opens learnfrc.com; after that, come back here and sign in with the same email and password."
+        )
+    }
+
+    private var sentTo: some View {
+            SlabView {
+                SlugText("sent to", color: LF.Palette.onBlue.opacity(0.85))
+                Text(email)
+                    .font(LF.Fonts.mono(24, weight: .bold, relativeTo: .title))
+                    .foregroundStyle(LF.Palette.onBlue)
+                    .lineLimit(3)
+                    .minimumScaleFactor(0.7)
+                    .textSelection(.enabled)
+                    .padding(.top, 4)
+                HStack(spacing: 24) {
+                    SlugText("one tap, no code to copy", color: LF.Palette.onBlue.opacity(0.85))
+                    SlugText("works on any device", color: LF.Palette.onBlue.opacity(0.85))
+                }
+                .padding(.top, 12)
+            }
+            .accessibilityElement(children: .combine)
+    }
+
+    private func single(width: CGFloat) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            header
+
+            sentTo
                 .padding(.top, 28)
-                .accessibilityElement(children: .combine)
 
-                if width >= 760 {
-                    HStack(alignment: .top, spacing: 48) {
-                        checklist
-                        actions.frame(width: 300)
-                    }
-                    .padding(.top, 40)
-                } else {
-                    VStack(alignment: .leading, spacing: 36) {
-                        actions
-                        checklist
-                    }
-                    .padding(.top, 32)
+            if width >= 760 {
+                HStack(alignment: .top, spacing: 48) {
+                    checklist
+                    actions.frame(width: 300)
                 }
+                .padding(.top, 40)
+            } else {
+                VStack(alignment: .leading, spacing: 36) {
+                    actions
+                    checklist
+                }
+                .padding(.top, 32)
             }
         }
     }

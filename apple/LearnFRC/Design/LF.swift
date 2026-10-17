@@ -198,6 +198,36 @@ nonisolated enum LF {
         static func gutter(for width: CGFloat) -> CGFloat {
             min(max(width * 0.04, gutter), 54)
         }
+
+        /// A page's leading and trailing margins: `gutter(for:)` on both sides, except next to
+        /// iPhone Duo's vertical bar. There the system's container margins
+        /// (`contentMargins(for: .container)`, iOS 27.1) come out asymmetric, 20 on the open
+        /// side and 0 against the bar, because the bar already stands off the content. That
+        /// side takes the system's value, and the open side the larger of the two, so the cover
+        /// screen stops losing 16pt of a 382pt column. Pass `container` from
+        /// `GeometryProxy.lfContainerMargins` (nil before 27.1 and on the Mac gives the gutter
+        /// on both sides), or read `GeometryProxy.lfPageMargins` for both at once.
+        static func pageMargins(for width: CGFloat, container: EdgeInsets? = nil) -> PageMargins {
+            let gutter = gutter(for: width)
+            // Symmetric margins (every other device) keep the site's gutter, as before.
+            guard let container, abs(container.leading - container.trailing) >= 1 else {
+                return PageMargins(leading: gutter, trailing: gutter)
+            }
+            return container.trailing < container.leading
+                ? PageMargins(leading: max(gutter, container.leading), trailing: max(0, container.trailing))
+                : PageMargins(leading: max(0, container.leading), trailing: max(gutter, container.trailing))
+        }
+    }
+
+    /// A page's horizontal margins (`Metrics.pageMargins(for:container:)`).
+    struct PageMargins: Equatable, Sendable {
+        var leading: CGFloat
+        var trailing: CGFloat
+
+        /// Both together: what the margins take out of the page's width.
+        var total: CGFloat { leading + trailing }
+        /// As padding: `.padding(margins.insets)`.
+        var insets: EdgeInsets { EdgeInsets(top: 0, leading: leading, bottom: 0, trailing: trailing) }
     }
 
     // MARK: Tilt
@@ -370,6 +400,27 @@ extension EnvironmentValues {
     /// Set by `.buttonStyle(.notebookCard)` while the card is held down, so a
     /// `NotebookCard` inside it can press into its own drop.
     @Entry var notebookCardPressed: Bool = false
+}
+
+// MARK: - Page margins
+
+extension GeometryProxy {
+    /// The system's container margins for this view (iOS 27.1), asymmetric next to iPhone
+    /// Duo's vertical bar. Nil before iOS 27.1 and on the Mac, whose 27.0 SDK lacks them.
+    var lfContainerMargins: EdgeInsets? {
+        #if os(iOS)
+        if #available(iOS 27.1, *) {
+            return contentMargins(for: .container)
+        }
+        #endif
+        return nil
+    }
+
+    /// This page's horizontal margins for its width (`LF.Metrics.pageMargins(for:container:)`).
+    /// Read it where the page measures its width, outside the scroll view.
+    var lfPageMargins: LF.PageMargins {
+        LF.Metrics.pageMargins(for: size.width, container: lfContainerMargins)
+    }
 }
 
 // MARK: - View helpers

@@ -13,10 +13,15 @@ struct LessonHeaderView: View {
     let isPending: Bool
     let hasQuiz: Bool
     let isWide: Bool
+    /// The facts two by two (this lesson and reading time, then filed under and state), for a
+    /// header kept to one page of iPhone Duo's open screen, where a free flow broke them 1, 2, 1.
+    var factsInPairs = false
     let metrics: LessonScrollMetrics
     let onOpen: (AppRoute) -> Void
     /// Scrolls to the quiz or the sign-off.
     let onFinish: () -> Void
+
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -115,27 +120,40 @@ struct LessonHeaderView: View {
     /// Each fact's label sits on one shared top line, whatever the value under it, and the
     /// module title sits on the counts' baseline (`LessonFiledUnder`). Aligned at the bottom
     /// instead, "filed under" sat about 13pt lower than "reading time" beside it.
+    @ViewBuilder
     private var facts: some View {
-        LessonFlowLayout(spacing: isWide ? 36 : 24, lineSpacing: 16, alignment: .top) {
-            if let position {
-                LessonFact(label: "this lesson") {
-                    CountText("\(position.index)", unit: "of \(position.total) in \(location.department.name)", size: Self.countSize)
-                }
-                .accessibilityLabel("Lesson \(position.index) of \(position.total) in \(location.department.name)")
+        if factsInPairs && !typeSize.isAccessibilitySize {
+            // Two equal columns, so each pair lines up under the other whatever the words.
+            LessonPairsLayout(spacing: 24, lineSpacing: 16) {
+                factViews
             }
-            if let readingMinutes {
-                LessonFact(label: "reading time") {
-                    CountText(readingMinutes, unit: "min", size: Self.countSize)
-                }
-                .accessibilityLabel("Reading time, \(readingMinutes) minute\(LessonText.plural(readingMinutes))")
+        } else {
+            LessonFlowLayout(spacing: isWide ? 36 : 24, lineSpacing: 16, alignment: .top) {
+                factViews
             }
-            LessonFiledUnder(title: location.module.title) {
-                onOpen(.module(location.module.id))
+        }
+    }
+
+    @ViewBuilder
+    private var factViews: some View {
+        if let position {
+            LessonFact(label: "this lesson") {
+                CountText("\(position.index)", unit: "of \(position.total) in \(location.department.name)", size: Self.countSize)
             }
-            LessonFact(label: "state") {
-                TagView(stateText, on: isCompleted && !isPending)
-                    .fixedSize()
+            .accessibilityLabel("Lesson \(position.index) of \(position.total) in \(location.department.name)")
+        }
+        if let readingMinutes {
+            LessonFact(label: "reading time") {
+                CountText(readingMinutes, unit: "min", size: Self.countSize)
             }
+            .accessibilityLabel("Reading time, \(readingMinutes) minute\(LessonText.plural(readingMinutes))")
+        }
+        LessonFiledUnder(title: location.module.title) {
+            onOpen(.module(location.module.id))
+        }
+        LessonFact(label: "state") {
+            TagView(stateText, on: isCompleted && !isPending)
+                .fixedSize()
         }
     }
 
@@ -216,5 +234,48 @@ private struct LessonFiledUnder: View {
         #if os(macOS)
         .pointerStyle(.link)
         #endif
+    }
+}
+
+/// Two equal columns, filled left to right and top to bottom; each row is as tall as the
+/// taller of its two and both sit at its top. The lesson header's facts in a page column.
+struct LessonPairsLayout: Layout {
+    var spacing: CGFloat = 24
+    var lineSpacing: CGFloat = 16
+
+    private func columnWidth(_ width: CGFloat) -> CGFloat {
+        max(0, (width - spacing) / 2)
+    }
+
+    private func rowHeights(_ subviews: Subviews, column: CGFloat) -> [CGFloat] {
+        stride(from: 0, to: subviews.count, by: 2).map { start in
+            (start..<min(start + 2, subviews.count))
+                .map { subviews[$0].sizeThatFits(ProposedViewSize(width: column, height: nil)).height }
+                .max() ?? 0
+        }
+    }
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let width = proposal.width ?? 2 * (subviews.map { $0.sizeThatFits(.unspecified).width }.max() ?? 0) + spacing
+        let heights = rowHeights(subviews, column: columnWidth(width))
+        let height = heights.reduce(0, +) + lineSpacing * CGFloat(max(0, heights.count - 1))
+        return CGSize(width: width, height: height)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let column = columnWidth(bounds.width)
+        var y = bounds.minY
+        for (row, height) in rowHeights(subviews, column: column).enumerated() {
+            for side in 0..<2 {
+                let index = row * 2 + side
+                guard index < subviews.count else { break }
+                subviews[index].place(
+                    at: CGPoint(x: bounds.minX + CGFloat(side) * (column + spacing), y: y),
+                    anchor: .topLeading,
+                    proposal: ProposedViewSize(width: column, height: nil)
+                )
+            }
+            y += height + lineSpacing
+        }
     }
 }

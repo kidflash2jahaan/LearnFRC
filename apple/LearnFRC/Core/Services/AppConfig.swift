@@ -1,4 +1,7 @@
 import Foundation
+#if canImport(UIKit)
+import UIKit
+#endif
 
 /// Where the app talks to. The publishable key lives in `AppConfig+Keys.swift`
 /// (generated from the site's `.env.local`; it's the public client key, never a secret).
@@ -27,6 +30,13 @@ enum AppConfig {
     /// The app's own URL scheme (`learnfrc://`).
     static let urlScheme = "learnfrc"
 
+    /// Where Supabase sends the browser back to after Continue with Google
+    /// (`learnfrc://auth-callback?code=...`, in the Supabase project's redirect allow list).
+    /// The system web sign-in sheet that started the flow catches it and hands it to Supabase
+    /// (`SupabaseService.signInWithOAuth`). It shares the `learnfrc` scheme with links, so
+    /// `DeepLink` reads it as nothing to open (`DeepLink.isAuthCallback(_:)`).
+    static let oauthCallbackURL = URL(string: "\(urlScheme)://auth-callback")!
+
     /// Catalog and reference refresh when older than this (six hours).
     static let catalogMaxAge: TimeInterval = 6 * 60 * 60
 
@@ -36,6 +46,16 @@ enum AppConfig {
         "Mac app"
         #else
         "iOS app"
+        #endif
+    }
+
+    /// `ios`, `ipados` or `macos`: the `platform` the sign-up and OAuth routes record as the
+    /// signup source ("iOS app", "iPad app", "Mac app"; `appSignupSource` on the site).
+    @MainActor static var platformID: String {
+        #if os(macOS)
+        "macos"
+        #else
+        UIDevice.current.userInterfaceIdiom == .pad ? "ipados" : "ios"
         #endif
     }
 

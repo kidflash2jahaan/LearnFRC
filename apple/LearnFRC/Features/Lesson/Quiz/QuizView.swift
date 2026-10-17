@@ -38,6 +38,8 @@ struct QuizView: View {
     @Environment(\.lessonAccountRequest) private var accountRequest
     @Environment(\.openURL) private var openURL
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// The lesson is showing its laptop-posture deck: hand the answer pad up to it.
+    @Environment(\.lessonQuizPadRequested) private var padRequested
 
     // Every @State here is set exactly once, in the designated init (no declared defaults to
     // overwrite: with iOS 27's @State macro an init can't replace a declared initial value).
@@ -47,6 +49,10 @@ struct QuizView: View {
     @State private var session: CompletionResult?
     @State private var justPassed: Bool
     @State private var milestone: LessonMilestone?
+    /// The question on the laptop answer pad (`QuizAnswerPad`).
+    @State private var padIndex: Int
+    /// Counts picks on the pad, so a move to the next question waits for the latest one.
+    @State private var padPicks: Int
     @ScaledMetric(relativeTo: .body) private var padding: CGFloat = 22
 
     /// The scroll anchor of question `index` on the answer sheet.
@@ -148,6 +154,8 @@ struct QuizView: View {
         _session = State(initialValue: startingSession)
         _justPassed = State(initialValue: startingJustPassed ?? (startingSession != nil))
         _milestone = State(initialValue: startingMilestone)
+        _padIndex = State(initialValue: 0)
+        _padPicks = State(initialValue: 0)
     }
 
     private var isCompleted: Bool { progress.isCompleted(lessonID) }
@@ -192,6 +200,7 @@ struct QuizView: View {
         .onChange(of: remembered) { _, remembered in
             memory?.set(remembered, for: Self.memoryKey(lessonID, tab: memoryTab))
         }
+        .preference(key: QuizPadPreference.self, value: padRequested ? padModel : nil)
     }
 
     private var remembered: Remembered {
@@ -328,10 +337,7 @@ struct QuizView: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, 8)
             Button(isSaving ? "Saving…" : "Mark complete") {
-                guard ready, !isSaving else { return }
-                Haptics.success()
-                justPassed = true
-                save(answers: [])
+                completeWithoutQuiz()
             }
             .buttonStyle(.inkLarge)
             .disabled(isSaving || !ready)
@@ -344,6 +350,69 @@ struct QuizView: View {
         .padding(.top, 16)
         .frame(maxWidth: .infinity, alignment: .leading)
         .overlay(alignment: .top) { InkRule() }
+    }
+
+    // MARK: The laptop answer pad
+
+    /// The question the pad shows: the one picked there, unless it has been banked since, in
+    /// which case the first question still open.
+    private var padQuestion: Int {
+        let open = quiz.indices.filter { !sheet.isLocked($0) }
+        return open.contains(padIndex) ? padIndex : (open.first ?? 0)
+    }
+
+    /// What the pad shows: nothing once the lesson is complete (the sign-off has the floor).
+    private var padModel: QuizPadModel? {
+        guard !isCompleted else { return nil }
+        let index = padQuestion
+        let content: QuizPadModel.Content
+        if sheet.hasQuiz, quiz.indices.contains(index) {
+            content = .questions(quiz[index])
+        } else if !sheet.hasQuiz {
+            content = .markComplete
+        } else {
+            return nil
+        }
+        return QuizPadModel(
+            content: content,
+            index: index,
+            count: sheet.count,
+            sheet: sheet,
+            isSaving: isSaving,
+            ready: ready,
+            message: message,
+            gradedStatus: gradedStatus,
+            retryLabel: retryLabel,
+            select: { option in padSelect(option, for: index) },
+            show: { padShow($0) },
+            submit: { submit() },
+            retry: { retry() },
+            markComplete: { completeWithoutQuiz() }
+        )
+    }
+
+    /// A pick on the pad: the same rule as the sheet, then on to the next question still
+    /// unanswered after a moment, so the pick is seen landing first.
+    private func padSelect(_ option: Int, for index: Int) {
+        guard sheet.canSelect(index) else { return }
+        if sheet.selection(index) != option { Haptics.select() }
+        sheet.select(option, for: index)
+        padPicks += 1
+        let pick = padPicks
+        guard let next = quiz.indices.first(where: { $0 > index && sheet.canSelect($0) && sheet.selection($0) == nil })
+            ?? quiz.indices.first(where: { sheet.canSelect($0) && sheet.selection($0) == nil }) else { return }
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(450))
+            guard pick == padPicks, !sheet.graded else { return }
+            padShow(next)
+        }
+    }
+
+    /// Puts question `index` on the pad and the page above at that question.
+    private func padShow(_ index: Int) {
+        guard quiz.indices.contains(index) else { return }
+        padIndex = index
+        onScrollTo?(Self.questionAnchor(index))
     }
 
     // MARK: The sign-off
@@ -386,12 +455,21 @@ struct QuizView: View {
         }
     }
 
+    /// A lesson with no quiz: "Mark complete".
+    private func completeWithoutQuiz() {
+        guard ready, !isSaving else { return }
+        Haptics.success()
+        justPassed = true
+        save(answers: [])
+    }
+
     /// Back to the questions still wrong, and the page to the first of them (it's usually
     /// above the fold by now: the retry button sits at the foot of the sheet).
     private func retry() {
         LF.Motion.perform(LF.Motion.settle) { sheet.retry() }
         Haptics.select()
         if let first = quiz.indices.first(where: { !sheet.isLocked($0) }) {
+            padIndex = first
             onScrollTo?(Self.questionAnchor(first))
         }
     }

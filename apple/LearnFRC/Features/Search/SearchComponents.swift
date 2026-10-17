@@ -44,6 +44,9 @@ struct SearchResultRow: View {
     var hasVideo = false
     var isCompleted = false
     var systemImage: String?
+    /// The chevron that says the row opens a screen. Off where a row shows its result beside
+    /// the list instead (the search spread on iPhone Duo).
+    var showsChevron = true
 
     @ScaledMetric(relativeTo: .body) private var iconSize: CGFloat = 20
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -98,10 +101,12 @@ struct SearchResultRow: View {
             if isCompleted {
                 PenCheckMark(size: 14)
             }
-            Image(systemName: "chevron.forward")
-                .font(.footnote.weight(.semibold))
-                .foregroundStyle(LF.Palette.graphite)
-                .accessibilityHidden(true)
+            if showsChevron {
+                Image(systemName: "chevron.forward")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(LF.Palette.graphite)
+                    .accessibilityHidden(true)
+            }
         }
         .padding(.top, 3)
     }
@@ -547,23 +552,68 @@ extension View {
 
     /// The same page width rules, worked out during layout from the width the page is offered,
     /// so the screen never stores a measured width (a stored width can feed back into layout).
-    func searchPage(maxWidth: CGFloat = LF.Metrics.maxContentWidth) -> some View {
-        SearchPageLayout(maxWidth: maxWidth) { self }
+    /// Pass `margins` (`GeometryProxy.lfPageMargins`, read where the page measures itself) for
+    /// the system's margins next to iPhone Duo's vertical bar; without them it's the gutter on
+    /// both sides.
+    func searchPage(maxWidth: CGFloat = LF.Metrics.maxContentWidth, margins: LF.PageMargins? = nil) -> some View {
+        SearchPageLayout(maxWidth: maxWidth, margins: margins) { self }
+    }
+
+    /// The screen's search field, kept in view: on iPhone Duo's vertical bar (iOS 27.1) the
+    /// system's own placement left the field off screen until something focused it, so there
+    /// it goes in a drawer under the title that's always out. Everywhere else, the usual place.
+    func searchFieldInView(text: Binding<String>, prompt: Text) -> some View {
+        modifier(SearchFieldInView(text: text, prompt: prompt))
+    }
+}
+
+private struct SearchFieldInView: ViewModifier {
+    @Binding var text: String
+    let prompt: Text
+    @Environment(\.lfVerticalBarEdge) private var barEdge
+
+    func body(content: Content) -> some View {
+        #if os(iOS)
+        content.searchable(
+            text: $text,
+            placement: barEdge == nil ? .automatic : .navigationBarDrawer(displayMode: .always),
+            prompt: prompt
+        )
+        #else
+        content.searchable(text: $text, prompt: prompt)
+        #endif
+    }
+}
+
+// MARK: - iPhone Duo's spread
+
+extension FoldInfo {
+    /// This fold seen from a search page's content (which starts `margins.leading` in from the
+    /// page's edge, `searchPage(margins:)`), when it splits that content into two pages wide
+    /// enough to read: iPhone Duo's open screen held upright. Nil anywhere else. Hand it to a
+    /// `FoldSplitLayout` around two blocks of the page.
+    func searchSpread(width: CGFloat, margins: LF.PageMargins) -> FoldInfo? {
+        guard width <= LF.Metrics.maxContentWidth,
+              columns(from: margins.leading, to: width - margins.trailing) != nil else { return nil }
+        return relative(to: CGPoint(x: margins.leading, y: 0))
     }
 }
 
 // MARK: - Layout-time width rules
 
 /// Centres its one child in at most `maxWidth`, inset by `LF.Metrics.gutter(for:)` of the
-/// width it's offered. The layout twin of `searchPage(width:)`.
+/// width it's offered (or by `margins`). The layout twin of `searchPage(width:)`.
 struct SearchPageLayout: Layout {
     var maxWidth: CGFloat = LF.Metrics.maxContentWidth
+    var margins: LF.PageMargins?
 
     /// The child's leading offset and width for a page this wide.
     private func column(for width: CGFloat) -> (offset: CGFloat, width: CGFloat) {
         let page = min(width, maxWidth)
         let gutter = LF.Metrics.gutter(for: max(width, 320))
-        return ((width - page) / 2 + gutter, max(0, page - 2 * gutter))
+        let leading = margins?.leading ?? gutter
+        let trailing = margins?.trailing ?? gutter
+        return ((width - page) / 2 + leading, max(0, page - leading - trailing))
     }
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
@@ -587,6 +637,9 @@ struct SearchPageLayout: Layout {
 
 /// A grid that picks its column count from the width it's offered, during layout. Cells in a
 /// row are offered the tallest cell's height, so cards in a row line up.
+///
+/// Across iPhone Duo's open screen (`fold`, in this grid's coordinates) it's two columns, one
+/// per page, with the crease between them, so no card sits on the fold.
 struct SearchColumnsLayout: Layout {
     /// The fewest points of content width for a column count.
     struct Breakpoint: Sendable {
@@ -597,27 +650,42 @@ struct SearchColumnsLayout: Layout {
     var breakpoints: [Breakpoint]
     var spacing: CGFloat = 20
     var rowSpacing: CGFloat = 24
+    var fold: FoldInfo = .none
 
     /// Card grids on a search page: two columns from a 600pt page, three from 1000pt
     /// (the content widths those pages leave inside their gutters).
     static let cards: [Breakpoint] = [Breakpoint(minWidth: 552, columns: 2), Breakpoint(minWidth: 920, columns: 3)]
+    /// The narrowest page a card gets on either side of a fold.
+    static let minimumFoldColumn: CGFloat = 260
 
     func columns(for width: CGFloat) -> Int {
         breakpoints.filter { width >= $0.minWidth }.map(\.columns).max() ?? 1
     }
 
-    private func rows(_ subviews: Subviews, width: CGFloat) -> (columnWidth: CGFloat, heights: [CGFloat], columns: Int) {
+    /// Each column's leading edge and width for a grid this wide.
+    private func columnFrames(width: CGFloat) -> [(x: CGFloat, width: CGFloat)] {
+        if fold.isVertical, let band = fold.band, band.minX >= Self.minimumFoldColumn,
+           width - band.maxX >= Self.minimumFoldColumn {
+            return [(0, band.minX), (band.maxX, width - band.maxX)]
+        }
         let columns = max(1, columns(for: width))
         let columnWidth = max(0, (width - spacing * CGFloat(columns - 1)) / CGFloat(columns))
+        return (0..<columns).map { (CGFloat($0) * (columnWidth + spacing), columnWidth) }
+    }
+
+    private func rows(_ subviews: Subviews, width: CGFloat) -> (columns: [(x: CGFloat, width: CGFloat)], heights: [CGFloat]) {
+        let columns = columnFrames(width: width)
         var heights: [CGFloat] = []
         var start = 0
         while start < subviews.count {
-            let end = min(start + columns, subviews.count)
-            let tallest = (start..<end).map { subviews[$0].sizeThatFits(ProposedViewSize(width: columnWidth, height: nil)).height }.max() ?? 0
+            let end = min(start + columns.count, subviews.count)
+            let tallest = (start..<end).map {
+                subviews[$0].sizeThatFits(ProposedViewSize(width: columns[$0 - start].width, height: nil)).height
+            }.max() ?? 0
             heights.append(tallest)
             start = end
         }
-        return (columnWidth, heights, columns)
+        return (columns, heights)
     }
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
@@ -631,14 +699,13 @@ struct SearchColumnsLayout: Layout {
         let layout = rows(subviews, width: bounds.width)
         var y = bounds.minY
         for (row, height) in layout.heights.enumerated() {
-            for column in 0..<layout.columns {
-                let index = row * layout.columns + column
+            for (column, frame) in layout.columns.enumerated() {
+                let index = row * layout.columns.count + column
                 guard index < subviews.count else { break }
-                let x = bounds.minX + CGFloat(column) * (layout.columnWidth + spacing)
                 subviews[index].place(
-                    at: CGPoint(x: x, y: y),
+                    at: CGPoint(x: bounds.minX + frame.x, y: y),
                     anchor: .topLeading,
-                    proposal: ProposedViewSize(width: layout.columnWidth, height: height)
+                    proposal: ProposedViewSize(width: frame.width, height: height)
                 )
             }
             y += height + rowSpacing
@@ -648,6 +715,8 @@ struct SearchColumnsLayout: Layout {
 
 /// `SearchCardGrid` with the column count chosen during layout (one column at the
 /// accessibility text sizes). Use it on screens that would otherwise measure their width.
+/// Where iPhone Duo's crease runs through it, it's a column on each page instead, at every
+/// text size (`SearchColumnsLayout`).
 struct SearchAdaptiveGrid<Item: Identifiable, Cell: View>: View {
     let items: [Item]
     var breakpoints: [SearchColumnsLayout.Breakpoint] = SearchColumnsLayout.cards
@@ -655,18 +724,28 @@ struct SearchAdaptiveGrid<Item: Identifiable, Cell: View>: View {
     @ViewBuilder var cell: (Int, Item) -> Cell
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.fold) private var window
+    /// The fold in this grid's own coordinates (only across it matters, so scrolling along
+    /// the crease doesn't change it).
+    @State private var local = FoldInfo.none
 
     var body: some View {
         SearchColumnsLayout(
             breakpoints: dynamicTypeSize.isAccessibilitySize ? [] : breakpoints,
             spacing: spacing,
-            rowSpacing: spacing + 4
+            rowSpacing: spacing + 4,
+            fold: window.hasFold || window.isSimulated ? local : .none
         ) {
             ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
                 cell(index, item)
                     .frame(maxHeight: .infinity, alignment: .top)
             }
         }
+        .onGeometryChange(for: FoldInfo.self) { [window] proxy in
+            var fold = FoldInfo.reading(proxy, window: window).acrossOnly
+            fold.hinge = nil
+            return fold
+        } action: { local = $0 }
     }
 }
 

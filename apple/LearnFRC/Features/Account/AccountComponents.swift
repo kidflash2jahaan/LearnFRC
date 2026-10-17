@@ -20,13 +20,34 @@ enum AccountLinks {
 
 // MARK: - Page
 
+/// What an account screen lays itself out by (`AccountPage` hands it to the content).
+struct AccountPageLayout: Equatable, Sendable {
+    /// The width to choose between one column and two by: the column's, or half of it at the
+    /// accessibility sizes (see `AccountPage`). Never for sizing anything.
+    var width: CGFloat
+    /// The two pages of an open iPhone Duo's inner screen, measured from the column's leading
+    /// edge: the leading page, the fold's band, the trailing page. Only for a page that asked
+    /// for a spread (`AccountPage.Fold.spread`); nil everywhere else.
+    var pages: FoldColumns?
+
+    /// Two pages, one each side of the fold.
+    var isSpread: Bool { pages != nil }
+}
+
 /// The scrolling sheet every account screen sits on: paper with the grid, a centred
-/// column no wider than `maxWidth`, the site's gutter for the window width, and the
-/// keyboard dismissed by dragging. The content gets a width to choose between one column
-/// and two: the column's, or half of it at the accessibility sizes, where text is two to
-/// three times its usual size and a side column (a 432pt sheet, a 240pt margin note)
-/// holds a word or two a line. So every two-column page stacks there. Use it only for
-/// that choice, never to size anything.
+/// column no wider than `maxWidth`, the page's margins for the window width (the site's
+/// gutter, or the system's margin beside iPhone Duo's vertical bar), and the keyboard
+/// dismissed by dragging. The content gets a width to choose between one column and two:
+/// the column's, or half of it at the accessibility sizes, where text is two to three times
+/// its usual size and a side column (a 432pt sheet, a 240pt margin note) holds a word or two
+/// a line. So every two-column page stacks there. Use it only for that choice, never to
+/// size anything.
+///
+/// On an open iPhone Duo held upright the fold runs down the middle of the screen, and
+/// nothing may sit across it. A page that passes `fold: .spread` gets the whole width and
+/// `AccountPageLayout.pages`, and lays itself out as two pages (`FoldPages`); any other page
+/// keeps to the leading page, as one column. At every text size: each page is about as wide
+/// as a phone, which every account screen already fits.
 ///
 /// When `resetKey` changes (sign in, sign out) the page goes back to the top, so the new
 /// state never opens at the old one's scroll position. Anything inside can bring a view
@@ -36,30 +57,57 @@ enum AccountLinks {
 /// A page with no text field passes `avoidsKeyboard: false`, so a keyboard inset can never
 /// reach it (on iPad one once outlived the sign-in sheet and left a blank band at the bottom).
 struct AccountPage<Content: View>: View {
+    /// What the page does when a fold runs through it.
+    enum Fold: Sendable {
+        /// One column on the leading page.
+        case leadingPage
+        /// Two pages, laid out by the content from `AccountPageLayout.pages`.
+        case spread
+    }
+
     var maxWidth: CGFloat
     var resetKey: AnyHashable?
     var avoidsKeyboard: Bool
     /// Which screen this is, so its scroll position comes back when the Mac builds the tab
     /// again (`remembersScroll`). Nil keeps nothing (the sign-in sheet, the username step).
     var place: ScreenPlace?
-    @ViewBuilder var content: (CGFloat) -> Content
+    var fold: Fold
+    @ViewBuilder var content: (AccountPageLayout) -> Content
 
-    @State private var width: CGFloat = 390
+    @State private var geometry = AccountPageGeometry()
     @State private var scroller = AccountScroller()
     @Environment(\.dynamicTypeSize) private var typeSize
+    @Environment(\.fold) private var windowFold
 
-    init(maxWidth: CGFloat = 760, resetKey: AnyHashable? = nil, avoidsKeyboard: Bool = true, place: ScreenPlace? = nil, @ViewBuilder content: @escaping (CGFloat) -> Content) {
+    init(maxWidth: CGFloat = 760, resetKey: AnyHashable? = nil, avoidsKeyboard: Bool = true, place: ScreenPlace? = nil,
+         fold: Fold = .leadingPage, @ViewBuilder content: @escaping (AccountPageLayout) -> Content) {
         self.maxWidth = maxWidth
         self.resetKey = resetKey
         self.avoidsKeyboard = avoidsKeyboard
         self.place = place
+        self.fold = fold
         self.content = content
     }
 
-    private var gutter: CGFloat { LF.Metrics.gutter(for: width) }
-    private var columnWidth: CGFloat { max(0, min(maxWidth, width - gutter * 2)) }
-    /// What the content chooses its columns by (see above).
-    private var layoutWidth: CGFloat { typeSize.isAccessibilitySize ? columnWidth / 2 : columnWidth }
+    private var margins: LF.PageMargins { geometry.margins }
+    /// The fold's pages across the content area, when both are wide enough to be a page.
+    private var pages: FoldColumns? {
+        geometry.fold.columns(from: margins.leading, to: geometry.width - margins.trailing)
+    }
+    /// How wide the column is: capped at `maxWidth`, the whole content area for a spread, the
+    /// leading page on a fold otherwise.
+    private var columnWidth: CGFloat {
+        if let pages { return fold == .spread ? pages.leading + pages.gap + pages.trailing : pages.leading }
+        return max(0, min(maxWidth, geometry.width - margins.total))
+    }
+    /// What the content chooses its columns by (see above). Each page of a spread is about a
+    /// phone wide, so a spread's pages choose by the narrower one.
+    private var layout: AccountPageLayout {
+        if let pages, fold == .spread {
+            return AccountPageLayout(width: min(pages.leading, pages.trailing), pages: pages)
+        }
+        return AccountPageLayout(width: typeSize.isAccessibilitySize && pages == nil ? columnWidth / 2 : columnWidth)
+    }
 
     var body: some View {
         ScrollViewReader { proxy in
@@ -68,15 +116,19 @@ struct AccountPage<Content: View>: View {
                     Color.clear
                         .frame(height: 0)
                         .id(AccountScroller.top)
-                    content(layoutWidth)
+                    content(layout)
                         // minWidth 0: the column takes the width it's given, so a child that
                         // can't shrink spills past the right edge instead of pushing the
                         // whole column (and its left gutter) off the page.
-                        .frame(minWidth: 0, maxWidth: maxWidth, alignment: .leading)
-                        .padding(.horizontal, gutter)
+                        .frame(minWidth: 0, maxWidth: columnWidth, alignment: .leading)
+                        // On a fold the column starts at the leading margin, so its pages
+                        // line up with the fold; elsewhere it's centred. One chain of
+                        // modifiers either way, so unfolding never rebuilds what's typed.
+                        .padding(.leading, margins.leading)
+                        .padding(.trailing, pages == nil ? margins.trailing : 0)
                         .padding(.top, 18)
                         .padding(.bottom, 56)
-                        .frame(maxWidth: .infinity)
+                        .frame(maxWidth: .infinity, alignment: pages == nil ? .center : .leading)
                 }
             }
             .scrollDismissesKeyboard(.interactively)
@@ -97,12 +149,124 @@ struct AccountPage<Content: View>: View {
             }
         }
         .environment(scroller)
-        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
+        .onGeometryChange(for: AccountPageGeometry.self) { [windowFold] proxy in
+            AccountPageGeometry(proxy, window: windowFold)
+        } action: { geometry = $0 }
         .paperBackground()
         #if os(iOS)
         .ignoresSafeArea(avoidsKeyboard ? [] : .keyboard, edges: .bottom)
         #endif
         .closesShareSheetsOnNavigation()
+    }
+}
+
+/// What `AccountPage` measures of itself: its width, its margins, and where a fold crosses it.
+private struct AccountPageGeometry: Equatable, Sendable {
+    var width: CGFloat = 390
+    var margins = LF.PageMargins(leading: LF.Metrics.gutter, trailing: LF.Metrics.gutter)
+    /// Only the band's position across the page, so nothing changes as the hinge moves.
+    var fold = FoldInfo.none
+
+    init() {}
+
+    init(_ proxy: GeometryProxy, window: FoldInfo) {
+        width = proxy.size.width
+        margins = proxy.lfPageMargins
+        var fold = FoldInfo.reading(proxy, window: window).acrossOnly
+        fold.hinge = nil
+        self.fold = fold
+    }
+}
+
+// MARK: - Two pages
+
+/// Two views, one each side of an open iPhone Duo's fold, with the gap exactly on the band:
+/// the first on the leading page, the second on the trailing page, each as wide as its page,
+/// tops aligned. With no pages (every other screen, and the Duo's cover) it stacks them, the
+/// first above the second, `spacing` apart.
+///
+/// The same two views either way, so unfolding the phone mid-edit keeps what's typed, the
+/// focus and the scroll position. `pages` comes from the screen's page frame
+/// (`AccountPageLayout.pages`, `CommunityLayout.pages`), measured from where this view starts.
+///
+///     FoldPages(page.pages) {
+///         AccountCard()
+///     } trailing: {
+///         RemindersCard()
+///     }
+struct FoldPages<Leading: View, Trailing: View>: View {
+    var pages: FoldColumns?
+    var spacing: CGFloat
+    var leading: Leading
+    var trailing: Trailing
+
+    init(_ pages: FoldColumns?, spacing: CGFloat = 0, @ViewBuilder leading: () -> Leading, @ViewBuilder trailing: () -> Trailing) {
+        self.pages = pages
+        self.spacing = spacing
+        self.leading = leading()
+        self.trailing = trailing()
+    }
+
+    var body: some View {
+        // Each side in a stack of its own, so the layout always gets exactly two views, even
+        // when a side is empty or several views long.
+        FoldPagesLayout(pages: pages, spacing: spacing) {
+            VStack(alignment: .leading, spacing: 0) { leading }
+            VStack(alignment: .leading, spacing: 0) { trailing }
+        }
+    }
+}
+
+/// The layout behind `FoldPages`: two subviews side by side at the pages' widths with the
+/// band between them, or stacked.
+struct FoldPagesLayout: Layout {
+    var pages: FoldColumns?
+    var spacing: CGFloat = 0
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        if let pages, subviews.count == 2 {
+            let first = subviews[0].sizeThatFits(ProposedViewSize(width: pages.leading, height: nil))
+            let second = subviews[1].sizeThatFits(ProposedViewSize(width: pages.trailing, height: nil))
+            return CGSize(width: proposal.width ?? (pages.leading + pages.gap + pages.trailing),
+                          height: max(first.height, second.height))
+        }
+        var height: CGFloat = 0
+        var width: CGFloat = 0
+        for subview in subviews {
+            let size = subview.sizeThatFits(ProposedViewSize(width: proposal.width, height: nil))
+            if size.height > 0, height > 0 { height += spacing }
+            height += size.height
+            width = max(width, size.width)
+        }
+        return CGSize(width: proposal.width ?? width, height: height)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        if let pages, subviews.count == 2 {
+            subviews[0].place(at: bounds.origin, anchor: .topLeading,
+                              proposal: ProposedViewSize(width: pages.leading, height: nil))
+            subviews[1].place(at: CGPoint(x: bounds.minX + pages.leading + pages.gap, y: bounds.minY), anchor: .topLeading,
+                              proposal: ProposedViewSize(width: pages.trailing, height: nil))
+            return
+        }
+        var y = bounds.minY
+        var placedAny = false
+        for subview in subviews {
+            let proposal = ProposedViewSize(width: bounds.width, height: nil)
+            let size = subview.sizeThatFits(proposal)
+            if size.height > 0, placedAny { y += spacing }
+            subview.place(at: CGPoint(x: bounds.minX, y: y), anchor: .topLeading, proposal: proposal)
+            if size.height > 0 { placedAny = true }
+            y += size.height
+        }
+    }
+}
+
+extension View {
+    /// Keeps this to the leading page on a fold (`pages`), so it never sits across it; as it
+    /// was everywhere else. For a card or a note on a page that has nothing for the other page.
+    func foldLeadingPage(_ pages: FoldColumns?) -> some View {
+        frame(maxWidth: pages?.leading ?? .infinity, alignment: .leading)
     }
 }
 

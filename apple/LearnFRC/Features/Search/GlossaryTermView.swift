@@ -56,24 +56,27 @@ private struct GlossaryEntryPage: View {
     }
 
     var body: some View {
-        ScrollView {
-            Group {
-                if let term {
-                    entry(term)
-                } else if !reference.isLoaded {
-                    loading
-                } else {
-                    missing
+        FoldReader { geometry, fold in
+            let margins = geometry.lfPageMargins
+            ScrollView {
+                Group {
+                    if let term {
+                        entry(term, spread: fold.searchSpread(width: geometry.size.width, margins: margins))
+                    } else if !reference.isLoaded {
+                        loading
+                    } else {
+                        missing
+                    }
                 }
+                .padding(.top, 8)
+                .padding(.bottom, 56)
+                // The same page as every other screen (gutters from the leading edge); each block
+                // below keeps its own reading width.
+                .searchPage(margins: margins)
             }
-            .padding(.top, 8)
-            .padding(.bottom, 56)
-            // The same page as every other screen (gutters from the leading edge); each block
-            // below keeps its own reading width.
-            .searchPage()
+            // The Mac rebuilds the tab on every switch; the entry comes back where it was left.
+            .remembersScroll(.route(.glossaryTerm(slug)))
         }
-        // The Mac rebuilds the tab on every switch; the entry comes back where it was left.
-        .remembersScroll(.route(.glossaryTerm(slug)))
         .paperBackground()
         .navigationTitle(term?.term ?? "Glossary")
         .toolbarTitleDisplayMode(.inline)
@@ -84,6 +87,7 @@ private struct GlossaryEntryPage: View {
                         Label("Share", systemImage: "square.and.arrow.up")
                     }
                 }
+                .lfAxisBehavior(.verticalPreferred)
             }
         }
         // Handoff: carry on reading this entry on learnfrc.com on another device. Only while
@@ -101,41 +105,68 @@ private struct GlossaryEntryPage: View {
 
     // MARK: The entry
 
-    private func entry(_ term: GlossaryTerm) -> some View {
+    /// - Parameter spread: iPhone Duo held upright (`FoldInfo.searchSpread`): the card and where
+    ///   you meet the term on the left page, the lessons, its neighbours and the footer on the
+    ///   right one.
+    @ViewBuilder
+    private func entry(_ term: GlossaryTerm, spread: FoldInfo?) -> some View {
+        if let spread {
+            FoldSplitLayout(fold: spread) {
+                VStack(alignment: .leading, spacing: 0) {
+                    entryCard(term)
+                }
+                VStack(alignment: .leading, spacing: 0) {
+                    entryMore(term, firstGap: 0)
+                }
+            }
+        } else {
+            VStack(alignment: .leading, spacing: 0) {
+                entryCard(term)
+                entryMore(term, firstGap: 48)
+            }
+        }
+    }
+
+    /// The slug, the card, and where you meet the term.
+    @ViewBuilder
+    private func entryCard(_ term: GlossaryTerm) -> some View {
+        SlugText("glossary / \(term.slug)")
+            .accessibilityLabel("Glossary")
+        card(term)
+            .frame(maxWidth: 760, alignment: .leading)
+            .padding(.top, 22)
+        if let inMatch = term.inMatch, !inMatch.isEmpty {
+            NoteCallout {
+                SlugText("where you actually meet \(GlossaryRules.shortName(term))")
+                    .accessibilityAddTraits(.isHeader)
+                Text(inMatch)
+                    .lfProse(16.5, lineHeight: 1.6)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .textSelection(.enabled)
+                    .padding(.top, 4)
+            }
+            // About 80 characters a line, like the lesson and article text.
+            .frame(maxWidth: LF.Metrics.readableWidth, alignment: .leading)
+            .padding(.top, 40)
+        }
+    }
+
+    /// The lessons that use it, its neighbours, and the footer. `firstGap` above the first.
+    @ViewBuilder
+    private func entryMore(_ term: GlossaryTerm, firstGap: CGFloat) -> some View {
         let shortName = GlossaryRules.shortName(term)
         let lessons = GlossaryRules.lessons(teaching: term, in: catalog.allLessons)
         let related = GlossaryRules.relatedTerms(for: term, in: reference.glossary)
-        return VStack(alignment: .leading, spacing: 0) {
-            SlugText("glossary / \(term.slug)")
-                .accessibilityLabel("Glossary")
-            card(term)
-                .frame(maxWidth: 760, alignment: .leading)
-                .padding(.top, 22)
-            if let inMatch = term.inMatch, !inMatch.isEmpty {
-                NoteCallout {
-                    SlugText("where you actually meet \(shortName)")
-                        .accessibilityAddTraits(.isHeader)
-                    Text(inMatch)
-                        .lfProse(16.5, lineHeight: 1.6)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .textSelection(.enabled)
-                        .padding(.top, 4)
-                }
-                // About 80 characters a line, like the lesson and article text.
-                .frame(maxWidth: LF.Metrics.readableWidth, alignment: .leading)
-                .padding(.top, 40)
-            }
-            if !lessons.isEmpty {
-                lessonsSection(lessons, shortName: shortName)
-                    .padding(.top, 48)
-            }
-            if !related.isEmpty {
-                relatedSection(related)
-                    .padding(.top, 48)
-            }
-            footer(term)
-                .padding(.top, 48)
+        if !lessons.isEmpty {
+            lessonsSection(lessons, shortName: shortName)
+                .padding(.top, firstGap)
         }
+        if !related.isEmpty {
+            relatedSection(related)
+                .padding(.top, lessons.isEmpty ? firstGap : 48)
+        }
+        footer(term)
+            .padding(.top, lessons.isEmpty && related.isEmpty ? firstGap : 48)
     }
 
     /// The card is the content: drawer, short form, term, definition, other names, and the

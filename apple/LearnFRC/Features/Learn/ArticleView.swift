@@ -90,7 +90,12 @@ struct ArticleView: View {
         let related = ArticleDesks.related(to: article, in: catalog.articles)
         let bridge = bridge?.slug == article.slug ? bridge : nil
 
-        return LearnScrollPage(title: article.title, place: .route(.article(slug))) { layout, proxy in
+        // The lesson treatment on iPhone Duo: the text on one page (the standing half in
+        // laptop posture), the sections and links on the other (the half on the table).
+        let hasCompanion = headings.count > 1 || bridge != nil || !related.isEmpty
+        return LearnScrollPage(title: article.title, place: .route(.article(slug)),
+                               companionAxes: hasCompanion ? [.horizontal, .vertical] : [],
+                               laptopCompanionEdge: .bottom) { layout, proxy in
             header(article, words: words, sections: headings.count, layout: layout)
                 .learnColumn(layout)
                 .padding(.top, 18)
@@ -99,21 +104,47 @@ struct ArticleView: View {
                 .learnColumn(layout)
                 .padding(.top, 30)
 
-            if let bridge {
-                bridgeBand(bridge, layout: layout)
-                    .learnBand()
-                    .padding(.top, 52)
-            }
+            // On iPhone Duo's two pages the bridge and the next articles are on the next page.
+            if layout.role == .page {
+                if let bridge {
+                    bridgeBand(bridge, layout: layout)
+                        .learnBand()
+                        .padding(.top, 52)
+                }
 
-            if !related.isEmpty {
-                keepReading(related, layout: layout)
-                    .learnColumn(layout)
-                    .padding(.top, 52)
+                if !related.isEmpty {
+                    keepReading(related, layout: layout)
+                        .learnColumn(layout)
+                        .padding(.top, 52)
+                }
             }
 
             endOfSheet(article)
                 .learnColumn(layout)
                 .padding(.top, 48)
+        } companion: { layout in
+            // iPhone Duo's trailing page (or the flat half in laptop posture), the way a lesson's
+            // margin works: the sections to jump to, the lessons that teach this properly, and
+            // the closest articles.
+            VStack(alignment: .leading, spacing: 0) {
+                if headings.count > 1 {
+                    LearnSheetIndex(headings: headings) { id in
+                        jumpTarget = id
+                    }
+                    .learnColumn(layout)
+                    .padding(.bottom, 44)
+                }
+                if let bridge {
+                    bridgeBand(bridge, layout: layout)
+                        .learnBand()
+                        .padding(.bottom, 44)
+                }
+                if !related.isEmpty {
+                    keepReading(related, layout: layout)
+                        .learnColumn(layout)
+                }
+            }
+            .padding(.top, 22)
         }
         .toolbar {
             if headings.count > 1 {
@@ -283,7 +314,7 @@ struct ArticleView: View {
                 .padding(.top, 24)
             }
             .frame(maxWidth: LF.Metrics.maxContentWidth, alignment: .leading)
-            .padding(.horizontal, max(0, layout.gutter - LF.Metrics.cardPadding))
+            .padding(layout.bandInsets)
             .frame(maxWidth: .infinity)
             .padding(.vertical, layout.isRegular ? 26 : 18)
         }
@@ -459,3 +490,11 @@ struct LearnSheetIndex: View {
         .appEnvironment(.preview)
         .environment(\.colorScheme, .dark)
 }
+
+#if DEBUG
+#Preview("Article, Duo book", traits: .fixedLayout(width: 867, height: 2000)) {
+    NavigationStack { ArticleView(slug: PreviewData.article.slug) }
+        .appEnvironment(.preview)
+        .previewFold(.previewBook)
+}
+#endif

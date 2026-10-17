@@ -13,15 +13,23 @@ struct LessonVideoFacade: View {
     let lessonTitle: String
     /// The live player once play was pressed, owned by the lesson so read-aloud can pause it.
     @Binding var player: YouTubePlayer?
+    /// The playing video is shown somewhere else on the screen (pinned to the top half of
+    /// iPhone Duo in laptop posture, `LessonPinnedVideo`), so this frame holds a note instead
+    /// of a second player.
+    var isPlayingElsewhere = false
     /// Called when play is pressed (the lesson stops reading aloud).
     var onPlay: () -> Void = {}
-
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             SectionLabel("the video version")
-            screen
+            LessonVideoScreen(
+                videoID: videoID,
+                lessonTitle: lessonTitle,
+                player: $player,
+                showsPlayer: !isPlayingElsewhere,
+                onPlay: onPlay
+            )
                 .padding(8)
                 .background { NotebookBoxBackground(size: .a, shadow: .card) }
             Text(caption)
@@ -43,15 +51,27 @@ struct LessonVideoFacade: View {
         text.append(link)
         return text
     }
+}
 
-    /// A 16:9 frame that the poster and the player both fill exactly, so pressing play swaps
-    /// one for the other without the page moving. The frame's size comes from the black
-    /// backing alone; whatever sits on it is laid over it and clipped to it.
-    private var screen: some View {
+/// A 16:9 frame that the poster and the player both fill exactly, so pressing play swaps
+/// one for the other without the page moving. The frame's size comes from the black
+/// backing alone; whatever sits on it is laid over it and clipped to it. Offered less height
+/// than 16:9 needs, it fits the height instead (the pinned video in laptop posture).
+struct LessonVideoScreen: View {
+    let videoID: String
+    let lessonTitle: String
+    @Binding var player: YouTubePlayer?
+    /// False while the playing video is shown somewhere else: this frame says so instead.
+    var showsPlayer = true
+    var onPlay: () -> Void = {}
+
+    var body: some View {
         Color.black
             .aspectRatio(16 / 9, contentMode: .fit)
             .overlay {
-                if let player {
+                if player != nil, !showsPlayer {
+                    playingElsewhere
+                } else if let player {
                     YouTubePlayerView(player) { state in
                         switch state {
                         case .idle:
@@ -78,6 +98,22 @@ struct LessonVideoFacade: View {
                     .strokeBorder(LF.Palette.ink, lineWidth: LF.Metrics.stroke)
                     .allowsHitTesting(false)
             }
+    }
+
+    private var playingElsewhere: some View {
+        VStack(spacing: 8) {
+            Image(systemName: "rectangle.portrait.tophalf.inset.filled")
+                .font(.title2)
+                .accessibilityHidden(true)
+            Text("Playing in the top half.")
+                .font(LF.Fonts.body(16, weight: .bold, relativeTo: .callout))
+                .multilineTextAlignment(.center)
+        }
+        .foregroundStyle(.white)
+        .padding()
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(.black)
+        .accessibilityElement(children: .combine)
     }
 
     private func play() {
@@ -170,6 +206,36 @@ struct LessonVideoFacade: View {
         .padding()
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(.black)
+    }
+}
+
+/// The lesson's video pinned to the top half of iPhone Duo in laptop posture, while the lesson
+/// scrolls in the bottom half. The close button sits beside the video, never over it.
+struct LessonPinnedVideo: View {
+    let videoID: String
+    let lessonTitle: String
+    @Binding var player: YouTubePlayer?
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 10) {
+            LessonVideoScreen(videoID: videoID, lessonTitle: lessonTitle, player: $player)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            Button {
+                player = nil
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.body.weight(.bold))
+                    .foregroundStyle(LF.Palette.ink)
+                    .frame(width: LF.Metrics.tap, height: LF.Metrics.tap)
+                    .background { HandShape(.s).strokeBorder(LF.Palette.ink, lineWidth: LF.Metrics.stroke) }
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Close the video")
+            .accessibilityHint("Stops the video and puts the lesson back in the top half")
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Video version of this lesson")
     }
 }
 

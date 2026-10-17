@@ -31,12 +31,25 @@ final class APIClient: Sendable {
 
     /// `GET /api/app/reference`
     func reference() async throws -> Reference {
-        try await send("GET", "/api/app/reference", auth: false)
+        try await send("GET", "/api/app/reference", auth: .anonymous)
+    }
+
+    /// `GET /api/app/resources`: learnfrc.com/resources as data. Public and cached by the site.
+    func resourcesPage() async throws -> ResourcesPage {
+        try await send("GET", "/api/app/resources", auth: .anonymous)
+    }
+
+    /// `GET /api/app/start-plan?goal=`: the five lessons for one start goal. Signed in, the
+    /// session goes along so the account's finished lessons come back ticked (`done`), like
+    /// on the site; signed out it's the plan a new visitor gets. An unknown goal comes back as
+    /// the default goal (`new`).
+    func startPlan(goal: String, signedIn: Bool) async throws -> StartPlan {
+        try await send("GET", "/api/app/start-plan", query: ["goal": goal], auth: signedIn ? .bearerIfSignedIn : .anonymous)
     }
 
     /// `GET /api/app/leaderboard?board=`
     func leaderboard(_ board: LeaderboardBoard) async throws -> LeaderboardPayload {
-        try await send("GET", "/api/app/leaderboard", query: ["board": board.rawValue], auth: false)
+        try await send("GET", "/api/app/leaderboard", query: ["board": board.rawValue], auth: .anonymous)
     }
 
     /// `GET /api/app/u/{username}`. nil when there's no such person.
@@ -44,7 +57,7 @@ final class APIClient: Sendable {
         let name = username.trimmingCharacters(in: .whitespaces).lowercased()
         guard !name.isEmpty, let encoded = name.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) else { return nil }
         do {
-            return try await send("GET", "/api/app/u/\(encoded)", auth: false, notFoundIsNil: true)
+            return try await send("GET", "/api/app/u/\(encoded)", auth: .anonymous, notFoundIsNil: true)
         } catch let error as NotFound {
             _ = error
             return nil
@@ -56,7 +69,7 @@ final class APIClient: Sendable {
     /// `POST /api/app/auth/sign-in` (username or email + password). Install the result with `setSession`.
     func signIn(identifier: String, password: String) async throws -> SessionTokens {
         struct Body: Encodable { let identifier: String; let password: String }
-        return try await send("POST", "/api/app/auth/sign-in", body: Body(identifier: identifier, password: password), auth: false)
+        return try await send("POST", "/api/app/auth/sign-in", body: Body(identifier: identifier, password: password), auth: .anonymous)
     }
 
     /// `POST /api/app/auth/sign-up`
@@ -64,11 +77,29 @@ final class APIClient: Sendable {
         struct Response: Decodable {
             let status: String?
         }
-        let response: Response = try await send("POST", "/api/app/auth/sign-up", body: request, auth: false)
+        let response: Response = try await send("POST", "/api/app/auth/sign-up", body: request, auth: .anonymous)
         switch response.status {
         case "exists": return .exists
         default: return .confirmEmail
         }
+    }
+
+    /// `POST /api/app/auth/oauth-complete`, with the session Continue with Google just made.
+    /// Runs the site's own post-sign-in work for an OAuth account (what its Google callback
+    /// does): a brand-new account gets its signup attribution and any pending referral reward.
+    /// Idempotent. `platform` is `AppConfig.platformID`, recorded as the source of a new
+    /// account. Returns `isNewAccount`.
+    func completeOAuthSignIn(ref: String?, via: String?, platform: String?) async throws -> Bool {
+        struct Body: Encodable { let ref: String?; let via: String?; let platform: String? }
+        struct Response: Decodable {
+            let isNewAccount: Bool
+            init(from decoder: any Decoder) throws {
+                let c = try decoder.container(keyedBy: AnyCodingKey.self)
+                isNewAccount = (try? c.decodeIfPresent(Bool.self, forKey: AnyCodingKey("isNewAccount"))) ?? false
+            }
+        }
+        let response: Response = try await send("POST", "/api/app/auth/oauth-complete", body: Body(ref: ref, via: via, platform: platform))
+        return response.isNewAccount
     }
 
     // MARK: Signed-in routes
@@ -149,7 +180,7 @@ final class APIClient: Sendable {
         let _: OKResponse = try await send(
             "POST", "/api/guest-progress",
             body: Body(visitorId: visitorID, lessonId: lessonID.uuidString.lowercased(), complete: true, answers: answers),
-            auth: false
+            auth: .anonymous
         )
     }
 
@@ -159,7 +190,7 @@ final class APIClient: Sendable {
         let _: OKResponse = try await send(
             "POST", "/api/guest-progress",
             body: Body(visitorId: visitorID, lessonId: lessonID.uuidString.lowercased(), complete: false),
-            auth: false
+            auth: .anonymous
         )
     }
 
@@ -172,7 +203,7 @@ final class APIClient: Sendable {
                 lessonIds = c.stringArray(forKey: AnyCodingKey("lessonIds"))
             }
         }
-        let response: Response = try await send("GET", "/api/guest-progress", query: ["visitorId": visitorID], auth: false)
+        let response: Response = try await send("GET", "/api/guest-progress", query: ["visitorId": visitorID], auth: .anonymous)
         return response.lessonIds.compactMap(UUID.init(uuidString:))
     }
 
@@ -186,11 +217,22 @@ final class APIClient: Sendable {
 
     private struct Empty: Encodable {}
 
+    /// Whether a request carries the session's access token.
+    private enum Auth {
+        /// Never (public routes, sign-in and sign-up).
+        case anonymous
+        /// Always. Signed out, the request isn't sent and `.unauthorized` is thrown.
+        case bearer
+        /// When there's a session; signed out, the request goes without one. A 401 is retried
+        /// once with a refreshed token, and as a visitor when no fresh token can be had.
+        case bearerIfSignedIn
+    }
+
     private func send<Response: Decodable>(
         _ method: String,
         _ path: String,
         query: [String: String] = [:],
-        auth: Bool = true,
+        auth: Auth = .bearer,
         notFoundIsNil: Bool = false
     ) async throws -> Response {
         try await send(method, path, query: query, body: Optional<Empty>.none, auth: auth, notFoundIsNil: notFoundIsNil)
@@ -201,22 +243,31 @@ final class APIClient: Sendable {
         _ path: String,
         query: [String: String] = [:],
         body: Body?,
-        auth: Bool = true,
+        auth: Auth = .bearer,
         notFoundIsNil: Bool = false
     ) async throws -> Response {
         var token: String?
-        if auth { token = try await supabase.validAccessToken() }
+        switch auth {
+        case .anonymous: break
+        case .bearer: token = try await supabase.validAccessToken()
+        case .bearerIfSignedIn:
+            if supabase.currentSession != nil { token = try? await supabase.validAccessToken() }
+        }
 
         var (data, response) = try await perform(method, path, query: query, body: body, token: token)
-        if auth, response.statusCode == 401 {
+        if token != nil, response.statusCode == 401 {
             // One retry with a freshly refreshed token.
-            token = try await supabase.refreshedAccessToken()
+            if case .bearer = auth {
+                token = try await supabase.refreshedAccessToken()
+            } else {
+                token = try? await supabase.refreshedAccessToken()
+            }
             (data, response) = try await perform(method, path, query: query, body: body, token: token)
         }
 
         guard (200..<300).contains(response.statusCode) else {
             if notFoundIsNil, response.statusCode == 404 { throw NotFound() }
-            let error = APIError.from(status: response.statusCode, data: data, headers: response, authenticated: auth)
+            let error = APIError.from(status: response.statusCode, data: data, headers: response, authenticated: token != nil)
             if error != .unauthorized {
                 Log.network.error("\(method, privacy: .public) \(path, privacy: .public) -> \(response.statusCode): \(error.message, privacy: .public)")
             }

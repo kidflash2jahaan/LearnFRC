@@ -35,11 +35,11 @@ struct ArticlesView: View {
                 library(articles, layout: layout, proxy: proxy)
             } else {
                 results(ArticleDesks.search(trimmed, in: articles), query: trimmed, layout: layout)
-                    .learnColumn(layout)
+                    .learnColumn(layout, spread: true)
                     .padding(.top, 20)
             }
         }
-        .searchable(text: $query, prompt: Text("Search \(articles.count) articles"))
+        .modifier(LearnSearchable(text: $query, prompt: Text("Search \(articles.count) articles")))
         .onAppear(perform: restoreQuery)
         .onChange(of: query) { _, words in
             // Only what's typed while the library is on show: on the Mac the field empties
@@ -70,37 +70,64 @@ struct ArticlesView: View {
         let featured = ArticleDesks.featured(in: articles)
         let minutes = articles.reduce(0) { $0 + $1.readMins }
 
-        masthead(count: articles.count, minutes: minutes, layout: layout)
-            .learnColumn(layout)
+        if let pages = layout.pages, !articles.isEmpty {
+            // iPhone Duo's inner screen held upright: the masthead and the desks to jump to
+            // side by side, the six in two cards, and the desks down both pages.
+            LearnSpread(pages: pages) {
+                masthead(count: articles.count, minutes: minutes, layout: .page(pages.leading))
+            } trailing: {
+                deskIndex(desks, total: articles.count, layout: .page(pages.trailing), proxy: proxy)
+            }
+            .learnColumn(layout, spread: true)
             .padding(.top, 20)
 
-        if articles.isEmpty {
-            Group {
-                if !catalog.isLoaded {
-                    LearnLoadingBlock(rows: 3)
-                } else {
-                    LearnNotice(kicker: "articles / none yet",
-                                message: "The articles aren't on this device yet. They download the first time the app has a connection, then work offline.")
-                }
-            }
-            .learnColumn(layout)
-            .padding(.top, 28)
-        } else {
             if !featured.isEmpty {
                 frontDoor(featured, layout: layout)
-                    .learnColumn(layout)
+                    .learnColumn(layout, spread: true)
                     .padding(.top, 44)
             }
 
-            deskIndex(desks, total: articles.count, layout: layout, proxy: proxy)
+            LearnFoldColumns(pages: pages, fill: .balanced, spacing: 44) {
+                ForEach(desks) { desk in
+                    deskSection(desk, layout: .page(min(pages.leading, pages.trailing)))
+                        .id(LearnAnchor.desk(desk.slug))
+                }
+            }
+            .learnColumn(layout, spread: true)
+            .padding(.top, 52)
+        } else {
+            masthead(count: articles.count, minutes: minutes, layout: layout)
                 .learnColumn(layout)
-                .padding(.top, 52)
+                .padding(.top, 20)
 
-            ForEach(desks) { desk in
-                deskSection(desk, layout: layout)
+            if articles.isEmpty {
+                Group {
+                    if !catalog.isLoaded {
+                        LearnLoadingBlock(rows: 3)
+                    } else {
+                        LearnNotice(kicker: "articles / none yet",
+                                    message: "The articles aren't on this device yet. They download the first time the app has a connection, then work offline.")
+                    }
+                }
+                .learnColumn(layout)
+                .padding(.top, 28)
+            } else {
+                if !featured.isEmpty {
+                    frontDoor(featured, layout: layout)
+                        .learnColumn(layout)
+                        .padding(.top, 44)
+                }
+
+                deskIndex(desks, total: articles.count, layout: layout, proxy: proxy)
                     .learnColumn(layout)
-                    .padding(.top, 44)
-                    .id(LearnAnchor.desk(desk.slug))
+                    .padding(.top, 52)
+
+                ForEach(desks) { desk in
+                    deskSection(desk, layout: layout)
+                        .learnColumn(layout)
+                        .padding(.top, 44)
+                        .id(LearnAnchor.desk(desk.slug))
+                }
             }
         }
     }
@@ -131,40 +158,79 @@ struct ArticlesView: View {
         let half = (featured.count + 1) / 2
         let columns = layout.isRegular ? [Array(featured.prefix(half)), Array(featured.dropFirst(half))] : [featured]
         return VStack(alignment: .leading, spacing: 0) {
-            InkRule()
-            HStack(alignment: .bottom, spacing: 24) {
+            if let pages = layout.pages {
+                LearnSpreadRule(pages: pages)
                 LearnSectionHeader(
                     title: "If you only read \(featured.count)",
                     sub: "What FRC actually is, how to get a team off the ground, how a competition day runs, and the two topics every team ends up arguing about at 1am."
                 )
-                .frame(maxWidth: .infinity, alignment: .leading)
-                if layout.isRegular {
-                    SlugText("read in this order").fixedSize()
-                }
-            }
-            .padding(.top, 28)
-
-            NotebookCard(padding: 0) {
-                HStack(alignment: .top, spacing: 0) {
-                    ForEach(Array(columns.enumerated()), id: \.offset) { columnIndex, column in
-                        if columnIndex > 0 {
-                            Rectangle().fill(LF.Palette.ink).frame(width: LF.Metrics.stroke)
-                        }
-                        VStack(alignment: .leading, spacing: 0) {
-                            ForEach(Array(column.enumerated()), id: \.element.id) { index, article in
-                                if index > 0 { DashedRule() }
-                                featuredRow(article, number: columnIndex * half + index + 1)
-                            }
-                        }
-                        .padding(.horizontal, LF.Metrics.cardPadding)
-                        .padding(.vertical, 8)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                .frame(width: pages.leading, alignment: .leading)
+                .padding(.top, 28)
+                // One card on each page, read in order down the first and then the second.
+                LearnSpread(pages: pages) {
+                    featuredCard(Array(featured.prefix(half)), firstNumber: 1)
+                } trailing: {
+                    VStack(alignment: .leading, spacing: 10) {
+                        SlugText("read in this order")
+                        featuredCard(Array(featured.dropFirst(half)), firstNumber: half + 1)
                     }
                 }
-                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, 24)
+            } else {
+                frontDoorBody(featured, columns: columns, half: half, layout: layout)
             }
-            .padding(.top, 24)
         }
+    }
+
+    private func featuredCard(_ articles: [Article], firstNumber: Int) -> some View {
+        NotebookCard(padding: 0) {
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(Array(articles.enumerated()), id: \.element.id) { index, article in
+                    if index > 0 { DashedRule() }
+                    featuredRow(article, number: firstNumber + index)
+                }
+            }
+            .padding(.horizontal, LF.Metrics.cardPadding)
+            .padding(.vertical, 8)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    @ViewBuilder
+    private func frontDoorBody(_ featured: [Article], columns: [[Article]], half: Int, layout: LearnLayout) -> some View {
+        InkRule()
+        HStack(alignment: .bottom, spacing: 24) {
+            LearnSectionHeader(
+                title: "If you only read \(featured.count)",
+                sub: "What FRC actually is, how to get a team off the ground, how a competition day runs, and the two topics every team ends up arguing about at 1am."
+            )
+            .frame(maxWidth: .infinity, alignment: .leading)
+            if layout.isRegular {
+                SlugText("read in this order").fixedSize()
+            }
+        }
+        .padding(.top, 28)
+
+        NotebookCard(padding: 0) {
+            HStack(alignment: .top, spacing: 0) {
+                ForEach(Array(columns.enumerated()), id: \.offset) { columnIndex, column in
+                    if columnIndex > 0 {
+                        Rectangle().fill(LF.Palette.ink).frame(width: LF.Metrics.stroke)
+                    }
+                    VStack(alignment: .leading, spacing: 0) {
+                        ForEach(Array(column.enumerated()), id: \.element.id) { index, article in
+                            if index > 0 { DashedRule() }
+                            featuredRow(article, number: columnIndex * half + index + 1)
+                        }
+                    }
+                    .padding(.horizontal, LF.Metrics.cardPadding)
+                    .padding(.vertical, 8)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+            .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.top, 24)
     }
 
     private func featuredRow(_ article: Article, number: Int) -> some View {
@@ -290,17 +356,57 @@ struct ArticlesView: View {
             if matches.isEmpty {
                 LearnNotice(kicker: "search / \(query)",
                             message: "No article mentions \"\(query)\". Try a shorter word, or a part name like PDH or SPARK MAX.")
+                    .frame(maxWidth: layout.pages?.leading ?? .infinity, alignment: .leading)
                     .padding(.top, 16)
-            } else {
-                VStack(spacing: 0) {
-                    InkRule()
-                    ForEach(matches) { article in
-                        articleRow(article, layout: layout)
-                    }
+            } else if let pages = layout.pages {
+                // Down the leading page, then on down the trailing one.
+                let half = (matches.count + 1) / 2
+                LearnSpread(pages: pages) {
+                    resultList(Array(matches.prefix(half)), layout: .page(pages.leading))
+                } trailing: {
+                    resultList(Array(matches.dropFirst(half)), layout: .page(pages.trailing))
                 }
                 .padding(.top, 16)
+            } else {
+                resultList(matches, layout: layout)
+                    .padding(.top, 16)
             }
         }
+    }
+
+    @ViewBuilder
+    private func resultList(_ matches: [Article], layout: LearnLayout) -> some View {
+        if !matches.isEmpty {
+            VStack(spacing: 0) {
+                InkRule()
+                ForEach(matches) { article in
+                    articleRow(article, layout: layout)
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Search field
+
+/// `searchable` that stays in sight beside iPhone Duo's vertical bar. With the bar showing
+/// (the cover screen, the inner screen held upright) the automatic placement left no field to
+/// type in until something else focused it, so there it's pinned in the navigation bar's
+/// drawer; everywhere else it's the usual automatic field.
+struct LearnSearchable: ViewModifier {
+    @Binding var text: String
+    let prompt: Text
+
+    @Environment(\.lfVerticalBarEdge) private var barEdge
+
+    func body(content: Content) -> some View {
+        #if os(iOS)
+        content.searchable(text: $text,
+                           placement: barEdge == nil ? .automatic : .navigationBarDrawer(displayMode: .always),
+                           prompt: prompt)
+        #else
+        content.searchable(text: $text, prompt: prompt)
+        #endif
     }
 }
 
@@ -483,6 +589,14 @@ nonisolated enum ArticleDesks {
         .appEnvironment(.preview)
         .environment(\.colorScheme, .dark)
 }
+
+#if DEBUG
+#Preview("Articles, Duo book, whole page", traits: .fixedLayout(width: 867, height: 3000)) {
+    NavigationStack { ArticlesView() }
+        .appEnvironment(.preview)
+        .previewFold(.previewFlat)
+}
+#endif
 
 // MARK: - The library's route
 

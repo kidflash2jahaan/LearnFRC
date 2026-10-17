@@ -28,11 +28,21 @@ struct BookmarksView: View {
 
     var body: some View {
         let saved = progress.bookmarkedLessons
-        AccountPage(maxWidth: 1080, avoidsKeyboard: false, place: .route(.bookmarks)) { width in
-            VStack(alignment: .leading, spacing: 0) {
-                masthead(saved, wide: width >= 900)
-                folder(saved, wide: width >= 760)
-                    .padding(.top, 52)
+        AccountPage(maxWidth: 1080, avoidsKeyboard: false, place: .route(.bookmarks), fold: .spread) { page in
+            if let pages = page.pages {
+                // An open iPhone Duo: the masthead and the index on the left page, the folder
+                // on the right.
+                FoldPages(pages) {
+                    masthead(saved, wide: false)
+                } trailing: {
+                    folder(saved, wide: false)
+                }
+            } else {
+                VStack(alignment: .leading, spacing: 0) {
+                    masthead(saved, wide: page.width >= 900)
+                    folder(saved, wide: page.width >= 760)
+                        .padding(.top, 52)
+                }
             }
         }
         .navigationTitle("Bookmarks")

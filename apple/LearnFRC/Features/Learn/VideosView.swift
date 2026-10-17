@@ -38,9 +38,22 @@ struct VideosView: View {
         let shelves = shelves
         let total = shelves.reduce(0) { $0 + $1.videos.count }
         LearnScrollPage(title: "Videos", refresh: { await model.refreshAll() }, place: .route(.videos)) { layout, proxy in
-            masthead(total: total, shelves: shelves, layout: layout, proxy: proxy)
-                .learnColumn(layout)
+            if let pages = layout.pages, shelves.count > 1 {
+                // iPhone Duo's inner screen held upright: the masthead on the leading page,
+                // the departments to jump to on the trailing one.
+                LearnSpread(pages: pages) {
+                    masthead(total: total, shelves: shelves, layout: .page(pages.leading), proxy: proxy, chips: false)
+                } trailing: {
+                    jumpChips(shelves, proxy: proxy)
+                        .padding(.top, 30)
+                }
+                .learnColumn(layout, spread: true)
                 .padding(.top, 20)
+            } else {
+                masthead(total: total, shelves: shelves, layout: layout.column, proxy: proxy, chips: true)
+                    .learnColumn(layout)
+                    .padding(.top, 20)
+            }
 
             if total == 0 {
                 Group {
@@ -56,7 +69,7 @@ struct VideosView: View {
             } else {
                 ForEach(shelves, id: \.department.id) { shelf in
                     shelfSection(shelf.department, videos: shelf.videos, layout: layout)
-                        .learnColumn(layout)
+                        .learnColumn(layout, spread: true)
                         .padding(.top, 48)
                         .id(LearnAnchor.department(shelf.department.slug))
                 }
@@ -87,7 +100,7 @@ struct VideosView: View {
     // MARK: Masthead
 
     private func masthead(total: Int, shelves: [(department: Department, videos: [LessonLocation])],
-                          layout: LearnLayout, proxy: ScrollViewProxy) -> some View {
+                          layout: LearnLayout, proxy: ScrollViewProxy, chips: Bool) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             SectionLabel("the videos")
             Text("Every lesson video, in course order.")
@@ -104,24 +117,29 @@ struct VideosView: View {
                     .padding(.top, 20)
             }
 
-            if shelves.count > 1 {
-                LearnFlowLayout(spacing: 8, lineSpacing: 4) {
-                    ForEach(shelves, id: \.department.id) { shelf in
-                        Button {
-                            LF.Motion.perform(LF.Motion.settle) {
-                                proxy.scrollTo(LearnAnchor.department(shelf.department.slug), anchor: .top)
-                            }
-                        } label: {
-                            LearnFittingTag(text: "\(shelf.department.name)  \(shelf.videos.count)")
-                                .frame(minHeight: LF.Metrics.tap)
-                                .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel("Jump to \(shelf.department.name)")
-                        .accessibilityValue(LearnFormat.plural(shelf.videos.count, "video", "videos"))
+            if chips, shelves.count > 1 {
+                jumpChips(shelves, proxy: proxy)
+                    .padding(.top, 22)
+            }
+        }
+    }
+
+    /// A chip for each department, jumping to its shelf.
+    private func jumpChips(_ shelves: [(department: Department, videos: [LessonLocation])], proxy: ScrollViewProxy) -> some View {
+        LearnFlowLayout(spacing: 8, lineSpacing: 4) {
+            ForEach(shelves, id: \.department.id) { shelf in
+                Button {
+                    LF.Motion.perform(LF.Motion.settle) {
+                        proxy.scrollTo(LearnAnchor.department(shelf.department.slug), anchor: .top)
                     }
+                } label: {
+                    LearnFittingTag(text: "\(shelf.department.name)  \(shelf.videos.count)")
+                        .frame(minHeight: LF.Metrics.tap)
+                        .contentShape(Rectangle())
                 }
-                .padding(.top, 22)
+                .buttonStyle(.plain)
+                .accessibilityLabel("Jump to \(shelf.department.name)")
+                .accessibilityValue(LearnFormat.plural(shelf.videos.count, "video", "videos"))
             }
         }
     }
@@ -130,6 +148,7 @@ struct VideosView: View {
 
     private func shelfSection(_ department: Department, videos: [LessonLocation], layout: LearnLayout) -> some View {
         let columns = layout.contentWidth >= 1000 ? 3 : (layout.contentWidth >= 560 ? 2 : 1)
+        let pages = layout.pages
         return VStack(alignment: .leading, spacing: 0) {
             // The count beside the name; under it at the accessibility sizes, where beside
             // it left the name a column too narrow for its words.
@@ -154,17 +173,31 @@ struct VideosView: View {
                 }
             }
             .padding(.bottom, 10)
-            InkRule()
+            .frame(maxWidth: pages?.leading ?? .infinity, alignment: .leading)
 
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 26, alignment: .top), count: columns),
-                      alignment: .leading, spacing: 34) {
-                ForEach(Array(videos.enumerated()), id: \.element.id) { index, location in
-                    LearnVideoTile(location: location, number: index + 1) {
-                        playing = location
+            if let pages {
+                // iPhone Duo's two pages: a video on each page, row by row.
+                LearnSpreadRule(pages: pages)
+                LearnFoldColumns(pages: pages, fill: .rows, spacing: 34) {
+                    ForEach(Array(videos.enumerated()), id: \.element.id) { index, location in
+                        LearnVideoTile(location: location, number: index + 1) {
+                            playing = location
+                        }
                     }
                 }
+                .padding(.top, 24)
+            } else {
+                InkRule()
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 26, alignment: .top), count: columns),
+                          alignment: .leading, spacing: 34) {
+                    ForEach(Array(videos.enumerated()), id: \.element.id) { index, location in
+                        LearnVideoTile(location: location, number: index + 1) {
+                            playing = location
+                        }
+                    }
+                }
+                .padding(.top, 24)
             }
-            .padding(.top, 24)
         }
     }
 }
@@ -554,3 +587,11 @@ struct LearnFlowLayout: Layout {
         .appEnvironment(.preview)
         .environment(\.colorScheme, .dark)
 }
+
+#if DEBUG
+#Preview("Videos, Duo book, whole page", traits: .fixedLayout(width: 867, height: 2400)) {
+    NavigationStack { VideosView() }
+        .appEnvironment(.preview)
+        .previewFold(.previewFlat)
+}
+#endif
