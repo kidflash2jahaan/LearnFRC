@@ -32,6 +32,7 @@ struct LeaderboardView: View {
     @Environment(AppModel.self) private var app
     @Environment(WindowNavigation.self) private var navigation: WindowNavigation?
     @Environment(\.navigationTab) private var tab
+    @Environment(SafetyStore.self) private var injectedSafety: SafetyStore?
 
     /// The board and the team ranking picked on this copy of the page. Nil until the person
     /// picks, when the page reads what its window kept for it in this tab (the Mac builds the
@@ -80,11 +81,18 @@ struct LeaderboardView: View {
 
     /// The board as it stands, falling back to what this session already fetched, so the
     /// first frame shows the standings instead of a placeholder.
+    ///
+    /// Anyone the signed-in account has blocked is taken off (`SafetyStore`, the site's list).
+    /// The route is public and the same for everyone, so the app hides them itself, the way
+    /// learnfrc.com/leaderboard does for its reader; ranks stay as earned.
     private func display(_ source: LeaderboardBoard) -> CommunityLoad<BoardSheet> {
         var state = sheets[source] ?? CommunityLoad()
         if state.value == nil, let instant = client.instantBoard(source) {
             state.value = instant.value
             state.fetchedAt = instant.fetchedAt
+        }
+        if account.isSignedIn, let sheet = state.value {
+            state.value = sheet.hiding((injectedSafety ?? .shared).blockedHandles)
         }
         return state
     }
@@ -502,21 +510,31 @@ struct CommunityBar: View {
     }
 }
 
-/// Wraps a label in a link to someone's public profile when they have a username.
+/// Wraps a label in a link to someone's public profile when they have a username. For a
+/// signed-in viewer it also carries Report and Block for that person (a context menu and
+/// accessibility actions, `profileSafety`), so every row that names someone offers them.
 struct CommunityProfileLink<Label: View>: View {
     let username: String?
     var style: Style = .plain
+    var surface: ReportSurface = .leaderboard
     @ViewBuilder var label: Label
 
     enum Style { case plain, row, card }
 
-    init(username: String?, style: Style = .plain, @ViewBuilder label: () -> Label) {
+    init(username: String?, style: Style = .plain, surface: ReportSurface = .leaderboard, @ViewBuilder label: () -> Label) {
         self.username = username
         self.style = style
+        self.surface = surface
         self.label = label()
     }
 
     var body: some View {
+        link
+            .profileSafety(username: username, surface: surface)
+    }
+
+    @ViewBuilder
+    private var link: some View {
         if let username {
             switch style {
             case .plain:

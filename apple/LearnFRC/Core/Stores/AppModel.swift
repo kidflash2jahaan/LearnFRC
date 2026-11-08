@@ -117,8 +117,12 @@ final class AppModel {
                 await CommunityCache.shared.forgetTeams()
                 // Admin data is memory only and belongs to the account that fetched it.
                 AdminStore.shared.reset()
+                // So does the block list (its file went with the community caches).
+                SafetyStore.shared.reset()
             case .signedIn(let userID, _):
-                await AdminStore.shared.sync(userID: userID, force: true)
+                async let admin: Void = AdminStore.shared.sync(userID: userID, force: true)
+                async let safety: Void = SafetyStore.shared.sync(userID: userID, force: true)
+                _ = await (admin, safety)
             }
             await self?.progress.handle(change)
         }
@@ -207,7 +211,8 @@ final class AppModel {
         async let progressRefresh: Void = progress.refresh(force: true)
         async let meRefresh: Void = account.refreshMe(force: true)
         async let adminRefresh: Void = AdminStore.shared.sync(userID: account.userID, force: true)
-        _ = await (catalogRefresh, referenceRefresh, progressRefresh, meRefresh, adminRefresh)
+        async let safetyRefresh: Void = SafetyStore.shared.sync(userID: account.userID, force: true)
+        _ = await (catalogRefresh, referenceRefresh, progressRefresh, meRefresh, adminRefresh, safetyRefresh)
         progress.catalogDidChange()
     }
 
@@ -377,6 +382,7 @@ extension View {
             .environment(model.progress)
             .environment(model.connectivity)
             .environment(AdminStore.shared)
+            .environment(SafetyStore.shared)
             .environment(\.adminNavigator, AdminNavigator { AppRoute($0) })
     }
 }

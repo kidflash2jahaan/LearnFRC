@@ -509,7 +509,7 @@ Errors: 400 `validation` (`Something went wrong. Try again.` when `optIn` isn't 
 
 ### GET /api/app/team
 
-Bearer. The caller's own team sheet, the same data as the website's /teams page (`loadTeamSheet`). The team is always the one on the caller's own profile. Teammates are shown by username and avatar only.
+Bearer. The caller's own team sheet, the same data as the website's /teams page (`loadTeamSheet`). The team is always the one on the caller's own profile. Teammates are shown by username and avatar only. Anyone the caller has blocked (`GET /api/app/blocks`) is left off the whole sheet: the roster, the coverage and every figure are worked out from the members the caller can see, and `hiddenMembers` says how many were left off.
 
 Response 200 with no team number on the profile:
 
@@ -530,6 +530,7 @@ Response 200 with a team:
     "claimedSubteams": 4,
     "totalSubteams": 11,
     "lessonsCovered": 51,
+    "hiddenMembers": 0,
     "referralCount": 1,
     "inviteURL": "https://learnfrc.com/signup?ref=maya_254&via=team-invite",
     "members": [
@@ -583,6 +584,7 @@ Response 200 with a team:
 | `avgPct` | Int | 0 to 100, average through the catalog. |
 | `claimedSubteams` / `totalSubteams` | Int | Departments with at least one member on them. |
 | `lessonsCovered` | Int | Distinct lessons anyone on the team has finished. |
+| `hiddenMembers` | Int | Teammates the caller has blocked, left off this sheet (the site prints "plus 1 you blocked, not shown"). Added for report and block; decode it as optional. |
 | `inviteURL` | String? | The team invite link every site surface hands out. Null until the caller has a username. |
 | `members` | [...] | Most lessons first. `username` can be null (then `name` is `Member`). `lastActive` is null with no completions. |
 | `members[].depts` | [...] | One per department in catalog order. `furthest` and `next` can be null. `next.href` is a site path; it maps to a lesson the same way `https://learnfrc.com/guides/...` links do. |
@@ -607,6 +609,8 @@ Response 200, `weekly` (XP and lessons from the last 7 days; level from all-time
 ```
 
 `username` can be null (show `Learner`). `teamNumber` can be null. `totals` covers every learner with XP, not just the top 50.
+
+The route is public and the same for everyone, so it never leaves anyone out. A signed-in app hides the handles it has blocked (`GET /api/app/blocks`) itself, as learnfrc.com/leaderboard does for its reader: the rows go, every other rank stays as earned (so a rank can skip a number). The teams boards aren't filtered.
 
 Response 200, `teams`:
 
@@ -653,6 +657,8 @@ Response 200:
 ```
 
 `achievements` is most recent first. Never includes a real name, email or id.
+
+The route is public and doesn't know who is asking. When the signed-in account has blocked `username` (`GET /api/app/blocks`), the app doesn't draw the record: it shows the site's blocked card ("You blocked @{username}.", Unblock, Report), as learnfrc.com/u/{username} does.
 
 Errors: 404 `not_found` (`There's no learner with that username.`), 500.
 
@@ -808,6 +814,116 @@ Response 200:
 
 Errors: 401, 500.
 
+## Report and block (`/api/app/reports`, `/api/app/blocks`)
+
+App Review guideline 1.2. What one member makes that another sees is a handle, an avatar, a bio and a team number (on public profiles, the leaderboards and the team sheet), plus the notes and titles on suggested edits and lesson proposals (learnfrc.com/contributions, which the app has no screen for). Any signed-in account can report any of it and block anyone. Every rule is in `src/lib/app/reports.ts` and `src/lib/app/blocks.ts`, which the website's report form, Block button and Settings list call too.
+
+**What a block does.** It hides the blocked account from the person who blocked it: their public profile, their rows on the leaderboards, their row on the team sheet, and their suggestions on /contributions. Nothing is sent to them and nothing changes for anyone else. `GET /api/app/team` leaves blocked teammates off on the server. The leaderboards and `/api/app/u/{username}` are public routes cached at the CDN, the same for everyone, so the app hides the handles from `GET /api/app/blocks` itself (ranks stay as earned), as the website does for its reader.
+
+**What a report does.** It stores a row in `user_reports` (service role only: a reporter never reads it back, and the person reported can never find out who filed it) and emails the owner (`ADMIN_EMAILS`, first entry) so it's answered within 24 hours. The desk that answers it is `GET /api/app/admin/reports` below and learnfrc.com/admin/reports.
+
+### GET /api/app/reports
+
+Public. `Cache-Control: public, max-age=0, s-maxage=3600, stale-while-revalidate=18000`. The reasons a report can give, in the order the website's form lists them. The app keeps the same list built in for a sheet opened offline; the server checks whichever `id` is sent.
+
+Response 200:
+
+```json
+{
+  "reasons": [
+    { "id": "harassment", "label": "Bullying or harassment" },
+    { "id": "offensive", "label": "Offensive or inappropriate" },
+    { "id": "personal_info", "label": "Sharing someone's personal information" },
+    { "id": "impersonation", "label": "Pretending to be someone else" },
+    { "id": "spam", "label": "Spam or cheating" },
+    { "id": "other", "label": "Something else" }
+  ],
+  "detailsMax": 1000,
+  "answerWithinHours": 24
+}
+```
+
+### POST /api/app/reports
+
+Bearer. Files a report (`fileReport`). Rate limited: 10 an hour per account.
+
+Request (the app only reports profiles):
+
+```json
+{ "username": "kai_cad", "reason": "offensive", "details": "The bio.", "surface": "leaderboard", "platform": "ios" }
+```
+
+| Field | Type | Notes |
+|---|---|---|
+| `contentKind` | String? | `profile` (the default), `edit` or `submission`. |
+| `username` | String | The person reported. Required for `profile`; ignored for an edit or a proposal, whose author is read from the row. |
+| `contentId` | String? | The edit's or proposal's id (website only today). |
+| `reason` | String | A `reasons[].id`. |
+| `details` | String? | Up to 1000 characters. Required (5 or more) when `reason` is `other`. |
+| `surface` | String? | Where the reporter was: `profile`, `leaderboard`, `team` (the website also sends `contributions`). Anything else is stored as null. |
+| `platform` | String? | `ios`, `ipados` or `macos` (`AppConfig.platformID`). |
+
+Response 201 (200 when it was already reported):
+
+```json
+{
+  "reportId": "1c9a7f3e-2b44-4d0e-8f6a-0f3f0c2a9b11",
+  "alreadyReported": false,
+  "message": "Thanks. Your report went to the LearnFRC team, and every report is read within 24 hours. @kai_cad isn't told who sent it."
+}
+```
+
+Show `message` as sent. A second report from the same account about the same thing, while the first is still open, is the same report: `alreadyReported` is true, `message` says so, and no second email goes out.
+
+Errors (the site's sentences):
+
+| Status | `code` | `error` |
+|---|---|---|
+| 400 | `validation` | `Pick a reason.` (`field: "reason"`) |
+| 400 | `validation` | `Tell us a little about what's wrong.` (`field: "details"`, reason `other`) |
+| 400 | `validation` | `Keep it under 1000 characters.` (`field: "details"`) |
+| 400 | `validation` | `You can't report yourself.` |
+| 400 | `validation` | `That request wasn't in the format we expected.` |
+| 404 | `not_found` | `There's no learner with that username.` / `That suggestion no longer exists.` |
+| 429 | `rate_limited` | `That's a lot of reports in an hour. Try again in a bit, or write to us from the contact page.` (`Retry-After: 3600`) |
+| 500 | `server` | `Couldn't send that report. Try again.` |
+
+### GET /api/app/blocks
+
+Bearer. Everyone the caller has blocked, newest first, by their handle now (`listBlocks`; the website's Settings card lists the same).
+
+Response 200:
+
+```json
+{
+  "blocks": [
+    { "username": "kai_cad", "avatarUrl": null, "blockedAt": "2026-11-08T18:02:11.123Z" }
+  ]
+}
+```
+
+`username` is the account's handle now (it can change after the block); a row whose account has no handle comes back with `username: null` and can't be unblocked by name. At most 500.
+
+Errors: 401, 500 `server` (`Couldn't load the accounts you've blocked. Try again.`).
+
+### POST /api/app/blocks
+
+Bearer. Blocks an account by handle (`blockUser`). Blocking someone already blocked answers 200 with the existing row. Rate limited: 60 an hour per account.
+
+Request: `{ "username": "kai_cad" }`
+
+Response 200: `{ "block": { "username": "kai_cad", "avatarUrl": null, "blockedAt": "2026-11-08T18:02:11.123Z" } }`
+
+Errors: 400 `validation` (`Pick someone to block.`, `You can't block yourself.`, `You've blocked as many accounts as you can. Unblock someone in Settings first.`), 404 `not_found` (`There's no learner with that username.`), 429 `rate_limited` (`That's a lot of blocks in an hour. Try again in a bit.`), 500 `server` (`Couldn't save that. Try again.`), 401.
+
+### DELETE /api/app/blocks/{username}
+
+Bearer. Undoes a block (`unblockUser`). Idempotent: unblocking someone who isn't blocked answers 200 too.
+
+Response 200: `{ "ok": true, "username": "kai_cad" }`
+
+Errors: 404 `not_found` (`There's no learner with that username.`), 500 `server`, 401.
+
 ## Admin and applying (`/api/app/admin/*`, `/api/app/apply`)
 
 The website's four admin jobs (the numbers on `/admin`, the feedback inbox, the verified mark, and the super admin's desk on `/admin/team`) and the members' `/apply` page. Every route is a thin wrapper over a shared function in `src/lib/app/admin-*.ts`, and the website's `/admin`, `/admin/team` and `/apply` pages and their Server Actions call the very same functions, so the two doors check the same role, apply the same limits and print the same sentences.
@@ -820,6 +936,8 @@ The website's four admin jobs (the numbers on `/admin`, the feedback inbox, the 
 | feedback reply | admin | `Not authorized.` |
 | lesson verified | admin | `not authorised` (the site prints it after "Could not save: ") |
 | team desk, decision, role change, removal | superadmin | `Only a super admin can do that. Try reloading the page and signing in again.` (the site's locked card: "This one stays with the super admins.") |
+| reports desk, resolve, remove | admin | The `/admin` sentence above (the site's /admin/reports locked card is "This drawer is locked.") |
+| report ban | superadmin | `Only a super admin can do that. Try reloading the page and signing in again.` |
 
 **Privacy.** No email addresses, real names or sender user ids appear in any of these payloads. Applicants and team members are a handle and a team number; team members' `userId` goes only to super admins, because the role controls need it. Keep admin payloads in memory only (never the cache, the widget app group, Spotlight or App Intents) and drop them on sign-out.
 
@@ -856,7 +974,8 @@ Response 200:
   "feedbackTotal": 8,
   "pendingApplications": 0,
   "pendingEdits": 0,
-  "pendingSubmissions": 0
+  "pendingSubmissions": 0,
+  "openReports": 1
 }
 ```
 
@@ -866,6 +985,7 @@ Response 200:
 | `openFeedback`, `feedbackTotal` | Int | Exact counts over the whole `feedback` table. |
 | `pendingApplications` | Int? | Null unless the caller is a super admin (only they can answer applications; the query isn't even run otherwise). |
 | `pendingEdits`, `pendingSubmissions` | Int | Exact counts of suggested edits and lesson submissions waiting for the moderator. There's no human review queue on the site; these are counts only. |
+| `openReports` | Int | Member reports waiting on a person (`GET /api/app/admin/reports`), each to be answered within 24 hours. 0 when the reports table can't be read. Added for report and block; decode it as optional. |
 
 Errors: 401, 403.
 
@@ -880,7 +1000,7 @@ Response 200 (arrays trimmed):
   "role": "superadmin",
   "generatedAt": "2026-10-17T03:38:53.645Z",
   "refreshSeconds": 30,
-  "now": { "onlineNow": 7, "openFeedback": 1, "feedbackTotal": 8, "pendingApplications": 0, "pendingEdits": 0, "pendingSubmissions": 0 },
+  "now": { "onlineNow": 7, "openFeedback": 1, "feedbackTotal": 8, "pendingApplications": 0, "pendingEdits": 0, "pendingSubmissions": 0, "openReports": 1 },
   "stamps": [
     { "key": "visitors", "value": 16809, "label": "unique visitors" },
     { "key": "pageViews", "value": 76717, "label": "page views, 4,689 of them on articles" },
@@ -933,7 +1053,7 @@ Response 200 (arrays trimmed):
 |---|---|---|
 | `role` | String | `admin` or `superadmin`. Super admins also get the "team / manage admins" link and the applications row. |
 | `refreshSeconds` | Int | Always 30. The site re-reads this often while the tab is visible, and on refocus ("re-read every 30s"). |
-| `now` | object | The "what wants a person today" card, same fields as `/summary` plus `onlineNow` (active in the last few minutes). Card rows, in order: `onlineNow` "people on the site right now" / "active in the last few minutes"; `openFeedback` "messages waiting for a reply" / "{feedbackTotal} received in total"; super admins only, when `pendingApplications` isn't null: "application waiting on you" (1) or "applications waiting on you" / "only a super admin can answer these", the one row that links (to the team desk); `pendingEdits` "content edits to review"; `pendingSubmissions` "lesson submissions to review". Pen note: "this card first, the rest after". |
+| `now` | object | The "what wants a person today" card, same fields as `/summary` plus `onlineNow` (active in the last few minutes). Card rows, in order: `onlineNow` "people on the site right now" / "active in the last few minutes"; `openFeedback` "messages waiting for a reply" / "{feedbackTotal} received in total"; super admins only, when `pendingApplications` isn't null: "application waiting on you" (1) or "applications waiting on you" / "only a super admin can answer these", which links to the team desk; `openReports` "report waiting on a person" (1) or "reports waiting on a person" / "answer each within 24 hours", which links to the reports desk (learnfrc.com/admin/reports); `pendingEdits` "content edits to review"; `pendingSubmissions` "lesson submissions to review". Pen note: "this card first, the rest after". |
 | `stamps` | [{ `key`, `value`, `label` }] | The four big figures on the blue slab "How far it has got.", in order. `key` is `visitors`, `pageViews`, `learners` or `completions`. |
 | `notes.traffic` | { `slug`, `text` }? | Present when the traffic figures are unmeasured or come from the banked ledger. Print the slug in mono over the text. |
 | `notes.coverage` | String? | The "what those four numbers cover" note. |
@@ -1170,6 +1290,79 @@ Response 200: `{ "ok": true }`
 
 Errors: the same own-row, owner and format refusals as PATCH, 403, 500 `server` (`Couldn't remove them. Please try again.`), 401.
 
+### GET /api/app/admin/reports
+
+Bearer, admin. The reports desk, the data learnfrc.com/admin/reports renders from (`loadReportsDesk`, `src/lib/app/admin-reports.ts`). The app has no screen for it yet; the routes are here so it can have one.
+
+Response 200 (one of each):
+
+```json
+{
+  "role": "superadmin",
+  "canBan": true,
+  "answerWithinHours": 24,
+  "openCount": 1,
+  "open": [
+    {
+      "id": "1c9a7f3e-2b44-4d0e-8f6a-0f3f0c2a9b11",
+      "status": "open",
+      "statusWord": "open",
+      "reason": "offensive",
+      "reasonLabel": "Offensive or inappropriate",
+      "contentKind": "profile",
+      "contentKindLabel": "Profile",
+      "contentId": null,
+      "reportedUsername": "kai_cad",
+      "currentUsername": "kai_cad",
+      "accountExists": true,
+      "reporterUsername": "maya_254",
+      "snapshot": { "username": "kai_cad", "avatarUrl": null, "bio": "…", "teamNumber": 254, "title": null, "note": null, "target": null, "newModuleTitle": null },
+      "details": "The bio.",
+      "surface": "leaderboard",
+      "platform": "ios",
+      "createdAt": "2026-11-08T18:02:11.123Z",
+      "answerBy": "2026-11-09T18:02:11.123Z",
+      "resolvedAt": null,
+      "resolutionNote": null,
+      "openAboutAccount": 1
+    }
+  ],
+  "closed": [ { "...": "the same shape, status resolved, removed or banned" } ]
+}
+```
+
+| Field | Type | Notes |
+|---|---|---|
+| `canBan` | Bool | Ban is a super admin's call. |
+| `open` | [DeskReport] | Oldest first, at most 100: the one closest to its 24 hours is on top. |
+| `closed` | [DeskReport] | The last 20 answered, newest first. |
+| `status`, `statusWord` | String | `open`; `resolved` ("closed, nothing removed"); `removed` ("content removed"); `banned` ("account banned"). |
+| `reportedUsername` / `currentUsername` | String? | The handle when reported, and now (null once the account is gone). |
+| `reporterUsername` | String? | Shown only on this desk. |
+| `snapshot` | object | The public fields as they stood when it was reported: `username`, `avatarUrl`, `bio`, `teamNumber` for a profile; `target` (the lesson or article), `note`, `title`, `newModuleTitle` for an edit or proposal. |
+| `answerBy` | String | `createdAt` plus 24 hours. |
+| `openAboutAccount` | Int | Open reports about the same account, this one included. |
+
+Errors: 401, 403, 500.
+
+### POST /api/app/admin/reports/{id}/resolve
+
+Bearer, admin. Closes one report with nothing taken down (`resolveReport`). Request: `{ "note": "Looked fine." }` (optional, up to 1000 characters; a longer one answers 400 with `field: "note"`). Response 200: `{ "ok": true, "status": "resolved" }`. Logged to `moderation_log`.
+
+Errors: 404 `not_found` (`That report no longer exists.`), 409 `conflict` (`That report has already been answered.`), 401, 403.
+
+### POST /api/app/admin/reports/{id}/remove
+
+Bearer, admin. Takes the reported content down and closes every open report about it (`removeReportedContent`). A profile loses its bio and picture, and with `replaceUsername: true` its handle too (a free `memberNNNNNN`, the old one kept in `name_moderation_log`); an edit loses its note, a proposal its title and note, and either is turned down if still pending. Request: `{ "note": "…", "replaceUsername": true }` (both optional). Response 200: `{ "ok": true, "status": "removed", "newUsername": "member482913" }` (`newUsername` null unless replaced).
+
+Errors: 404, 409 `conflict` (`That report has already been answered.` or `That account is already gone. Close the report instead.`), 500 `server` (`Couldn't take that down. Try again.`), 401, 403.
+
+### POST /api/app/admin/reports/{id}/ban
+
+Bearer, super admin. Bans the reported account with the site's existing ban (the email on `banned_emails` with its signup IP; the IP on `banned_ips` once a second banned account shares it), deletes it with `deleteAccountData`, and closes every open report about it (`banReportedAccount`). Can't be undone; confirm first. Request: `{ "note": "…" }` (optional). Response 200: `{ "ok": true, "status": "banned" }`.
+
+Errors: 400 `validation` (`That account is on the admin team. Take it off the team on /admin/team first.`, `You can't ban your own account.`), 404, 409 `conflict`, 500 `server` (`Couldn't ban that account. Try again.` or `The email is banned, but the account couldn't be deleted. Try again.`), 401, 403.
+
 ### GET /api/app/apply
 
 Bearer, any signed-in account. Where the caller stands on "Help run it" (`/apply`), from `loadApplyState`, which the website's `/apply` page renders from too.
@@ -1240,4 +1433,4 @@ Errors: 404 `not_found` (`There's no open application to withdraw.`), 500 `serve
 
 ## What the app reads directly from Supabase
 
-Not covered here, read with the publishable key: `departments`, `modules`, `lessons` (including `quiz`), `articles`, `achievements`; the signed-in user's own `bookmarks` (read, insert, delete under RLS). The app never writes `lesson_progress` or `user_achievements` directly, and never reads `profiles`. Admin data (`site_admins`, `admin_applications`, `feedback`, the admin views) is RLS-locked to the service role, so it only ever comes through the routes above.
+Not covered here, read with the publishable key: `departments`, `modules`, `lessons` (including `quiz`), `articles`, `achievements`; the signed-in user's own `bookmarks` (read, insert, delete under RLS). The app never writes `lesson_progress` or `user_achievements` directly, and never reads `profiles`. Admin data (`site_admins`, `admin_applications`, `feedback`, the admin views) is RLS-locked to the service role, so it only ever comes through the routes above. So are `user_reports` (service role only) and `user_blocks` (an account may read its own rows under RLS, but the app uses the routes, which also resolve handles).

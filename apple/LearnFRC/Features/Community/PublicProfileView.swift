@@ -11,11 +11,16 @@ struct PublicProfileView: View {
     @Environment(CatalogStore.self) private var catalog
     @Environment(AppModel.self) private var app
     @Environment(WindowNavigation.self) private var navigation: WindowNavigation?
+    @Environment(SafetyStore.self) private var injectedSafety: SafetyStore?
 
     @State private var state = CommunityLoad<PublicProfile?>()
     /// Whose record `state` holds (the lowercased handle). A link to someone else can reuse
     /// this view in place, and it must never show the last person's card under the new name.
     @State private var stateHandle: String?
+    /// Report and block (section 6.13): what the toolbar menu presents, owned by the page.
+    @State private var reporting = false
+    @State private var confirmingBlock = false
+    @State private var safetyFailure: String?
 
     init(username: String) {
         self.username = username
@@ -43,13 +48,24 @@ struct PublicProfileView: View {
         return mine.lowercased() == handle.lowercased()
     }
 
+    private var safety: SafetyStore { injectedSafety ?? .shared }
+    /// Someone else's page, seen by a signed-in account: Report and Block are offered.
+    private var offersSafety: Bool { account.isSignedIn && !isMine && !handle.isEmpty }
+    /// Blocked by the signed-in account: the record isn't drawn, as on the site.
+    private var isBlockedHere: Bool { offersSafety && safety.isBlocked(handle) }
+    /// The record has loaded and there is someone by that name.
+    private var hasRecord: Bool {
+        if case .some(.some) = display.value { return true }
+        return false
+    }
+
     var body: some View {
         CommunityPage(refresh: { await load(force: true) }, place: .route(.profile(username))) { layout, _ in
             content(layout)
         }
         .communityNavigationTitle("@\(handle)")
         .toolbar {
-            if case .some(.some(let profile)) = display.value {
+            if case .some(.some(let profile)) = display.value, !isBlockedHere {
                 ToolbarItem(placement: .primaryAction) {
                     ShareLink(item: profile.webURL, subject: Text("@\(profile.username) on LearnFRC"), message: Text("@\(profile.username)'s record of work on LearnFRC:")) {
                         Label("Share profile", systemImage: "square.and.arrow.up")
@@ -57,7 +73,23 @@ struct PublicProfileView: View {
                     .help("Share this profile")
                 }
             }
+            // Report and block (App Review 1.2): someone else's page, signed in.
+            if offersSafety, isBlockedHere || hasRecord {
+                ToolbarItem(placement: .primaryAction) {
+                    ProfileSafetyMenu(
+                        username: handle,
+                        isBlocked: isBlockedHere,
+                        report: { reporting = true },
+                        block: { confirmingBlock = true },
+                        unblock: { Task { await unblock() } }
+                    )
+                }
+            }
         }
+        .profileSafetyPresentations(
+            username: handle, surface: .profile,
+            reporting: $reporting, confirmingBlock: $confirmingBlock, failure: $safetyFailure
+        )
         .communityRefreshButton(isLoading: current.isLoading) { Task { await load(force: true) } }
         // Handoff only while this is the screen on show (ARCHITECTURE 6.6).
         .screenHandoff(.route(.profile(username)), url: AppConfig.webBase.appending(path: "u/\(handle)"),
@@ -67,7 +99,18 @@ struct PublicProfileView: View {
 
     @ViewBuilder
     private func content(_ layout: CommunityLayout) -> some View {
-        let state = display
+        if isBlockedHere {
+            BlockedProfileCard(username: handle)
+                .foldLeadingPage(layout.pages)
+                .communityColumn(layout)
+                .padding(.top, 28)
+        } else {
+            record(display, layout)
+        }
+    }
+
+    @ViewBuilder
+    private func record(_ state: CommunityLoad<PublicProfile?>, _ layout: CommunityLayout) -> some View {
         switch state.value {
         case .some(.some(let profile)):
             if state.isStale {
@@ -132,6 +175,14 @@ struct PublicProfileView: View {
         .padding(.top, 28)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Loading @\(handle)")
+    }
+
+    private func unblock() async {
+        do {
+            try await safety.unblock(handle)
+        } catch {
+            safetyFailure = APIError.from(error).message
+        }
     }
 
     private func load(force: Bool = false) async {
