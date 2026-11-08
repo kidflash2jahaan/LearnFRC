@@ -863,7 +863,7 @@ Response 200:
 | Field | Type | Notes |
 |---|---|---|
 | `role` | String | `admin` or `superadmin`, as the server sees it right now. |
-| `openFeedback`, `feedbackTotal` | Int | Exact counts over the whole `feedback` table. |
+| `openFeedback`, `feedbackTotal` | Int | Exact counts over the whole `feedback` table. `openFeedback` counts only messages that can still be answered: not replied and with a reply address (anonymous messages never count as open). |
 | `pendingApplications` | Int? | Null unless the caller is a super admin (only they can answer applications; the query isn't even run otherwise). |
 | `pendingEdits`, `pendingSubmissions` | Int | Exact counts of suggested edits and lesson submissions waiting for the moderator. There's no human review queue on the site; these are counts only. |
 
@@ -980,7 +980,7 @@ Response 200:
 | `hasReplyAddress` | Bool | Whether a reply can be sent. The address itself never leaves the server. Stamp: "from / can be answered", or "from / anonymous, no reply possible". |
 | `status` | String | `open` or `replied`. Show "replied" in the stamp, and `replyBody` under "what you sent back". |
 | `page` | String? | Stamp "page / {page}". |
-| `openCount`, `total` | Int | Exact, over the whole table, not just the returned items. |
+| `openCount`, `total` | Int | Exact, over the whole table, not just the returned items. `openCount` counts only items that can still be answered (`status` not `replied` and `hasReplyAddress`). |
 
 Show Reply only when `status` is `open` and `hasReplyAddress` is true. The site's copy: "Reply" / "Cancel"; label "Reply to the sender"; hint "It goes straight to their inbox from LearnFRC. There's no thread on the site, so this row is the whole conversation."; "Send reply" / "Sending"; success "Reply sent"; empty inbox "Nothing in the box. Feedback lands here the moment someone sends it."
 

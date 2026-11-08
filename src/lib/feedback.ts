@@ -57,6 +57,10 @@ export async function getFeedback(limit = 40): Promise<FeedbackItem[]> {
  * Exact counts over the whole table, not over the page of rows the inbox
  * shows: "N received in total" and the open badge used to be the length of the
  * latest 40, which is right until the 41st message arrives.
+ *
+ * "Open" means waiting on a reply someone can actually send, so anonymous
+ * messages (no reply address) never count: they could only ever sit there,
+ * and a badge that can't be cleared stops meaning anything.
  */
 export async function getFeedbackCounts(): Promise<{ openCount: number; total: number }> {
   const admin = createAdminClient();
@@ -65,7 +69,9 @@ export async function getFeedbackCounts(): Promise<{ openCount: number; total: n
     admin
       .from("feedback")
       .select("id", { count: "exact", head: true })
-      .neq("status", "replied"),
+      .neq("status", "replied")
+      .not("from_email", "is", null)
+      .neq("from_email", ""),
   ]);
   return { openCount: open.count ?? 0, total: all.count ?? 0 };
 }
