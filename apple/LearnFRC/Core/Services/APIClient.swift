@@ -186,6 +186,38 @@ final class APIClient: Sendable {
         let _: OKResponse = try await send("DELETE", "/api/app/account")
     }
 
+    // MARK: Report and block
+
+    /// `GET /api/app/reports`: the reasons a report can give, in the site's order. Public.
+    func reportReasons() async throws -> ReportReasonsPayload {
+        try await send("GET", "/api/app/reports", auth: .anonymous)
+    }
+
+    /// `POST /api/app/reports`. The site's thank-you sentence comes back in `message`.
+    func report(_ request: ReportRequest) async throws -> ReportFiled {
+        try await send("POST", "/api/app/reports", body: request)
+    }
+
+    /// `GET /api/app/blocks`: everyone this account has blocked, newest first.
+    func blocks() async throws -> [BlockedAccount] {
+        let payload: BlockedAccountsPayload = try await send("GET", "/api/app/blocks")
+        return payload.blocks
+    }
+
+    /// `POST /api/app/blocks`. Blocking someone already blocked succeeds too.
+    func block(username: String) async throws -> BlockedAccount? {
+        struct Body: Encodable { let username: String }
+        let filed: BlockFiled = try await send("POST", "/api/app/blocks", body: Body(username: username))
+        return filed.block
+    }
+
+    /// `DELETE /api/app/blocks/{username}`. Idempotent.
+    func unblock(username: String) async throws {
+        let name = username.trimmingCharacters(in: .whitespaces).lowercased()
+        guard !name.isEmpty, let encoded = name.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) else { return }
+        let _: OKResponse = try await send("DELETE", "/api/app/blocks/\(encoded)")
+    }
+
     // MARK: Guest progress (the site's existing anonymous route)
 
     /// `POST /api/guest-progress` with `complete: true`. The server re-grades the quiz.

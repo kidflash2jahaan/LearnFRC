@@ -8,6 +8,7 @@ struct TeamView: View {
     @Environment(AccountStore.self) private var account
     @Environment(CatalogStore.self) private var catalog
     @Environment(ProgressStore.self) private var progress
+    @Environment(SafetyStore.self) private var injectedSafety: SafetyStore?
 
     @State private var state = CommunityLoad<TeamPayload>()
     /// Whose team `state` holds, so a different account never sees the last one's sheet.
@@ -59,6 +60,9 @@ struct TeamView: View {
         // A completion, un-completion or a sign-in's guest lessons changed the totals the
         // sheet prints on the server: fetch it again rather than wait out the 30 seconds.
         .onChange(of: progress.progressRevision) { Task { await load(force: true) } }
+        // The server leaves blocked teammates off the sheet, so a block or an unblock made
+        // anywhere in the app fetches it again.
+        .onChange(of: (injectedSafety ?? .shared).revision) { Task { await load(force: true) } }
     }
 
     @ViewBuilder
@@ -798,7 +802,7 @@ struct TeamRosterTable: View {
                 }
             }
             ForEach(Array(members.enumerated()), id: \.element.id) { index, member in
-                CommunityProfileLink(username: member.username, style: .row) {
+                CommunityProfileLink(username: member.username, style: .row, surface: .team) {
                     row(member, index: index, ax: ax)
                 }
                 DashedRule()

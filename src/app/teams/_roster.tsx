@@ -1,9 +1,12 @@
+import Link from "next/link";
 import { Avatar } from "@/components/ui/avatar";
 import { clampPct } from "@/lib/utils";
 
 export type RosterMember = {
   userId: string;
   name: string;
+  /** Links a teammate's name to their public page, where it can be reported or blocked. */
+  username?: string | null;
   avatarUrl: string | null;
   xp: number;
   completed: number;
@@ -109,7 +112,13 @@ export function Roster({
                       className="h-9 w-9 text-[0.7rem]"
                     />
                     <span className="min-w-0">
-                      <span className="block truncate font-bold">{m.name}</span>
+                      {m.username && !m.isYou ? (
+                        <Link href={`/u/${m.username}`} className="nb-link block truncate font-bold">
+                          {m.name}
+                        </Link>
+                      ) : (
+                        <span className="block truncate font-bold">{m.name}</span>
+                      )}
                       <span className="mt-1 flex flex-wrap items-center gap-1.5">
                         {m.isYou && (
                           <span className="nb-tag" data-on>

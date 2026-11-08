@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
  *
  * The team is always the one on the caller's OWN profile; there is no way to
  * ask for another team's roster. Members are identified by username and avatar
- * only: no user ids, no real names.
+ * only: no user ids, no real names. Anyone the caller has blocked is left off.
  */
 export async function GET(req: Request) {
   return guarded(async () => {
@@ -36,6 +36,9 @@ export async function GET(req: Request) {
         claimedSubteams: sheet.claimedSubteams,
         totalSubteams: sheet.coverage.length,
         lessonsCovered: sheet.lessonsCovered,
+        // Teammates the caller has blocked are left off everything above and
+        // below (src/lib/app/blocks.ts); this says how many.
+        hiddenMembers: sheet.hiddenMembers,
         referralCount: sheet.referralCount,
         // The referral link every invite surface on the site hands out.
         inviteURL: profile.username ? teamInviteUrl(profile.username) : null,

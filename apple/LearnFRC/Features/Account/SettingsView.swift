@@ -141,6 +141,11 @@ struct SettingsView: View {
                     SettingsAppearanceCard()
                 }
 
+                section(spacing: 18) {
+                    AccountSectionHeading(title: "Blocking", slug: "the same for the app and learnfrc.com")
+                    SettingsBlockedAccountsCard()
+                }
+
                 section(spacing: 22) {
                     AccountSectionHeading(title: "Sign-in", slug: "the same for the app and learnfrc.com")
                     SettingsSessionSection(me: me)
@@ -263,6 +268,9 @@ struct SettingsView: View {
                     SettingsAppearanceCard()
                 }
             }
+            Tab("Blocked", systemImage: "hand.raised") {
+                macPane { macBlockedPane }
+            }
         }
         .tabViewStyle(.automatic)
         .frame(width: 600)
@@ -328,6 +336,20 @@ struct SettingsView: View {
         case .guest:
             AccountSectionHeading(title: "Profile")
             AccountNote("no account", "A profile belongs to an account: your username, team number and the bio on your public page. Sign in or make one under Account.")
+        case .loading:
+            loading
+        }
+    }
+
+    @ViewBuilder
+    private var macBlockedPane: some View {
+        switch account.state {
+        case .signedIn:
+            AccountSectionHeading(title: "Blocking", slug: "the same for the app and learnfrc.com")
+            SettingsBlockedAccountsCard()
+        case .guest:
+            AccountSectionHeading(title: "Blocking")
+            AccountNote("no account", "Blocking belongs to an account. Sign in under Account to see who you've blocked.")
         case .loading:
             loading
         }

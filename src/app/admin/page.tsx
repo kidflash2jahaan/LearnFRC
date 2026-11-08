@@ -224,6 +224,14 @@ export default async function AdminPage() {
                     href="/admin/team"
                   />
                 ) : null}
+                {/* A link, like the applications row: reports are answered on
+                    their own desk, within 24 hours of coming in. */}
+                <NowRow
+                  value={now.openReports}
+                  label={now.openReports === 1 ? "report waiting on a person" : "reports waiting on a person"}
+                  hint="answer each within 24 hours"
+                  href="/admin/reports"
+                />
                 <NowRow
                   value={now.pendingEdits}
                   label="content edits to review"
