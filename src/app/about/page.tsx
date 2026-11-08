@@ -374,8 +374,9 @@ export default async function AboutPage() {
               , without an account.
             </p>
             <p>
-              It doesn&rsquo;t have to stay one person&rsquo;s reach. If
-              you&rsquo;ve been on an FRC team, you can{" "}
+              Getting it in front of teams doesn&rsquo;t have to be one
+              person&rsquo;s job. If you&rsquo;ve been on an FRC team, you
+              can{" "}
               <Link className="nb-link" href="/apply">
                 apply to help spread it
               </Link>

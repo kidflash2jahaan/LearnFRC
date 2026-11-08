@@ -1,11 +1,13 @@
 import SwiftUI
 
-/// learnfrc.com/admin/team in the app: who else can open the drawer. Super admins only.
+/// learnfrc.com/admin/team in the app: who's helping, and how much. Super admins only.
 ///
-/// What the page is beside what saying yes actually hands over, then three drawers like the
-/// site: Applications (opens itself when any are waiting), The team, and Decided. No real names
-/// and no email addresses anywhere, because the server never sends one. An admin who isn't a
-/// super admin gets the site's locked card.
+/// What the page is beside what saying yes actually hands over, then four drawers like the
+/// site: Applications (marketing only; opens itself when any are waiting), Marketers (with the
+/// signups through each one's invite link), The admin team, and Decided. Accepting an
+/// application gives a marketing tag, never admin access. No real names and no email addresses
+/// anywhere, because the server never sends one. An admin who isn't a super admin gets the
+/// site's locked card.
 struct AdminTeamView: View {
     @Environment(AdminStore.self) private var injected: AdminStore?
     @Environment(AccountStore.self) private var account
@@ -13,8 +15,10 @@ struct AdminTeamView: View {
     @State private var isOnScreen = false
     @State private var openDrawers: Set<String> = []
     @State private var didAutoOpen = false
-    /// The last decision's toast, kept on the page ("Accepted. They can open /admin now.").
+    /// The last decision's toast, kept on the page ("Accepted. The welcome email is on its way.").
     @State private var applicationStatus: String?
+    /// The last marketer change's toast ("Tag removed. ...").
+    @State private var marketerStatus: String?
     /// The last team change's toast ("Role saved.").
     @State private var teamStatus: String?
 
@@ -82,7 +86,7 @@ struct AdminTeamView: View {
                 .padding(.top, 24)
         } else {
             VStack(alignment: .leading, spacing: 32) {
-                AdminMasthead(marker: "sheet / team", title: "Who else can open the drawer.")
+                AdminMasthead(marker: "sheet / team", title: "Who’s helping, and how much.")
                 AdminLoadingBlock(lines: 6)
             }
             .adminLeadingPage(layout)
@@ -96,8 +100,8 @@ struct AdminTeamView: View {
         AdminColumnsLayout(columns: layout.isWide ? 2 : 1, spacing: 64, rowSpacing: 40, weights: [1.4, 0.9], crease: layout.columnCrease) {
             AdminMasthead(
                 marker: "sheet / team",
-                title: "Who else can open the drawer.",
-                lede: "Applications land here, and so does everyone already let in. Read both answers before you decide, because the access is real."
+                title: "Who’s helping, and how much.",
+                lede: "Marketing applications land here, along with every marketer you’ve taken on and how many people signed up through their link. The admin team sits below them, and nobody joins it through an application."
             )
             AdminGrantsCard(grants: desk.grants)
                 .padding(.top, layout.isWide ? 8 : 0)
@@ -107,12 +111,13 @@ struct AdminTeamView: View {
 
         VStack(alignment: .leading, spacing: 18) {
             SectionLabel("drawers / open one to read it")
-            // On an open iPhone Duo: what's waiting on the left page; the team and every
-            // decision on the right, each page ruled off on its own. Elsewhere the three
-            // drawers run down one column. The same views either way, so unfolding the phone
-            // mid-note keeps what's written.
+            // On an open iPhone Duo: what's waiting and the marketers on the left page; the
+            // admin team and every decision on the right, each page ruled off on its own.
+            // Elsewhere the four drawers run down one column. The same views either way, so
+            // unfolding the phone mid-note keeps what's written.
             FoldPages(layout.pages) {
                 applications(desk, layout: layout)
+                marketers(desk, layout: layout)
                 if layout.isFoldSplit { InkRule() }
             } trailing: {
                 team(desk, layout: layout)
@@ -169,12 +174,43 @@ struct AdminTeamView: View {
         }
     }
 
-    // MARK: The team
+    // MARK: Marketers
+
+    private func marketers(_ desk: AdminTeamDesk, layout: AdminLayout) -> some View {
+        AdminDrawer(
+            "Marketers",
+            slug: "drawer / marketers",
+            badge: "\(desk.marketers.count) \(desk.marketers.count == 1 ? "person" : "people")",
+            isOpen: binding("marketers")
+        ) {
+            if let marketerStatus {
+                AdminStatusLine(marketerStatus)
+                    .padding(.bottom, 16)
+            }
+            if desk.marketers.isEmpty {
+                SlugText("Nobody has the marketing tag yet. Accepting an application above adds them here, with a count of who signed up through their link.")
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.vertical, 8)
+            } else {
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(Array(desk.marketers.enumerated()), id: \.element.id) { index, marketer in
+                        if index > 0 { DashedRule() }
+                        AdminMarketerRow(marketer: marketer, isWide: layout.isWide && !layout.isFoldSplit) { status in
+                            marketerStatus = status
+                        }
+                        .padding(.vertical, 16)
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: The admin team
 
     private func team(_ desk: AdminTeamDesk, layout: AdminLayout) -> some View {
         AdminDrawer(
-            "The team",
-            slug: "drawer / the team",
+            "The admin team",
+            slug: "drawer / the admin team",
             badge: "\(desk.team.count) \(desk.team.count == 1 ? "person" : "people")",
             isOpen: binding("team")
         ) {
@@ -269,12 +305,12 @@ struct AdminGrantsCard: View {
                 .padding(.top, 4)
                 DashedRule()
                     .padding(.top, 8)
-                Text("No real names and no email addresses appear anywhere in that panel, on purpose. They get an email whichever way you answer, and whatever you write in the note goes in it.")
+                Text("Accepting never opens /admin. They get an email whichever way you answer, and whatever you write in the note goes in it. Replies to it go to the owner’s inbox.")
                     .lfProse(15, lineHeight: 1.5, color: LF.Palette.graphite)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, 12)
             }
-            MarkerText("removing an admin is easy, a rejection is not")
+            MarkerText("removing a marketer is easy, a rejection is not")
                 .padding(.top, 16)
                 .padding(.leading, 6)
                 .padding(.trailing, 8)
@@ -397,7 +433,7 @@ struct AdminApplicationRow: View {
         Task {
             do throws(AdminError) {
                 try await admin.decide(application.id, decision: decision, note: trimmed.isEmpty ? nil : trimmed)
-                onDecided(decision == .reject ? "Turned down. The email is on its way." : "Accepted. They can open /admin now.")
+                onDecided(decision == .reject ? "Turned down. The email is on its way." : "Accepted. The welcome email is on its way.")
                 admin.refreshTeamQuietly()
             } catch {
                 // Still armed on a fixable failure: re-arming to retry is a punishment for the
@@ -559,6 +595,109 @@ struct AdminMemberRow: View {
                 onChanged("Off the team. /admin is shut to them now.")
             } catch {
                 intent = nil
+                self.error = error.message
+            }
+        }
+    }
+}
+
+// MARK: - One marketer
+
+/// One person with the marketing tag: handle, how many signed up through their link (all time
+/// and since they were accepted), since when, their link, and the armed Remove. The count is the
+/// point of the row, so it's the one figure in ink.
+struct AdminMarketerRow: View {
+    let marketer: AdminTeamDesk.Marketer
+    var isWide: Bool
+    let onChanged: (String) -> Void
+
+    @Environment(AdminStore.self) private var injected: AdminStore?
+    @State private var isRemoving = false
+    @State private var isArmed = false
+    @State private var error: String?
+
+    private var admin: AdminStore { injected ?? .shared }
+
+    private static func signups(_ n: Int) -> String { "\(n) \(n == 1 ? "signup" : "signups")" }
+
+    var body: some View {
+        Group {
+            if isWide {
+                HStack(alignment: .top, spacing: 32) {
+                    identity.frame(maxWidth: .infinity, alignment: .leading)
+                    controls.frame(maxWidth: 360, alignment: .leading)
+                }
+            } else {
+                VStack(alignment: .leading, spacing: 14) {
+                    identity
+                    controls
+                }
+            }
+        }
+    }
+
+    private var identity: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            AdminFlowLayout(spacing: 12, lineSpacing: 6) {
+                Text(marketer.username.map { "@\($0)" } ?? "no username yet")
+                    .font(LF.Fonts.body(16.5, weight: .bold, relativeTo: .body))
+                    .foregroundStyle(LF.Palette.ink)
+                SlugText("\(Self.signups(marketer.signups)) through their link", color: LF.Palette.ink, weight: .bold)
+            }
+            AdminFlowLayout(spacing: 14, lineSpacing: 4) {
+                SlugText("team / \(marketer.teamNumber.map(String.init) ?? "not given")")
+                SlugText("since \(AdminText.day(marketer.grantedAt) ?? "not recorded")")
+                SlugText("\(Self.signups(marketer.signupsSinceAccepted)) since then")
+            }
+            SlugText(marketer.inviteUrl.map { "link / \($0.absoluteString)" } ?? "link / none until they pick a handle")
+                .textSelection(.enabled)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: 620, alignment: .leading)
+            if let note = marketer.note {
+                SlugText("note / \(note)")
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: 620, alignment: .leading)
+            }
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    private var controls: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            ArmedButton(
+                title: "Remove",
+                armedTitle: "Yes, remove",
+                busyTitle: "Removing",
+                handle: marketer.handle,
+                isBusy: isRemoving,
+                isArmed: $isArmed
+            ) {
+                remove()
+            }
+            if isArmed, !isRemoving {
+                FieldHint("One more click takes the marketing tag off \(marketer.handle). They keep their account, their progress and the signups already counted.")
+                    .frame(maxWidth: 440, alignment: .leading)
+                    .onAppear {
+                        AccessibilityNotification.Announcement("One more click takes the marketing tag off \(marketer.handle). They keep their account, their progress and the signups already counted.").post()
+                    }
+            }
+            if let error {
+                FieldError(error)
+                    .frame(maxWidth: 420, alignment: .leading)
+            }
+        }
+    }
+
+    private func remove() {
+        guard !isRemoving else { return }
+        isRemoving = true
+        error = nil
+        Task {
+            do throws(AdminError) {
+                try await admin.removeMarketer(marketer.userId)
+                onChanged("Tag removed. Their account and progress stay.")
+            } catch {
+                isRemoving = false
                 self.error = error.message
             }
         }

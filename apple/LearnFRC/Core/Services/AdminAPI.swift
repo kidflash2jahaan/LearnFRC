@@ -107,6 +107,12 @@ final class AdminAPI: Sendable {
         let _: OK = try await send("DELETE", "/api/app/admin/team/\(Self.pathID(userID))")
     }
 
+    /// `DELETE /api/app/admin/marketers/{userId}`: takes the marketing tag off. Their account,
+    /// progress and the signups already counted stay.
+    func removeMarketer(userID: UUID) async throws(AdminError) {
+        let _: OK = try await send("DELETE", "/api/app/admin/marketers/\(Self.pathID(userID))")
+    }
+
     // MARK: Apply (any signed-in member)
 
     /// `GET /api/app/apply`

@@ -112,13 +112,18 @@ enum AdminPreviewData {
         grants: AdminTeamDesk.siteGrants,
         pending: [
             AdminTeamDesk.Application(
-                id: UUID(), username: "scout_lead_sam", teamNumber: 4414, teamRole: "mentor", teamRoleLabel: "Mentor",
-                experience: "Five seasons on 4414, the last two as the electrical mentor. I rebuilt our wiring standards after a brownout cost us a playoff match.\n\nI also run our scouting app.",
-                why: "I already answer most of these questions on Chief Delphi. I'd like to keep the electrical lessons honest.",
-                availability: "a couple of evenings a month", createdAt: ago(60 * 52)
+                id: UUID(), username: "scout_lead_sam", teamNumber: 5835, teamRole: "student", teamRoleLabel: "Student",
+                experience: "Three seasons on our team, mostly scouting and running the team Instagram. I'm in two regional Discord servers.\n\nI also help at our outreach events.",
+                why: "Our rookies found LearnFRC late. I'd post it in the Discords first, and I'd like to cut short clips from the lesson videos.",
+                availability: "a few posts a month", createdAt: ago(60 * 52)
             ),
         ],
         pendingTruncated: false,
+        marketers: [
+            AdminTeamDesk.Marketer(userId: UUID(), username: "clipmaker_jo", teamNumber: 5835, grantedAt: ago(60 * 24 * 20), note: "accepted application",
+                                   signups: 14, signupsSinceAccepted: 9,
+                                   inviteUrl: URL(string: "https://learnfrc.com/signup?ref=clipmaker_jo&via=team-invite")),
+        ],
         team: [
             AdminTeamDesk.Member(userId: UUID(), username: "owner_desk", teamNumber: nil, role: .superadmin, roleWord: "owner", grantedAt: ago(60 * 24 * 90), note: nil, isOwner: true, isYou: true, canChange: false),
             AdminTeamDesk.Member(userId: UUID(), username: "pitcrewpat", teamNumber: 254, role: .admin, roleWord: "admin", grantedAt: ago(60 * 24 * 30), note: "accepted application", isOwner: false, isYou: false, canChange: true),
@@ -134,7 +139,9 @@ enum AdminPreviewData {
             applicationsOpen: open,
             mode: mode,
             heading: AdminApplyState.heads[mode] ?? AdminApplyState.Heading(title: "Apply", slug: ""),
-            record: .init(username: mode == .noHandle ? nil : "gearhead_ava", teamNumber: 4414, teamRoleLabel: "Student"),
+            record: mode == .marketer
+                ? .empty
+                : .init(username: mode == .noHandle ? nil : "gearhead_ava", teamNumber: 4414, teamRoleLabel: "Student"),
             application: {
                 switch mode {
                 case .pending: .init(status: "pending", createdAt: ago(60 * 24 * 2), reviewedAt: nil, reviewNote: nil)
@@ -142,7 +149,33 @@ enum AdminPreviewData {
                 default: nil
                 }
             }(),
-            jobs: AdminApplyState.siteJobs
+            jobs: AdminApplyState.siteJobs,
+            marketer: mode == .marketer ? marketerKit : nil
         )
     }
+
+    /// The `marketer` block /api/app/apply sends, as src/lib/applications.ts has it.
+    static let marketerKit = AdminApplyState.MarketerKit(
+        inviteUrl: URL(string: "https://learnfrc.com/signup?ref=gearhead_ava&via=team-invite"),
+        since: ago(60 * 24 * 6),
+        trailerUrl: nil,
+        logos: [
+            .init(label: "Logo, SVG", url: URL(string: "https://learnfrc.com/icon.svg")!),
+            .init(label: "Logo, 180px PNG", url: URL(string: "https://learnfrc.com/apple-icon.png")!),
+            .init(label: "Share card, 1200 by 630 PNG", url: URL(string: "https://learnfrc.com/opengraph-image")!),
+        ],
+        colors: [
+            .init(name: "Ink", hex: "#16181B", use: "type and borders"),
+            .init(name: "Ballpoint blue", hex: "#1B36C8", use: "the one accent"),
+            .init(name: "Card", hex: "#F5F6F2", use: "cards and raised surfaces"),
+            .init(name: "Paper", hex: "#E6E8E3", use: "the background"),
+            .init(name: "Graphite", hex: "#565C60", use: "secondary type"),
+            .init(name: "Tape", hex: "#C4A77D", use: "decoration only, never text"),
+        ],
+        fonts: "Bricolage Grotesque for headings, Space Mono for labels, Caveat for handwritten notes.",
+        clips: [
+            .init(label: "The 60-second tour", url: URL(string: "https://www.youtube.com/watch?v=-QlRttoFw3g")!),
+            .init(label: "Lesson videos", url: URL(string: "https://learnfrc.com/videos")!),
+        ]
+    )
 }

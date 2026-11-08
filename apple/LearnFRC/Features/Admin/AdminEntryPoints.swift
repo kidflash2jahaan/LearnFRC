@@ -216,7 +216,7 @@ struct ApplyLinkRow: View {
                     AdminLink(to: .apply) {
                         HStack(alignment: .center, spacing: 12) {
                             VStack(alignment: .leading, spacing: 3) {
-                                SlugText("apply / the admin team")
+                                SlugText("apply / marketing")
                                 Text("Help run it")
                                     .font(LF.Fonts.body(16.5, weight: .semibold))
                                     .foregroundStyle(LF.Palette.ink)
@@ -231,7 +231,7 @@ struct ApplyLinkRow: View {
                         .accessibilityElement(children: .combine)
                     }
                     .buttonStyle(.inkRow)
-                    .accessibilityHint("What helping run LearnFRC involves, and how to apply")
+                    .accessibilityHint("What helping spread LearnFRC involves, and how to apply")
                     DashedRule()
                 }
                 .padding(.top, topPadding)
