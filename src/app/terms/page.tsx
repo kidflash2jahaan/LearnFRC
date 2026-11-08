@@ -1,23 +1,34 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { FirstTrademarkNotice } from "@/components/footer";
+import { PUBLIC_CONTACT_EMAIL } from "@/lib/email";
 import { ClauseIndex, type Clause } from "./_contents-rail";
 
 export const metadata: Metadata = {
   title: "Terms of Service",
-  description: "The terms for using LearnFRC.",
+  description:
+    "The terms for using LearnFRC on the website and in the app, including the rules for what you post and for marketing helpers.",
   alternates: { canonical: "/terms" },
 };
 
-const UPDATED = "June 20, 2026";
-// NOT an email address. learnfrc.com publishes no MX record, so every address
-// printed here bounced, and a personal mailbox can't be published (the
-// maintainer is a minor). /contact is an anonymous form that reaches the same
-// inbox and actually works.
+const UPDATED = "November 8, 2026";
+// The contact form, which needs no account and no email address. The public
+// address is the other way in, printed beside it.
 const CONTACT_PATH = "/contact";
+const MAILTO = `mailto:${PUBLIC_CONTACT_EMAIL}`;
 const MANUAL = "https://www.firstinspires.org/robotics/frc/game-and-season";
 
-/* ---------- the clauses. Substance preserved, dashes rewritten. ---------- */
+/** The contact address as a link, for the running text below. */
+function Email() {
+  return (
+    <a href={MAILTO} className="[overflow-wrap:anywhere]">
+      {PUBLIC_CONTACT_EMAIL}
+    </a>
+  );
+}
+
+/* ---------- the clauses ---------- */
 
 type Rule = Clause & { body: ReactNode };
 
@@ -27,9 +38,10 @@ const RULES: Rule[] = [
     title: "Who can use LearnFRC",
     body: (
       <p>
-        You should be at least 13 years old to create an account. If you are
-        under 18, you should have a parent or guardian&rsquo;s permission. By
-        signing up you confirm the information you provide is accurate.
+        Anyone can read the lessons, no account needed. To make an account, on
+        the website or in the app, you should be at least 13, and if
+        you&rsquo;re under 18 you should have a parent or guardian&rsquo;s OK.
+        The details you sign up with should be true.
       </p>
     ),
   },
@@ -39,33 +51,69 @@ const RULES: Rule[] = [
     body: (
       <ul>
         <li>
-          Keep your password secure. You are responsible for activity on your
-          account.
+          Keep your password to yourself. You&rsquo;re responsible for what
+          happens on your account.
         </li>
         <li>
-          Choose a username and display name that aren&rsquo;t offensive and
-          don&rsquo;t impersonate anyone.
+          If you sign in with Google or Apple, their terms also cover that
+          sign-in.
         </li>
-        <li>Verify your email address to activate your account.</li>
+        <li>
+          Pick a username and name that aren&rsquo;t offensive and don&rsquo;t
+          pretend to be someone else.
+        </li>
+        <li>
+          Confirm your email address to finish making an account with a
+          password.
+        </li>
       </ul>
     ),
   },
   {
+    id: "zero-tolerance",
+    title: "No objectionable content, no abuse",
+    body: (
+      <>
+        <p>
+          LearnFRC has zero tolerance for objectionable content and abusive
+          users. That covers anything hateful, harassing, bullying, threatening,
+          sexual or violent, plus spam, pretending to be someone else, and
+          posting someone else&rsquo;s personal information. It applies to
+          everything you can put on LearnFRC: your username, name, bio and
+          avatar, suggested edits, submitted lessons and anything else.
+        </p>
+        <ul>
+          <li>
+            A filter blocks profanity and slurs in names, usernames and bios
+            before they&rsquo;re saved.
+          </li>
+          <li>
+            You can report a user or something they posted, and you can block a
+            user so you stop seeing them. You can also report anything by
+            emailing <Email />.
+          </li>
+          <li>
+            Every report is reviewed within 24 hours. If something breaks this
+            rule, we remove it and remove the account that posted it.
+          </li>
+          <li>An account removed for this can&rsquo;t come back with a new one.</li>
+        </ul>
+      </>
+    ),
+  },
+  {
     id: "acceptable-use",
-    title: "Acceptable use",
+    title: "Using the site fairly",
     body: (
       <>
         <p>You agree not to:</p>
         <ul>
           <li>
-            Abuse, scrape, overload, or attempt to break the service or its
-            security.
+            Scrape, overload, or try to break the service or its security.
           </li>
-          <li>Cheat or manipulate XP, quizzes, or the leaderboard.</li>
-          <li>Harass others or post unlawful, harmful, or infringing content.</li>
+          <li>Cheat or game XP, quizzes, or the leaderboard.</li>
           <li>Use LearnFRC for anything illegal.</li>
         </ul>
-        <p>We may suspend or remove accounts that violate these terms.</p>
       </>
     ),
   },
@@ -74,39 +122,91 @@ const RULES: Rule[] = [
     title: "Educational content",
     body: (
       <p>
-        Our lessons and quizzes are researched from public sources and provided
-        for educational purposes. We work hard to keep them accurate, but for
-        official competition decisions you should always confirm details against
-        the current{" "}
+        Lessons and quizzes are researched from public sources and provided
+        for learning. We work hard to keep them accurate, but for anything that
+        matters at competition, check the current{" "}
         <a href={MANUAL} target="_blank" rel="noopener noreferrer">
           FRC Game Manual
         </a>{" "}
-        and official documentation. Content is provided &ldquo;as is&rdquo;
+        and official documentation. Content is provided &ldquo;as is&rdquo;,
         without warranties.
       </p>
     ),
   },
   {
     id: "your-content",
-    title: "Your content",
+    title: "What you post",
     body: (
       <p>
-        Content you submit, such as your profile details or feedback, remains
-        yours. You grant LearnFRC a license to store and display it as needed to
-        operate the service, for example showing your public profile.
+        What you post, like your profile, suggested edits and submitted
+        lessons, stays yours. You let LearnFRC store and show it to run the
+        service: your public profile, the contributions page, and the lesson
+        itself if we accept your edit or lesson. Once an edit or lesson is
+        part of a lesson, we can keep using and changing it, even after your
+        account is gone. Only post what you have the right to share.
       </p>
+    ),
+  },
+  {
+    id: "helpers",
+    title: "Marketing helpers",
+    body: (
+      <>
+        <p>
+          If you&rsquo;re accepted to help spread the word about LearnFRC, these
+          apply too. Helping is unpaid volunteer work, and helpers&rsquo; names
+          are never shown publicly.
+        </p>
+        <ul>
+          <li>
+            Anything you send in, like videos, clips, graphics or posts, may be
+            posted on LearnFRC&rsquo;s official YouTube, Instagram and TikTok
+            accounts if Jahaan chooses. It may be trimmed or edited, and it
+            goes up without your name.
+          </li>
+          <li>
+            You keep owning what you make. Sending it in gives LearnFRC free
+            permission to edit it and post it on those accounts.
+          </li>
+          <li>
+            Only send work you made or have the right to share, with the OK of
+            anyone who appears in it. Ask and we&rsquo;ll take anything of
+            yours down from LearnFRC&rsquo;s accounts.
+          </li>
+          <li>
+            Don&rsquo;t present LearnFRC as official FIRST material or as
+            endorsed by FIRST, and put FIRST&rsquo;s disclaimer (the next
+            clause) on anything you make that names FIRST.
+          </li>
+          <li>Jahaan can end a helper role at any time, and so can you.</li>
+        </ul>
+      </>
     ),
   },
   {
     id: "trademarks",
     title: "Trademarks",
     body: (
-      <p>
-        LearnFRC is an independent project and is{" "}
-        <strong>not affiliated with or endorsed by FIRST®</strong>. FIRST®, FRC®,
-        and related marks belong to FIRST. References are for identification and
-        educational purposes only.
-      </p>
+      <>
+        <p>
+          LearnFRC is an independent project and is{" "}
+          <strong>not affiliated with, sponsored by or endorsed by FIRST</strong>.
+          FIRST names are used only to identify what the lessons are about.
+        </p>
+        <p>
+          <FirstTrademarkNotice />
+        </p>
+        <p>
+          <i>FIRST</i>&reg; LEGO&reg; League is a jointly held trademark of{" "}
+          <i>FIRST</i>&reg; (
+          <a href="https://www.firstinspires.org" target="_blank" rel="noopener noreferrer">
+            www.firstinspires.org
+          </a>
+          ) and the LEGO Group, neither of which is overseeing, involved with,
+          or responsible for this activity, product, or service. FRC game
+          names, like REBUILT&trade;, are trademarks of <i>FIRST</i>.
+        </p>
+      </>
     ),
   },
   {
@@ -114,20 +214,24 @@ const RULES: Rule[] = [
     title: "Limitation of liability",
     body: (
       <p>
-        To the maximum extent permitted by law, LearnFRC and its maintainers are
-        not liable for any indirect or consequential damages arising from your
-        use of the service. The service is provided without warranty of any kind.
+        To the fullest extent the law allows, LearnFRC and the people who run
+        it aren&rsquo;t liable for indirect or consequential damages from your
+        use of the service. The service is provided without warranty of any
+        kind.
       </p>
     ),
   },
   {
     id: "termination",
-    title: "Termination",
+    title: "Ending your account",
     body: (
       <p>
-        You may delete your account at any time, either in{" "}
-        <Link href="/settings">settings</Link> or by asking us. We may suspend or
-        terminate access if these terms are violated.
+        You can delete your account at any time: on the website under{" "}
+        <Link href="/settings">Settings</Link>, &ldquo;Delete my account&rdquo;,
+        or in the app under Settings, &ldquo;Delete my account&rdquo;. You can
+        also ask us to do it. We can suspend or remove an account that breaks
+        these terms, without warning when the rule broken is the one on
+        objectionable content and abuse.
       </p>
     ),
   },
@@ -136,8 +240,8 @@ const RULES: Rule[] = [
     title: "Changes",
     body: (
       <p>
-        We may update these terms. The date above reflects the latest version.
-        Continued use after changes means you accept them.
+        We may update these terms. The date at the top shows the latest
+        version, and using LearnFRC after a change means you accept it.
       </p>
     ),
   },
@@ -146,9 +250,10 @@ const RULES: Rule[] = [
     title: "Contact",
     body: (
       <p>
-        Questions about these terms? Send them through our{" "}
-        <Link href={CONTACT_PATH}>contact form</Link>, no account needed. See
-        also our <Link href="/privacy">Privacy Policy</Link>.
+        LearnFRC is run by Jahaan Pardhanani. Questions about these terms go
+        to <Email />, or through the <Link href={CONTACT_PATH}>contact form</Link>,
+        no account needed. See also the{" "}
+        <Link href="/privacy">Privacy Policy</Link>.
       </p>
     ),
   },
@@ -156,13 +261,21 @@ const RULES: Rule[] = [
 
 const CLAUSES: Clause[] = RULES.map(({ id, title }) => ({ id, title }));
 
+/** The clause count in words, for the headline. Digits past twenty. */
+const COUNT_WORDS = [
+  "Zero", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight",
+  "Nine", "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen",
+  "Sixteen", "Seventeen", "Eighteen", "Nineteen", "Twenty",
+];
+const COUNT = COUNT_WORDS[RULES.length] ?? String(RULES.length);
+
 /**
  * The terms, as the rules page at the front of the binder.
  *
- * LAYOUT: a contract, not a feature grid. Ten clauses run as one continuous
+ * LAYOUT: a contract, not a feature grid. The clauses run as one continuous
  * ledger with the ordinal hanging in the margin, opened by a single ink rule
  * and separated by dashed hairlines, so the whole document reads as one
- * agreement instead of ten equally-weighted boxes. The contents sit on the
+ * agreement instead of a dozen equally-weighted boxes. The contents sit on the
  * first page, taped down, the way a printed rulebook prints them, which is why
  * nothing here needs to track your scroll position.
  *
@@ -170,6 +283,11 @@ const CLAUSES: Clause[] = RULES.map(({ id, title }) => ({ id, title }));
  * that one leads with a table because its reader arrives with a question about
  * their own data. This one's reader arrives asking what they just agreed to, so
  * it leads with the agreement and then numbers it.
+ *
+ * COVERS the website and the app. The "No objectionable content, no abuse"
+ * clause is what App Review guideline 1.2 asks every app with user content to
+ * put in its terms: zero tolerance, reporting, blocking, and reports acted on
+ * within 24 hours. Don't soften it without changing how reports are handled.
  *
  * Server Component throughout. This page ships no client JavaScript.
  */
@@ -179,13 +297,13 @@ export default function TermsPage() {
       <header>
         <p className="nb-marker">terms / the rules of the room</p>
         <h1 className="text-[clamp(2.2rem,1.2rem+3.4vw,3.4rem)]">
-          Ten rules, and none of them are{" "}
+          {COUNT} rules, and none of them are{" "}
           <span className="nb-mark">a surprise</span>.
         </h1>
         <p className="nb-lede mt-5">
           LearnFRC is a free, independent place to learn the FIRST Robotics
-          Competition. These are the terms for using it, written to be read
-          rather than skipped.
+          Competition, on the website and in the app. These are the terms for
+          using it, written to be read rather than skipped.
         </p>
         <p className="nb-slug mt-5">
           revised {UPDATED} / {RULES.length} clauses / about a four minute read
@@ -194,15 +312,15 @@ export default function TermsPage() {
 
       {/* ---- the agreement itself ----------------------------------------
           The one sentence with legal weight goes above the contents, not
-          buried at clause nine. A note frame rather than a card, because it is
+          buried at the end. A note frame rather than a card, because it is
           an aside on the page, not another section of it. */}
       <p className="nb-note mt-[clamp(1.8rem,4vw,2.8rem)] max-w-[38rem]">
         <span className="nb-slug">what you are agreeing to</span>
         <span className="mt-2 block text-[0.99rem] leading-relaxed">
-          By creating an account or using the service you accept these terms. If
-          you don&rsquo;t accept them, don&rsquo;t use the service. Reading the
-          lessons needs no account, so nothing on this page applies to you until
-          you make one.
+          By making an account or using LearnFRC, on the website or in the app,
+          you accept these terms. If you don&rsquo;t accept them, don&rsquo;t
+          use it. Reading the lessons needs no account, and most of these rules
+          only matter once you make one.
         </span>
       </p>
 
@@ -252,9 +370,12 @@ export default function TermsPage() {
             Still not sure what a clause means?
           </h2>
           <p className="nb-sub mt-3">
-            One form, one person reading it. You don&rsquo;t need an account and
-            you don&rsquo;t need to leave an email address unless you want an
-            answer back.
+            Email{" "}
+            <a href={MAILTO} className="nb-link [overflow-wrap:anywhere]">
+              {PUBLIC_CONTACT_EMAIL}
+            </a>{" "}
+            or use the form. One person reads it, and the form needs no account
+            and no email address unless you want an answer back.
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
@@ -266,11 +387,6 @@ export default function TermsPage() {
           </Link>
         </div>
       </section>
-
-      <p className="nb-hint mt-[clamp(2rem,4vw,3rem)] max-w-[68ch]">
-        LearnFRC is an independent educational project and is not affiliated with
-        or endorsed by FIRST®. FIRST® and FRC® are trademarks of FIRST.
-      </p>
     </div>
   );
 }
