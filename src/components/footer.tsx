@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Logo } from "@/components/logo";
 import { NewsletterForm } from "@/components/newsletter-form";
 import { getOverviewStats } from "@/lib/queries";
+import { PUBLIC_CONTACT_EMAIL } from "@/lib/email";
 
 /**
  * The inside back cover of the binder: every destination written out, the
@@ -73,6 +74,39 @@ function Offsite() {
         strokeLinejoin="round"
       />
     </svg>
+  );
+}
+
+/**
+ * FIRST's own disclaimer, in the words its trademark policy asks for: the
+ * "Policy on the Use of FIRST Trademarks and Copyrighted Materials" (rev.
+ * 04/19/25), section IV.A. The policy gives the sentence for FIRST, FIRST
+ * Robotics Competition and FIRST Tech Challenge and says a disclaimer must
+ * name the marks actually used, so the list adds the other registered marks
+ * the lessons use (FRC, FTC, Gracious Professionalism, Coopertition). The rest
+ * is FIRST's wording, punctuation included. FIRST is set in italics because
+ * section III.A.5 of the same policy says the word mark is always written that
+ * way.
+ *
+ * Exported so the terms can print the same sentence instead of a paraphrase.
+ */
+export function FirstTrademarkNotice() {
+  return (
+    <>
+      <i>FIRST</i>&reg;, <i>FIRST</i>&reg; Robotics Competition, FRC&reg;,{" "}
+      <i>FIRST</i>&reg; Tech Challenge, FTC&reg;, Gracious Professionalism&reg;,
+      and Coopertition&reg; are registered trademarks of <i>FIRST</i>&reg; (
+      <a
+        href="https://www.firstinspires.org"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="nb-link"
+      >
+        www.firstinspires.org
+      </a>
+      ) which is not overseeing, involved with, or responsible for this
+      activity, product, or service.
+    </>
   );
 }
 
@@ -193,6 +227,15 @@ export async function Footer() {
             <Link href="/terms" className="nb-link inline-flex min-h-11 items-center">
               Terms
             </Link>
+            {/* The public contact address, on every page because the policy
+                and the terms both send people to it. Allowed to break
+                anywhere so it can never push a 320px screen sideways. */}
+            <a
+              href={`mailto:${PUBLIC_CONTACT_EMAIL}`}
+              className="nb-link inline-flex min-h-11 items-center [overflow-wrap:anywhere]"
+            >
+              {PUBLIC_CONTACT_EMAIL}
+            </a>
             {catalogue ? (
               <span>
                 {lessonCount.toLocaleString()} lessons / {deptCount} departments
@@ -207,7 +250,7 @@ export async function Footer() {
         <div className="nb-note mt-6 max-w-[78ch]">
           <p className="nb-slug mb-1.5">note on accuracy</p>
           <p className="text-[0.88rem] leading-[1.55] text-[var(--graphite)]">
-            LearnFRC is in beta. Lessons are AI-assisted: drafted from primary sources like the
+            Lessons are AI-assisted: drafted from primary sources like the
             WPILib docs, the game manual and vendor sites, then reviewed for accuracy. If
             something looks wrong,{" "}
             <Link href="/guides" className="nb-link">
@@ -224,6 +267,13 @@ export async function Footer() {
             .
           </p>
         </div>
+
+        {/* The formal notice FIRST's policy asks an independent site to carry.
+            The bottom rule above already says it in plain words; this is the
+            version with the marks named, on every page. */}
+        <p className="nb-hint mt-5 max-w-[78ch]">
+          LearnFRC is an independent project. <FirstTrademarkNotice />
+        </p>
       </div>
     </footer>
   );
