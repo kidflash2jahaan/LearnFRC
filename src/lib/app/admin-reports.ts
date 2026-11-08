@@ -261,8 +261,8 @@ async function readReport(id: string): Promise<Row | null> {
 }
 
 /**
- * Closes this report, plus (with `alsoMatching`) every other open report
- * about the same content, or every open report about the account for a ban.
+ * Closes this report, plus every other open report about the same content
+ * (`scope: "content"`) or about the same account (`scope: "account"`, a ban).
  * Status-gated, so two people answering at once close it exactly once:
  * returns null when this report was no longer open, else the close's stamp.
  */
