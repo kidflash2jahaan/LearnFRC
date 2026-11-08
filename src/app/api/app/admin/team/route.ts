@@ -6,9 +6,10 @@ export const dynamic = "force-dynamic";
 /**
  * GET /api/app/admin/team: the super admin's desk, the same reads /admin/team
  * renders from (loadAdminTeamDesk in src/lib/app/admin-team-desk.ts): what
- * accepting hands over, pending applications, the team, and the last 30
- * decisions. Handles and team numbers only, never names or emails. Super
- * admins only; an admin or member gets 403 `forbidden`.
+ * accepting hands over, pending marketing applications, the marketers with
+ * their signup counts, the admin team, and the last 30 decisions. Handles and
+ * team numbers only, never names or emails. Super admins only; an admin or
+ * member gets 403 `forbidden`.
  */
 export async function GET(req: Request) {
   return guarded(async () => {

@@ -1,18 +1,19 @@
 /**
- * What /admin/team waits on: three query bundles in one `Promise.all`. Two are
- * ordinary table reads, but `getAdminTeam()` calls `auth.admin.getUserById`
+ * What /admin/team waits on: four query bundles in one `Promise.all`. Most are
+ * ordinary table reads (the marketers' signup counts are head-only counts),
+ * but `getAdminTeam()` calls `auth.admin.getUserById`
  * once per member to work out who is an owner, and those are network round
  * trips that do not batch. On a team of six that is the whole wait.
  *
  * Same rule as src/app/admin/loading.tsx: draw everything that is KNOWN and
  * put a placeholder only where data goes. The gutter, the ink rules, the taped
- * card and all three drawer headers are real here, not grey blocks. What
+ * card and all four drawer headers are real here, not grey blocks. What
  * pulses is the handful of words the database has not handed over yet.
  *
  * Geometry is read off src/app/admin/team/page.tsx rather than eyeballed:
  *  - masthead  `nb-wrap pt-10 lg:pt-16`, then the same two-column grid
  *  - card      `nb-box nb-tilt-1`, four ruled grant rows, then the note
- *  - drawers   three, all CLOSED here, so each is a bare header: 2px rule +
+ *  - drawers   four, all CLOSED here, so each is a bare header: 2px rule +
  *              py-4 + a slug line + a title line, about 74px.
  *
  * One deliberate mismatch, the same one /admin's fallback accepts: a signed-in
@@ -90,6 +91,7 @@ export default function AdminTeamLoading() {
 
       <section className="nb-wrap mt-12 lg:mt-16">
         <Line w="w-48" className="mb-3.5" />
+        <DrawerRow />
         <DrawerRow />
         <DrawerRow />
         <DrawerRow />

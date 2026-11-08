@@ -207,8 +207,8 @@ export function ApplyForm({
           label="Your FRC experience"
           rows={5}
           disabled={isPending}
-          placeholder="Team number, the seasons you were around for, and what you actually worked on."
-          hint="If you were on more than one team, say so. If you have been away from it for a few years, say that too."
+          placeholder="Your team, what you do on it, and where you already talk to other FRC people."
+          hint="A team Discord, a team account, competitions you go to. If you were on more than one team, say so."
         />
 
         <LongAnswer
@@ -217,8 +217,8 @@ export function ApplyForm({
           label="Why you want to help"
           rows={4}
           disabled={isPending}
-          placeholder="What you'd want to pick up first, and why this rather than something else."
-          hint="A paragraph is plenty. If there's a department you'd want to keep an eye on in particular, name it."
+          placeholder="Who you'd show LearnFRC to first, and anything you'd want to make."
+          hint="A paragraph is plenty. Making videos is optional, so say so if you wouldn't."
         />
 
         <div className="nb-field">
@@ -233,7 +233,7 @@ export function ApplyForm({
             disabled={isPending}
             value={availability}
             onChange={(e) => setAvailability(e.target.value)}
-            placeholder="a couple of evenings a month"
+            placeholder="a few posts a month"
             aria-describedby={availHintId}
             className="nb-input"
           />

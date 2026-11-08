@@ -374,13 +374,13 @@ export default async function AboutPage() {
               , without an account.
             </p>
             <p>
-              It doesn&rsquo;t have to stay one person. If you&rsquo;ve been on
-              an FRC team and can spare a few hours a month, you can{" "}
+              It doesn&rsquo;t have to stay one person&rsquo;s reach. If
+              you&rsquo;ve been on an FRC team, you can{" "}
               <Link className="nb-link" href="/apply">
-                apply to help run the site
+                apply to help spread it
               </Link>
-              : answering the feedback readers send in, reviewing suggested
-              edits, checking lessons against their sources.
+              : showing it to your own team and other teams, and making clips
+              of your own if you want.
             </p>
             <p>
               LearnFRC is in beta and the code is public on{" "}

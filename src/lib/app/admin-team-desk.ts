@@ -1,7 +1,13 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isOwnerEmail } from "@/lib/auth";
-import { GRANTS } from "@/lib/applications";
+import {
+  BRAND_KIT,
+  GRANTS,
+  MARKETING_RULES,
+  OFFICIAL_POSTING,
+  TRAILER_URL,
+} from "@/lib/applications";
 import { teamRoleLabel } from "@/lib/team-roles";
 import { applicationDecisionHtml } from "@/lib/email";
 import {
@@ -20,17 +26,30 @@ import {
   type StaffRole,
 } from "@/lib/app/admin-access";
 import { emailFor, mailAfter, revalidateTeamPages } from "@/lib/app/admin-notify";
+import {
+  APPLICATION_REPLY_TO,
+  getMarketers,
+  grantMarketingTag,
+  marketerInviteUrl,
+  type DeskMarketer,
+} from "@/lib/app/admin-apply-marketing";
 import { fail, type AppUser, type Result } from "@/lib/app/result";
 
 /**
- * The super admin's desk: applications, the team, the decision log. Shared by
- * /admin/team (its page and the reviewAdminApplication / setAdminRole Server
- * Actions) and the app's /api/app/admin/team and
- * /api/app/admin/applications/{id}/decision routes.
+ * The super admin's desk: marketing applications, the marketers, the admin
+ * team, the decision log. Shared by /admin/team (its page and the
+ * reviewAdminApplication / setAdminRole / removeMarketer Server Actions) and
+ * the app's /api/app/admin/team, /api/app/admin/applications/{id}/decision and
+ * /api/app/admin/marketers/{userId} routes.
+ *
+ * Applications are for the marketing role only. Accepting one puts a marketing
+ * tag on the account (admin-apply-marketing.ts) and never a `site_admins` row,
+ * so no application can open /admin. The admin team is still listed and
+ * managed here, by role changes, outside applications.
  *
  * Nothing here returns a real name or an email address. Handles and team
- * numbers only, and team members' user ids only to super admins (the controls
- * need them, as on the site).
+ * numbers only, and user ids only to super admins (the controls need them, as
+ * on the site).
  */
 
 /** Pending applications are read in pages of this many. */
@@ -82,6 +101,13 @@ export type AdminTeamDesk = {
   pending: DeskApplication[];
   /** True when the pending list is a full page (60) and more may be waiting. */
   pendingTruncated: boolean;
+  /**
+   * Everyone with the marketing tag, longest-standing first, each with how
+   * many people signed up through their invite link. Newer than the app copies
+   * already installed, which ignore it.
+   */
+  marketers: DeskMarketer[];
+  /** The admin team (`site_admins` plus the owners). */
   team: DeskMember[];
   decided: DeskDecision[];
   /** True when the log is a full page (30); older decisions are on file. */
@@ -109,8 +135,9 @@ export async function loadAdminTeamDesk(user: AppUser): Promise<Result<AdminTeam
   const gate = await requireSiteRole(user, "superadmin", NOT_SUPER_ADMIN);
   if (!gate.ok) return gate;
 
-  const [pending, team, decided] = await Promise.all([
+  const [pending, marketers, team, decided] = await Promise.all([
     getApplications("pending", PENDING_PAGE),
+    getMarketers(),
     getAdminTeam(),
     // Its own read, ordered and cut by `reviewed_at`. Taking a window of
     // everything by arrival order and re-sorting it by decision order loses
@@ -134,6 +161,7 @@ export async function loadAdminTeamDesk(user: AppUser): Promise<Result<AdminTeam
       createdAt: isoOr(a.createdAt),
     })),
     pendingTruncated: pending.length === PENDING_PAGE,
+    marketers,
     team: team.map((m) => {
       const isYou = m.userId === user.id;
       return {
@@ -203,8 +231,8 @@ export async function decideApplication(
   // plus a returned row means exactly one of them wins, so a retry after a
   // timeout, or a second super admin with the drawer open, gets "already
   // decided" instead of a second email. Granting first would be worse than
-  // duplicate mail: an Accept and a Reject racing would leave an account that
-  // can open /admin holding an application that reads "rejected".
+  // duplicate mail: an Accept and a Reject racing would leave an account with
+  // the marketing tag holding an application that reads "rejected".
   const { data: won, error: updErr } = await admin
     .from("admin_applications")
     .update({
@@ -220,20 +248,18 @@ export async function decideApplication(
   if (!won || won.length === 0) return fail("conflict", "That one has already been decided.");
 
   if (accepted) {
-    const { error: grantErr } = await admin.from("site_admins").upsert(
-      {
-        user_id: app.user_id as string,
-        role: "admin",
-        granted_by: user.id,
-        granted_at: now,
-        note: note || "accepted application",
-      },
-      { onConflict: "user_id" }
-    );
-    if (grantErr) {
+    // The marketing tag, and only the tag. This never writes `site_admins`:
+    // an accepted application can't open /admin (see admin-apply-marketing.ts).
+    const grant = await grantMarketingTag({
+      userId: app.user_id as string,
+      grantedBy: user.id,
+      applicationId: id,
+      note: note || null,
+    });
+    if (!grant.ok) {
       // Put the application back on the desk. Without this the row reads
-      // "accepted" while the account holds no admin record, every retry is
-      // refused as already decided, and nothing on the page shows the split.
+      // "accepted" while the account holds no tag, every retry is refused as
+      // already decided, and nothing on the page shows the split.
       await admin
         .from("admin_applications")
         .update({
@@ -243,7 +269,10 @@ export async function decideApplication(
           review_note: null,
         })
         .eq("id", id);
-      return fail("server", "Couldn't add them to the team, so nothing was decided. Try again.");
+      return fail(
+        "server",
+        "Couldn't add them to the marketing team, so nothing was decided. Try again."
+      );
     }
   }
 
@@ -254,16 +283,28 @@ export async function decideApplication(
       .select("username")
       .eq("id", app.user_id as string)
       .maybeSingle();
+    const username = (prof?.username as string | null) ?? null;
     mailAfter("decision", {
       to,
       subject: accepted
-        ? "You're on the LearnFRC admin team"
+        ? "You're on the LearnFRC marketing team"
         : "About your LearnFRC application",
-      html: applicationDecisionHtml({
-        accepted,
-        note: note || null,
-        username: (prof?.username as string | null) ?? null,
-      }),
+      html: accepted
+        ? applicationDecisionHtml({
+            accepted: true,
+            note: note || null,
+            username,
+            welcome: {
+              inviteUrl: marketerInviteUrl(username),
+              trailerUrl: TRAILER_URL,
+              brandKit: BRAND_KIT,
+              rules: MARKETING_RULES,
+              posting: OFFICIAL_POSTING,
+            },
+          })
+        : applicationDecisionHtml({ accepted: false, note: note || null, username }),
+      // "Reply to this email to send in what you make" has to reach a person.
+      replyTo: APPLICATION_REPLY_TO,
     });
   }
 

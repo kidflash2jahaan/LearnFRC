@@ -220,9 +220,9 @@ export default async function ContributionsPage() {
             <p className="nb-hair mt-auto pt-[clamp(1rem,2.2vw,1.4rem)] text-[0.95rem] leading-snug text-graphite">
               Every suggestion is read by a person, and the decision is written
               here either way. Nothing gets quietly dropped. If you&rsquo;ve
-              been on an FRC team, you can{" "}
+              been on an FRC team, you can also{" "}
               <Link href="/apply" className="nb-link">
-                apply to be one of the people reading them
+                apply to help more teams find LearnFRC
               </Link>
               .
             </p>

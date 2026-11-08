@@ -3,9 +3,11 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { loadAdminTeamDesk, type DeskApplication } from "@/lib/app/admin-team-desk";
+import type { DeskMarketer } from "@/lib/app/admin-apply-marketing";
 import { CollapsiblePanel } from "@/components/admin/collapsible-panel";
 import { ReviewControls } from "./_review-controls";
 import { MemberControls } from "./_member-controls";
+import { MarketerControls } from "./_marketer-controls";
 
 export const metadata: Metadata = {
   // The root template appends " · LearnFRC".
@@ -113,6 +115,52 @@ function ApplicationEntry({ app }: { app: DeskApplication }) {
   );
 }
 
+/** "1 signup" / "12 signups". */
+function signups(n: number): string {
+  return `${n} ${n === 1 ? "signup" : "signups"}`;
+}
+
+/**
+ * One marketer: who, since when, and what their invite link has brought in.
+ * The count is the whole point of the row, so it is the one figure set in
+ * ink rather than graphite. Nothing here is shown anywhere public.
+ */
+function MarketerEntry({ m }: { m: DeskMarketer }) {
+  const handle = m.username ? `@${m.username}` : "this account";
+  return (
+    <li className="nb-hair py-4 first:border-t-0 first:pt-0">
+      <div className="grid gap-x-8 gap-y-3.5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
+        <div className="min-w-0">
+          <p className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1.5">
+            <span className="min-w-0 truncate text-[0.98rem] font-bold">
+              {m.username ? `@${m.username}` : "no username yet"}
+            </span>
+            <span className="nb-slug font-bold text-ink">
+              {signups(m.signups)} through their link
+            </span>
+          </p>
+          <p className="nb-slug mt-1 flex min-w-0 flex-wrap gap-x-4 gap-y-1">
+            <span className="whitespace-nowrap">team / {m.teamNumber ?? "not given"}</span>
+            <span className="whitespace-nowrap">since {utcDay(m.grantedAt)}</span>
+            <span className="whitespace-nowrap">
+              {signups(m.signupsSinceAccepted)} since then
+            </span>
+          </p>
+          {m.inviteUrl ? (
+            <p className="nb-slug mt-1 max-w-[68ch] break-all">link / {m.inviteUrl}</p>
+          ) : (
+            <p className="nb-slug mt-1">link / none until they pick a handle</p>
+          )}
+          {m.note ? (
+            <p className="nb-slug mt-1 max-w-[68ch] break-words">note / {m.note}</p>
+          ) : null}
+        </div>
+        <MarketerControls userId={m.userId} handle={handle} />
+      </div>
+    </li>
+  );
+}
+
 /**
  * The same locked-drawer card /admin shows a signed-in non-admin, with the copy
  * this case needs: an admin who lands here has the right account, just not
@@ -134,9 +182,9 @@ function SuperAdminsOnly() {
             whether there is a route in. */}
         <p className="mt-4 text-graphite">
           Admins open /admin and work the numbers, the feedback inbox and the
-          edit queue. Deciding who else gets that access is a super
-          admin&rsquo;s job, and this account isn&rsquo;t one. Nothing is
-          wrong with it.
+          edit queue. Deciding who else helps, as a marketer or an admin, is a
+          super admin&rsquo;s job, and this account isn&rsquo;t one. Nothing
+          is wrong with it.
         </p>
         <Link href="/admin" className="nb-btn mt-6">
           Back to the admin panel
@@ -157,7 +205,7 @@ export default async function AdminTeamPage() {
   // GET /api/app/admin/team sends. It re-checks the role itself.
   const desk = await loadAdminTeamDesk(user);
   if (!desk.ok) return <SuperAdminsOnly />;
-  const { grants, pending, team, decided } = desk;
+  const { grants, pending, marketers, team, decided } = desk;
 
   return (
     <div className="nb-route pb-24">
@@ -170,11 +218,13 @@ export default async function AdminTeamPage() {
           <div>
             <p className="nb-marker">sheet / team</p>
             <h1 className="text-[clamp(2.2rem,1rem+3.4vw,3.6rem)]">
-              Who else can open the drawer.
+              Who&rsquo;s helping, and how much.
             </h1>
             <p className="nb-lede mt-5">
-              Applications land here, and so does everyone already let in. Read
-              both answers before you decide, because the access is real.
+              Marketing applications land here, along with every marketer
+              you&rsquo;ve taken on and how many people signed up through their
+              link. The admin team sits below them, and nobody joins it through
+              an application.
             </p>
           </div>
 
@@ -192,20 +242,20 @@ export default async function AdminTeamPage() {
                 ))}
               </ul>
               <p className="mt-4 border-t border-dashed border-rule pt-3 text-[0.9rem] leading-relaxed text-graphite">
-                No real names and no email addresses appear anywhere in that
-                panel, on purpose. They get an email whichever way you answer,
-                and whatever you write in the note goes in it.
+                Accepting never opens /admin. They get an email whichever way
+                you answer, and whatever you write in the note goes in it.
+                Replies to it go to the owner&rsquo;s inbox.
               </p>
             </div>
             <p className="nb-pen mt-4 rotate-[-1.2deg]">
-              removing an admin is easy, a rejection is not
+              removing a marketer is easy, a rejection is not
             </p>
           </div>
         </div>
       </section>
 
       {/* ============================ THE DESK ============================
-          Three drawers, same shell as /admin. The one with something waiting
+          Four drawers, same shell as /admin. The one with something waiting
           opens itself: this page has exactly one reason to be visited, and
           making the owner click twice to reach it is the wrong default.
           No section heading above them, because each drawer already prints its
@@ -249,9 +299,31 @@ export default async function AdminTeamPage() {
           )}
         </CollapsiblePanel>
 
+        {/* Marketers before the admin team: it is the list applications
+            feed, and the signup counts are the thing worth checking on a
+            visit with nothing waiting. */}
         <CollapsiblePanel
-          title="The team"
-          slug="drawer / the team"
+          title="Marketers"
+          slug="drawer / marketers"
+          badge={`${marketers.length} ${marketers.length === 1 ? "person" : "people"}`}
+        >
+          {marketers.length === 0 ? (
+            <p className="nb-slug py-2">
+              Nobody has the marketing tag yet. Accepting an application above
+              adds them here, with a count of who signed up through their link.
+            </p>
+          ) : (
+            <ul className="min-w-0">
+              {marketers.map((m) => (
+                <MarketerEntry key={m.userId} m={m} />
+              ))}
+            </ul>
+          )}
+        </CollapsiblePanel>
+
+        <CollapsiblePanel
+          title="The admin team"
+          slug="drawer / the admin team"
           badge={`${team.length} ${team.length === 1 ? "person" : "people"}`}
         >
           {team.length === 0 ? (

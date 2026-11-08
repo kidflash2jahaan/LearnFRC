@@ -8,19 +8,34 @@ import { getMyApplication } from "@/lib/admin-team";
 import {
   APPLICATIONS_OPEN,
   APPLY_LIMITS,
+  BRAND_KIT,
   HEADS,
   JOBS,
+  MARKETING_RULES,
+  OFFICIAL_POSTING,
+  TRAILER_URL,
   type ApplyMode,
 } from "@/lib/applications";
 import { toIso } from "@/lib/app/format";
 import { BAD_REQUEST, siteRoleFor, textField } from "@/lib/app/admin-access";
 import { mailAfter, revalidateTeamPages } from "@/lib/app/admin-notify";
+import {
+  APPLICATION_REPLY_TO,
+  getMarketerTag,
+  marketerInviteUrl,
+} from "@/lib/app/admin-apply-marketing";
 import { fail, type AppUser, type Result } from "@/lib/app/result";
 
 /**
- * Applying to help run LearnFRC, shared by /apply (its page and the
- * submitAdminApplication / withdrawAdminApplication Server Actions) and the
- * app's GET, POST and DELETE /api/app/apply.
+ * Applying for the marketing role, the one role /apply takes applications
+ * for. Shared by /apply (its page and the submitAdminApplication /
+ * withdrawAdminApplication Server Actions) and the app's GET, POST and DELETE
+ * /api/app/apply.
+ *
+ * The table is still `admin_applications` and the functions keep their names,
+ * because the app copies already installed call the same routes with the same
+ * fields. What an accepted application grants changed: a marketing tag
+ * (admin-apply-marketing.ts), never a `site_admins` row.
  */
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com";
@@ -34,15 +49,26 @@ export type SignedInApplyMode = Exclude<ApplyMode, "signed-out">;
 
 export type ApplyState = {
   applicationsOpen: boolean;
+  /**
+   * `marketer` is newer than the app copies already installed, which decode an
+   * unknown mode as `new`. That is why `record` is empty in that mode: those
+   * copies print the form only when `record.username` is set, so an old copy
+   * shows a marketer the heading ("You're on the marketing team") and nothing
+   * under it, rather than a form to apply for what they already have.
+   */
   mode: SignedInApplyMode;
   heading: { title: string; slug: string };
-  /** What the reviewer would see: a handle, a team number, a role word. */
+  /**
+   * What the reviewer would see: a handle, a team number, a role word. All
+   * null in `marketer` mode, where there is nothing left to review.
+   */
   record: { username: string | null; teamNumber: number | null; teamRoleLabel: string | null };
   /**
    * The account's latest application when it still says something: pending,
-   * turned down or withdrawn. An accepted one whose account is no longer on
-   * the team is treated as none at all (they were removed, and the old
-   * acceptance is not an answer to "can I apply"). Always null for an admin.
+   * turned down or withdrawn. An accepted one whose account no longer has the
+   * tag is treated as none at all (they were removed, and the old acceptance
+   * is not an answer to "can I apply"). Always null for an admin or a
+   * marketer.
    */
   application: {
     status: "pending" | "rejected" | "withdrawn";
@@ -50,16 +76,37 @@ export type ApplyState = {
     reviewedAt: string | null;
     reviewNote: string | null;
   } | null;
+  /** What a marketer does: four of them, in order. */
   jobs: { slug: string; text: string }[];
   limits: typeof APPLY_LIMITS;
+  /** Where what a marketer makes ends up, said plainly. */
+  posting: string;
+  /** The rules a marketer agrees to. */
+  rules: string[];
+  /**
+   * Only in `marketer` mode: what the tag gives them to work with. Their own
+   * invite link (null until they pick a handle), when they were accepted, the
+   * trailer (null until it is public) and the brand kit.
+   */
+  marketer: {
+    inviteUrl: string | null;
+    since: string;
+    trailerUrl: string | null;
+    brandKit: typeof BRAND_KIT;
+  } | null;
 };
 
 export async function loadApplyState(user: AppUser): Promise<Result<ApplyState>> {
-  const [role, profile] = await Promise.all([siteRoleFor(user), getProfile(user.id)]);
+  const [role, profile, tag] = await Promise.all([
+    siteRoleFor(user),
+    getProfile(user.id),
+    getMarketerTag(user.id),
+  ]);
   const isAdmin = role !== "member";
-  // Only fetched when it can change what renders: an admin has nothing to
-  // apply for.
-  const latest = isAdmin ? null : await getMyApplication(user.id);
+  const isMarketer = !isAdmin && tag !== null;
+  // Only fetched when it can change what renders: an admin or a marketer has
+  // nothing to apply for.
+  const latest = isAdmin || isMarketer ? null : await getMyApplication(user.id);
   const application =
     latest && (latest.status === "pending" || latest.status === "rejected" || latest.status === "withdrawn")
       ? {
@@ -76,29 +123,44 @@ export async function loadApplyState(user: AppUser): Promise<Result<ApplyState>>
   const open = application?.status === "pending";
   const mode: SignedInApplyMode = isAdmin
     ? "on-the-team"
-    : open
-      ? "pending"
-      : !handle
-        ? "no-handle"
-        : application
-          ? "again"
-          : "new";
+    : isMarketer
+      ? "marketer"
+      : open
+        ? "pending"
+        : !handle
+          ? "no-handle"
+          : application
+            ? "again"
+            : "new";
 
   return {
     ok: true,
     applicationsOpen: APPLICATIONS_OPEN,
     mode,
     heading: { ...HEADS[mode] },
-    record: {
-      username: handle,
-      teamNumber: profile?.team_number ?? null,
-      // The word, not the stored slug: `profiles.role` holds `other` for a
-      // fifth of accounts, and nobody calls themselves that.
-      teamRoleLabel: profile?.role ? teamRoleLabel(profile.role) : null,
-    },
+    record: isMarketer
+      ? { username: null, teamNumber: null, teamRoleLabel: null }
+      : {
+          username: handle,
+          teamNumber: profile?.team_number ?? null,
+          // The word, not the stored slug: `profiles.role` holds `other` for a
+          // fifth of accounts, and nobody calls themselves that.
+          teamRoleLabel: profile?.role ? teamRoleLabel(profile.role) : null,
+        },
     application,
     jobs: JOBS,
     limits: APPLY_LIMITS,
+    posting: OFFICIAL_POSTING,
+    rules: MARKETING_RULES,
+    marketer:
+      isMarketer && tag
+        ? {
+            inviteUrl: marketerInviteUrl(handle),
+            since: tag.grantedAt,
+            trailerUrl: TRAILER_URL,
+            brandKit: BRAND_KIT,
+          }
+        : null,
   };
 }
 
@@ -106,8 +168,13 @@ export async function submitApplication(
   user: AppUser,
   input: { experience: unknown; why: unknown; availability?: unknown }
 ): Promise<Result> {
-  const [role, profile] = await Promise.all([siteRoleFor(user), getProfile(user.id)]);
+  const [role, profile, tag] = await Promise.all([
+    siteRoleFor(user),
+    getProfile(user.id),
+    getMarketerTag(user.id),
+  ]);
   if (role !== "member") return fail("conflict", "You're already on the team.");
+  if (tag) return fail("conflict", "You're already on the marketing team.");
   if (!APPLICATIONS_OPEN)
     return fail("conflict", "Applications are closed for now. Check back later.");
 
@@ -119,7 +186,8 @@ export async function submitApplication(
 
   // The page shows the "Pick a handle first" state instead of the form, and
   // this is the same rule on the server, so no door can file an application
-  // that reaches the desk with nothing on it to identify anybody.
+  // that reaches the desk with nothing on it to identify anybody. The invite
+  // link a marketer is counted through is keyed on the handle too.
   const username = profile?.username ?? null;
   if (!username)
     return fail("validation", "Pick a handle on your settings page first, then apply.");
@@ -177,15 +245,16 @@ export async function submitApplication(
       to: user.email,
       subject: "Your LearnFRC application is in",
       html: applicationReceivedHtml(username),
+      replyTo: APPLICATION_REPLY_TO,
     });
   }
   const ownerEmail = (process.env.ADMIN_EMAILS || "").split(",")[0]?.trim();
   if (ownerEmail) {
     mailAfter("owner notification", {
       to: ownerEmail,
-      subject: `LearnFRC: admin application from @${username}`,
+      subject: `LearnFRC: marketing application from @${username}`,
       html: adminNotifyHtml({
-        heading: "Someone applied to join the admin team",
+        heading: "Someone applied for the marketing role",
         rows: [
           { label: "Handle", value: `@${username}` },
           { label: "Team", value: profile?.team_number ? String(profile.team_number) : "not given" },
@@ -199,7 +268,7 @@ export async function submitApplication(
           <p style="margin:0;white-space:pre-wrap">${esc(why)}</p>`,
         ctaText: "Review it",
         ctaUrl: `${SITE}/admin/team`,
-        note: "Accepting gives them the admin panel: site numbers (no names or emails), the feedback inbox, edit review, and the verified mark.",
+        note: "Accepting gives them a marketing tag and the welcome email (trailer, invite link, brand kit, rules). It never opens /admin.",
       }),
     });
   }
