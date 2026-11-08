@@ -11,7 +11,7 @@ import {
   payReferralReward,
 } from "@/lib/signup-attribution";
 import { isFreshSignup } from "@/lib/first-run";
-import { normalizeUsername } from "@/lib/app/profile";
+import { deleteAccountData, normalizeUsername } from "@/lib/app/profile";
 import {
   appleIdentity,
   keepAppleRefreshToken,
@@ -66,6 +66,41 @@ export async function resolveSignInEmail(
   const email = u?.user?.email ?? "";
   if (!email) return fail("unauthorized", "Couldn't sign you in. Try your email instead.");
   return { ok: true, email };
+}
+
+/* ------------------------------------------------------------------ */
+/*  The ban list                                                       */
+/* ------------------------------------------------------------------ */
+
+/**
+ * What a banned email or IP is told, at every door that makes an account: the
+ * sign-up form, the app's sign-up, and Google or Apple on either.
+ */
+export const BANNED_SIGNUP =
+  "This account can't be created. If you believe this is a mistake, contact support.";
+
+/**
+ * Whether a new account's email or signup IP is on the ban list
+ * (`banned_emails`, `banned_ips`; the report desk's ban and the progress scan
+ * write them). A read error counts as not banned, as it always has: the ban
+ * list must never lock everyone out.
+ */
+async function isOnBanList(
+  email: string | null | undefined,
+  ip: string | null | undefined
+): Promise<boolean> {
+  const address = email?.trim().toLowerCase() || null;
+  if (!address && !ip) return false;
+  const admin = createAdminClient();
+  const [{ data: bannedEmail }, { data: bannedIp }] = await Promise.all([
+    address
+      ? admin.from("banned_emails").select("email").eq("email", address).maybeSingle()
+      : Promise.resolve({ data: null as { email: string } | null }),
+    ip
+      ? admin.from("banned_ips").select("ip").eq("ip", ip).maybeSingle()
+      : Promise.resolve({ data: null as { ip: string } | null }),
+  ]);
+  return !!bannedEmail || !!bannedIp;
 }
 
 /* ------------------------------------------------------------------ */
@@ -154,19 +189,7 @@ export async function registerAccount(
 
   // Ban list: reject banned emails or banned IPs with a generic message.
   const admin = createAdminClient();
-  {
-    const [{ data: bannedEmail }, { data: bannedIp }] = await Promise.all([
-      admin.from("banned_emails").select("email").eq("email", email.toLowerCase()).maybeSingle(),
-      ctx.signupIp
-        ? admin.from("banned_ips").select("ip").eq("ip", ctx.signupIp).maybeSingle()
-        : Promise.resolve({ data: null as { ip: string } | null }),
-    ]);
-    if (bannedEmail || bannedIp)
-      return fail(
-        "validation",
-        "This account can't be created. If you believe this is a mistake, contact support."
-      );
-  }
+  if (await isOnBanList(email, ctx.signupIp)) return fail("validation", BANNED_SIGNUP);
 
   // Friendly pre-check for username collision (avoids a cryptic DB error).
   // Exact match, `id` only: a taken/not-taken answer for one handle, which the
@@ -296,7 +319,16 @@ export type OAuthSignInContext = {
 };
 
 /** The account as both doors have it: Supabase's verified user. */
-type OAuthUser = Pick<User, "id" | "created_at"> & Partial<Pick<User, "identities">>;
+type OAuthUser = Pick<User, "id" | "created_at"> & Partial<Pick<User, "identities" | "email">>;
+
+export type OAuthSignInOutcome = {
+  isNewAccount: boolean;
+  /**
+   * The new account's email or signup IP is on the ban list, so the account
+   * has just been deleted. The door signs out and shows BANNED_SIGNUP.
+   */
+  banned?: true;
+};
 
 /**
  * The work that runs once an OAuth provider has signed someone in, for the
@@ -315,15 +347,30 @@ type OAuthUser = Pick<User, "id" | "created_at"> & Partial<Pick<User, "identitie
  * its Apple tokens when the account is deleted, and saves the name Apple sent
  * if the profile has none yet.
  *
- * Never fails. Analytics must never block a sign-in, so an attribution error
- * is logged loudly (a silent failure here is how the last gap went unnoticed
- * for three weeks) and the answer still comes back.
+ * THE BAN LIST. A brand-new account gets the sign-up form's ban check (its
+ * email, and the IP it signed up from). Google and Apple make the account
+ * before LearnFRC hears about it, so on a hit the account is deleted on the
+ * spot and the answer says `banned`: the door signs out and shows
+ * BANNED_SIGNUP. Apple's Hide My Email address is the same every time for one
+ * Apple ID and one app, so a banned Apple account matches too. The database
+ * hook in supabase/migrations/20261108140000_ban_list_signup_hook.sql refuses
+ * a banned email before the account exists, at every door, once it's
+ * switched on; this check covers the IP and the time until then.
+ *
+ * Otherwise never fails. Analytics must never block a sign-in, so an
+ * attribution error is logged loudly (a silent failure here is how the last
+ * gap went unnoticed for three weeks) and the answer still comes back.
  */
 export async function completeOAuthSignIn(
   user: OAuthUser | null | undefined,
   ctx: OAuthSignInContext
-): Promise<{ isNewAccount: boolean }> {
+): Promise<OAuthSignInOutcome> {
   const isNewAccount = isFreshSignup(user?.created_at);
+
+  if (user && isNewAccount && (await isOnBanList(user.email, ctx.signupIp))) {
+    await removeBannedSignup(user, ctx);
+    return { isNewAccount: false, banned: true };
+  }
 
   if (user && isNewAccount) {
     try {
@@ -354,6 +401,32 @@ export async function completeOAuthSignIn(
   }
 
   return { isNewAccount };
+}
+
+/**
+ * Delete an account Google or Apple just made for someone on the ban list.
+ * For Apple, the token Apple handed over at this sign-in is kept first, so the
+ * deletion can revoke it and LearnFRC leaves their Apple ID's list as it
+ * would for any deleted account. Never throws; a failure is logged.
+ */
+async function removeBannedSignup(user: OAuthUser, ctx: OAuthSignInContext): Promise<void> {
+  try {
+    if (appleIdentity(user)) {
+      const refreshToken = ctx.apple?.refreshToken;
+      if (refreshToken) await keepAppleRefreshToken(user, refreshToken);
+      const code = ctx.apple?.authorizationCode;
+      if (code) await keepAppleTokenFromCode(user, code);
+    }
+    const admin = createAdminClient();
+    const deleted = await deleteAccountData(
+      { id: user.id, email: user.email, created_at: user.created_at },
+      { supabase: admin, admin }
+    );
+    if (!deleted.ok)
+      console.error(`${ctx.door}: a banned sign-up (${user.id.slice(0, 8)}) couldn't be deleted`);
+  } catch (e) {
+    console.error(`${ctx.door}: removing a banned sign-up failed:`, e);
+  }
 }
 
 /** The longest name kept from a provider. */

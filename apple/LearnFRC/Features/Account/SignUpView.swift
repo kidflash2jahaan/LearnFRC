@@ -153,7 +153,7 @@ struct SignUpView: View {
                     FieldError(error)
                 }
 
-                ProviderSignInButtons(isWorking: $isUsingProvider, error: $error, referrer: referrer, via: via) {
+                ProviderSignInButtons(isWorking: $isUsingProvider, error: $error, referrer: referrer, via: via, showsTermsNote: false) {
                     password = ""
                     // In the sign-in sheet, the sheet closes on the account change; pushed on
                     // its own, this screen goes back.
@@ -204,6 +204,9 @@ struct SignUpView: View {
                 .buttonStyle(InkButtonStyle(.primary, fullWidth: true))
                 .keyboardShortcut(.defaultAction)
                 .padding(.top, 2)
+
+                // App Review 1.2: making the account is agreeing to the terms, whichever way.
+                TermsAgreementNote()
 
                 VStack(alignment: .leading, spacing: 14) {
                     DashedRule()

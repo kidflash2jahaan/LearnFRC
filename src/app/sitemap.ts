@@ -105,8 +105,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { path: "/corrections", lastModified: correctionsLastUpdated() },
     { path: "/terms", lastModified: LEGAL_UPDATED },
     { path: "/privacy", lastModified: LEGAL_UPDATED },
-    // The site's only reachable contact surface. /privacy, /terms and /about all
-    // depend on it now that the dead mailto: links are gone.
+    // The contact form and the public contact address. /privacy, /terms and
+    // /about all send people here.
     { path: "/contact", lastModified: STATIC_UPDATED },
   ].map((r) => ({
     url: `${SITE}${r.path}`,

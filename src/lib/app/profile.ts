@@ -1,5 +1,6 @@
 import "server-only";
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { rateLimit } from "@/lib/rate-limit";
 import { firstProfaneField } from "@/lib/profanity";
 import { isPlaceholderUsername } from "@/lib/onboarding";
@@ -7,7 +8,7 @@ import { needsUsernameSetup } from "@/lib/onboarding-server";
 import type { Profile } from "@/lib/types";
 import { levelForXp, tierFor } from "@/lib/app/levels";
 import { toIso } from "@/lib/app/format";
-import { revokeAppleSignIn } from "@/lib/app/apple-sign-in";
+import { readAppleRevocation, revokeAppleTokens } from "@/lib/app/apple-sign-in";
 import { fail, type AppClients, type AppUser, type Result } from "@/lib/app/result";
 
 /**
@@ -346,16 +347,18 @@ export async function setEmailChoice(
  * rows also cascade from auth.users, but deleting them explicitly first keeps
  * this correct even if a foreign key ever changes.
  *
- * An account that signed in with Apple has its Apple tokens revoked first, as
- * Apple requires (src/lib/app/apple-sign-in.ts); that has to happen while the
- * auth user and its kept tokens still exist. It never blocks the deletion.
+ * An account that signed in with Apple has its Apple tokens revoked, as Apple
+ * requires (src/lib/app/apple-sign-in.ts). The tokens are read first, while
+ * the auth user and its kept tokens still exist, and revoked after the
+ * response, once the account is gone, so a slow Apple never holds up (or times
+ * out) the deletion. Nothing is revoked if the deletion fails.
  */
 export async function deleteAccountData(
   user: AppUser,
   { admin }: AppClients
 ): Promise<Result> {
   const uid = user.id;
-  await revokeAppleSignIn(uid);
+  const apple = await readAppleRevocation(uid);
   await admin.from("lesson_progress").delete().eq("user_id", uid);
   await admin.from("bookmarks").delete().eq("user_id", uid);
   await admin.from("user_achievements").delete().eq("user_id", uid);
@@ -365,5 +368,6 @@ export async function deleteAccountData(
     console.error("deleteAccountData:", error.message);
     return fail("server", "Couldn't delete the account. Try again.");
   }
+  if (apple) after(() => revokeAppleTokens(apple));
   return { ok: true };
 }

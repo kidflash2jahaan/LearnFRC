@@ -46,7 +46,9 @@ export function AuthForm({
   referrer?: string;
   /** Which share surface produced a referral link (?via=). */
   via?: string;
-  notice?: "exists";
+  /** "exists": signed up with an email that has an account. "banned": Google
+      or Apple made an account for an email or IP on the ban list. */
+  notice?: "exists" | "banned";
   defaultEmail?: string;
 }) {
   const isSignup = mode === "signup";
@@ -89,6 +91,14 @@ export function AuthForm({
             straight back where you were.
           </p>
         </div>
+      )}
+
+      {/* BANNED_SIGNUP in src/lib/app/accounts.ts, word for word. */}
+      {notice === "banned" && (
+        <p className="nb-error" role="alert">
+          This account can&rsquo;t be created. If you believe this is a mistake,
+          contact support.
+        </p>
       )}
 
       {state?.error && (
@@ -282,6 +292,19 @@ export function AuthForm({
             ? "Create my account"
             : "Sign in"}
       </button>
+
+      {/* App Review 1.2: agreeing to the terms, with the zero-tolerance line,
+          where an account is made. On the sign-in form too, because Google and
+          Apple make an account the first time. The app's sign-up and sign-in
+          sheets say the same (TermsAgreementNote). */}
+      <p className="nb-hint">
+        By creating an account or continuing with{" "}
+        {APPLE_SIGN_IN_ENABLED ? "Apple or Google" : "Google"}, you agree to the{" "}
+        <Link href="/terms" className="nb-link">
+          Terms of Service
+        </Link>
+        . LearnFRC has zero tolerance for objectionable content and abuse.
+      </p>
 
       <p className="nb-hair pt-4 text-[0.95rem] text-graphite">
         {isSignup ? "Already on the roster? " : "First time here? "}

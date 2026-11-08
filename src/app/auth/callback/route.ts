@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { readSourceCookie } from "@/lib/signup-attribution";
 import { postAuthDestination } from "@/lib/first-run";
-import { completeOAuthSignIn } from "@/lib/app/accounts";
+import { BANNED_SIGNUP, completeOAuthSignIn } from "@/lib/app/accounts";
 
 /**
  * THE OAUTH DOOR, where Google puts people down.
@@ -32,6 +32,11 @@ import { completeOAuthSignIn } from "@/lib/app/accounts";
  * now, is kept so the account's Apple sign-in can be revoked when it's deleted,
  * and Apple's name, sent on the first sign-in only, has already been read into
  * the account by Supabase and copied to the profile by handle_new_user.
+ *
+ * THE BAN LIST. completeOAuthSignIn also gives a brand-new account the sign-up
+ * form's ban check. On a hit it deletes the account, and this route signs out
+ * and sends the person to /login?notice=banned, which says the account can't
+ * be created.
  *
  * FIRST RUN. A brand-new account whose destination is the GENERIC dashboard is
  * sent to /start instead: one question, then a five-lesson plan. 45% of
@@ -95,7 +100,17 @@ export async function GET(request: Request) {
           ? { refreshToken: data?.session?.provider_refresh_token ?? null }
           : undefined,
     });
+    // On the ban list: the account was just deleted, so drop the session the
+    // code exchange set and say why on the sign-in page.
+    if (outcome.banned) {
+      await supabase.auth.signOut();
+      return NextResponse.redirect(new URL("/login?notice=banned", origin));
+    }
     isNew = outcome.isNewAccount;
+  } else if (searchParams.get("error_description") === BANNED_SIGNUP) {
+    // The ban-list hook in the database refused to make the account, and
+    // Supabase sent its sentence back here instead of a code.
+    return NextResponse.redirect(new URL("/login?notice=banned", origin));
   }
 
   return NextResponse.redirect(

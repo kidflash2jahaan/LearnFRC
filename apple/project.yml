@@ -52,6 +52,28 @@ targets:
       - package: YouTubePlayerKit
         product: YouTubePlayerKit
       - target: LearnFRCWidgets
+    # App Review 4.8 and 2.1: an App Store build that offers Google must offer Sign in with
+    # Apple too, and its button must work. Two switches have to move together for that
+    # (LF_APPLE_SIGN_IN below, and dropping the two CODE_SIGN_ENTITLEMENTS overrides that
+    # leave the Apple entitlement out), so archives (ACTION=install) refuse to build with
+    # either one forgotten. Debug runs and Personal Team installs aren't archives and are
+    # untouched.
+    preBuildScripts:
+      - name: Check Sign in with Apple for App Store builds
+        basedOnDependencyAnalysis: false
+        inputFiles:
+          - $(SRCROOT)/$(CODE_SIGN_ENTITLEMENTS)
+        script: |
+          if [ "$ACTION" = "install" ]; then
+            if [ "$LF_APPLE_SIGN_IN" != "YES" ]; then
+              echo "error: LF_APPLE_SIGN_IN is NO but Google sign-in is offered (App Review 4.8). Set it to YES in project.yml for an App Store build."
+              exit 1
+            fi
+            if ! /usr/libexec/PlistBuddy -c "Print :com.apple.developer.applesignin" "$SRCROOT/$CODE_SIGN_ENTITLEMENTS" >/dev/null 2>&1; then
+              echo "error: $CODE_SIGN_ENTITLEMENTS has no Sign in with Apple entitlement. Drop the Personal Team and local Mac CODE_SIGN_ENTITLEMENTS overrides in project.yml."
+              exit 1
+            fi
+          fi
     entitlements:
       path: LearnFRC/LearnFRC.entitlements
       properties:

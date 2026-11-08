@@ -41,7 +41,8 @@ enum SignInProvider: Hashable, Sendable, CaseIterable, Identifiable {
 
 /// The provider buttons at the top of the sign-in and sign-up sheets, and the ruled break
 /// under them ("or write it in"), in the site's order (`auth-form.tsx`): the error line, the
-/// providers, the rule, then the fields.
+/// providers, the rule, then the fields. Between the providers and the rule, the terms line
+/// (`TermsAgreementNote`, App Review 1.2), unless the sheet shows it elsewhere.
 ///
 /// Google opens its page in the system web sign-in sheet, anchored to this window. Apple is
 /// Apple's own `SignInWithAppleButton` and system sheet (Face ID, Touch ID or the Apple ID
@@ -68,6 +69,9 @@ struct ProviderSignInButtons: View {
     var via: String? = nil
     /// Which buttons, in order. Previews pass `[.apple, .google]` to show Apple's while it's off.
     var providers: [SignInProvider] = SignInProvider.offered
+    /// The terms line under the buttons (`TermsAgreementNote`), because they make an account
+    /// the first time. The sign-up sheet turns it off and shows it under Create my account.
+    var showsTermsNote = true
     var onSignedIn: () -> Void
 
     @State private var phase: Phase?
@@ -102,6 +106,9 @@ struct ProviderSignInButtons: View {
                         .accessibilityHint(phase == nil ? "" : "Working")
                     }
                 }
+            }
+            if showsTermsNote {
+                TermsAgreementNote(providers: providers)
             }
             OrWriteItIn()
         }

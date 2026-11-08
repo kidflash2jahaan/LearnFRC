@@ -26,7 +26,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
  *    (APPLE_APP_BUNDLE_ID).
  *
  * deleteAccountData (src/lib/app/profile.ts), which the website's Settings and
- * the app's DELETE /api/app/account both call, runs revokeAppleSignIn first.
+ * the app's DELETE /api/app/account both call, reads what revoking needs
+ * before it deletes anything (readAppleRevocation), then revokes after the
+ * response (revokeAppleTokens), so Apple being slow never slows a deletion.
  *
  * Tokens live in `apple_sign_in_tokens` (service role only, RLS on with no
  * policies, rows cascade with the auth user). Every function here is best
@@ -272,22 +274,29 @@ async function revokeOne(clientId: string, refreshToken: string, keys: AppleKeys
   return false;
 }
 
+/** What revoking an account's Apple sign-in needs, read while the account still exists. */
+export type AppleRevocation = {
+  userId: string;
+  tokens: { client_id: string; refresh_token: string }[];
+};
+
 /**
- * Revoke every Apple token kept for an account, as Apple requires when an
- * account that signed in with Apple is deleted. Call it BEFORE the auth user
- * is deleted: the tokens cascade away with it, and the identity check reads
- * the auth user.
+ * Step one of revoking, as Apple requires when an account that signed in with
+ * Apple is deleted: read the account's kept Apple tokens. Call it BEFORE the
+ * auth user is deleted, because the tokens cascade away with it and the
+ * identity check reads the auth user. Two quick database reads, no call to
+ * Apple, so it costs the deletion nothing.
  *
- * Does nothing for an account without an Apple identity (most of them, and
- * every one until Sign in with Apple is switched on). Never throws and never
- * blocks the deletion: a person who asked to be deleted gets deleted, and a
- * failure here is logged for a manual revoke.
+ * Null for an account without an Apple identity (most of them, and every one
+ * until Sign in with Apple is switched on) or with nothing on file. Never
+ * throws: a person who asked to be deleted gets deleted, and a failure here is
+ * logged for a manual revoke.
  */
-export async function revokeAppleSignIn(userId: string): Promise<void> {
+export async function readAppleRevocation(userId: string): Promise<AppleRevocation | null> {
   try {
     const admin = createAdminClient();
     const { data } = await admin.auth.admin.getUserById(userId);
-    if (!appleIdentity(data?.user)) return;
+    if (!appleIdentity(data?.user)) return null;
 
     const { data: rows, error } = await admin
       .from(TABLE)
@@ -295,23 +304,41 @@ export async function revokeAppleSignIn(userId: string): Promise<void> {
       .eq("user_id", userId);
     if (error) {
       console.error("apple sign-in: couldn't read the account's Apple tokens:", error.message);
-      return;
+      return null;
     }
     const tokens = (rows ?? []) as { client_id: string; refresh_token: string }[];
     if (tokens.length === 0) {
       console.error(`apple sign-in: account ${userId.slice(0, 8)} has an Apple identity but no token on file; not revoked`);
-      return;
+      return null;
     }
+    return { userId, tokens };
+  } catch (e) {
+    console.error("apple sign-in: reading the account's Apple tokens failed:", e);
+    return null;
+  }
+}
+
+/**
+ * Step two: revoke the tokens step one read, through Apple's REST API. Meant
+ * to run after the response (deleteAccountData hands it to `after`), so up to
+ * two eight-second tries per token never hold up the person deleting their
+ * account. Never throws; failures are logged for a manual revoke.
+ */
+export async function revokeAppleTokens(revocation: AppleRevocation | null): Promise<void> {
+  if (!revocation) return;
+  try {
     const keys = appleKeys();
     if (!keys) {
       console.error("apple sign-in: the Sign in with Apple key isn't configured; Apple tokens not revoked");
       return;
     }
     const results = await Promise.all(
-      tokens.map((t) => revokeOne(t.client_id, t.refresh_token, keys))
+      revocation.tokens.map((t) => revokeOne(t.client_id, t.refresh_token, keys))
     );
     if (results.some((revoked) => !revoked))
-      console.error(`apple sign-in: account ${userId.slice(0, 8)}: not every Apple token was revoked`);
+      console.error(
+        `apple sign-in: account ${revocation.userId.slice(0, 8)}: not every Apple token was revoked`
+      );
   } catch (e) {
     console.error("apple sign-in: revoking failed:", e);
   }

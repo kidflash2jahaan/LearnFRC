@@ -21,6 +21,8 @@ struct PublicProfileView: View {
     @State private var reporting = false
     @State private var confirmingBlock = false
     @State private var safetyFailure: String?
+    /// A guest's sign-in sheet, from "Sign in to report or block".
+    @State private var authScreen: AuthFlowView.Screen?
 
     init(username: String) {
         self.username = username
@@ -51,6 +53,9 @@ struct PublicProfileView: View {
     private var safety: SafetyStore { injectedSafety ?? .shared }
     /// Someone else's page, seen by a signed-in account: Report and Block are offered.
     private var offersSafety: Bool { account.isSignedIn && !isMine && !handle.isEmpty }
+    /// A guest on someone's page: the same menu, with signing in as its one item (the site's
+    /// "Sign in to report it or to block @x.").
+    private var offersGuestSafety: Bool { !account.isSignedIn && !handle.isEmpty }
     /// Blocked by the signed-in account: the record isn't drawn, as on the site.
     private var isBlockedHere: Bool { offersSafety && safety.isBlocked(handle) }
     /// The record has loaded and there is someone by that name.
@@ -85,7 +90,18 @@ struct PublicProfileView: View {
                     )
                 }
             }
+            if offersGuestSafety, hasRecord {
+                ToolbarItem(placement: .primaryAction) {
+                    Menu {
+                        GuestSafetyItem(username: handle) { authScreen = .signIn }
+                    } label: {
+                        Label("Report or block", systemImage: "ellipsis.circle")
+                    }
+                    .help("Sign in to report or block @\(handle)")
+                }
+            }
         }
+        .authSheet(item: $authScreen)
         .profileSafetyPresentations(
             username: handle, surface: .profile,
             reporting: $reporting, confirmingBlock: $confirmingBlock, failure: $safetyFailure

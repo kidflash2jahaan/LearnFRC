@@ -1,5 +1,10 @@
-import { appSignupSource, completeOAuthSignIn, requestIp } from "@/lib/app/accounts";
-import { badJson, guarded, ok, requireAppUser } from "@/lib/app/http";
+import {
+  appSignupSource,
+  BANNED_SIGNUP,
+  completeOAuthSignIn,
+  requestIp,
+} from "@/lib/app/accounts";
+import { apiError, badJson, guarded, ok, requireAppUser } from "@/lib/app/http";
 
 export const dynamic = "force-dynamic";
 
@@ -34,7 +39,9 @@ const MAX_CODE_LENGTH = 4096;
  *
  * Responds { isNewAccount }. Idempotent: an account older than a few minutes
  * gets `false` and nothing is attributed, and the reward is paid at most once.
- * Attribution and Apple trouble never fail the call.
+ * Attribution and Apple trouble never fail the call. The ban list does: a
+ * brand-new account whose email or signup IP is banned is deleted, and the
+ * answer is 403 `forbidden` with the sign-up form's sentence.
  */
 export async function POST(req: Request) {
   return guarded(async () => {
@@ -59,7 +66,7 @@ export async function POST(req: Request) {
       typeof body[k] === "string" ? (body[k] as string) : null;
 
     const code = text("appleAuthorizationCode")?.trim() || null;
-    const { isNewAccount } = await completeOAuthSignIn(auth.user, {
+    const { isNewAccount, banned } = await completeOAuthSignIn(auth.user, {
       ref: text("ref"),
       via: text("via"),
       srcCookie: appSignupSource(text("platform") ?? ""),
@@ -70,6 +77,9 @@ export async function POST(req: Request) {
         authorizationCode: code && code.length <= MAX_CODE_LENGTH ? code : null,
       },
     });
+    // On the ban list: the account is already deleted. The app signs out and
+    // shows the sentence; an older app gets 401 on its next call instead.
+    if (banned) return apiError("forbidden", BANNED_SIGNUP);
     return ok({ isNewAccount });
   });
 }

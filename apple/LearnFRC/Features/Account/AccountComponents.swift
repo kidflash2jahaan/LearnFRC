@@ -12,9 +12,45 @@ enum AccountLinks {
     static let site = AppConfig.webBase
     static let privacy = AppConfig.webBase.appending(path: "privacy")
     static let terms = AppConfig.webBase.appending(path: "terms")
+    /// The contact form, for anyone who'd rather not email.
+    static let contactPage = AppConfig.webBase.appending(path: "contact")
+    /// The public contact address as text, and as a link that opens a new email to it.
+    static let contactEmail = AppConfig.contactEmail
+    static let contact = URL(string: "mailto:\(AppConfig.contactEmail)")!
 
     static func publicProfile(_ username: String) -> URL {
         AppConfig.webBase.appending(path: "u/\(username)")
+    }
+}
+
+// MARK: - Terms
+
+/// The line that makes signing up agreeing to the terms (App Review 1.2): what an account
+/// agrees to, and the zero-tolerance rule, with the Terms of Service a tap away. The site's
+/// sign-in and sign-up forms say the same (`auth-form.tsx`). On the sign-in sheet it sits
+/// under the provider buttons, which make an account the first time; on the sign-up sheet,
+/// under Create my account.
+struct TermsAgreementNote: View {
+    var providers: [SignInProvider] = SignInProvider.offered
+
+    var body: some View {
+        Text(text)
+            .font(LF.Fonts.mono(12, relativeTo: .caption))
+            .lineHeight(.multiple(factor: 1.5))
+            .foregroundStyle(LF.Palette.graphite)
+            .tint(LF.Palette.blue)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var names: String {
+        providers.contains(.apple) ? "Apple or Google" : "Google"
+    }
+
+    private var text: AttributedString {
+        let plain = "By creating an account or continuing with \(names), you agree to the Terms of Service. LearnFRC has zero tolerance for objectionable content and abuse."
+        let markdown = "By creating an account or continuing with \(names), you agree to the [Terms of Service](\(AccountLinks.terms.absoluteString)). LearnFRC has zero tolerance for objectionable content and abuse."
+        return (try? AttributedString(markdown: markdown)) ?? AttributedString(plain)
     }
 }
 

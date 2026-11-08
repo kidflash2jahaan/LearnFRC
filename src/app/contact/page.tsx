@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ReportForm } from "@/components/report-form";
+import { PUBLIC_CONTACT_EMAIL } from "@/lib/email";
 
 export const metadata: Metadata = {
   // The root template appends " · LearnFRC", so don't repeat it here.
@@ -27,14 +28,13 @@ const USES: { slug: string; text: string }[] = [
 ];
 
 /**
- * The site's one reachable contact surface.
+ * The site's contact page: the form, and the one public email address.
  *
- * There is no `mailto:` anywhere on LearnFRC any more: the domain publishes no
- * MX record, so every address that used to be printed on /privacy, /terms and
- * /about bounced silently, including the legally-operative "email us to
- * request deletion of your data" line. The maintainer is a minor, so the fix
- * could not be "publish a personal address". This form is the replacement, and
- * every one of those pages now links here.
+ * learnfrc.com publishes no MX record, so an @learnfrc.com address would
+ * bounce. The address printed here, in the footer and on /privacy, /terms and
+ * /about is PUBLIC_CONTACT_EMAIL (src/lib/email.ts), a school mailbox that
+ * does receive mail. The form reaches the same person and needs no email
+ * address at all, so it stays the page's main way in.
  *
  * LAYOUT: one narrow column, and the form is the page rather than a card
  * halfway down it. The page used to open with a chip, a gradient headline and
@@ -114,13 +114,16 @@ export default function ContactPage() {
           rather than as the page's pattern. */}
       <div className="nb-box nb-tilt-3 mt-[clamp(2.4rem,5vw,3.6rem)] p-[clamp(1.1rem,2.6vw,1.8rem)]">
         <span className="nb-tape -top-3 left-[12%] rotate-[-3.2deg]" aria-hidden="true" />
-        <p className="nb-slug">why there is no email address on this site</p>
+        <p className="nb-slug">or write an email</p>
         <p className="mt-3 max-w-[62ch] text-[0.99rem] leading-relaxed">
-          LearnFRC is run by one high-school student. Publishing a personal
-          mailbox on every page of a site this size is a privacy problem, and
-          the domain doesn&rsquo;t run a mail server, so an address printed here
-          would simply bounce. This form is the honest version of &ldquo;email
-          us&rdquo;: it reaches the same person, and it works.
+          Rather email? Write to{" "}
+          <a
+            href={`mailto:${PUBLIC_CONTACT_EMAIL}`}
+            className="nb-link [overflow-wrap:anywhere]"
+          >
+            {PUBLIC_CONTACT_EMAIL}
+          </a>
+          . It reaches the same person as the form.
         </p>
       </div>
 

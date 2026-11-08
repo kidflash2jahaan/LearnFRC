@@ -221,8 +221,12 @@ final class AccountStore {
             if let session {
                 // A Google or Apple sign-in's session arrives here first; it waits for the
                 // site's post-sign-in work, so the other stores (guest progress moving in)
-                // start after.
-                if let oauthGate { await oauthGate.wait() }
+                // start after. If the site refused the account (the ban list), it's already
+                // signed out again and there's nothing to establish.
+                if let gate = oauthGate {
+                    await gate.wait()
+                    if gate.isRefused { return }
+                }
                 await establish(userID: session.user.id, email: session.user.email, isNewSignIn: true)
             }
         case .signedOut:
@@ -403,34 +407,59 @@ final class AccountStore {
             throw fail(APIError.from(error))
         }
         lastError = nil
-        let isNewAccount = await completeOAuthSignIn(
+        let completion = await completeOAuthSignIn(
             userID: session.user.id, ref: ref, via: via,
             fullName: fullName, appleAuthorizationCode: appleAuthorizationCode
         )
+        let isNewAccount: Bool
+        switch completion {
+        case .completed(let isNew):
+            isNewAccount = isNew
+        case .refused(let message):
+            // The site turned the new account down (the ban list) and has already deleted it:
+            // drop the session and show its sentence.
+            gate.refuse()
+            await supabase.signOut()
+            await becomeGuest()
+            throw fail(.validation(message))
+        }
         gate.open()
         await establish(userID: session.user.id, email: session.user.email, isNewSignIn: true)
         return .signedIn(isNewAccount: isNewAccount)
     }
 
+    /// What the site said after an OAuth sign-in.
+    private enum OAuthCompletion {
+        /// Carry on. `isNewAccount` is false when the site couldn't be asked.
+        case completed(isNewAccount: Bool)
+        /// The site refused the account with this sentence (403: its email or signup IP is on
+        /// the ban list) and has deleted it.
+        case refused(String)
+    }
+
     /// The site's post-sign-in work for an OAuth account. Like the site's sign-in callback, it
-    /// never blocks the sign-in: a failure is logged and the person carries on. If the network
-    /// blinked, it tries once more a few seconds later (the route is safe to repeat), so an
-    /// invite's referral, or Apple's name, isn't lost to one dropped request.
+    /// never blocks the sign-in, except for the ban list: any other failure is logged and the
+    /// person carries on. If the network blinked, it tries once more a few seconds later (the
+    /// route is safe to repeat), so an invite's referral, or Apple's name, isn't lost to one
+    /// dropped request.
     private func completeOAuthSignIn(
         userID: UUID, ref: String?, via: String?,
         fullName: String? = nil, appleAuthorizationCode: String? = nil
-    ) async -> Bool {
-        guard let api else { return false }
+    ) async -> OAuthCompletion {
+        guard let api else { return .completed(isNewAccount: false) }
         let platform = AppConfig.platformID
         do {
-            return try await api.completeOAuthSignIn(
+            return .completed(isNewAccount: try await api.completeOAuthSignIn(
                 ref: ref, via: via, platform: platform,
                 fullName: fullName, appleAuthorizationCode: appleAuthorizationCode
-            )
+            ))
         } catch {
             let error = APIError.from(error)
             Log.auth.error("oauth-complete failed: \(error.message, privacy: .public)")
-            guard error == .network || error == .server else { return false }
+            // The route's only refusal with a sentence is the ban list's 403 (the app always
+            // sends a well-formed body), and the account is gone by then.
+            if case .validation(let message) = error { return .refused(message) }
+            guard error == .network || error == .server else { return .completed(isNewAccount: false) }
             Task { [weak self] in
                 try? await Task.sleep(for: .seconds(4))
                 guard let self, self.userID == userID else { return }
@@ -443,7 +472,7 @@ final class AccountStore {
                     await self.refreshMe(force: true)
                 }
             }
-            return false
+            return .completed(isNewAccount: false)
         }
     }
 
@@ -734,7 +763,15 @@ final class AccountStore {
 @MainActor
 private final class SignInGate {
     private var isOpen = false
+    /// Opened by `refuse()`: the site turned the account down, so whatever waited has nothing
+    /// to do.
+    private(set) var isRefused = false
     private var waiters: [CheckedContinuation<Void, Never>] = []
+
+    func refuse() {
+        isRefused = true
+        open()
+    }
 
     func wait() async {
         guard !isOpen else { return }

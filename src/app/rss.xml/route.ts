@@ -1,4 +1,5 @@
 import { getArticles } from "@/lib/queries";
+import { PUBLIC_CONTACT_EMAIL } from "@/lib/email";
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com";
 
@@ -304,8 +305,8 @@ export async function GET(): Promise<Response> {
     <description>Free, structured guides for every department of the FIRST Robotics Competition: mechanical, CAD, programming, electrical, controls, strategy, business and outreach.</description>
     <language>en-us</language>
     <lastBuildDate>${lastBuild}</lastBuildDate>
-    <managingEditor>noreply@learnfrc.com (${esc(AUTHOR)})</managingEditor>
-    <webMaster>noreply@learnfrc.com (${esc(AUTHOR)})</webMaster>
+    <managingEditor>${esc(PUBLIC_CONTACT_EMAIL)} (${esc(AUTHOR)})</managingEditor>
+    <webMaster>${esc(PUBLIC_CONTACT_EMAIL)} (${esc(AUTHOR)})</webMaster>
     <copyright>© ${new Date().getUTCFullYear()} LearnFRC</copyright>
     <generator>Next.js</generator>
     <docs>https://www.rssboard.org/rss-specification</docs>

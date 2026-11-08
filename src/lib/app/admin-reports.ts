@@ -33,6 +33,9 @@ import { fail, type AppUser, type Result } from "@/lib/app/result";
  *     account shares it), then the account is deleted with the same function
  *     as "Delete account" (super admins only, because it can't be undone).
  *
+ * A report about anyone on the admin team, the person answering included, is
+ * a super admin's to resolve or act on (mayAnswerAbout below).
+ *
  * Privacy: handles only. No real names and no email addresses, and the
  * reporter's handle is shown only here, to the people who answer reports.
  */
@@ -340,6 +343,39 @@ function refreshPublicPages(username: string | null) {
   if (username) revalidatePath(`/u/${username}`);
 }
 
+const TEAM_TARGET =
+  "That report is about someone on the admin team, so a super admin answers it.";
+
+/**
+ * Whether the caller may answer a report about this account. A report about
+ * anyone on the admin team, the caller included, is a super admin's to answer:
+ * otherwise a plain admin could close reports about themselves, or use Remove
+ * to clear another admin's or the owner's profile and handle, which is more
+ * than a plain admin can do anywhere else. A super admin answers anything (with
+ * one owner and no one above them, a report about the owner still has to be
+ * closable). Ban has its own, stricter rule.
+ *
+ * Null when the account couldn't be looked up. A deleted account's reports
+ * have no reported_user_id (the foreign key sets it null), so a failed lookup
+ * is a passing error, and the caller refuses rather than guess.
+ */
+async function mayAnswerAbout(
+  role: StaffRole,
+  reportedUserId: string | null
+): Promise<boolean | null> {
+  if (role === "superadmin" || !reportedUserId) return true;
+  const { data } = await createAdminClient().auth.admin.getUserById(reportedUserId);
+  if (!data?.user) return null;
+  return (await getSiteRole(reportedUserId, data.user.email ?? null)) === "member";
+}
+
+/** mayAnswerAbout as a refusal, or null to go ahead. */
+async function refusalAbout(role: StaffRole, row: Row) {
+  const may = await mayAnswerAbout(role, row.reported_user_id);
+  if (may === null) return fail("server", "Couldn't check that account. Try again in a moment.");
+  return may ? null : fail("forbidden", TEAM_TARGET);
+}
+
 function parseIdAndNote(input: { id: unknown; note?: unknown }) {
   const id = textField(input.id);
   const note = textField(input.note);
@@ -363,6 +399,8 @@ export async function resolveReport(
   const row = await readReport(p.id);
   if (!row) return fail("not_found", GONE);
   if (row.status !== "open") return fail("conflict", ALREADY);
+  const refused = await refusalAbout(gate.role, row);
+  if (refused) return refused;
 
   if (!(await closeReports(row, "resolved", user.id, p.note || null, "this")))
     return fail("conflict", ALREADY);
@@ -406,6 +444,8 @@ export async function removeReportedContent(
   const row = await readReport(p.id);
   if (!row) return fail("not_found", GONE);
   if (row.status !== "open") return fail("conflict", ALREADY);
+  const refused = await refusalAbout(gate.role, row);
+  if (refused) return refused;
 
   const admin = createAdminClient();
   const note = p.note || null;
@@ -461,11 +501,13 @@ export async function removeReportedContent(
   } else if (row.content_kind === "edit" && row.content_id) {
     const { data: edit } = await admin.from("content_edits").select("id, status").eq("id", row.content_id).maybeSingle();
     if (edit) {
+      // No reviewed_by: its foreign key to auth.users has no ON DELETE action,
+      // so stamping the admin there would stop them ever deleting their own
+      // account. Who acted is on the report (resolved_by) and in moderation_log.
       const patch: Record<string, unknown> = { note: null };
       if (edit.status === "pending") {
         patch.status = "rejected";
         patch.reviewed_at = new Date().toISOString();
-        patch.reviewed_by = user.id;
       }
       const { error } = await admin.from("content_edits").update(patch).eq("id", edit.id as string);
       if (error) return failed("edit", error.message);
@@ -484,10 +526,10 @@ export async function removeReportedContent(
         note: null,
         new_module_title: null,
       };
+      // No reviewed_by, for the same reason as an edit's.
       if (sub.status === "pending") {
         patch.status = "rejected";
         patch.reviewed_at = new Date().toISOString();
-        patch.reviewed_by = user.id;
       }
       const { error } = await admin.from("content_submissions").update(patch).eq("id", sub.id as string);
       if (error) return failed("submission", error.message);

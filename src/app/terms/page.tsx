@@ -39,9 +39,9 @@ const RULES: Rule[] = [
     body: (
       <p>
         Anyone can read the lessons, no account needed. To make an account, on
-        the website or in the app, you should be at least 13, and if
-        you&rsquo;re under 18 you should have a parent or guardian&rsquo;s OK.
-        The details you sign up with should be true.
+        the website or in the app, you should have a parent or guardian
+        involved if you&rsquo;re under 13, and their OK if you&rsquo;re under
+        18. The details you sign up with should be true.
       </p>
     ),
   },
@@ -175,8 +175,8 @@ const RULES: Rule[] = [
           </li>
           <li>
             Don&rsquo;t present LearnFRC as official FIRST material or as
-            endorsed by FIRST, and put FIRST&rsquo;s disclaimer (the next
-            clause) on anything you make that names FIRST.
+            endorsed by FIRST, and put the FIRST disclaimer from the next
+            clause on anything you post about LearnFRC.
           </li>
           <li>Jahaan can end a helper role at any time, and so can you.</li>
         </ul>

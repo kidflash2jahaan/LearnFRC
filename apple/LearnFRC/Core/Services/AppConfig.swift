@@ -27,6 +27,16 @@ enum AppConfig {
     /// Canonical public links (share sheets, Handoff, "open on the web").
     static let webBase = URL(string: "https://learnfrc.com")!
 
+    /// The one public contact address, the same as the site's footer, privacy policy and terms
+    /// (`PUBLIC_CONTACT_EMAIL` in `src/lib/email.ts`). learnfrc.com itself receives no mail.
+    static let contactEmail = "29pardhananij@sagehillschool.org"
+
+    /// FIRST's trademark notice, word for word the site's footer (`FirstTrademarkNotice` in
+    /// `src/components/footer.tsx`), which FIRST's trademark policy asks anyone using the marks
+    /// to carry. Shown at the foot of Settings.
+    static let firstTrademarkNotice =
+        "LearnFRC is an independent project. FIRST®, FIRST® Robotics Competition, FRC®, FIRST® Tech Challenge, FTC®, Gracious Professionalism®, and Coopertition® are registered trademarks of FIRST® (www.firstinspires.org) which is not overseeing, involved with, or responsible for this activity, product, or service."
+
     /// The app's own URL scheme (`learnfrc://`).
     static let urlScheme = "learnfrc"
 

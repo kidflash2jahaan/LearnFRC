@@ -157,6 +157,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = AEBA46B924EC42CAADB1ECB2 /* Build configuration list for PBXNativeTarget "LearnFRC" */;
 			buildPhases = (
+				3800253B368763E94ECA1C8C /* Check Sign in with Apple for App Store builds */,
 				C2F189E4EFB4861583898BA7 /* Sources */,
 				560D15DF18D02AB7AE15F435 /* Resources */,
 				75C99F9990E10EF95B829F43 /* Frameworks */,
@@ -241,6 +242,29 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		3800253B368763E94ECA1C8C /* Check Sign in with Apple for App Store builds */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/$(CODE_SIGN_ENTITLEMENTS)",
+			);
+			name = "Check Sign in with Apple for App Store builds";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "if [ \"$ACTION\" = \"install\" ]; then\n  if [ \"$LF_APPLE_SIGN_IN\" != \"YES\" ]; then\n    echo \"error: LF_APPLE_SIGN_IN is NO but Google sign-in is offered (App Review 4.8). Set it to YES in project.yml for an App Store build.\"\n    exit 1\n  fi\n  if ! /usr/libexec/PlistBuddy -c \"Print :com.apple.developer.applesignin\" \"$SRCROOT/$CODE_SIGN_ENTITLEMENTS\" >/dev/null 2>&1; then\n    echo \"error: $CODE_SIGN_ENTITLEMENTS has no Sign in with Apple entitlement. Drop the Personal Team and local Mac CODE_SIGN_ENTITLEMENTS overrides in project.yml.\"\n    exit 1\n  fi\nfi\n";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		9088E2DA0A2AAC796E5C3A47 /* Sources */ = {

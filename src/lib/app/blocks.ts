@@ -1,6 +1,8 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { adminNotifyHtml } from "@/lib/email";
 import { rateLimit } from "@/lib/rate-limit";
+import { mailAfter } from "@/lib/app/admin-notify";
 import { normalizeUsername } from "@/lib/app/profile";
 import { textField } from "@/lib/app/admin-access";
 import { toIso } from "@/lib/app/format";
@@ -16,12 +18,15 @@ import { fail, type AppUser, type Result } from "@/lib/app/result";
  * team sheet, and their suggested edits and lesson proposals on
  * /contributions. Nothing is sent to the blocked account and nothing changes
  * for anyone else. Profiles are public pages, so a block is a filter on what
- * the blocker sees, not a wall.
+ * the blocker sees, not a wall. A new block also emails the owner, so the
+ * blocked account can be looked at (tellOwnerAboutBlock below).
  *
  * `user_blocks` is written only here, with the service role, scoped by the id
  * the auth server verified. People are named by username at the edges (the
  * app's payloads carry no user ids) and by id in the table.
  */
+
+const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com";
 
 /** Per account. Far past any honest use, and it keeps the filters cheap. */
 export const MAX_BLOCKS = 500;
@@ -235,10 +240,52 @@ export async function blockUser(
     console.error("blockUser:", error.message);
     return fail("server", BLOCK_SENTENCES.save);
   }
+  await tellOwnerAboutBlock(user.id, target.username);
   return {
     ok: true,
     block: { username: target.username, avatarUrl: target.avatarUrl, blockedAt },
   };
+}
+
+/** Owner emails about blocks from any one account, per day. */
+const BLOCK_NOTICE_MAX = 5;
+
+/**
+ * App Review 1.2 asks that blocking also reaches the developer, so the blocked
+ * account can be looked at. A new block emails the owner (ADMIN_EMAILS, first
+ * entry), at most BLOCK_NOTICE_MAX a day from one account, so a run of blocks
+ * can't use up the day's email allowance that reports need. The blocked
+ * account is never told. Never fails the block.
+ */
+async function tellOwnerAboutBlock(blockerId: string, blocked: string): Promise<void> {
+  try {
+    const ownerEmail = (process.env.ADMIN_EMAILS || "").split(",")[0]?.trim();
+    if (!ownerEmail) return;
+    if (!(await rateLimit("block-notice", BLOCK_NOTICE_MAX, 86400, blockerId))) return;
+    const { data: me } = await createAdminClient()
+      .from("profiles")
+      .select("username")
+      .eq("id", blockerId)
+      .maybeSingle();
+    const blocker = (me?.username as string | null) ?? null;
+    const by = blocker ? `@${blocker}` : "A member";
+    mailAfter("block notification", {
+      to: ownerEmail,
+      subject: `LearnFRC: @${blocked} was blocked`,
+      html: adminNotifyHtml({
+        heading: `${by} blocked @${blocked}`,
+        rows: [
+          { label: "Blocked", value: `@${blocked}` },
+          { label: "By", value: blocker ? `@${blocker}` : "a member with no username" },
+        ],
+        ctaText: "Open their profile",
+        ctaUrl: `${SITE}/u/${encodeURIComponent(blocked)}`,
+        note: "A block only hides the account from the person who blocked it, and nobody is told about this email. If the profile breaks the rules, report it from that page and answer the report on the reports desk.",
+      }),
+    });
+  } catch (e) {
+    console.error("block notification:", e);
+  }
 }
 
 /** Undo a block, by the account's current handle. Idempotent. */

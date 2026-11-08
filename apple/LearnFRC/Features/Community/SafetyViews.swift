@@ -7,7 +7,8 @@ import SwiftUI
 // - `ReportSheet`: pick a reason, add a line, send. Shows the site's thank-you sentence.
 // - `.profileSafety(username:surface:)`: Report and Block (or Unblock) in a context menu and
 //   as accessibility actions on anything that names a person (leaderboard and team rows),
-//   with the sheet and the block confirmation it needs.
+//   with the sheet and the block confirmation it needs (Block, or Block and report). A guest
+//   gets "Sign in to report or block" there instead (`GuestSafetyItem`).
 // - `ProfileSafetyMenu`: the same two actions as a toolbar menu (a public profile).
 // - `BlockedProfileCard`: what a blocked person's profile shows instead of their record.
 
@@ -179,8 +180,9 @@ struct ReportSheet: View {
 
 extension View {
     /// Report and Block (or Unblock) for the person `username` names, in a context menu and as
-    /// accessibility actions, for a signed-in viewer looking at someone else. Nothing for a
-    /// guest, for your own row, or for a row with no handle.
+    /// accessibility actions, for a signed-in viewer looking at someone else. A guest gets
+    /// "Sign in to report or block" in the same places. Nothing for your own row or for a row
+    /// with no handle.
     func profileSafety(username: String?, surface: ReportSurface) -> some View {
         modifier(ProfileSafetyModifier(username: username, surface: surface))
     }
@@ -202,10 +204,19 @@ extension View {
     }
 
     /// The site's Block confirmation, worded the same: what is hidden, and that they aren't told.
-    func blockConfirmation(isPresented: Binding<Bool>, username: String, perform: @escaping @MainActor () async -> Void) -> some View {
+    /// Two ways to go ahead: Block, or Block and report (`perform(true)`), which sends a report
+    /// about them as well, so the LearnFRC team hears about it (App Review 1.2).
+    func blockConfirmation(
+        isPresented: Binding<Bool>,
+        username: String,
+        perform: @escaping @MainActor (_ thenReport: Bool) async -> Void
+    ) -> some View {
         confirmationDialog("Block @\(username)?", isPresented: isPresented, titleVisibility: .visible) {
             Button("Block @\(username)", role: .destructive) {
-                Task { await perform() }
+                Task { await perform(false) }
+            }
+            Button("Block and report @\(username)", role: .destructive) {
+                Task { await perform(true) }
             }
             Button("Cancel", role: .cancel) {}
         } message: {
@@ -222,6 +233,27 @@ func safetyTarget(_ username: String?, account: AccountStore) -> String? {
     return username
 }
 
+/// Whose row a guest is looking at: anyone with a handle. Reporting and blocking need an
+/// account, so a guest is offered signing in instead, as on the site.
+@MainActor
+func guestSafetyTarget(_ username: String?, account: AccountStore) -> String? {
+    guard !account.isSignedIn, let username, !username.isEmpty else { return nil }
+    return username
+}
+
+/// A guest's one item where a member gets Report and Block: sign in first. The site's
+/// `/u/<username>` says the same ("Sign in to report it or to block @x.").
+struct GuestSafetyItem: View {
+    let username: String
+    let signIn: () -> Void
+
+    var body: some View {
+        Button(action: signIn) {
+            Label("Sign in to report or block @\(username)", systemImage: "person.crop.circle")
+        }
+    }
+}
+
 private struct ProfileSafetyModifier: ViewModifier {
     let username: String?
     let surface: ReportSurface
@@ -231,11 +263,22 @@ private struct ProfileSafetyModifier: ViewModifier {
     @State private var reporting = false
     @State private var confirmingBlock = false
     @State private var failure: String?
+    /// A guest's sign-in sheet, from "Sign in to report or block".
+    @State private var authScreen: AuthFlowView.Screen?
 
     private var safety: SafetyStore { injected ?? .shared }
 
     func body(content: Content) -> some View {
-        if let target = safetyTarget(username, account: account) {
+        if let guestTarget = guestSafetyTarget(username, account: account) {
+            content
+                .contextMenu {
+                    GuestSafetyItem(username: guestTarget) { authScreen = .signIn }
+                }
+                .accessibilityAction(named: "Sign in to report or block @\(guestTarget)") {
+                    authScreen = .signIn
+                }
+                .authSheet(item: $authScreen)
+        } else if let target = safetyTarget(username, account: account) {
             let blocked = safety.isBlocked(target)
             content
                 .contextMenu {
@@ -277,21 +320,29 @@ private struct ProfileSafetyPresentations: ViewModifier {
     @Binding var failure: String?
 
     @Environment(SafetyStore.self) private var injected: SafetyStore?
+    /// Block and report: the block waits until the report sheet closes, because blocking
+    /// takes a row (and this modifier with it) off a board at once.
+    @State private var blockAfterReport = false
 
     private var safety: SafetyStore { injected ?? .shared }
 
     func body(content: Content) -> some View {
         content
-            .sheet(isPresented: $reporting) {
+            .sheet(isPresented: $reporting, onDismiss: {
+                guard blockAfterReport else { return }
+                blockAfterReport = false
+                Task { await block() }
+            }) {
                 ReportSheet(username: username, surface: surface)
             }
             .closesOnNavigation($reporting)
-            .blockConfirmation(isPresented: $confirmingBlock, username: username) {
-                do {
-                    try await safety.block(username)
-                    Haptics.success()
-                } catch {
-                    failure = APIError.from(error).message
+            .blockConfirmation(isPresented: $confirmingBlock, username: username) { thenReport in
+                if thenReport {
+                    // Report first, then block once the sheet is closed (sent or not).
+                    blockAfterReport = true
+                    reporting = true
+                } else {
+                    await block()
                 }
             }
             .alert("Couldn't do that", isPresented: Binding(get: { failure != nil }, set: { if !$0 { failure = nil } })) {
@@ -299,6 +350,15 @@ private struct ProfileSafetyPresentations: ViewModifier {
             } message: {
                 Text(failure ?? "")
             }
+    }
+
+    private func block() async {
+        do {
+            try await safety.block(username)
+            Haptics.success()
+        } catch {
+            failure = APIError.from(error).message
+        }
     }
 }
 

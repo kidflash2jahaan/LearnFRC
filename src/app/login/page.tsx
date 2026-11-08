@@ -34,7 +34,9 @@ export default async function LoginPage({
   // and Next refreshes this route): HARD redirect so every layout picks up the
   // session. An RSC redirect() here would only soft-navigate.
   if (user) return <HardRedirect to={safeNext ?? "/dashboard"} />;
-  const noticeExists = notice === "exists" ? "exists" : undefined;
+  // "banned": /auth/callback after Google or Apple made an account for an
+  // email or IP on the ban list (completeOAuthSignIn deleted it again).
+  const knownNotice = notice === "exists" || notice === "banned" ? notice : undefined;
 
   return (
     <div className="nb-wrap py-[clamp(2.4rem,5vw,4.2rem)]">
@@ -51,7 +53,7 @@ export default async function LoginPage({
           <AuthForm
             mode="login"
             next={safeNext}
-            notice={noticeExists}
+            notice={knownNotice}
             defaultEmail={email}
           />
         </SignInSheet>

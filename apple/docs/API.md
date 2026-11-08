@@ -786,6 +786,10 @@ Response 200:
 
 Attribution and Apple trouble never fail the call (they're logged on the server), because nothing after the sign-in itself may block it.
 
+The ban list does. A brand-new account whose email is on the ban list, or that was made from a banned IP, is deleted on the spot and the call answers 403 `forbidden` with `This account can't be created. If you believe this is a mistake, contact support.` (the sign-up form's sentence). Sign out and show it. The session the app holds is for an account that no longer exists, so an older app that ignores this answer gets 401 on its next call and signs out then.
+
+Errors: 400 `validation` (a body that isn't a JSON object), 401, 403 `forbidden` (the ban list, above).
+
 An Apple account's email can be an Apple "Hide My Email" address (`...@privaterelay.appleid.com`). It's real: Apple forwards mail sent to it. Don't suggest a username from it or show its first half as a name.
 
 Errors: 400 `validation` (`That request wasn't in the format we expected.` when the body isn't a JSON object or a field isn't a string), 401, 500.
@@ -816,7 +820,7 @@ Errors: 400 `validation` (missing `visitorId`), 429 `rate_limited` (`Too many tr
 
 Bearer. Permanently deletes the caller's account and all their data: completions, bookmarks, badges, profile and the sign-in itself (`deleteAccountData`, the same function as the website's Settings "Delete account"). It can't be undone, so confirm first. Afterwards every session for the account is invalid; sign out locally.
 
-An account that signed in with Apple first has its Apple tokens revoked with Apple's REST endpoint (`revokeAppleSignIn` in `src/lib/app/apple-sign-in.ts`), as App Store rule 5.1.1(v) requires, using the refresh tokens kept at sign-in (the website's, and the app's from `appleAuthorizationCode`). The app sends nothing extra for it. Apple trouble is logged and never stops the deletion.
+An account that signed in with Apple has its Apple tokens revoked with Apple's REST endpoint (`readAppleRevocation` and `revokeAppleTokens` in `src/lib/app/apple-sign-in.ts`), as App Store rule 5.1.1(v) requires, using the refresh tokens kept at sign-in (the website's, and the app's from `appleAuthorizationCode`). The tokens are read before the account is deleted and revoked after the response, so Apple's speed never adds to this call. The app sends nothing extra for it. Apple trouble is logged and never stops the deletion.
 
 Response 200:
 
@@ -920,7 +924,7 @@ Errors: 401, 500 `server` (`Couldn't load the accounts you've blocked. Try again
 
 ### POST /api/app/blocks
 
-Bearer. Blocks an account by handle (`blockUser`). Blocking someone already blocked answers 200 with the existing row. Rate limited: 60 an hour per account.
+Bearer. Blocks an account by handle (`blockUser`). Blocking someone already blocked answers 200 with the existing row. Rate limited: 60 an hour per account. A new block also emails the owner (`ADMIN_EMAILS`, first entry, at most 5 a day per blocking account) so the blocked account can be checked, as App Review asks; the blocked account is never told.
 
 Request: `{ "username": "kai_cad" }`
 
@@ -1385,13 +1389,13 @@ Errors: 401, 403, 500.
 
 Bearer, admin. Closes one report with nothing taken down (`resolveReport`). Request: `{ "note": "Looked fine." }` (optional, up to 1000 characters; a longer one answers 400 with `field: "note"`). Response 200: `{ "ok": true, "status": "resolved" }`. Logged to `moderation_log`.
 
-Errors: 404 `not_found` (`That report no longer exists.`), 409 `conflict` (`That report has already been answered.`), 401, 403.
+Errors: 404 `not_found` (`That report no longer exists.`), 409 `conflict` (`That report has already been answered.`), 401, 403 (also `forbidden` with `That report is about someone on the admin team, so a super admin answers it.` when a plain admin answers a report about anyone on the admin team, themselves included), 500 `server` (`Couldn't check that account. Try again in a moment.`, when that account can't be looked up).
 
 ### POST /api/app/admin/reports/{id}/remove
 
 Bearer, admin. Takes the reported content down and closes every open report about it (`removeReportedContent`). A profile loses its bio and picture, and with `replaceUsername: true` its handle too (a free `memberNNNNNN`, the old one kept in `name_moderation_log`); an edit loses its note, a proposal its title and note, and either is turned down if still pending. Request: `{ "note": "…", "replaceUsername": true }` (both optional). Response 200: `{ "ok": true, "status": "removed", "newUsername": "member482913" }` (`newUsername` null unless replaced).
 
-Errors: 404, 409 `conflict` (`That report has already been answered.` or `That account is already gone. Close the report instead.`), 500 `server` (`Couldn't take that down. Try again.`), 401, 403.
+Errors: 404, 409 `conflict` (`That report has already been answered.` or `That account is already gone. Close the report instead.`), 500 `server` (`Couldn't take that down. Try again.`), 401, 403 (also the admin-team sentence under resolve, by the same rule).
 
 ### POST /api/app/admin/reports/{id}/ban
 

@@ -827,7 +827,8 @@ struct SettingsDeleteAccountBox: View {
 
 // MARK: - About
 
-/// The policies and the site, opened in the browser.
+/// The policies and the site, opened in the browser; the contact address, which opens a new
+/// email; and FIRST's trademark notice under the version.
 struct SettingsAboutSection: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -839,14 +840,23 @@ struct SettingsAboutSection: View {
                 DashedRule()
                 row("LearnFRC on the web", slug: "learnfrc.com", url: AccountLinks.site)
                 DashedRule()
+                // The public contact address, the same one the site prints everywhere
+                // (App Review 1.2 asks for contact details people can find).
+                row("Contact", slug: AccountLinks.contactEmail, url: AccountLinks.contact, hint: "Writes an email")
+                DashedRule()
+                row("Contact form", slug: "learnfrc.com/contact", url: AccountLinks.contactPage)
+                DashedRule()
             }
             SlugText("learnfrc \(AppConfig.appVersion)")
                 .padding(.top, 10)
                 .textSelection(.enabled)
+            // FIRST's trademark notice, as the site's footer carries it.
+            FieldHint(AppConfig.firstTrademarkNotice)
+                .padding(.top, 4)
         }
     }
 
-    private func row(_ title: String, slug: String, url: URL) -> some View {
+    private func row(_ title: String, slug: String, url: URL, hint: String = "Opens in your browser") -> some View {
         Link(destination: url) {
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 2) {
@@ -864,6 +874,6 @@ struct SettingsAboutSection: View {
             .padding(.vertical, 10)
         }
         .buttonStyle(.inkRow)
-        .accessibilityHint("Opens in your browser")
+        .accessibilityHint(hint)
     }
 }

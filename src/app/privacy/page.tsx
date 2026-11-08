@@ -72,8 +72,10 @@ const SECTIONS: Section[] = [
           store who sent the report, who it is about, what was reported (a
           profile, a suggested edit or a lesson proposal), the reason picked,
           any details added, and whether it came from the site or the app.
-          When you block someone, we store that you blocked them. A block hides
-          that account from you and changes nothing for anyone else.
+          When you block someone, we store that you blocked them and let
+          LearnFRC&rsquo;s admins know, so they can check that account. A
+          block hides that account from you and changes nothing for anyone
+          else.
         </p>
         <p>
           <strong>How you found us.</strong>{" "}The site or link you first came
@@ -160,8 +162,8 @@ const SECTIONS: Section[] = [
           never shown publicly.
         </p>
         <p>
-          <strong>Reports</strong>{" "}are seen only by the person who reviews
-          them. We don&rsquo;t tell anyone who reported them, and blocking
+          <strong>Reports</strong>{" "}are seen only by LearnFRC&rsquo;s
+          admins. We don&rsquo;t tell anyone who reported them, and blocking
           someone doesn&rsquo;t notify them.
         </p>
       </>
@@ -285,9 +287,12 @@ const SECTIONS: Section[] = [
           </li>
           <li>Changes from your edits that were already merged into a lesson.</li>
           <li>
-            Reports, no longer linked to the deleted account, for as long as we
-            need them to deal with the report and spot repeat problems. Blocks
-            go with the account.
+            Reports, for as long as we need them to deal with the report and
+            spot repeat problems. A report someone sent is no longer linked to
+            their deleted account. A report about an account keeps its handle
+            and a copy of what was reported (its public profile, or the
+            suggested edit or lesson proposal) as it was at the time. Blocks go
+            with the account.
           </li>
           <li>
             If an account was banned, its email address and IP address stay on
