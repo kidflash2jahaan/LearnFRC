@@ -20,11 +20,9 @@ import {
   MobileProgressCard,
   LessonStatusDot,
   SuggestEditIsland,
-  VerifyLessonIsland,
 } from "./_progress-islands";
 import { LessonSignupHook } from "@/components/lesson/lesson-signup-hook";
 import { Provenance } from "@/components/lesson/provenance";
-import { VerifiedBadge } from "@/components/lesson/verified-badge";
 import { LessonReadNext } from "@/components/lesson/lesson-read-next";
 import { YouTubeFacade } from "@/components/youtube-facade";
 import {
@@ -457,21 +455,6 @@ export default async function LessonPage({
               relatedLabel={relatedLabel}
               startHref={startHref}
               showStart={idx > 0}
-            />
-
-            {/* The verified mark, immediately above the sources it was checked
-                against. Renders nothing until the lesson has been verified, so
-                this is a no-op on most pages for now. Placed BEFORE the
-                colophon rather than inside it: on a page that has been checked,
-                that is the first thing a sceptical reader wants. */}
-            <VerifiedBadge verifiedAt={body?.verified_at ?? null} />
-            {/* The control sits in the same place as the mark, so verifying is
-                the last thing you do after reading the lesson rather than a
-                trip to a separate list. Renders nothing for everyone who is
-                not an admin, which is everyone. */}
-            <VerifyLessonIsland
-              lessonId={les.id}
-              initialVerifiedAt={body?.verified_at ?? null}
             />
 
             {/* Provenance: the lesson's sources, its last logged correction,

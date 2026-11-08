@@ -60,15 +60,6 @@ enum LessonText {
         return host.hasPrefix("www.") ? String(host.dropFirst(4)) : host
     }
 
-    /// "9 Sept 2026": the verified badge's date, day month year in UTC like the site
-    /// (`toLocaleDateString("en-GB", { timeZone: "UTC" })`).
-    static func verifiedDate(_ date: Date) -> String {
-        date.formatted(
-            Date.FormatStyle(locale: Locale(identifier: "en_GB"), timeZone: .gmt)
-                .day().month(.abbreviated).year()
-        )
-    }
-
     /// How many lines a clipped teaser (a summary or description on a card) gets: `lines` at
     /// the regular sizes, more as the text grows, so a large size still shows a sentence
     /// rather than three words and an ellipsis.

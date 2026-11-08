@@ -37,6 +37,14 @@ const nextConfig: NextConfig = {
         destination: "/guides/getting-started/what-first-and-frc-are/what-is-first",
         permanent: true,
       },
+      // /fact-check was the running total of lessons carrying the verified
+      // mark. The mark is gone, so the page is too; the corrections log is the
+      // public record of what has been checked and fixed.
+      {
+        source: "/fact-check",
+        destination: "/corrections",
+        permanent: true,
+      },
     ];
   },
 };

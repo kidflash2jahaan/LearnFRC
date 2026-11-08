@@ -65,17 +65,6 @@ final class AdminAPI: Sendable {
         return response.item
     }
 
-    /// `PUT /api/app/admin/lessons/{lessonId}/verified`: puts the public verified mark on a
-    /// lesson, or takes it off. Returns the mark's new date (nil when removed).
-    func setVerified(lessonID: UUID, verified: Bool) async throws(AdminError) -> Date? {
-        struct Body: Encodable { let verified: Bool }
-        let result: AdminVerifiedResult = try await send(
-            "PUT", "/api/app/admin/lessons/\(Self.pathID(lessonID))/verified",
-            body: Body(verified: verified)
-        )
-        return result.verifiedAt
-    }
-
     // MARK: Team desk (super admin)
 
     /// `GET /api/app/admin/team`: applications, the team and the decided log.

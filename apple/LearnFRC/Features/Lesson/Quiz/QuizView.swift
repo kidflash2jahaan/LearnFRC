@@ -575,7 +575,7 @@ private enum QuizPreview {
     static var lesson: LessonLocation { PreviewData.lessonLocation }
     static var quiz: [QuizQuestion] { PreviewData.lessonBody.quiz }
     /// "Programming Basics": already finished in the preview account.
-    static var doneLesson: LessonLocation { PreviewData.location(PreviewData.verifiedLessonBody.id) }
+    static var doneLesson: LessonLocation { PreviewData.location(PreviewData.variablesLessonBody.id) }
 
     /// Two submits in: one banked, two missed twice (explanations showing).
     static var stuckSheet: QuizSheet {
@@ -622,9 +622,9 @@ private enum QuizPreview {
     QuizPreview.page {
         QuizView(
             lessonID: QuizPreview.doneLesson.id,
-            quiz: PreviewData.verifiedLessonBody.quiz,
+            quiz: PreviewData.variablesLessonBody.quiz,
             nextLesson: PreviewData.allLessons[1],
-            previewSheet: QuizSheet(quiz: PreviewData.verifiedLessonBody.quiz),
+            previewSheet: QuizSheet(quiz: PreviewData.variablesLessonBody.quiz),
             previewSession: PreviewData.completionResult
         )
     }
@@ -633,7 +633,7 @@ private enum QuizPreview {
 
 #Preview("Signed off, guest, iPad dark", traits: .fixedLayout(width: 820, height: 900)) {
     QuizPreview.page {
-        QuizView(lessonID: PreviewData.allLessons[0].id, quiz: PreviewData.verifiedLessonBody.quiz, nextLesson: PreviewData.allLessons[1]) {}
+        QuizView(lessonID: PreviewData.allLessons[0].id, quiz: PreviewData.variablesLessonBody.quiz, nextLesson: PreviewData.allLessons[1]) {}
     }
     .appEnvironment(.preview(signedIn: false))
     .environment(\.colorScheme, .dark)
@@ -645,9 +645,9 @@ private enum QuizPreview {
             QuizView(lessonID: QuizPreview.lesson.id, quiz: QuizPreview.quiz, previewSheet: QuizPreview.stuckSheet)
             QuizView(
                 lessonID: QuizPreview.doneLesson.id,
-                quiz: PreviewData.verifiedLessonBody.quiz,
+                quiz: PreviewData.variablesLessonBody.quiz,
                 nextLesson: PreviewData.allLessons[1],
-                previewSheet: QuizSheet(quiz: PreviewData.verifiedLessonBody.quiz),
+                previewSheet: QuizSheet(quiz: PreviewData.variablesLessonBody.quiz),
                 previewSession: PreviewData.completionResult
             )
         }

@@ -10,8 +10,10 @@ enum SupabaseQueries {
     lessons(id,module_id,slug,title,summary,estimated_minutes,sort_order,youtube_id))
     """
 
-    /// Every lesson body (markdown, takeaways, resources, quiz, verification).
-    static let lessonBodySelect = "id,content,key_takeaways,resources,quiz,verified_at,verified_by,verified_note,verified_sources,youtube_id"
+    /// Every lesson body (markdown, takeaways, resources, quiz, video). Copies from before the
+    /// verified mark came off also select `verified_at,verified_by,verified_note,verified_sources`,
+    /// so those columns have to stay in `lessons`.
+    static let lessonBodySelect = "id,content,key_takeaways,resources,quiz,youtube_id"
 
     static let articleSelect = "id,slug,title,description,keywords,date,read_mins,content,sort_order"
 

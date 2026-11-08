@@ -7,8 +7,8 @@ import YouTubePlayerKit
 ///     LessonView(lessonID: id) { route in path.append(route) }
 ///
 /// Top to bottom, in the website's order: the file path, title, summary and the ruled fact
-/// row; the video (a poster until pressed); the lesson; key takeaways; "Keep going"; the
-/// verified mark; sources and corrections; articles clipped to the lesson; the quiz and its
+/// row; the video (a poster until pressed); the lesson; key takeaways; "Keep going";
+/// sources and corrections; articles clipped to the lesson; the quiz and its
 /// sign-off (`QuizView`); the guest's ask; progress through the department; the lesson
 /// before and after; every lesson in the department, folded away.
 ///
@@ -453,15 +453,8 @@ struct LessonView: View {
                 nextStep(location, next: next, signedIn: signedIn, columns: width >= 700 ? 2 : 1)
                     .padding(.top, gap)
 
-                if let verifiedAt = body.verifiedAt {
-                    LessonVerifiedBadge(verifiedAt: verifiedAt)
-                        .padding(.top, gap)
-                }
-
-                AdminVerifyLessonControl(lessonID: location.id)
-
                 LessonProvenanceView(sources: body.resources, lessonURL: location.webURL, isWide: width >= 700)
-                    .padding(.top, body.verifiedAt == nil ? gap : 12)
+                    .padding(.top, gap)
 
                 let articles = Array(reference.relatedArticles(for: location.id).prefix(3))
                 if !articles.isEmpty {
@@ -1189,9 +1182,9 @@ private struct LessonBookColumnsLayout: Layout {
     .appEnvironment(.preview)
 }
 
-#Preview("iPad dark, finished and verified", traits: .fixedLayout(width: 1180, height: 820)) {
+#Preview("iPad dark, finished", traits: .fixedLayout(width: 1180, height: 820)) {
     NavigationStack {
-        LessonView(lessonID: PreviewData.verifiedLessonBody.id)
+        LessonView(lessonID: PreviewData.variablesLessonBody.id)
     }
     .appEnvironment(.preview)
     .environment(\.colorScheme, .dark)
