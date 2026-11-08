@@ -26,6 +26,13 @@ import { completeOAuthSignIn } from "@/lib/app/accounts";
  * shared with the app's POST /api/app/auth/oauth-complete, because the app's
  * own Google sign-in never passes through this route.
  *
+ * SIGN IN WITH APPLE comes through the same door (the Apple button adds
+ * `provider=apple` to this URL). Two things differ, and both are handled in
+ * completeOAuthSignIn: Apple's refresh token, which Supabase passes back only
+ * now, is kept so the account's Apple sign-in can be revoked when it's deleted,
+ * and Apple's name, sent on the first sign-in only, has already been read into
+ * the account by Supabase and copied to the profile by handle_new_user.
+ *
  * FIRST RUN. A brand-new account whose destination is the GENERIC dashboard is
  * sent to /start instead: one question, then a five-lesson plan. 45% of
  * accounts never finish a single lesson, and that loss happens entirely
@@ -80,6 +87,13 @@ export async function GET(request: Request) {
         hdrs.get("x-real-ip") ||
         null,
       door: "auth/callback",
+      // Only Apple's: a Google sign-in on an account that also has Apple must
+      // never file Google's token as Apple's. completeOAuthSignIn also checks
+      // the account really has an Apple identity.
+      apple:
+        searchParams.get("provider") === "apple"
+          ? { refreshToken: data?.session?.provider_refresh_token ?? null }
+          : undefined,
     });
     isNew = outcome.isNewAccount;
   }

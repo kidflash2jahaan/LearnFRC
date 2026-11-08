@@ -5,6 +5,7 @@ import { useFormStatus } from "react-dom";
 import { saveProfileSetup, skipProfileSetup } from "@/app/actions/profile";
 import type { ProfileState } from "@/app/actions/profile";
 import type { ProfileSetupMode } from "@/lib/onboarding";
+import { APPLE_SIGN_IN_ENABLED } from "@/lib/auth-providers";
 
 const SAVE_FORM_ID = "profile-setup-save";
 
@@ -105,7 +106,7 @@ export function ProfileSetupForm({
       <p className="mt-2.5 max-w-[56ch] text-[0.95rem] leading-snug text-graphite">
         {needsUsername
           ? required
-            ? "Signing in with Google skips the roster line, so an account can land without a handle. It is your profile link and it is how teammates find you. The team number is optional and can wait."
+            ? `Signing in with ${APPLE_SIGN_IN_ENABLED ? "Google or Apple" : "Google"} skips the roster line, so an account can land without a handle. It is your profile link and it is how teammates find you. The team number is optional and can wait.`
             : "Your handle was minted for you, so it is not really yours. Pick one you would want next to your name on the leaderboard. The team number is optional."
           : "Put your FRC team number in and you show up alongside your teammates on the team page and on the leaderboard."}
       </p>

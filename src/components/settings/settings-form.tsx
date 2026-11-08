@@ -9,6 +9,7 @@ import {
   type ProfileState,
 } from "@/app/actions/profile";
 import { Avatar } from "@/components/ui/avatar";
+import { isApplePrivateRelayEmail } from "@/lib/auth-providers";
 import type { Profile } from "@/lib/types";
 
 const ROLES = [
@@ -123,7 +124,11 @@ export function SettingsForm({
             className="nb-input"
           />
           <p id="email-help" className="nb-hint">
-            Your sign-in email. It can&rsquo;t be changed here.
+            {/* Sign in with Apple's "Hide My Email" gives a made-up address.
+                Saying where it goes stops it reading like a mistake. */}
+            {isApplePrivateRelayEmail(email)
+              ? "A private address from Apple’s Hide My Email. Mail sent to it reaches your own inbox. It can’t be changed here."
+              : "Your sign-in email. It can’t be changed here."}
           </p>
         </div>
 

@@ -23,13 +23,28 @@ enum AccountChange: Hashable, Sendable {
     case deleted(userID: UUID)
 }
 
-/// How Continue with Google ended (`AccountStore.signInWithGoogle`).
+/// How Continue with Google or Sign in with Apple ended (`AccountStore.signInWithGoogle`,
+/// `AccountStore.signInWithApple`).
 enum OAuthSignInOutcome: Hashable, Sendable {
     /// Signed in. `isNewAccount` is the site's answer (`POST /api/app/auth/oauth-complete`):
     /// the account was made by this sign-in. False when the site couldn't be asked.
     case signedIn(isNewAccount: Bool)
-    /// The person closed the sheet or turned Google down. Show nothing.
+    /// The person closed the sheet or turned the provider down. Show nothing.
     case cancelled
+}
+
+/// What Sign in with Apple hands back (an `ASAuthorizationAppleIDCredential`), read into plain
+/// values so it can cross into the store.
+struct AppleSignInCredential: Hashable, Sendable {
+    /// Apple's ID token (a JWT), which Supabase checks.
+    let idToken: String
+    /// The raw nonce whose SHA-256 went into the request; Supabase checks the token against it.
+    let nonce: String
+    /// The one-time code the site trades for the token it revokes when the account is deleted.
+    /// Good for five minutes, once.
+    let authorizationCode: String?
+    /// The person's name, sent only the first time they sign in to LearnFRC with Apple.
+    let fullName: String?
 }
 
 /// Sign in, sign up, the signed-in profile and every account setting. Rules
@@ -55,9 +70,9 @@ final class AccountStore {
     @ObservationIgnored private var guestNotified = false
     @ObservationIgnored private var establishing: (userID: UUID, task: Task<Void, Never>)?
     @ObservationIgnored private var changeChain: Task<Void, Never>?
-    /// Closed while Continue with Google is running: the session lands (and Auth says
-    /// `.signedIn`) before the site has run its post-sign-in work, and nothing else may
-    /// start on the account until it has (`signInWithGoogle`).
+    /// Closed while Continue with Google or Sign in with Apple is running: the session lands
+    /// (and Auth says `.signedIn`) before the site has run its post-sign-in work, and nothing
+    /// else may start on the account until it has (`signInWithProvider`).
     @ObservationIgnored private var oauthGate: SignInGate?
     /// When each account on this device last skipped the profile setup step (user id to date).
     /// One entry covers both asks, like the site's one skip cookie.
@@ -204,8 +219,9 @@ final class AccountStore {
             }
         case .signedIn:
             if let session {
-                // A Google sign-in's session arrives here first; it waits for the site's
-                // post-sign-in work, so the other stores (guest progress moving in) start after.
+                // A Google or Apple sign-in's session arrives here first; it waits for the
+                // site's post-sign-in work, so the other stores (guest progress moving in)
+                // start after.
                 if let oauthGate { await oauthGate.wait() }
                 await establish(userID: session.user.id, email: session.user.email, isNewSignIn: true)
             }
@@ -325,6 +341,47 @@ final class AccountStore {
         via: String? = nil,
         present: @MainActor @Sendable (_ url: URL) async throws -> URL
     ) async throws -> OAuthSignInOutcome {
+        try await signInWithProvider(ref: ref, via: via) { supabase in
+            try await supabase.signInWithOAuth(.google, present: present)
+        }
+    }
+
+    /// Sign in with Apple, from the credential Apple's own sheet handed back
+    /// (`AppleSignInButton` in `ProviderSignIn.swift`, which made the nonce).
+    ///
+    /// Supabase checks Apple's ID token against the nonce and finds or makes the account
+    /// (`SupabaseService.signInWithApple`). Then, as for Google, the site's post-sign-in work
+    /// runs before anything else (`POST /api/app/auth/oauth-complete`), carrying two things only
+    /// Apple has: the name, which Apple sends just once, on the first sign-in, so this is the
+    /// one chance to save it; and the one-time authorization code, which the site trades for the
+    /// token it revokes if the account is ever deleted (App Store rule 5.1.1(v)). Then the
+    /// normal sign-in work follows, the username gate included.
+    ///
+    /// Throws a plain sentence when it fails.
+    @discardableResult
+    func signInWithApple(
+        _ credential: AppleSignInCredential,
+        ref: String? = nil,
+        via: String? = nil
+    ) async throws -> OAuthSignInOutcome {
+        try await signInWithProvider(
+            ref: ref, via: via,
+            fullName: credential.fullName, appleAuthorizationCode: credential.authorizationCode
+        ) { supabase in
+            try await supabase.signInWithApple(idToken: credential.idToken, nonce: credential.nonce)
+        }
+    }
+
+    /// The part every provider shares. `signIn` makes the session, or returns nil when the person
+    /// backed out. While it and the site's post-sign-in work run, the gate holds Auth's
+    /// `.signedIn` event, so nothing else starts on the account first.
+    private func signInWithProvider(
+        ref: String?,
+        via: String?,
+        fullName: String? = nil,
+        appleAuthorizationCode: String? = nil,
+        signIn: (SupabaseService) async throws -> Session?
+    ) async throws -> OAuthSignInOutcome {
         guard let supabase else { throw fail(.network) }
         isWorking = true
         defer { isWorking = false }
@@ -338,7 +395,7 @@ final class AccountStore {
 
         let session: Session
         do {
-            guard let signedIn = try await supabase.signInWithOAuth(.google, present: present) else {
+            guard let signedIn = try await signIn(supabase) else {
                 return .cancelled
             }
             session = signedIn
@@ -346,21 +403,30 @@ final class AccountStore {
             throw fail(APIError.from(error))
         }
         lastError = nil
-        let isNewAccount = await completeOAuthSignIn(userID: session.user.id, ref: ref, via: via)
+        let isNewAccount = await completeOAuthSignIn(
+            userID: session.user.id, ref: ref, via: via,
+            fullName: fullName, appleAuthorizationCode: appleAuthorizationCode
+        )
         gate.open()
         await establish(userID: session.user.id, email: session.user.email, isNewSignIn: true)
         return .signedIn(isNewAccount: isNewAccount)
     }
 
-    /// The site's post-sign-in work for an OAuth account. Like the site's Google callback, it
+    /// The site's post-sign-in work for an OAuth account. Like the site's sign-in callback, it
     /// never blocks the sign-in: a failure is logged and the person carries on. If the network
     /// blinked, it tries once more a few seconds later (the route is safe to repeat), so an
-    /// invite's referral isn't lost to one dropped request.
-    private func completeOAuthSignIn(userID: UUID, ref: String?, via: String?) async -> Bool {
+    /// invite's referral, or Apple's name, isn't lost to one dropped request.
+    private func completeOAuthSignIn(
+        userID: UUID, ref: String?, via: String?,
+        fullName: String? = nil, appleAuthorizationCode: String? = nil
+    ) async -> Bool {
         guard let api else { return false }
         let platform = AppConfig.platformID
         do {
-            return try await api.completeOAuthSignIn(ref: ref, via: via, platform: platform)
+            return try await api.completeOAuthSignIn(
+                ref: ref, via: via, platform: platform,
+                fullName: fullName, appleAuthorizationCode: appleAuthorizationCode
+            )
         } catch {
             let error = APIError.from(error)
             Log.auth.error("oauth-complete failed: \(error.message, privacy: .public)")
@@ -368,8 +434,12 @@ final class AccountStore {
             Task { [weak self] in
                 try? await Task.sleep(for: .seconds(4))
                 guard let self, self.userID == userID else { return }
-                if (try? await api.completeOAuthSignIn(ref: ref, via: via, platform: platform)) != nil {
-                    // A referral reward lands as XP on the account.
+                let retried = try? await api.completeOAuthSignIn(
+                    ref: ref, via: via, platform: platform,
+                    fullName: fullName, appleAuthorizationCode: appleAuthorizationCode
+                )
+                if retried != nil {
+                    // A referral reward lands as XP on the account, and Apple's name on it.
                     await self.refreshMe(force: true)
                 }
             }
@@ -622,6 +692,13 @@ final class AccountStore {
         String(raw.lowercased().filter { ("a"..."z").contains($0) || ("0"..."9").contains($0) || $0 == "_" })
     }
 
+    /// An address from Apple's Hide My Email (someone who signed in with Apple and kept their
+    /// real address to themselves), like the site's `isApplePrivateRelayEmail`. It works (mail
+    /// is forwarded to their inbox) but its first half is random, so nothing is made from it.
+    static func isApplePrivateRelayEmail(_ email: String?) -> Bool {
+        (email ?? "").trimmingCharacters(in: .whitespaces).lowercased().hasSuffix("@privaterelay.appleid.com")
+    }
+
     private func apply(profile: Profile) {
         // Only onto the account the profile belongs to (a reply can land after sign-out).
         guard let me, profile.id == me.user.id else { return }
@@ -652,8 +729,8 @@ final class AccountStore {
 }
 
 /// A one-way gate: `wait()` returns once `open()` has been called, straight away if it already
-/// has. Holds the Auth `.signedIn` event for a Google sign-in until the site's post-sign-in
-/// work is done (`AccountStore.signInWithGoogle`).
+/// has. Holds the Auth `.signedIn` event for a Google or Apple sign-in until the site's
+/// post-sign-in work is done (`AccountStore.signInWithProvider`).
 @MainActor
 private final class SignInGate {
     private var isOpen = false

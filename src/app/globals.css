@@ -781,6 +781,53 @@
   cursor: not-allowed;
 }
 
+/* nb-btn-apple: Continue with Apple, drawn to Apple's rules rather than ours.
+   Apple's sign-in button is black with the logo and the words in white, in the
+   system font, so this is the one button not in the palette or in Space Mono.
+   Everything else matches the Google ghost button it sits above: the same
+   width, height, corners and press, so neither reads as the lesser option.
+   The line height is the ghost button's own (0.86rem at the body's 1.55), so
+   the two come out exactly the same height. */
+.nb-btn-apple {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: var(--tap);
+  padding: 0.72rem 1.15rem;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-weight: 600;
+  font-size: 0.95rem;
+  line-height: calc(0.86rem * 1.55);
+  letter-spacing: 0;
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+  background: #000;
+  color: #fff;
+  border: 2px solid #000;
+  border-radius: var(--hand-s);
+  box-shadow: 3px 3px 0 rgba(22, 24, 27, 0.22);
+  transition:
+    transform var(--nb-t-hover) var(--nb-ease-out),
+    box-shadow var(--nb-t-hover) var(--nb-ease-out);
+}
+@media (hover: hover) and (pointer: fine) {
+  .nb-btn-apple:hover { transform: translate(2px, 2px); box-shadow: 1px 1px 0 rgba(22, 24, 27, 0.22); }
+}
+.nb-btn-apple:active {
+  transform: translate(3px, 3px);
+  box-shadow: 0 0 0 rgba(22, 24, 27, 0.22);
+  transition-duration: var(--nb-t-press);
+}
+.nb-btn-apple:disabled,
+.nb-btn-apple[aria-disabled="true"] {
+  opacity: 0.6;
+  box-shadow: none;
+  transform: none;
+  cursor: not-allowed;
+}
+
 /* nb-btn-sm: the same buttons at nav scale. Narrower and quieter, still a
    44px touch target, because the rule has no small-screen exception. */
 .nb-btn-sm { padding-inline: 0.9rem; font-size: 0.8rem; }

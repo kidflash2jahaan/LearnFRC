@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
+import { APPLE_SIGN_IN_ENABLED } from "@/lib/auth-providers";
 import { ForgotForm } from "./_forgot-form";
 
 export const metadata: Metadata = {
@@ -32,9 +33,12 @@ const SNAGS = [
     // other two on purpose. At its old wording this one ran to a second line
     // while its neighbours held one, which dropped its body copy half a line
     // below theirs and made the strip read as three panels that were not
-    // set together.
-    title: "It's a Google account",
-    body: "Then there's no password on the account to reset and no email is coming. Use Continue with Google on the sign-in sheet and you're in.",
+    // set together. With Sign in with Apple switched on it names both
+    // providers in no more characters than before.
+    title: APPLE_SIGN_IN_ENABLED ? "It's Google or Apple" : "It's a Google account",
+    body: APPLE_SIGN_IN_ENABLED
+      ? "Then there's no password on the account to reset and no email is coming. Use the Google or Apple button on the sign-in sheet and you're in."
+      : "Then there's no password on the account to reset and no email is coming. Use Continue with Google on the sign-in sheet and you're in.",
   },
 ] as const;
 

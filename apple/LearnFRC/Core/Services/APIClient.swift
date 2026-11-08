@@ -84,13 +84,24 @@ final class APIClient: Sendable {
         }
     }
 
-    /// `POST /api/app/auth/oauth-complete`, with the session Continue with Google just made.
-    /// Runs the site's own post-sign-in work for an OAuth account (what its Google callback
-    /// does): a brand-new account gets its signup attribution and any pending referral reward.
-    /// Idempotent. `platform` is `AppConfig.platformID`, recorded as the source of a new
-    /// account. Returns `isNewAccount`.
-    func completeOAuthSignIn(ref: String?, via: String?, platform: String?) async throws -> Bool {
-        struct Body: Encodable { let ref: String?; let via: String?; let platform: String? }
+    /// `POST /api/app/auth/oauth-complete`, with the session Continue with Google or Sign in
+    /// with Apple just made. Runs the site's own post-sign-in work for an OAuth account (what
+    /// its sign-in callback does): a brand-new account gets its signup attribution and any
+    /// pending referral reward. Idempotent. `platform` is `AppConfig.platformID`, recorded as
+    /// the source of a new account. Apple only: `fullName` is the name in Apple's credential
+    /// (first sign-in only) and `appleAuthorizationCode` its one-time code, which the site
+    /// trades for the token it revokes when the account is deleted. Returns `isNewAccount`.
+    func completeOAuthSignIn(
+        ref: String?, via: String?, platform: String?,
+        fullName: String? = nil, appleAuthorizationCode: String? = nil
+    ) async throws -> Bool {
+        struct Body: Encodable {
+            let ref: String?
+            let via: String?
+            let platform: String?
+            let fullName: String?
+            let appleAuthorizationCode: String?
+        }
         struct Response: Decodable {
             let isNewAccount: Bool
             init(from decoder: any Decoder) throws {
@@ -98,7 +109,10 @@ final class APIClient: Sendable {
                 isNewAccount = (try? c.decodeIfPresent(Bool.self, forKey: AnyCodingKey("isNewAccount"))) ?? false
             }
         }
-        let response: Response = try await send("POST", "/api/app/auth/oauth-complete", body: Body(ref: ref, via: via, platform: platform))
+        let response: Response = try await send(
+            "POST", "/api/app/auth/oauth-complete",
+            body: Body(ref: ref, via: via, platform: platform, fullName: fullName, appleAuthorizationCode: appleAuthorizationCode)
+        )
         return response.isNewAccount
     }
 

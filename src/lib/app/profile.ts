@@ -7,6 +7,7 @@ import { needsUsernameSetup } from "@/lib/onboarding-server";
 import type { Profile } from "@/lib/types";
 import { levelForXp, tierFor } from "@/lib/app/levels";
 import { toIso } from "@/lib/app/format";
+import { revokeAppleSignIn } from "@/lib/app/apple-sign-in";
 import { fail, type AppClients, type AppUser, type Result } from "@/lib/app/result";
 
 /**
@@ -344,12 +345,17 @@ export async function setEmailChoice(
  * Permanently delete the user's own account and all their data. The child
  * rows also cascade from auth.users, but deleting them explicitly first keeps
  * this correct even if a foreign key ever changes.
+ *
+ * An account that signed in with Apple has its Apple tokens revoked first, as
+ * Apple requires (src/lib/app/apple-sign-in.ts); that has to happen while the
+ * auth user and its kept tokens still exist. It never blocks the deletion.
  */
 export async function deleteAccountData(
   user: AppUser,
   { admin }: AppClients
 ): Promise<Result> {
   const uid = user.id;
+  await revokeAppleSignIn(uid);
   await admin.from("lesson_progress").delete().eq("user_id", uid);
   await admin.from("bookmarks").delete().eq("user_id", uid);
   await admin.from("user_achievements").delete().eq("user_id", uid);

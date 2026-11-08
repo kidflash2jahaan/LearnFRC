@@ -4,7 +4,9 @@ import * as React from "react";
 import Link from "next/link";
 import { useActionState } from "react";
 import { signIn, signUp, type AuthState } from "@/app/actions/auth";
+import { AppleSignInButton } from "@/components/auth/apple-button";
 import { GoogleSignInButton } from "@/components/auth/google-button";
+import { APPLE_SIGN_IN_ENABLED } from "@/lib/auth-providers";
 
 type Mode = "login" | "signup";
 
@@ -93,6 +95,17 @@ export function AuthForm({
         <p className="nb-error" role="alert" aria-live="assertive">
           {state.error}
         </p>
+      )}
+
+      {/* Apple first and the same size as Google: Apple's guidelines ask for
+          Sign in with Apple to be at least as prominent as any other provider.
+          Hidden until the Apple keys exist (src/lib/auth-providers.ts). */}
+      {APPLE_SIGN_IN_ENABLED && (
+        <AppleSignInButton
+          next={nextValue}
+          referrer={isSignup ? referrer : undefined}
+          via={isSignup ? via : undefined}
+        />
       )}
 
       <GoogleSignInButton

@@ -4,9 +4,9 @@ import SwiftUI
 ///
 /// A headline, the sign-in sheet (flat, taped, because a tilted text field reads badly),
 /// and beside it on wide windows (under it on narrow ones) what the account holds.
-/// Continue with Google sits at the top of the sheet, like the site's
-/// (`ProviderSignInButtons`); usernames go through `POST /api/app/auth/sign-in`; emails sign
-/// in with Supabase directly.
+/// Continue with Google (and Sign in with Apple above it, once that's switched on) sits at the
+/// top of the sheet, like the site's (`ProviderSignInButtons`); usernames go through
+/// `POST /api/app/auth/sign-in`; emails sign in with Supabase directly.
 ///
 ///     SignInView()                                         // in any NavigationStack
 ///     SignInView(identifier: email, notice: .exists)       // after sign-up found the email
@@ -32,7 +32,7 @@ struct SignInView: View {
     @State private var identifierError: String?
     @State private var passwordError: String?
     @State private var isSubmitting = false
-    /// Continue with Google is running (its sheet, then the sign-in).
+    /// Continue with Google or Sign in with Apple is running (its sheet, then the sign-in).
     @State private var isUsingProvider = false
     @FocusState private var focus: Field?
 

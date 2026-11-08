@@ -1,5 +1,6 @@
 import "server-only";
 import { headers } from "next/headers";
+import { after } from "next/server";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { firstProfaneField } from "@/lib/profanity";
@@ -11,14 +12,19 @@ import {
 } from "@/lib/signup-attribution";
 import { isFreshSignup } from "@/lib/first-run";
 import { normalizeUsername } from "@/lib/app/profile";
+import {
+  appleIdentity,
+  keepAppleRefreshToken,
+  keepAppleTokenFromCode,
+} from "@/lib/app/apple-sign-in";
 import { fail, type Result } from "@/lib/app/result";
 
 /**
  * Sign-in lookup and sign-up rules, shared by the website's signIn / signUp
  * Server Actions (src/app/actions/auth.ts) and the app's
  * POST /api/app/auth/sign-in and POST /api/app/auth/sign-up. The post-sign-in
- * work for Google (and any other OAuth provider) is here too, shared by the
- * website's /auth/callback and the app's POST /api/app/auth/oauth-complete.
+ * work for Google and Sign in with Apple is here too, shared by the website's
+ * /auth/callback and the app's POST /api/app/auth/oauth-complete.
  */
 
 /** The client's IP as Vercel forwards it, or null. */
@@ -258,7 +264,7 @@ export function appSignupSource(platform: string): string {
 }
 
 /* ------------------------------------------------------------------ */
-/*  After an OAuth sign-in (Google)                                    */
+/*  After an OAuth sign-in (Google, Apple)                             */
 /* ------------------------------------------------------------------ */
 
 export type OAuthSignInContext = {
@@ -271,26 +277,50 @@ export type OAuthSignInContext = {
   signupIp: string | null;
   /** Names the door in the error log, e.g. "auth/callback". */
   door: string;
+  /**
+   * The person's name as their provider gave it, when it doesn't arrive with
+   * the account itself. Sign in with Apple in the app is that case: Apple sends
+   * the name once, on the first sign-in, in the credential and not in the ID
+   * token, so the app passes it along. The website's Apple sign-in doesn't
+   * need it: Supabase reads the name from Apple's reply into the account, and
+   * handle_new_user copies it to the profile.
+   */
+  fullName?: string | null;
+  /**
+   * What Sign in with Apple hands out for revoking the account later (see
+   * src/lib/app/apple-sign-in.ts): the refresh token Supabase passed back on
+   * the website, or the app's one-time authorization code. Ignored for an
+   * account without an Apple identity.
+   */
+  apple?: { refreshToken?: string | null; authorizationCode?: string | null };
 };
+
+/** The account as both doors have it: Supabase's verified user. */
+type OAuthUser = Pick<User, "id" | "created_at"> & Partial<Pick<User, "identities">>;
 
 /**
  * The work that runs once an OAuth provider has signed someone in, for the
  * website's /auth/callback (after it trades the code for a session) and the
- * app's POST /api/app/auth/oauth-complete (after the app's own Google sign-in).
+ * app's POST /api/app/auth/oauth-complete (after the app's own Google or Apple
+ * sign-in).
  *
  * Only a brand-new account (isFreshSignup, the one definition of "new" in this
  * codebase) is attributed: someone signing back in keeps the source they first
  * arrived with, and attributeSignup also refuses to overwrite a source that is
- * already set. Google has already verified the address, so a referral reward
- * is paid straight away; payReferralReward pays at most once per account, so
- * calling this on every sign-in is safe.
+ * already set. Google and Apple have already verified the address, so a
+ * referral reward is paid straight away; payReferralReward pays at most once
+ * per account, so calling this on every sign-in is safe.
+ *
+ * For an account with an Apple identity it also keeps what's needed to revoke
+ * its Apple tokens when the account is deleted, and saves the name Apple sent
+ * if the profile has none yet.
  *
  * Never fails. Analytics must never block a sign-in, so an attribution error
  * is logged loudly (a silent failure here is how the last gap went unnoticed
  * for three weeks) and the answer still comes back.
  */
 export async function completeOAuthSignIn(
-  user: Pick<User, "id" | "created_at"> | null | undefined,
+  user: OAuthUser | null | undefined,
   ctx: OAuthSignInContext
 ): Promise<{ isNewAccount: boolean }> {
   const isNewAccount = isFreshSignup(user?.created_at);
@@ -304,14 +334,52 @@ export async function completeOAuthSignIn(
         srcCookie: ctx.srcCookie,
         signupIp: ctx.signupIp,
       });
-      // Google has already verified the address, so the reward is safe to pay
-      // now. Waiting on a confirmation click would wait forever: this flow
-      // never produces one.
+      // The provider has already verified the address, so the reward is safe
+      // to pay now. Waiting on a confirmation click would wait forever: this
+      // flow never produces one.
       if (referredBy) await payReferralReward(user.id);
     } catch (e) {
       console.error(`${ctx.door} attribution failed:`, e);
     }
   }
 
+  if (user && appleIdentity(user)) {
+    await saveProviderName(user.id, ctx.fullName, ctx.door);
+    const refreshToken = ctx.apple?.refreshToken;
+    if (refreshToken) await keepAppleRefreshToken(user, refreshToken);
+    const code = ctx.apple?.authorizationCode;
+    // A round trip to Apple nobody should wait on: it runs after the response,
+    // with the instance kept alive for it. The code is good for five minutes.
+    if (code) after(() => keepAppleTokenFromCode(user, code));
+  }
+
   return { isNewAccount };
+}
+
+/** The longest name kept from a provider. */
+const PROVIDER_NAME_MAX = 100;
+
+/**
+ * Save the name Sign in with Apple sent (first sign-in only) as the profile's
+ * full name, the private name on certificates. Only fills an empty name, so a
+ * name someone typed or edited is never overwritten, and the signup form's
+ * profanity rule applies. Never fails.
+ */
+async function saveProviderName(
+  userId: string,
+  fullName: string | null | undefined,
+  door: string
+): Promise<void> {
+  const name = (fullName ?? "").replace(/\s+/g, " ").trim().slice(0, PROVIDER_NAME_MAX).trim();
+  if (!name || firstProfaneField({ full_name: name })) return;
+  try {
+    const { error } = await createAdminClient()
+      .from("profiles")
+      .update({ full_name: name })
+      .eq("id", userId)
+      .is("full_name", null);
+    if (error) console.error(`${door}: saving the provider's name failed:`, error.message);
+  } catch (e) {
+    console.error(`${door}: saving the provider's name failed:`, e);
+  }
 }

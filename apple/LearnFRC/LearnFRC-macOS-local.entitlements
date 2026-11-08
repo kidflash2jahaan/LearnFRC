@@ -2,7 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <!-- Mac builds without a development team: no app group (it needs a team on macOS),
      so Mac widgets show sample data until DEVELOPMENT_TEAM is set in project.yml and
-     these overrides are removed. -->
+     these overrides are removed. No Sign in with Apple either: it needs a paid team, and
+     comes back with the full entitlements file once these overrides go. -->
 <plist version="1.0">
 <dict>
 	<key>com.apple.security.app-sandbox</key>

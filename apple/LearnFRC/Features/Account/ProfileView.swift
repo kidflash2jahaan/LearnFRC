@@ -329,6 +329,8 @@ struct ProfileMemberCard: View {
     private var displayName: String {
         if let name = p.fullName?.accountTrimmed, !name.isEmpty { return name }
         if let username = p.username { return username }
+        // An Apple Hide My Email address starts with random letters, not a name.
+        if AccountStore.isApplePrivateRelayEmail(me.user.email) { return "You" }
         return me.user.email?.split(separator: "@").first.map(String.init) ?? "You"
     }
 

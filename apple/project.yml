@@ -59,10 +59,18 @@ targets:
         com.apple.security.app-sandbox: true
         com.apple.security.network.client: true
         com.apple.security.files.user-selected.read-write: true
+        # Sign in with Apple (docs/ARCHITECTURE.md 6.1). Only a paid team can sign it, so the
+        # Personal Team device build and the teamless Mac build use the override files below,
+        # which leave it out; with a paid team those overrides go and this file is used.
+        com.apple.developer.applesignin: [Default]
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.learnfrc.app
         PRODUCT_NAME: LearnFRC
+        # Sign in with Apple's button (AppConfig.isAppleSignInEnabled, read from Info.plist's
+        # LFAppleSignIn). NO until the paid team, the capability on the App ID and Supabase's
+        # Apple provider are set up; then YES.
+        LF_APPLE_SIGN_IN: "NO"
         # No team yet: Mac builds sign locally without the app group (see the file).
         "CODE_SIGN_ENTITLEMENTS[sdk=macosx*]": LearnFRC/LearnFRC-macOS-local.entitlements
         # Free Personal Team: device builds can't use App Groups (see the file). Remove with a paid team.
@@ -97,6 +105,8 @@ targets:
         # build setting, so it lives here.
         NSUserActivityTypes:
           - com.learnfrc.app.lesson
+        # The LF_APPLE_SIGN_IN build setting, for AppConfig.isAppleSignInEnabled.
+        LFAppleSignIn: $(LF_APPLE_SIGN_IN)
         # Lets debug runs talk to `next dev` on localhost (-LFAPIBase http://localhost:3000).
         # Local network only; every real request goes to https://learnfrc.com.
         NSAppTransportSecurity:

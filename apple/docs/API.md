@@ -747,9 +747,9 @@ Errors (the site's messages):
 
 ### POST /api/app/auth/oauth-complete
 
-Bearer. The app's half of the website's `/auth/callback`. On the site, Google sign-in lands on that route, which records where a brand-new account came from and pays any pending referral reward. The app's own Google sign-in never passes through it, so call this straight after every OAuth sign-in, as soon as the session is installed and before anything else (including `GET /api/app/me`). Both doors run `completeOAuthSignIn` (`src/lib/app/accounts.ts`): the same "new account" test, the same attribution and the same reward.
+Bearer. The app's half of the website's `/auth/callback`. On the site, Google and Apple sign-ins land on that route, which records where a brand-new account came from and pays any pending referral reward. The app's own Google and Apple sign-ins never pass through it, so call this straight after every OAuth sign-in, as soon as the session is installed and before anything else (including `GET /api/app/me`). Both doors run `completeOAuthSignIn` (`src/lib/app/accounts.ts`): the same "new account" test, the same attribution and the same reward.
 
-"New" means the account was created in the last 5 minutes (`isFreshSignup`), so a call made late attributes nothing. Calling it on every OAuth sign-in is safe: an older account gets `false` and nothing is written, a source that's already set is never overwritten, and the referral reward (+25 XP each side) is paid at most once. Google has already verified the address, so the reward is paid now rather than after a confirmation email.
+"New" means the account was created in the last 5 minutes (`isFreshSignup`), so a call made late attributes nothing. Calling it on every OAuth sign-in is safe: an older account gets `false` and nothing is attributed, a source that's already set is never overwritten, and the referral reward (+25 XP each side) is paid at most once. Google and Apple have already verified the address, so the reward is paid now rather than after a confirmation email.
 
 Request (every field optional; no body at all is the same as `{}`):
 
@@ -757,10 +757,18 @@ Request (every field optional; no body at all is the same as `{}`):
 { "ref": "jordan_frc", "via": "team-invite", "platform": "ios" }
 ```
 
+After Sign in with Apple:
+
+```json
+{ "platform": "ios", "fullName": "Jordan Rivera", "appleAuthorizationCode": "c1f0e2...0a9.0.rsuv.AbCdEf" }
+```
+
 | Field | Type | Notes |
 |---|---|---|
 | `ref`, `via` | String? | From the invite link the app was opened with (`?ref=` and `?via=`), exactly as for `POST /api/app/auth/sign-up`. Unknown `via` values are ignored; a `ref` that isn't another member's username credits nobody. |
 | `platform` | String? | `ios`, `ipados` or `macos`. Recorded as the signup source (`iOS app`, `iPad app`, `Mac app`; anything else, or nothing, is `LearnFRC app`), the same rule as `POST /api/app/auth/sign-up`. A `ref` wins over it and records `Referral`. |
+| `fullName` | String? | Sign in with Apple only: the name in Apple's credential (`ASAuthorizationAppleIDCredential.fullName`, formatted), which Apple sends only on the person's first sign-in to LearnFRC. Saved as the profile's full name (private, the name on certificates) only if the profile has none, with the signup form's profanity rule; trimmed to 100 characters. Ignored for an account without an Apple identity. Omit it when Apple sent no name. |
+| `appleAuthorizationCode` | String? | Sign in with Apple only: the credential's `authorizationCode` as UTF-8 text. The site trades it with Apple (client id: the app's bundle id) for the refresh token it revokes when the account is deleted (`DELETE /api/app/account`), after checking the code belongs to the account's own Apple ID. Good for five minutes and once, so send it with this first call; the trade happens after the response, so it never slows the sign-in. Ignored for an account without an Apple identity, or when longer than 4096 characters. |
 
 Response 200:
 
@@ -768,9 +776,11 @@ Response 200:
 { "isNewAccount": true }
 ```
 
-`isNewAccount` is true only for an account created moments ago. The site sends such a person to `/start` (the one-question first-run plan, see `GET /api/app/start-plan`) instead of the dashboard, unless they were heading somewhere specific like an invite. A new Google account usually has no username yet, so the username step (`needsUsernameSetup` from `GET /api/app/me`) still comes first, as on the site.
+`isNewAccount` is true only for an account created moments ago. The site sends such a person to `/start` (the one-question first-run plan, see `GET /api/app/start-plan`) instead of the dashboard, unless they were heading somewhere specific like an invite. A new Google or Apple account usually has no username yet, so the username step (`needsUsernameSetup` from `GET /api/app/me`) still comes first, as on the site.
 
-Attribution trouble never fails the call (it's logged on the server), because analytics must never block a sign-in.
+Attribution and Apple trouble never fail the call (they're logged on the server), because nothing after the sign-in itself may block it.
+
+An Apple account's email can be an Apple "Hide My Email" address (`...@privaterelay.appleid.com`). It's real: Apple forwards mail sent to it. Don't suggest a username from it or show its first half as a name.
 
 Errors: 400 `validation` (`That request wasn't in the format we expected.` when the body isn't a JSON object or a field isn't a string), 401, 500.
 
@@ -799,6 +809,8 @@ Errors: 400 `validation` (missing `visitorId`), 429 `rate_limited` (`Too many tr
 ### DELETE /api/app/account
 
 Bearer. Permanently deletes the caller's account and all their data: completions, bookmarks, badges, profile and the sign-in itself (`deleteAccountData`, the same function as the website's Settings "Delete account"). It can't be undone, so confirm first. Afterwards every session for the account is invalid; sign out locally.
+
+An account that signed in with Apple first has its Apple tokens revoked with Apple's REST endpoint (`revokeAppleSignIn` in `src/lib/app/apple-sign-in.ts`), as App Store rule 5.1.1(v) requires, using the refresh tokens kept at sign-in (the website's, and the app's from `appleAuthorizationCode`). The app sends nothing extra for it. Apple trouble is logged and never stops the deletion.
 
 Response 200:
 

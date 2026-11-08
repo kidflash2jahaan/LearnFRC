@@ -287,6 +287,30 @@ final class SupabaseService: Sendable {
         }
     }
 
+    /// Sign in with Apple, natively: the ID token from Apple's credential and the raw nonce
+    /// whose SHA-256 went into the Apple request. Supabase checks the token against the nonce,
+    /// finds or makes the account, stores the session in the Keychain and emits `.signedIn`.
+    func signInWithApple(idToken: String, nonce: String) async throws -> Session {
+        do {
+            return try await client.auth.signInWithIdToken(
+                credentials: OpenIDConnectCredentials(provider: .apple, idToken: idToken, nonce: nonce)
+            )
+        } catch {
+            if case .api(let message, let code, _, _)? = error as? AuthError,
+               code == .providerDisabled || message.localizedCaseInsensitiveContains("not enabled") {
+                // The site's sentence for a provider switched off in Supabase.
+                throw APIError.validation("Apple sign-in isn't set up yet, use email for now.")
+            }
+            switch APIError.from(error) {
+            case .network: throw APIError.network
+            case .rateLimited(let retryAfter): throw APIError.rateLimited(retryAfter: retryAfter)
+            default:
+                Log.auth.error("Apple sign-in didn't finish: \(String(describing: error), privacy: .public)")
+                throw APIError.validation("Couldn't finish signing in with Apple. Try again, or use email instead.")
+            }
+        }
+    }
+
     /// Signs this device out (the website's sessions are separate and stay signed in).
     func signOut() async {
         do {

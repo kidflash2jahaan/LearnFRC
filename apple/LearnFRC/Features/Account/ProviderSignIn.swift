@@ -1,21 +1,31 @@
 import AuthenticationServices
+import CryptoKit
+import Security
 import SwiftUI
 
 /// A way to sign in that isn't an email and a password.
 ///
-/// Google today, the same button and words as the site's (`GoogleSignInButton` in
-/// `src/components/auth/google-button.tsx`). Sign in with Apple joins it here before the App
-/// Store (rule 4.8: an app that offers Google sign-in has to offer Apple's too); it needs a
-/// case, its words and mark, and an `AccountStore` call, and `ProviderSignInButtons` stacks it
-/// under Google with no other change.
+/// Google, the same button and words as the site's (`GoogleSignInButton` in
+/// `src/components/auth/google-button.tsx`), and Sign in with Apple, Apple's own button (the
+/// site's `AppleSignInButton`, `src/components/auth/apple-button.tsx`). Apple is built but
+/// only offered once `AppConfig.isAppleSignInEnabled` is on, which waits for the paid
+/// developer team (docs/ARCHITECTURE.md 6.1).
 enum SignInProvider: Hashable, Sendable, CaseIterable, Identifiable {
+    case apple
     case google
 
     var id: Self { self }
 
-    /// The button's words at rest.
+    /// The providers on the sheets, in order. Apple goes first, the same size as Google:
+    /// Apple's guidelines ask for Sign in with Apple to be at least as prominent as any other.
+    static var offered: [SignInProvider] {
+        AppConfig.isAppleSignInEnabled ? [.apple, .google] : [.google]
+    }
+
+    /// The button's words at rest (Apple's button draws its own, in these words).
     var title: String {
         switch self {
+        case .apple: "Continue with Apple"
         case .google: "Continue with Google"
         }
     }
@@ -23,6 +33,7 @@ enum SignInProvider: Hashable, Sendable, CaseIterable, Identifiable {
     /// While the provider's sheet is opening or up (the site's busy label).
     var openingTitle: String {
         switch self {
+        case .apple: "Opening Apple"
         case .google: "Opening Google"
         }
     }
@@ -32,33 +43,44 @@ enum SignInProvider: Hashable, Sendable, CaseIterable, Identifiable {
 /// under them ("or write it in"), in the site's order (`auth-form.tsx`): the error line, the
 /// providers, the rule, then the fields.
 ///
-/// A tap opens the provider's page in the system web sign-in sheet, anchored to this window.
-/// Closing that sheet is a choice, so nothing is shown; any other failure goes to the form's
-/// error line as one plain sentence. Once the account is in, the haptic and the VoiceOver
-/// announcement happen here and `onSignedIn` runs; the username gate or the profile setup
-/// step follow on their own, exactly as after an email sign-in.
+/// Google opens its page in the system web sign-in sheet, anchored to this window. Apple is
+/// Apple's own `SignInWithAppleButton` and system sheet (Face ID, Touch ID or the Apple ID
+/// password), with a fresh nonce for each attempt. Closing either sheet is a choice, so
+/// nothing is shown; any other failure goes to the form's error line as one plain sentence.
+/// Once the account is in, the haptic and the VoiceOver announcement happen here and
+/// `onSignedIn` runs; the username gate or the profile setup step follow on their own,
+/// exactly as after an email sign-in.
 ///
 ///     ProviderSignInButtons(isWorking: $isUsingProvider, error: $error) { dismiss() }
 ///     ProviderSignInButtons(isWorking: $isUsingProvider, error: $error, referrer: "kai_cad", via: "team-invite") {}
 struct ProviderSignInButtons: View {
     @Environment(AccountStore.self) private var account
     @Environment(\.webAuthenticationSession) private var webAuthenticationSession
+    @Environment(\.colorScheme) private var colorScheme
 
     /// True from the tap until the account is in (or the attempt ends): the form beside it waits.
     @Binding var isWorking: Bool
     /// The form's error line. Cleared when a provider starts; one plain sentence when it fails.
     @Binding var error: String?
     /// An invite's username and share surface (the sign-up screen's `?ref=` and `?via=`), so a
-    /// new account made with Google is credited like one made with the form.
+    /// new account made with Google or Apple is credited like one made with the form.
     var referrer: String? = nil
     var via: String? = nil
+    /// Which buttons, in order. Previews pass `[.apple, .google]` to show Apple's while it's off.
+    var providers: [SignInProvider] = SignInProvider.offered
     var onSignedIn: () -> Void
 
     @State private var phase: Phase?
+    /// The raw nonce for the Apple request on screen; its SHA-256 went into the request.
+    @State private var appleNonce: String?
+
+    /// Apple's button is a fixed-height control, so it's given the Google button's height and
+    /// grows with the text the way that one does (which stops at AX3).
+    @ScaledMetric(relativeTo: .callout) private var appleButtonHeight: CGFloat = LF.Metrics.tap
 
     /// Where a provider's attempt is.
     private enum Phase: Hashable {
-        /// The web sheet is opening or up.
+        /// The provider's sheet is opening or up.
         case opening(SignInProvider)
         /// The sheet came back with the account; the session and the site's work are running.
         case finishing(SignInProvider)
@@ -67,13 +89,18 @@ struct ProviderSignInButtons: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             VStack(spacing: 12) {
-                ForEach(SignInProvider.allCases) { provider in
-                    Button { start(provider) } label: {
-                        ProviderButtonLabel(provider: provider, title: title(for: provider), showsMark: phase == nil)
+                ForEach(providers) { provider in
+                    switch provider {
+                    case .apple:
+                        appleButton
+                    case .google:
+                        Button { startGoogle() } label: {
+                            ProviderButtonLabel(provider: provider, title: title(for: provider), showsMark: phase == nil)
+                        }
+                        .buttonStyle(InkButtonStyle(.ghost, fullWidth: true))
+                        .disabled(phase != nil)
+                        .accessibilityHint(phase == nil ? "" : "Working")
                     }
-                    .buttonStyle(InkButtonStyle(.ghost, fullWidth: true))
-                    .disabled(phase != nil)
-                    .accessibilityHint(phase == nil ? "" : "Working")
                 }
             }
             OrWriteItIn()
@@ -89,8 +116,11 @@ struct ProviderSignInButtons: View {
         }
     }
 
-    private func start(_ provider: SignInProvider) {
+    // MARK: Google
+
+    private func startGoogle() {
         guard phase == nil, !isWorking else { return }
+        let provider = SignInProvider.google
         error = nil
         phase = .opening(provider)
         isWorking = true
@@ -103,29 +133,165 @@ struct ProviderSignInButtons: View {
                 isWorking = false
             }
             do {
-                let outcome: OAuthSignInOutcome
-                switch provider {
-                case .google:
-                    outcome = try await account.signInWithGoogle(ref: ref, via: via) { url in
-                        let callback = try await session.authenticate(
-                            using: url,
-                            callback: .customScheme(AppConfig.urlScheme),
-                            preferredBrowserSession: nil,
-                            additionalHeaderFields: [:]
-                        )
-                        phase = .finishing(provider)
-                        return callback
-                    }
+                let outcome = try await account.signInWithGoogle(ref: ref, via: via) { url in
+                    let callback = try await session.authenticate(
+                        using: url,
+                        callback: .customScheme(AppConfig.urlScheme),
+                        preferredBrowserSession: nil,
+                        additionalHeaderFields: [:]
+                    )
+                    phase = .finishing(provider)
+                    return callback
                 }
-                guard case .signedIn = outcome else { return }
-                Haptics.success()
-                accountAnnounce("Signed in.")
-                onSignedIn()
+                finished(outcome)
             } catch {
-                self.error = error.accountMessage
-                accountAnnounce(error.accountMessage)
+                show(error)
             }
         }
+    }
+
+    // MARK: Apple
+
+    /// Apple's own button, in the style that stands out on the page (black on paper, white at
+    /// night), Google's width and height. While the account is being opened it gives way to a
+    /// plain face of the same size that says so, since Apple's button can't change its words.
+    @ViewBuilder
+    private var appleButton: some View {
+        let height = min(appleButtonHeight, 72)
+        if case .finishing(.apple) = phase {
+            AppleFinishingFace(darkMode: colorScheme == .dark)
+                .frame(maxWidth: .infinity)
+                .frame(height: height)
+        } else {
+            SignInWithAppleButton(.continue) { request in
+                let nonce = AppleNonce.make()
+                appleNonce = nonce
+                request.requestedScopes = [.fullName, .email]
+                request.nonce = AppleNonce.sha256(nonce)
+                error = nil
+                phase = .opening(.apple)
+                isWorking = true
+            } onCompletion: { result in
+                finishApple(result)
+            }
+            .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
+            // A new identity when the style changes, so the button redraws in it.
+            .id(colorScheme)
+            .frame(maxWidth: .infinity)
+            .frame(height: height)
+            .disabled(phase != nil)
+            .accessibilityHint(phase == nil ? "" : "Working")
+        }
+    }
+
+    private func finishApple(_ result: Result<ASAuthorization, any Error>) {
+        let nonce = appleNonce
+        appleNonce = nil
+        switch result {
+        case .failure(let failure):
+            phase = nil
+            isWorking = false
+            // Cancel on Apple's sheet is a choice: nothing to show.
+            if let failure = failure as? ASAuthorizationError, failure.code == .canceled { return }
+            Log.auth.error("Sign in with Apple didn't start: \(String(describing: failure), privacy: .public)")
+            show(APIError.validation("Couldn't start Apple sign-in. Use email instead."))
+        case .success(let authorization):
+            guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential,
+                  let tokenData = credential.identityToken,
+                  let idToken = String(data: tokenData, encoding: .utf8),
+                  let nonce else {
+                phase = nil
+                isWorking = false
+                show(APIError.validation("Couldn't finish signing in with Apple. Try again, or use email instead."))
+                return
+            }
+            let apple = AppleSignInCredential(
+                idToken: idToken,
+                nonce: nonce,
+                authorizationCode: credential.authorizationCode.flatMap { String(data: $0, encoding: .utf8) },
+                fullName: AppleNonce.displayName(credential.fullName)
+            )
+            phase = .finishing(.apple)
+            let ref = referrer
+            let via = via
+            Task {
+                defer {
+                    phase = nil
+                    isWorking = false
+                }
+                do {
+                    finished(try await account.signInWithApple(apple, ref: ref, via: via))
+                } catch {
+                    show(error)
+                }
+            }
+        }
+    }
+
+    // MARK: Both
+
+    private func finished(_ outcome: OAuthSignInOutcome) {
+        guard case .signedIn = outcome else { return }
+        Haptics.success()
+        accountAnnounce("Signed in.")
+        onSignedIn()
+    }
+
+    private func show(_ failure: any Error) {
+        error = failure.accountMessage
+        accountAnnounce(failure.accountMessage)
+    }
+}
+
+/// What Apple's button turns into while the account is being opened: the same black (white at
+/// night) face and size, with the site's words for that moment. Not a button.
+private struct AppleFinishingFace: View {
+    let darkMode: Bool
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: 8, style: .continuous)
+            .fill(darkMode ? Color.white : Color.black)
+            .overlay {
+                Text("Signing you in")
+                    .font(.system(.callout, weight: .semibold))
+                    .foregroundStyle(darkMode ? Color.black : Color.white)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityAddTraits(.updatesFrequently)
+    }
+}
+
+/// The pieces of Sign in with Apple that aren't views: the nonce, and the name Apple sends.
+private nonisolated enum AppleNonce {
+    /// 64 characters, so each random byte maps onto one evenly.
+    private static let charset = Array("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-_")
+
+    /// 32 characters from the system's secure random source, sent to Supabase as is.
+    static func make(length: Int = 32) -> String {
+        var bytes = [UInt8](repeating: 0, count: length)
+        if SecRandomCopyBytes(kSecRandomDefault, length, &bytes) != errSecSuccess {
+            // Practically never; the system generator is still a good source.
+            var generator = SystemRandomNumberGenerator()
+            bytes = bytes.map { _ in UInt8.random(in: .min ... .max, using: &generator) }
+        }
+        return String(bytes.map { charset[Int($0) % charset.count] })
+    }
+
+    /// The SHA-256 of the nonce in lowercase hex, which goes in Apple's request (Apple puts it
+    /// in the ID token, and Supabase checks it against the raw nonce).
+    static func sha256(_ nonce: String) -> String {
+        SHA256.hash(data: Data(nonce.utf8)).map { String(format: "%02x", $0) }.joined()
+    }
+
+    /// The person's name as Apple sent it, or nil. Apple sends it only on the first sign-in
+    /// to LearnFRC, and only if they let it share the name.
+    static func displayName(_ components: PersonNameComponents?) -> String? {
+        guard let components else { return nil }
+        let name = PersonNameComponentsFormatter.localizedString(from: components, style: .default)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return name.isEmpty ? nil : name
     }
 }
 
@@ -144,6 +310,8 @@ private struct ProviderButtonLabel: View {
             if showsMark {
                 switch provider {
                 case .google: GoogleMark().frame(width: markSize, height: markSize)
+                // Apple's button draws its own logo; this face is only Google's.
+                case .apple: EmptyView()
                 }
             }
             Text(title)
@@ -408,6 +576,26 @@ private nonisolated enum SVGPathData {
         .appEnvironment(.preview(signedIn: false))
         .environment(\.colorScheme, .dark)
         .environment(\.dynamicTypeSize, .accessibility5)
+}
+
+#Preview("Providers with Apple, iPhone", traits: .fixedLayout(width: 393, height: 300)) {
+    @Previewable @State var working = false
+    @Previewable @State var error: String?
+    ProviderSignInButtons(isWorking: $working, error: $error, providers: [.apple, .google]) {}
+        .padding(22)
+        .paperBackground()
+        .appEnvironment(.preview(signedIn: false))
+}
+
+#Preview("Providers with Apple, night, AX3", traits: .fixedLayout(width: 393, height: 420)) {
+    @Previewable @State var working = false
+    @Previewable @State var error: String?
+    ProviderSignInButtons(isWorking: $working, error: $error, providers: [.apple, .google]) {}
+        .padding(22)
+        .paperBackground()
+        .appEnvironment(.preview(signedIn: false))
+        .environment(\.colorScheme, .dark)
+        .environment(\.dynamicTypeSize, .accessibility3)
 }
 
 #Preview("Google mark", traits: .fixedLayout(width: 240, height: 240)) {

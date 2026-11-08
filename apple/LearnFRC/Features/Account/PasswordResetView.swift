@@ -19,8 +19,11 @@ struct PasswordResetView: View {
     private let snags: [(slug: String, text: String)] = [
         ("not arrived", "Mail is queued, not instant. Give it a couple of minutes, then search your inbox for LearnFRC rather than scrolling, because a new message doesn't always land at the top."),
         ("expired", "Links last an hour and open once. If you asked twice, only the newest one works. Come back here and send another, because the old one won't open again."),
-        // The site's words for the third snag (`src/app/forgot-password/page.tsx`).
-        ("google", "Then there's no password on the account to reset and no email is coming. Use Continue with Google on the sign-in sheet and you're in."),
+        // The site's words for the third snag (`src/app/forgot-password/page.tsx`), naming
+        // Apple too once Sign in with Apple is on.
+        AppConfig.isAppleSignInEnabled
+            ? ("google or apple", "Then there's no password on the account to reset and no email is coming. Use the Google or Apple button on the sign-in sheet and you're in.")
+            : ("google", "Then there's no password on the account to reset and no email is coming. Use Continue with Google on the sign-in sheet and you're in."),
     ]
 
     init(email: String = "", onBackToSignIn: (() -> Void)? = nil) {
