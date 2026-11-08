@@ -9,6 +9,7 @@ import {
 } from "@/lib/queries";
 import { clampPct } from "@/lib/utils";
 import type { TeamMemberProgress } from "@/lib/types";
+import { blockedSetFor, withoutBlockedIds } from "@/lib/app/blocks";
 
 /**
  * Everything the team sheet shows, loaded once. Shared by the website's /teams
@@ -19,6 +20,11 @@ import type { TeamMemberProgress } from "@/lib/types";
  * underneath never select `full_name`, and nothing here adds it. The viewer
  * must be a member of `teamNumber` (both callers pass the signed-in user's own
  * team number from their own profile).
+ *
+ * BLOCKS: anyone the viewer has blocked (src/lib/app/blocks.ts) is left off
+ * the sheet entirely, roster and coverage alike, so every figure on it is
+ * worked out from the members the viewer can see. `hiddenMembers` says how
+ * many were left off, so the page can say so rather than miscount.
  */
 export type TeamSheet = {
   teamNumber: number;
@@ -41,16 +47,20 @@ export type TeamSheet = {
   claimedSubteams: number;
   /** Distinct lessons finished by anyone on the team (each lesson once). */
   lessonsCovered: number;
+  /** Teammates the viewer has blocked, left off this sheet. */
+  hiddenMembers: number;
 };
 
 export async function loadTeamSheet(
   teamNumber: number,
   viewerId: string
 ): Promise<TeamSheet> {
-  const [{ totalLessons, members }, referralCount] = await Promise.all([
+  const [{ totalLessons, members: everyone }, referralCount, blocked] = await Promise.all([
     getTeamByNumber(teamNumber),
     getReferralCount(viewerId),
+    blockedSetFor(viewerId),
   ]);
+  const members = withoutBlockedIds(everyone, blocked, (m) => m.userId);
   const ids = members.map((m) => m.userId);
   // Departments ARE subteams, so this is the one team view a member can act on.
   // The coverage query never opens the profiles table at all.
@@ -84,5 +94,6 @@ export async function loadTeamSheet(
     avgPct,
     claimedSubteams,
     lessonsCovered,
+    hiddenMembers: everyone.length - members.length,
   };
 }

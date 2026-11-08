@@ -5,6 +5,11 @@ import { ShareButton } from "@/components/profile/share-button";
 import { Ink } from "@/components/motion/primitives";
 import { getPublicRecord } from "@/lib/app/public-profile";
 import { levelForXp, tierFor } from "@/lib/app/levels";
+import { createClient } from "@/lib/supabase/server";
+import { hasBlocked } from "@/lib/app/blocks";
+import { REPORT_REASONS } from "@/lib/app/reports";
+import { ReportControl } from "@/components/safety/report-control";
+import { BlockButton, UnblockButton } from "@/components/safety/block-button";
 import { RankStamp } from "./_trophy-panel";
 
 /**
@@ -47,6 +52,23 @@ export async function generateMetadata({
   };
 }
 
+/**
+ * Who is looking, verified with the auth server, or null. Only the id is
+ * needed (to offer report and block, and to honour a block), so this skips
+ * getSession's profile and role reads on a page strangers mostly open.
+ */
+async function viewerOf() {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    return user ?? null;
+  } catch {
+    return null;
+  }
+}
+
 const ROLE_LABEL: Record<string, string> = {
   student: "Student",
   mentor: "Mentor",
@@ -66,12 +88,19 @@ export default async function PublicProfilePage({
   // visitor's client IS the anon role, which can't read `profiles`, so this
   // page has to read server-side to stay public and indexable. See
   // src/lib/app/public-profile.ts.
-  const record = await getPublicRecord(username);
+  const [record, viewer] = await Promise.all([getPublicRecord(username), viewerOf()]);
   if (!record) notFound();
 
   const p = record.profile;
   // Public profile: identify by username only; real names are never public.
   const displayName = p.username || username;
+
+  // Report and block (src/lib/app/reports.ts, blocks.ts). Signed in and not
+  // your own page: the two controls at the foot. Blocked: the record is not
+  // drawn at all, only the way to undo it.
+  const isOwn = !!viewer && viewer.id === p.id;
+  const blocked = !!viewer && !isOwn && (await hasBlocked(viewer.id, p.id));
+  if (blocked) return <BlockedRecord handle={displayName} />;
   const level = levelForXp(p.xp);
   const xpIntoLevel = p.xp % 100;
   const xpToNext = 100 - xpIntoLevel;
@@ -234,6 +263,81 @@ export default async function PublicProfilePage({
           . No account is needed to read them.
         </p>
       </section>
+
+      {/* ===================== REPORT OR BLOCK =====================
+          Last on the sheet and quiet on purpose: it is for the rare visit
+          that needs it, and a stranger reading somebody's record should not
+          have to read past it first. */}
+      {!isOwn && (
+        <section aria-labelledby="safety-h" className="nb-wrap pb-[clamp(2.4rem,5vw,3.6rem)]">
+          <div className="border-t border-dashed border-rule pt-[clamp(1.2rem,2.6vw,1.8rem)]">
+            <h2 id="safety-h" className="nb-slug">
+              something wrong with this profile?
+            </h2>
+            {viewer ? (
+              <div className="mt-3 flex flex-wrap items-start gap-3">
+                <ReportControl
+                  reasons={REPORT_REASONS}
+                  username={displayName}
+                  surface="profile"
+                  label={`Report @${displayName}`}
+                  what="this profile"
+                />
+                <BlockButton username={displayName} />
+              </div>
+            ) : (
+              <p className="mt-2 max-w-[56ch] text-[0.95rem] leading-snug text-graphite">
+                <Link href={`/login?next=/u/${displayName}`} className="nb-link">
+                  Sign in
+                </Link>{" "}
+                to report it or to block @{displayName}. Every report is read
+                within 24 hours.
+              </p>
+            )}
+          </div>
+        </section>
+      )}
     </>
+  );
+}
+
+/**
+ * What someone who blocked this account sees at its address: whose page it
+ * is, that it is hidden from them, and the two things they might still want
+ * to do. The handle is printed because they typed or followed it; nothing
+ * else of the record is.
+ */
+function BlockedRecord({ handle }: { handle: string }) {
+  return (
+    <section className="nb-wrap pb-[clamp(3rem,6vw,5rem)] pt-[clamp(2.2rem,5vw,4rem)]">
+      <div className="nb-box nb-tilt-2 mx-auto max-w-[44rem] p-[clamp(1.3rem,3vw,2.2rem)]">
+        <span className="nb-tape -top-3 left-[18%] rotate-[-3.4deg]" aria-hidden="true" />
+        <p className="nb-slug">learnfrc / blocked</p>
+        <h1 className="mt-3 text-[clamp(1.8rem,1.2rem+2vw,2.6rem)]">
+          You blocked @{handle}.
+        </h1>
+        <p className="nb-lede mt-4">
+          Their profile, their rows on the leaderboards and their row on your
+          team sheet are hidden from you. They aren&rsquo;t told.
+        </p>
+        <div className="mt-6 flex flex-wrap items-start gap-3">
+          <UnblockButton username={handle} className="nb-btn nb-btn-sm" />
+          <ReportControl
+            reasons={REPORT_REASONS}
+            username={handle}
+            surface="profile"
+            label={`Report @${handle}`}
+            what="this profile"
+          />
+        </div>
+        <p className="nb-hint mt-5">
+          Everyone you&rsquo;ve blocked is listed in{" "}
+          <Link href="/settings#blocked" className="nb-link">
+            Settings
+          </Link>
+          .
+        </p>
+      </div>
+    </section>
   );
 }

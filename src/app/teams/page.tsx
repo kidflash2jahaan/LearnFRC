@@ -111,11 +111,13 @@ async function renderTeam(
     avgPct,
     claimedSubteams: claimedCount,
     lessonsCovered: distinctDone,
+    hiddenMembers,
   } = await loadTeamSheet(teamNumber, uid);
 
   const rosterMembers: RosterMember[] = members.map((m) => ({
     userId: m.userId,
     name: m.name,
+    username: m.username,
     avatarUrl: m.avatarUrl,
     xp: m.xp,
     completed: m.completed,
@@ -330,9 +332,19 @@ async function renderTeam(
                 : "Your own row is washed blue and barred in the margin, so you can find yourself on it even printed in greyscale."}
             </p>
           </div>
-          <p className="nb-slug shrink-0">
-            {pluralize(members.length, "member")}
-          </p>
+          <div className="shrink-0 text-right">
+            <p className="nb-slug">{pluralize(members.length, "member")}</p>
+            {/* Blocked teammates are left off the whole sheet
+                (src/lib/app/team.ts), so the counts above add up to the rows
+                below. This says so rather than letting it look like a miscount. */}
+            {hiddenMembers > 0 && (
+              <p className="nb-slug mt-1">
+                {hiddenMembers === 1
+                  ? "plus 1 you blocked, not shown"
+                  : `plus ${hiddenMembers} you blocked, not shown`}
+              </p>
+            )}
+          </div>
         </div>
 
         {members.length === 0 ? (

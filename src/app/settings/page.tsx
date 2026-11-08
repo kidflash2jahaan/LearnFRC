@@ -7,6 +7,8 @@ import { SettingsForm } from "@/components/settings/settings-form";
 import { PerfModeCard } from "@/components/perf-mode";
 import { EmailPrefsCard } from "@/components/settings/email-prefs-card";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { listBlocks } from "@/lib/app/blocks";
+import { BlockedAccountsCard } from "@/components/settings/blocked-accounts-card";
 import { IdentityCard } from "./_identity-card";
 
 export const metadata = {
@@ -56,6 +58,11 @@ export default async function SettingsPage() {
     .eq("id", user.id)
     .maybeSingle();
   const emailOptIn = emailRow?.email_opt_in === true;
+
+  // Everyone this member has blocked (src/lib/app/blocks.ts). A read error
+  // shows an empty list rather than taking Settings down with it.
+  const blockList = await listBlocks(user);
+  const blocks = blockList.ok ? blockList.blocks : [];
 
   const displayName =
     profile?.full_name || profile?.username || user.email || "Your account";
@@ -138,6 +145,12 @@ export default async function SettingsPage() {
           Like the motion card, it draws its own card and heading. */}
       <div id="email" className="mt-5">
         <EmailPrefsCard initialOn={emailOptIn} />
+      </div>
+
+      {/* ---- blocked ----------------------------------------------------
+          Same card language again. Undo for every block lives here. */}
+      <div id="blocked" className="mt-5 scroll-mt-24">
+        <BlockedAccountsCard blocks={blocks} />
       </div>
 
       {/* ---- session ----------------------------------------------------- */}

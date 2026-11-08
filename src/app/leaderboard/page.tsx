@@ -14,6 +14,7 @@ import {
   type WeeklyEntry,
 } from "@/lib/queries";
 import { getSession } from "@/lib/auth";
+import { blockedSetFor, withoutBlockedIds } from "@/lib/app/blocks";
 import type { Profile } from "@/lib/types";
 import { ChampionPanel } from "./_champion-panel";
 
@@ -100,9 +101,21 @@ export default async function LeaderboardPage() {
     ]);
 
   const uid = user?.id ?? null;
-  const referralCount = uid ? await getReferralCount(uid) : 0;
-  const allTimeEntries = profiles.map((p, i) => toEntry(p, i + 1, uid));
-  const weeklyEntries = weekly.map((p, i) => toWeeklyEntry(p, i + 1, uid));
+  const [referralCount, blocked] = await Promise.all([
+    uid ? getReferralCount(uid) : Promise.resolve(0),
+    blockedSetFor(uid),
+  ]);
+  // Ranked first, then anyone the viewer blocked is taken out
+  // (src/lib/app/blocks.ts), so everyone else keeps the rank they earned and a
+  // block never moves anybody up the board.
+  const allTimeRanked = profiles.map((p, i) => toEntry(p, i + 1, uid));
+  const weeklyRanked = weekly.map((p, i) => toWeeklyEntry(p, i + 1, uid));
+  const allTimeEntries = withoutBlockedIds(allTimeRanked, blocked, (e) => e.id);
+  const weeklyEntries = withoutBlockedIds(weeklyRanked, blocked, (e) => e.id);
+  const hiddenCount = Math.max(
+    allTimeRanked.length - allTimeEntries.length,
+    weeklyRanked.length - weeklyEntries.length
+  );
   // Site-wide totals across all learners, so the band matches the admin panel.
   const totalXp = xpTotals.totalXp;
 
@@ -239,6 +252,13 @@ export default async function LeaderboardPage() {
                 ever earned, and the team standing. Your own row is washed blue
                 and barred in the margin wherever you land.
               </p>
+              {hiddenCount > 0 && (
+                <p className="nb-slug mt-2">
+                  {hiddenCount === 1
+                    ? "1 account you blocked is left off, so a rank can skip a number"
+                    : `${hiddenCount} accounts you blocked are left off, so a rank can skip a number`}
+                </p>
+              )}
             </div>
             <p className="nb-pen max-w-[20ch] rotate-[1.4deg] min-[900px]:text-right">
               the weekly one is the winnable one

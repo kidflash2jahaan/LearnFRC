@@ -8,6 +8,7 @@ import { getRetentionStats } from "@/lib/retention";
 import { getFunnelStats } from "@/lib/funnel";
 import { toIso } from "@/lib/app/format";
 import { NOT_ADMIN, requireSiteRole, type StaffRole } from "@/lib/app/admin-access";
+import { openReportCount } from "@/lib/app/admin-reports";
 import type { AppUser, Result } from "@/lib/app/result";
 
 /**
@@ -42,6 +43,8 @@ export type AdminSummary = {
   pendingApplications: number | null;
   pendingEdits: number;
   pendingSubmissions: number;
+  /** Member reports waiting on a person (/admin/reports). Answered within 24 hours. */
+  openReports: number;
 };
 
 export type AdminDashboard = {
@@ -56,6 +59,7 @@ export type AdminDashboard = {
     pendingApplications: number | null;
     pendingEdits: number;
     pendingSubmissions: number;
+    openReports: number;
   };
   stamps: { key: "visitors" | "pageViews" | "learners" | "completions"; value: number; label: string }[];
   notes: { traffic: { slug: string; text: string } | null; coverage: string | null };
@@ -163,13 +167,14 @@ async function pendingCount(table: "content_edits" | "content_submissions"): Pro
 }
 
 async function readNow(role: StaffRole) {
-  const [feedback, pendingEdits, pendingSubmissions, pendingApplications] = await Promise.all([
+  const [feedback, pendingEdits, pendingSubmissions, pendingApplications, openReports] = await Promise.all([
     getFeedbackCounts(),
     pendingCount("content_edits"),
     pendingCount("content_submissions"),
     // Only a super admin sees the line this feeds, so a plain admin does not
     // pay for the query at all.
     role === "superadmin" ? getPendingApplicationCount() : Promise.resolve(null),
+    openReportCount(),
   ]);
   return {
     openFeedback: feedback.openCount,
@@ -177,6 +182,7 @@ async function readNow(role: StaffRole) {
     pendingApplications,
     pendingEdits,
     pendingSubmissions,
+    openReports,
   };
 }
 

@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getPublicContributions, type PublicContribution } from "@/lib/queries";
+import { getSession } from "@/lib/auth";
+import { blockedSetFor, withoutBlockedUsernames } from "@/lib/app/blocks";
+import { REPORT_REASONS } from "@/lib/app/reports";
+import { ReportControl } from "@/components/safety/report-control";
 
 export const metadata: Metadata = {
   // The root template appends " · LearnFRC", so it is not repeated here.
@@ -10,9 +14,11 @@ export const metadata: Metadata = {
   alternates: { canonical: "/contributions" },
 };
 
-// The queue changes as people submit and as edits are reviewed; keep it fresh
-// without hitting the DB on every request.
-export const revalidate = 60;
+// Rendered per request, because what a signed-in reader sees depends on who
+// they have blocked (src/lib/app/blocks.ts): a blocked member's suggestions
+// are left off for them. The queue itself is still read from the one-minute
+// cache in getPublicContributions, so this costs a session check, not a query.
+export const dynamic = "force-dynamic";
 
 /**
  * The change log, clipped to the wall of the shop.
@@ -101,7 +107,7 @@ function Byline({ c }: { c: PublicContribution }) {
 }
 
 /** One open line: status in the gutter, the work in the wide column. */
-function OpenEntry({ c }: { c: PublicContribution }) {
+function OpenEntry({ c, canReport }: { c: PublicContribution; canReport: boolean }) {
   return (
     <li className="grid items-baseline gap-x-[clamp(1rem,3vw,2.2rem)] gap-y-2 border-b border-dashed border-rule py-[clamp(1rem,2.2vw,1.5rem)] min-[760px]:grid-cols-[minmax(0,12rem)_minmax(0,1fr)]">
       <div className="flex flex-wrap items-center gap-2">
@@ -133,6 +139,21 @@ function OpenEntry({ c }: { c: PublicContribution }) {
             </p>
           </div>
         )}
+
+        {/* Signed in and not your own: the author's words are theirs, so
+            they can be reported (src/lib/app/reports.ts). */}
+        {canReport && (
+          <div className="mt-3">
+            <ReportControl
+              reasons={REPORT_REASONS}
+              contentKind={c.kind}
+              contentId={c.id}
+              surface="contributions"
+              label="Report"
+              what={c.kind === "edit" ? "this suggestion" : "this proposal"}
+            />
+          </div>
+        )}
       </div>
     </li>
   );
@@ -159,7 +180,14 @@ function ResolvedLine({ c }: { c: PublicContribution }) {
 }
 
 export default async function ContributionsPage() {
-  const { open, resolved } = await getPublicContributions();
+  const [queue, { user, profile }] = await Promise.all([getPublicContributions(), getSession()]);
+  // Anything filed by somebody the reader blocked is left off, for them only.
+  const blocked = await blockedSetFor(user?.id);
+  const open = withoutBlockedUsernames(queue.open, blocked, (c) => c.byUsername);
+  const resolved = withoutBlockedUsernames(queue.resolved, blocked, (c) => c.byUsername);
+  const myHandle = profile?.username?.toLowerCase() ?? null;
+  const canReport = (c: PublicContribution) =>
+    !!user && (!c.byUsername || c.byUsername.toLowerCase() !== myHandle);
 
   return (
     <>
@@ -281,7 +309,7 @@ export default async function ContributionsPage() {
         ) : (
           <ul className="nb-list mt-[clamp(1.2rem,2.6vw,1.8rem)]">
             {open.map((c) => (
-              <OpenEntry key={`${c.kind}-${c.id}`} c={c} />
+              <OpenEntry key={`${c.kind}-${c.id}`} c={c} canReport={canReport(c)} />
             ))}
           </ul>
         )}
