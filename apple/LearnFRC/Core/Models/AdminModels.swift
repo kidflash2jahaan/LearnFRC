@@ -973,6 +973,52 @@ struct AdminTeamDesk: Decodable, Hashable, Sendable {
         }
     }
 
+    /// Somebody with the marketing tag, and how many people signed up through their invite
+    /// link. The tag never opens /admin; it lives in its own table on the server.
+    struct Marketer: Decodable, Hashable, Sendable, Identifiable {
+        let userId: UUID
+        let username: String?
+        let teamNumber: Int?
+        let grantedAt: Date?
+        let note: String?
+        /// Every account that signed up through their link, whenever it joined.
+        let signups: Int
+        /// The same, only accounts created after the tag was granted.
+        let signupsSinceAccepted: Int
+        /// Their invite link, nil until they pick a handle.
+        let inviteUrl: URL?
+
+        var id: UUID { userId }
+
+        init(userId: UUID, username: String?, teamNumber: Int?, grantedAt: Date?, note: String?,
+             signups: Int, signupsSinceAccepted: Int, inviteUrl: URL?) {
+            self.userId = userId
+            self.username = username
+            self.teamNumber = teamNumber
+            self.grantedAt = grantedAt
+            self.note = note
+            self.signups = signups
+            self.signupsSinceAccepted = signupsSinceAccepted
+            self.inviteUrl = inviteUrl
+        }
+
+        init(from decoder: any Decoder) throws {
+            let c = try decoder.container(keyedBy: AnyCodingKey.self)
+            self.init(
+                userId: try c.requiredUUID(forKey: AnyCodingKey("userId")),
+                username: c.nonEmptyString(AnyCodingKey("username")),
+                teamNumber: c.flexibleInt(forKey: AnyCodingKey("teamNumber")),
+                grantedAt: c.flexibleDate(forKey: AnyCodingKey("grantedAt")),
+                note: c.nonEmptyString(AnyCodingKey("note")),
+                signups: c.flexibleInt(forKey: AnyCodingKey("signups")) ?? 0,
+                signupsSinceAccepted: c.flexibleInt(forKey: AnyCodingKey("signupsSinceAccepted")) ?? 0,
+                inviteUrl: c.nonEmptyString(AnyCodingKey("inviteUrl")).flatMap(URL.init(string:))
+            )
+        }
+
+        var handle: String { username.map { "@\($0)" } ?? "this account" }
+    }
+
     /// A decided application in the log.
     struct Decided: Decodable, Hashable, Sendable, Identifiable {
         let id: UUID
@@ -1013,14 +1059,19 @@ struct AdminTeamDesk: Decodable, Hashable, Sendable {
     let grants: [Grant]
     let pending: [Application]
     let pendingTruncated: Bool
+    /// Everyone with the marketing tag, longest-standing first. Empty from an older site.
+    let marketers: [Marketer]
+    /// The admin team (`site_admins` plus the owners).
     let team: [Member]
     let decided: [Decided]
     let decidedTruncated: Bool
 
-    init(grants: [Grant], pending: [Application], pendingTruncated: Bool, team: [Member], decided: [Decided], decidedTruncated: Bool) {
+    init(grants: [Grant], pending: [Application], pendingTruncated: Bool, marketers: [Marketer] = [],
+         team: [Member], decided: [Decided], decidedTruncated: Bool) {
         self.grants = grants
         self.pending = pending
         self.pendingTruncated = pendingTruncated
+        self.marketers = marketers
         self.team = team
         self.decided = decided
         self.decidedTruncated = decidedTruncated
@@ -1035,18 +1086,19 @@ struct AdminTeamDesk: Decodable, Hashable, Sendable {
             grants: grants.isEmpty ? Self.siteGrants : grants,
             pending: pending,
             pendingTruncated: c.flexibleBool(forKey: AnyCodingKey("pendingTruncated")) ?? (pending.count == 60),
+            marketers: c.lossyArray(Marketer.self, forKey: AnyCodingKey("marketers")),
             team: c.lossyArray(Member.self, forKey: AnyCodingKey("team")),
             decided: decided,
             decidedTruncated: c.flexibleBool(forKey: AnyCodingKey("decidedTruncated")) ?? (decided.count == 30)
         )
     }
 
-    /// /admin/team's `GRANTS`, for an older payload that doesn't send them.
+    /// /admin/team's `GRANTS` (src/lib/applications.ts), for a payload that doesn't send them.
     static let siteGrants: [Grant] = [
-        Grant(label: "The numbers", hint: "every figure on /admin, read off the database"),
-        Grant(label: "The feedback inbox", hint: "read what people send in, and write back"),
-        Grant(label: "Edit review", hint: "approve or turn down suggested edits"),
-        Grant(label: "The verified mark", hint: "sign off a lesson as checked"),
+        Grant(label: "A marketing tag", hint: "on their account, seen only on this page"),
+        Grant(label: "The welcome email", hint: "the trailer, their invite link, the brand kit and the rules"),
+        Grant(label: "A signup count", hint: "people who join through their invite link, shown here"),
+        Grant(label: "No admin access", hint: "no /admin, no site numbers, no feedback inbox"),
     ]
 
     /// After a decision: the application leaves the waiting list and heads the log.
@@ -1057,29 +1109,40 @@ struct AdminTeamDesk: Decodable, Hashable, Sendable {
                             statusWord: decision == .accept ? "accepted" : "turned down",
                             reviewedAt: date, createdAt: app.createdAt, reviewNote: note)
         return AdminTeamDesk(grants: grants, pending: pending.filter { $0.id != id }, pendingTruncated: pendingTruncated,
-                             team: team, decided: Array(([entry] + decided).prefix(30)), decidedTruncated: decidedTruncated)
+                             marketers: marketers, team: team,
+                             decided: Array(([entry] + decided).prefix(30)), decidedTruncated: decidedTruncated)
     }
 
     /// After a role change.
     func setting(_ userID: UUID, to role: SiteRole) -> AdminTeamDesk {
-        AdminTeamDesk(grants: grants, pending: pending, pendingTruncated: pendingTruncated,
+        AdminTeamDesk(grants: grants, pending: pending, pendingTruncated: pendingTruncated, marketers: marketers,
                       team: team.map { $0.userId == userID ? $0.with(role: role) : $0 },
                       decided: decided, decidedTruncated: decidedTruncated)
     }
 
-    /// After a removal.
+    /// After a removal from the admin team.
     func removing(_ userID: UUID) -> AdminTeamDesk {
-        AdminTeamDesk(grants: grants, pending: pending, pendingTruncated: pendingTruncated,
+        AdminTeamDesk(grants: grants, pending: pending, pendingTruncated: pendingTruncated, marketers: marketers,
                       team: team.filter { $0.userId != userID }, decided: decided, decidedTruncated: decidedTruncated)
+    }
+
+    /// After the marketing tag comes off somebody.
+    func removingMarketer(_ userID: UUID) -> AdminTeamDesk {
+        AdminTeamDesk(grants: grants, pending: pending, pendingTruncated: pendingTruncated,
+                      marketers: marketers.filter { $0.userId != userID },
+                      team: team, decided: decided, decidedTruncated: decidedTruncated)
     }
 }
 
 // MARK: - Apply
 
-/// `GET /api/app/apply`: where this account stands on /apply.
+/// `GET /api/app/apply`: where this account stands on /apply, which takes applications for the
+/// marketing role only.
 struct AdminApplyState: Decodable, Hashable, Sendable {
     enum Mode: String, Hashable, Sendable {
         case onTheTeam = "on-the-team"
+        /// Already has the marketing tag: their invite link and brand kit instead of a form.
+        case marketer
         case pending
         case noHandle = "no-handle"
         case again
@@ -1192,6 +1255,82 @@ struct AdminApplyState: Decodable, Hashable, Sendable {
         }
     }
 
+    /// What the marketing tag gives a marketer to work with (`marketer` mode only).
+    struct MarketerKit: Decodable, Hashable, Sendable {
+        struct Link: Decodable, Hashable, Sendable {
+            let label: String
+            let url: URL
+
+            init(label: String, url: URL) {
+                self.label = label
+                self.url = url
+            }
+
+            init(from decoder: any Decoder) throws {
+                let c = try decoder.container(keyedBy: AnyCodingKey.self)
+                guard let url = c.nonEmptyString(AnyCodingKey("url")).flatMap(URL.init(string:)) else {
+                    throw DecodingError.dataCorrupted(.init(codingPath: c.codingPath, debugDescription: "No url"))
+                }
+                self.init(label: c.flexibleString(forKey: AnyCodingKey("label")) ?? url.absoluteString, url: url)
+            }
+        }
+
+        struct Colour: Decodable, Hashable, Sendable {
+            let name: String
+            let hex: String
+            let use: String
+
+            init(name: String, hex: String, use: String) {
+                self.name = name
+                self.hex = hex
+                self.use = use
+            }
+
+            init(from decoder: any Decoder) throws {
+                let c = try decoder.container(keyedBy: AnyCodingKey.self)
+                self.init(
+                    name: c.flexibleString(forKey: AnyCodingKey("name")) ?? "",
+                    hex: c.flexibleString(forKey: AnyCodingKey("hex")) ?? "",
+                    use: c.flexibleString(forKey: AnyCodingKey("use")) ?? ""
+                )
+            }
+        }
+
+        /// Their invite link; nil until they pick a handle.
+        let inviteUrl: URL?
+        let since: Date?
+        /// Nil until the trailer is public.
+        let trailerUrl: URL?
+        let logos: [Link]
+        let colors: [Colour]
+        let fonts: String
+        let clips: [Link]
+
+        init(inviteUrl: URL?, since: Date?, trailerUrl: URL?, logos: [Link], colors: [Colour], fonts: String, clips: [Link]) {
+            self.inviteUrl = inviteUrl
+            self.since = since
+            self.trailerUrl = trailerUrl
+            self.logos = logos
+            self.colors = colors
+            self.fonts = fonts
+            self.clips = clips
+        }
+
+        init(from decoder: any Decoder) throws {
+            let c = try decoder.container(keyedBy: AnyCodingKey.self)
+            let kit = try? c.nestedContainer(keyedBy: AnyCodingKey.self, forKey: AnyCodingKey("brandKit"))
+            self.init(
+                inviteUrl: c.nonEmptyString(AnyCodingKey("inviteUrl")).flatMap(URL.init(string:)),
+                since: c.flexibleDate(forKey: AnyCodingKey("since")),
+                trailerUrl: c.nonEmptyString(AnyCodingKey("trailerUrl")).flatMap(URL.init(string:)),
+                logos: kit?.lossyArray(Link.self, forKey: AnyCodingKey("logos")) ?? [],
+                colors: kit?.lossyArray(Colour.self, forKey: AnyCodingKey("colors")) ?? [],
+                fonts: kit?.flexibleString(forKey: AnyCodingKey("fonts")) ?? "",
+                clips: kit?.lossyArray(Link.self, forKey: AnyCodingKey("clips")) ?? []
+            )
+        }
+    }
+
     let applicationsOpen: Bool
     let mode: Mode
     let heading: Heading
@@ -1199,8 +1338,16 @@ struct AdminApplyState: Decodable, Hashable, Sendable {
     let application: Application?
     let jobs: [Job]
     let limits: Limits
+    /// Where what a marketer makes ends up, said plainly.
+    let posting: String
+    /// The rules a marketer agrees to.
+    let rules: [String]
+    /// Only in `marketer` mode.
+    let marketer: MarketerKit?
 
-    init(applicationsOpen: Bool, mode: Mode, heading: Heading, record: Record, application: Application?, jobs: [Job], limits: Limits = .site) {
+    init(applicationsOpen: Bool, mode: Mode, heading: Heading, record: Record, application: Application?, jobs: [Job],
+         limits: Limits = .site, posting: String = AdminApplyState.sitePosting, rules: [String] = AdminApplyState.siteRules,
+         marketer: MarketerKit? = nil) {
         self.applicationsOpen = applicationsOpen
         self.mode = mode
         self.heading = heading
@@ -1208,6 +1355,9 @@ struct AdminApplyState: Decodable, Hashable, Sendable {
         self.application = application
         self.jobs = jobs
         self.limits = limits
+        self.posting = posting
+        self.rules = rules
+        self.marketer = marketer
     }
 
     init(from decoder: any Decoder) throws {
@@ -1215,6 +1365,7 @@ struct AdminApplyState: Decodable, Hashable, Sendable {
         let mode = Mode(rawValue: c.flexibleString(forKey: AnyCodingKey("mode")) ?? "") ?? .new
         let heading = (try? c.decodeIfPresent(Heading.self, forKey: AnyCodingKey("heading"))) ?? Self.heads[mode] ?? Heading(title: "Apply", slug: "")
         let jobs = c.lossyArray(Job.self, forKey: AnyCodingKey("jobs"))
+        let rules = c.lossyArray(String.self, forKey: AnyCodingKey("rules"))
         self.init(
             applicationsOpen: c.flexibleBool(forKey: AnyCodingKey("applicationsOpen")) ?? false,
             mode: mode,
@@ -1222,7 +1373,10 @@ struct AdminApplyState: Decodable, Hashable, Sendable {
             record: (try? c.decodeIfPresent(Record.self, forKey: AnyCodingKey("record"))) ?? .empty,
             application: try? c.decodeIfPresent(Application.self, forKey: AnyCodingKey("application")),
             jobs: jobs.isEmpty ? Self.siteJobs : jobs,
-            limits: (try? c.decodeIfPresent(Limits.self, forKey: AnyCodingKey("limits"))) ?? .site
+            limits: (try? c.decodeIfPresent(Limits.self, forKey: AnyCodingKey("limits"))) ?? .site,
+            posting: c.nonEmptyString(AnyCodingKey("posting")) ?? Self.sitePosting,
+            rules: rules.isEmpty ? Self.siteRules : rules,
+            marketer: try? c.decodeIfPresent(MarketerKit.self, forKey: AnyCodingKey("marketer"))
         )
     }
 
@@ -1230,6 +1384,7 @@ struct AdminApplyState: Decodable, Hashable, Sendable {
     /// app draws without asking the server.
     static let heads: [Mode: Heading] = [
         .onTheTeam: Heading(title: "You’re already on the team", slug: "nothing to apply for"),
+        .marketer: Heading(title: "You’re on the marketing team", slug: "nothing to apply for"),
         .pending: Heading(title: "Your application", slug: "waiting on a decision"),
         .noHandle: Heading(title: "Pick a handle first", slug: "one step, then the three questions"),
         .again: Heading(title: "Apply again", slug: "three questions, nothing else"),
@@ -1237,12 +1392,23 @@ struct AdminApplyState: Decodable, Hashable, Sendable {
     ]
     static let signedOutHeading = Heading(title: "Applying needs an account", slug: "free, and it takes a minute")
 
-    /// /apply's `JOBS`, for a payload that leaves them out and for the signed-out page.
+    /// /apply's `JOBS` (src/lib/applications.ts), for a payload that leaves them out and for the
+    /// signed-out page.
     static let siteJobs: [Job] = [
-        Job(slug: "the feedback", text: "Every message sent through the contact form lands in one inbox. Most want a short, specific answer. Some are a real bug report and need chasing down before you can reply."),
-        Job(slug: "suggested edits", text: "Anyone with an account can rewrite the markdown of a lesson. Somebody has to read the change, check it against the source it touches, and either merge it or say plainly why not."),
-        Job(slug: "verifying lessons", text: "Lessons are drafted with AI help and checked by hand. Marking one verified means you read it against the documents it cites, found it held up, and put your account behind that."),
-        Job(slug: "the numbers", text: "The same admin page I read: signups, lessons finished, where readers arrive from, which pages get opened and which ones never do."),
+        Job(slug: "your own team", text: "Show LearnFRC to the team you’re on. Put the link in your team’s Discord or group chat, bring it up at a meeting, and point new members at it when they join."),
+        Job(slug: "other teams", text: "Share it with teams you already know, at competitions, scrimmages and outreach events, or online. Post the trailer and the clips where FRC people will see them."),
+        Job(slug: "places to post", text: "Tell me where LearnFRC should show up and doesn’t yet: a Discord server, a forum, a subreddit, a newsletter, a league’s resource page."),
+        Job(slug: "your own videos", text: "Only if you want to: make a video, a clip or a short explainer of your own and send it to me. I may post it on LearnFRC’s official YouTube, Instagram and TikTok."),
+    ]
+
+    /// /apply's `OFFICIAL_POSTING`.
+    static let sitePosting = "Anything you make comes to me, and I may post it on LearnFRC’s official YouTube, Instagram and TikTok if I choose. Sending something in doesn’t mean it goes up."
+
+    /// /apply's `MARKETING_RULES`.
+    static let siteRules: [String] = [
+        "Don’t present LearnFRC as official FIRST material, or as something FIRST runs or recommends. It’s an independent project.",
+        "Put the FIRST disclaimer on anything you post about it: “LearnFRC is an independent educational project and is not affiliated with or endorsed by FIRST®. FIRST® and FRC® are trademarks of FIRST.”",
+        "Don’t name other teams without their permission.",
     ]
 }
 

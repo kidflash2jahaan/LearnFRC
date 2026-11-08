@@ -1,12 +1,14 @@
 import SwiftUI
 
-/// learnfrc.com/apply in the app: the way in, for somebody who wants to take a piece of running
-/// the site.
+/// learnfrc.com/apply in the app: the way in, for somebody who wants to help more teams find
+/// LearnFRC. The marketing role is the only one anyone can apply for; accepting puts a
+/// marketing tag on the account and never opens the admin screens.
 ///
-/// Shaped like the site, in the order somebody actually decides in: what the job is, what it
-/// doesn't come with, whether it's for them, and only then where they stand. One section, five
-/// states (signed out, already on the team, pending, no handle yet, applying again or new), and
-/// while applications are closed the form gives way to the site's closed note.
+/// Shaped like the site, in the order somebody actually decides in: what the role is, what it
+/// doesn't come with, what happens once you're in, whether it's for them, and only then where
+/// they stand. One section, six states (signed out, on the admin team, a marketer already,
+/// pending, no handle yet, applying again or new), and while applications are closed the form
+/// gives way to the site's closed note.
 struct ApplyView: View {
     @Environment(AdminStore.self) private var injected: AdminStore?
     @Environment(AccountStore.self) private var account
@@ -26,6 +28,7 @@ struct ApplyView: View {
             FoldPages(layout.pages) {
                 header
                 work(layout)
+                onceIn
                 whoItSuits
             } trailing: {
                 standing(layout, top: layout.isFoldSplit ? 0 : 52)
@@ -67,11 +70,11 @@ struct ApplyView: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: 0) {
             AccountHeader(
-                marker: "apply / the admin team",
-                title: accountMarked("Help ", "run", " LearnFRC."),
-                lede: "One person writes the lessons here, and the same person answers everything that comes back. The second half is the part I want help with. If you’ve been on an FRC team, you can take a piece of it."
+                marker: "apply / marketing",
+                title: accountMarked("Help ", "spread", " LearnFRC."),
+                lede: "LearnFRC is free, and one person writes it. The lessons only help the teams that find them. If you’re on an FRC team, or have been, you can help more of them find it."
             )
-            MarkerText("most of it is reading what people send in")
+            MarkerText("telling your own team counts")
                 .frame(maxWidth: 300, alignment: .leading)
                 .padding(.top, 18)
                 .padding(.leading, 4)
@@ -82,8 +85,9 @@ struct ApplyView: View {
 
     private func work(_ layout: AdminLayout) -> some View {
         let jobs = admin.applyState.value?.jobs ?? AdminApplyState.siteJobs
+        let posting = admin.applyState.value?.posting ?? AdminApplyState.sitePosting
         return VStack(alignment: .leading, spacing: 0) {
-            sectionHeading("What an admin does", slug: "four jobs, and that is the list")
+            sectionHeading("What a marketer does", slug: "four things, do as much as you like")
 
             VStack(alignment: .leading, spacing: 0) {
                 ForEach(Array(jobs.enumerated()), id: \.offset) { _, job in
@@ -107,23 +111,61 @@ struct ApplyView: View {
             }
             .padding(.top, 18)
 
+            // Said plainly and on its own line: somebody sending in a video should know before
+            // they make it where it can end up, and that it might not.
+            VStack(alignment: .leading, spacing: 0) {
+                DashedRule()
+                Text(posting)
+                    .font(LF.Fonts.body(16, weight: .semibold))
+                    .foregroundStyle(LF.Palette.ink)
+                    .lineHeight(.multiple(factor: 1.5))
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 15)
+            }
+            .frame(maxWidth: 640, alignment: .leading)
+
             NoteCallout {
-                SlugText("what the job does not come with")
+                SlugText("what the role does not come with")
                 VStack(alignment: .leading, spacing: 10) {
-                    bullet("No real names. Everyone in the panel is a handle and a team number. An application adds the FRC role they picked and what they wrote in the three boxes, and that is the end of it.")
-                    bullet("No email addresses. Replies leave through the site, so you answer somebody without ever seeing where the answer goes.")
-                    bullet("No new editing rights. Reviewing an edit is not writing one. You can merge somebody else’s change and mark a lesson verified, and you can suggest an edit exactly like any other account can.")
+                    bullet("No admin access. Accepting you puts a marketing tag on your account and changes nothing else. There’s no admin panel, no site numbers and no feedback inbox.")
+                    bullet("No public name. Marketers aren’t listed anywhere on the site. Your handle shows up only on my review page, next to how many people signed up through your invite link.")
+                    bullet("No quota. Nobody counts your posts or your hours, and making videos is optional.")
                 }
                 .padding(.top, 6)
-                Text("That is deliberate, and it is not loosening later. Nobody needs a stranger’s legal name to answer a question about swerve.")
-                    .lfProse(15, lineHeight: 1.5, color: LF.Palette.graphite)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.top, 6)
             }
             .frame(maxWidth: 700, alignment: .leading)
             .padding(.top, 26)
         }
         .padding(.top, 40)
+    }
+
+    // MARK: Once you're in
+
+    private var onceIn: some View {
+        let rules = admin.applyState.value?.rules ?? AdminApplyState.siteRules
+        return VStack(alignment: .leading, spacing: 0) {
+            sectionHeading("Once you’re in", slug: nil)
+            VStack(alignment: .leading, spacing: 14) {
+                Text("You get one email. It has the trailer, your invite link, a small brand kit (the logo, the colours and the fonts) and the rules below.")
+                Text("Your invite link is the referral link every account already has: learnfrc.com/signup with your handle on the end. Everyone who signs up through it is counted, and that count is how I see what’s working.")
+                Text("When you make something, reply to that email with it. Replies come straight to me.")
+            }
+            .lfProse(16, lineHeight: 1.55, color: LF.Palette.graphite)
+            .frame(maxWidth: 640, alignment: .leading)
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(.top, 16)
+
+            SlugText("the rules")
+                .padding(.top, 22)
+            VStack(alignment: .leading, spacing: 10) {
+                ForEach(Array(rules.enumerated()), id: \.offset) { _, rule in
+                    bullet(rule)
+                }
+            }
+            .frame(maxWidth: 640, alignment: .leading)
+            .padding(.top, 10)
+        }
+        .padding(.top, 52)
     }
 
     private func jobSlug(_ text: String) -> some View {
@@ -155,8 +197,8 @@ struct ApplyView: View {
         VStack(alignment: .leading, spacing: 0) {
             sectionHeading("Who this suits", slug: nil)
             VStack(alignment: .leading, spacing: 14) {
-                Text("Somebody who has actually been on an FRC team. Student, mentor, alum, coach, it makes no difference which. The job is judging whether an answer about a gearbox or a CAN bus or a scouting app is right, and that comes from having done it, not from reading about it.")
-                Text("A few hours a month is enough, and there are quiet weeks. It is unpaid. Nothing on this site makes money, so there is nothing to pay anyone out of. What you get instead is a say in what a free curriculum tells the next rookie who finds it.")
+                Text("Anybody who is on an FRC team or has been. Student, mentor, alum, coach, any age. You don’t need followers or editing skills. If your team’s group chat would listen to you, that’s enough.")
+                Text("It is unpaid. Nothing on this site makes money, so there is nothing to pay anyone out of. What you get instead is more rookies finding a free curriculum before their first build season.")
             }
             .lfProse(16, lineHeight: 1.55, color: LF.Palette.graphite)
             .frame(maxWidth: 640, alignment: .leading)
@@ -216,12 +258,15 @@ struct ApplyView: View {
         case .onTheTeam:
             NotebookCard(tilt: .preset(1), tape: true, padding: 24) {
                 SlugText("you already have the keys")
-                cardText("This account can open the admin panel, answer the feedback readers send in, review suggested edits and mark a lesson verified. There is nothing here left to apply for.")
+                cardText("This account is on the admin team and can open the admin panel. There is nothing here left to apply for, and you can share LearnFRC with anyone you like without a tag.")
                 AdminLink(to: .dashboard) { Text("Open the admin panel") }
                     .buttonStyle(.ink)
                     .padding(.top, 22)
             }
             .frame(maxWidth: 640, alignment: .leading)
+
+        case .marketer:
+            ApplyMarketerCard(kit: state.marketer)
 
         case .pending:
             VStack(alignment: .leading, spacing: 0) {
@@ -252,7 +297,7 @@ struct ApplyView: View {
         case .noHandle:
             NotebookCard(tilt: .preset(2), tape: true, padding: 24) {
                 SlugText("one field on your settings page")
-                cardText("A handle is the only thing on an application that says who sent it. Without one, yours lands on the desk as a team number and nothing else. Pick one, then come back and the three questions are right here.")
+                cardText("A handle is the only thing on an application that says who sent it, and your invite link is built from it. Without one, yours lands on the desk as a team number and nothing else. Pick one, then come back and the three questions are right here.")
                 AccountSettingsLink { Text("Pick a handle") }
                     .buttonStyle(.ink)
                     .padding(.top, 22)
@@ -338,7 +383,7 @@ struct ApplyView: View {
     private var signedOutCard: some View {
         NotebookCard(tilt: .preset(2), tape: true, padding: 24) {
             SlugText("sign in first")
-            cardText("An application arrives as a handle and a team number, so it has to be attached to an account. Reading LearnFRC never needs one. An account is free and takes a minute.")
+            cardText("An application arrives as a handle and a team number, and your invite link is keyed on that handle, so it has to be attached to an account. Reading LearnFRC never needs one. An account is free and takes a minute.")
             Button("Sign in and apply") { authScreen = .signIn }
                 .buttonStyle(.ink)
                 .padding(.top, 22)
@@ -355,7 +400,7 @@ struct ApplyView: View {
     // MARK: Footer
 
     private var footer: some View {
-        Text("Not looking to help run it, just want to tell me something is wrong? The [contact form](https://learnfrc.com/contact) is the shorter path and needs no account at all. Every change anyone has suggested is public on the [contributions page](https://learnfrc.com/contributions).")
+        Text("Not looking to help spread it, just want to tell me something is wrong? The [contact form](https://learnfrc.com/contact) is the shorter path and needs no account at all. Every change anyone has suggested is public on the [contributions page](https://learnfrc.com/contributions).")
             .font(LF.Fonts.mono(12, relativeTo: .caption))
             .lineHeight(.multiple(factor: 1.5))
             .foregroundStyle(LF.Palette.graphite)
@@ -363,6 +408,121 @@ struct ApplyView: View {
             .frame(maxWidth: 620, alignment: .leading)
             .fixedSize(horizontal: false, vertical: true)
             .padding(.top, 56)
+    }
+}
+
+// MARK: - A marketer's card
+
+/// Where a marketer stands: their invite link (with the share sheet), the trailer and clips, the
+/// brand kit, and where to send what they make. Everything here arrives from the server
+/// (`marketer` in `GET /api/app/apply`), so it matches the card on learnfrc.com/apply.
+struct ApplyMarketerCard: View {
+    let kit: AdminApplyState.MarketerKit?
+
+    var body: some View {
+        NotebookCard(tilt: .preset(1), tape: true, padding: 24) {
+            SlugText("tagged \(AdminText.day(kit?.since) ?? "already") / your invite link")
+            if let invite = kit?.inviteUrl {
+                prose("Everyone who signs up through this link is counted. It’s your account’s own referral link, so it works anywhere you paste it.")
+                    .padding(.top, 12)
+                Text(invite.absoluteString)
+                    .font(LF.Fonts.mono(13, relativeTo: .callout))
+                    .foregroundStyle(LF.Palette.ink)
+                    .textSelection(.enabled)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 14)
+                    .accessibilityLabel(Text(verbatim: "Invite link, \(invite.absoluteString)"))
+                ShareLink(item: invite) {
+                    Label("Share the invite link", systemImage: "square.and.arrow.up")
+                }
+                .buttonStyle(.inkSmall)
+                .padding(.top, 12)
+            } else {
+                prose("Your invite link is keyed on your handle, and this account doesn’t have one yet. Pick one on your settings page and the link shows up here.")
+                    .padding(.top, 12)
+                AccountSettingsLink { Text("Pick a handle") }
+                    .buttonStyle(.ink)
+                    .padding(.top, 22)
+            }
+
+            DashedRule().padding(.top, 22)
+            SlugText("the trailer and clips").padding(.top, 14)
+            VStack(alignment: .leading, spacing: 8) {
+                if let trailer = kit?.trailerUrl {
+                    link("The trailer", trailer)
+                } else {
+                    prose("The trailer isn’t public yet. You’ll get the link the day it goes up.", color: LF.Palette.graphite)
+                }
+                ForEach(kit?.clips ?? [], id: \.self) { clip in
+                    link(clip.label, clip.url)
+                }
+            }
+            .padding(.top, 8)
+
+            if let kit, !kit.logos.isEmpty || !kit.colors.isEmpty {
+                DashedRule().padding(.top, 22)
+                SlugText("the brand kit").padding(.top, 14)
+                VStack(alignment: .leading, spacing: 8) {
+                    ForEach(kit.logos, id: \.self) { logo in
+                        link(logo.label, logo.url)
+                    }
+                }
+                .padding(.top, 8)
+                VStack(alignment: .leading, spacing: 7) {
+                    ForEach(kit.colors, id: \.self) { colour in
+                        HStack(alignment: .firstTextBaseline, spacing: 9) {
+                            Rectangle()
+                                .fill(Self.color(hex: colour.hex))
+                                .frame(width: 12, height: 12)
+                                .overlay(Rectangle().stroke(LF.Palette.ink, lineWidth: 1))
+                                .alignmentGuide(.firstTextBaseline) { $0[.bottom] - 1 }
+                                .accessibilityHidden(true)
+                            Text("\(colour.name) \(Text(colour.hex).font(LF.Fonts.mono(12.5, relativeTo: .caption)))\(Text(", \(colour.use)").foregroundStyle(LF.Palette.graphite))")
+                                .font(LF.Fonts.body(15, relativeTo: .body))
+                                .foregroundStyle(LF.Palette.ink)
+                                .textSelection(.enabled)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                }
+                .padding(.top, 14)
+                if !kit.fonts.isEmpty {
+                    FieldHint(kit.fonts)
+                        .padding(.top, 12)
+                }
+            }
+
+            DashedRule().padding(.top, 22)
+            prose("When you make something, reply to the email you got when you were accepted. It comes straight to me.")
+                .padding(.top, 14)
+        }
+        .frame(maxWidth: 640, alignment: .leading)
+    }
+
+    private func prose(_ text: String, color: Color = LF.Palette.ink) -> some View {
+        Text(text)
+            .lfProse(16, lineHeight: 1.5, color: color)
+            .frame(maxWidth: 560, alignment: .leading)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private func link(_ label: String, _ url: URL) -> some View {
+        Link(label, destination: url)
+            .font(LF.Fonts.body(15.5, weight: .semibold, relativeTo: .body))
+            .tint(LF.Palette.blue)
+            .underline()
+    }
+
+    /// `#16181B` to a colour. The swatch is the one place a colour is the content, so it's drawn
+    /// from the server's hex rather than mapped onto the app's palette.
+    static func color(hex: String) -> Color {
+        let digits = hex.trimmingCharacters(in: CharacterSet(charactersIn: "# "))
+        guard digits.count == 6, let value = UInt32(digits, radix: 16) else { return LF.Palette.paper }
+        return Color(
+            red: Double((value >> 16) & 0xFF) / 255,
+            green: Double((value >> 8) & 0xFF) / 255,
+            blue: Double(value & 0xFF) / 255
+        )
     }
 }
 
@@ -412,8 +572,8 @@ struct ApplyForm: View {
                 ApplyLongAnswer(
                     label: "Your FRC experience",
                     text: $experience,
-                    prompt: "Team number, the seasons you were around for, and what you actually worked on.",
-                    hint: "If you were on more than one team, say so. If you have been away from it for a few years, say that too.",
+                    prompt: "Your team, what you do on it, and where you already talk to other FRC people.",
+                    hint: "A team Discord, a team account, competitions you go to. If you were on more than one team, say so.",
                     lines: 5,
                     limits: state.limits,
                     disabled: isSending
@@ -421,15 +581,15 @@ struct ApplyForm: View {
                 ApplyLongAnswer(
                     label: "Why you want to help",
                     text: $why,
-                    prompt: "What you'd want to pick up first, and why this rather than something else.",
-                    hint: "A paragraph is plenty. If there's a department you'd want to keep an eye on in particular, name it.",
+                    prompt: "Who you'd show LearnFRC to first, and anything you'd want to make.",
+                    hint: "A paragraph is plenty. Making videos is optional, so say so if you wouldn't.",
                     lines: 4,
                     limits: state.limits,
                     disabled: isSending
                 )
                 VStack(alignment: .leading, spacing: 7) {
                     FieldLabel("Rough availability, optional")
-                    TextField("", text: $availability, prompt: Text("a couple of evenings a month").foregroundStyle(LF.Palette.graphite))
+                    TextField("", text: $availability, prompt: Text("a few posts a month").foregroundStyle(LF.Palette.graphite))
                         .focused($availabilityFocused)
                         .inkField(focused: availabilityFocused)
                         .disabled(isSending)
@@ -626,6 +786,14 @@ struct ApplyWithdrawForm: View {
     .adminStore(.preview(role: .member, apply: AdminPreviewData.apply(mode: .pending, open: false)))
     .appEnvironment(.preview(signedIn: true))
     .preferredColorScheme(.dark)
+}
+
+#Preview("Apply, a marketer") {
+    NavigationStack {
+        ApplyView()
+    }
+    .adminStore(.preview(role: .member, apply: AdminPreviewData.apply(mode: .marketer, open: true)))
+    .appEnvironment(.preview(signedIn: true))
 }
 
 #Preview("Apply, signed out") {

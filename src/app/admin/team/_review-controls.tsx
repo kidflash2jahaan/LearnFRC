@@ -77,7 +77,7 @@ export function ReviewControls({ id, handle }: { id: string; handle: string }) {
       toast.success(
         choice === "reject"
           ? "Turned down. The email is on its way."
-          : "Accepted. They can open /admin now."
+          : "Accepted. The welcome email is on its way."
       );
     }
   }, [state, choice]);

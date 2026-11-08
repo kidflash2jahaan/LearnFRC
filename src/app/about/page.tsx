@@ -375,13 +375,14 @@ export default async function AboutPage() {
               , without an account.
             </p>
             <p>
-              It doesn&rsquo;t have to stay one person. If you want more teams
-              to find LearnFRC, you can{" "}
+              Getting it in front of teams doesn&rsquo;t have to be one
+              person&rsquo;s job. If you&rsquo;ve been on an FRC team, you
+              can{" "}
               <Link className="nb-link" href="/apply">
-                apply to help spread the word
+                apply to help spread it
               </Link>
-              : sharing it with your team and others, posting the trailer and
-              clips, and making your own videos if you want to.
+              : showing it to your own team and other teams, posting the
+              trailer and clips, and making your own videos if you want.
             </p>
             <p>
               The code is public on{" "}

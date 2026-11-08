@@ -16,10 +16,12 @@ import {
 export const dynamic = "force-dynamic";
 
 /**
- * GET /api/app/apply: where the caller stands on /apply (on the team, pending,
- * needs a handle, applying again, or new), with the page's heading, the four
- * jobs, the record a reviewer would see and whether applications are open.
- * loadApplyState in src/lib/app/admin-apply.ts, which /apply renders from too.
+ * GET /api/app/apply: where the caller stands on /apply (on the admin team, a
+ * marketer already, pending, needs a handle, applying again, or new), with the
+ * page's heading, what a marketer does, the record a reviewer would see,
+ * whether applications are open, and for a marketer their invite link and
+ * brand kit. loadApplyState in src/lib/app/admin-apply.ts, which /apply
+ * renders from too.
  */
 export async function GET(req: Request) {
   return guarded(async () => {
@@ -35,7 +37,8 @@ export async function GET(req: Request) {
  * POST /api/app/apply { experience, why, availability? }
  *
  * Files an application through submitApplication, the function /apply's form
- * calls: closed (409) while applications are closed, a handle required, the
+ * calls: closed (409) while applications are closed, 409 for an admin or an
+ * account that is already a marketer, a handle required, the
  * same lengths, rate limits (3 a day per account, 25 per network) and the
  * one-pending rule. 201 on success.
  */

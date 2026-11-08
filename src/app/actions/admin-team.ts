@@ -4,17 +4,20 @@ import { createClient } from "@/lib/supabase/server";
 import { NOT_SUPER_ADMIN } from "@/lib/app/admin-access";
 import { decideApplication, setAdminRoleFor } from "@/lib/app/admin-team-desk";
 import { submitApplication, withdrawApplication } from "@/lib/app/admin-apply";
+import { removeMarketerFor } from "@/lib/app/admin-apply-marketing";
 
 /**
- * The website's door onto the admin team: applying to join it, and running it.
+ * The website's door onto /apply and /admin/team: applying for the marketing
+ * role, deciding applications, taking the marketing tag off, and running the
+ * admin team.
  *
  * The rules themselves (role checks, limits, the status-gated decision, the
  * grant rollback, owner and self protection, the emails and revalidation) live
- * in src/lib/app/admin-team-desk.ts and src/lib/app/admin-apply.ts, shared with
- * the app's /api/app/admin/* and /api/app/apply routes, so the two doors can't
- * drift. Each shared function re-checks the caller's site role itself: a
- * "use server" function is a public endpoint and the UI hiding a button is not
- * authorisation.
+ * in src/lib/app/admin-team-desk.ts, src/lib/app/admin-apply.ts and
+ * src/lib/app/admin-apply-marketing.ts, shared with the app's /api/app/admin/*
+ * and /api/app/apply routes, so the two doors can't drift. Each shared
+ * function re-checks the caller's site role itself: a "use server" function is
+ * a public endpoint and the UI hiding a button is not authorisation.
  */
 
 export type ApplyState = { error?: string; success?: boolean } | undefined;
@@ -83,7 +86,19 @@ export async function reviewAdminApplication(
   return result.field === "note" ? { error: result.error, field: "note" } : { error: result.error };
 }
 
-/* ── Managing the team (super admin only) ─────────────────────────── */
+/* ── Taking the marketing tag off (super admin only) ──────────────── */
+
+export async function removeMarketer(
+  _prev: ReviewState,
+  formData: FormData
+): Promise<ReviewState> {
+  const user = await sessionUser();
+  if (!user) return { error: NOT_SUPER_ADMIN };
+  const result = await removeMarketerFor(user, { userId: field(formData, "userId") });
+  return result.ok ? { success: true } : { error: result.error };
+}
+
+/* ── Managing the admin team (super admin only) ───────────────────── */
 
 export async function setAdminRole(
   _prev: ReviewState,

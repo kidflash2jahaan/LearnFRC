@@ -379,6 +379,19 @@ final class AdminStore {
         }
     }
 
+    /// Takes the marketing tag off somebody. Their account, progress and counted signups stay.
+    func removeMarketer(_ userID: UUID) async throws(AdminError) {
+        guard let api, let owner = ownerID else { throw AdminError.unauthorized }
+        do throws(AdminError) {
+            try await api.removeMarketer(userID: userID)
+            guard owner == ownerID else { throw AdminError.unauthorized }
+            if let desk = team.value { team.value = desk.removingMarketer(userID) }
+        } catch {
+            if error.isForbidden, owner == ownerID { team.locked = error.message }
+            throw error
+        }
+    }
+
     // MARK: Apply
 
     /// `GET /apply` for this account.
