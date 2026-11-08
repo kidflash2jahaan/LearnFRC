@@ -32,9 +32,14 @@ const LAUNCH = new Date("2026-06-20T00:00:00Z");
 // Bump these by hand when that section's content actually changes. They are
 // deliberately coarse: one date per group of hand-authored pages.
 const STATIC_UPDATED = new Date("2026-08-03T00:00:00Z");
-const TOOLS_UPDATED = new Date("2026-08-03T00:00:00Z");
+// Last real change to a tool page: the wire gauge fix, Oct 17. The gear ratio
+// calculator (Aug 6) is newer than the old Aug 3 stamp, so that one could not
+// stay.
+const TOOLS_UPDATED = new Date("2026-10-17T00:00:00Z");
 const PATHS_UPDATED = new Date("2026-08-03T00:00:00Z");
 const GLOSSARY_UPDATED = new Date("2026-08-03T00:00:00Z");
+/** The privacy policy and terms, rewritten for the 1.0 release. */
+const LEGAL_UPDATED = new Date("2026-11-08T00:00:00Z");
 
 /** A database timestamp, or the launch date if the row somehow has none. */
 function rowDate(ts?: string | null): Date {
@@ -79,6 +84,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { path: "/glossary", lastModified: GLOSSARY_UPDATED },
     { path: "/resources", lastModified: STATIC_UPDATED },
     { path: "/tools", lastModified: TOOLS_UPDATED },
+    { path: "/tools/frc-gear-ratio-calculator", lastModified: TOOLS_UPDATED },
     { path: "/tools/frc-budget-calculator", lastModified: TOOLS_UPDATED },
     { path: "/tools/frc-wire-gauge-calculator", lastModified: TOOLS_UPDATED },
     { path: "/tools/frc-tipping-calculator", lastModified: TOOLS_UPDATED },
@@ -97,8 +103,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // /corrections carries a real per-entry date, so its lastmod comes from the
     // newest entry in the log rather than the hand-bumped constant above.
     { path: "/corrections", lastModified: correctionsLastUpdated() },
-    { path: "/terms", lastModified: LAUNCH },
-    { path: "/privacy", lastModified: LAUNCH },
+    { path: "/terms", lastModified: LEGAL_UPDATED },
+    { path: "/privacy", lastModified: LEGAL_UPDATED },
     // The site's only reachable contact surface. /privacy, /terms and /about all
     // depend on it now that the dead mailto: links are gone.
     { path: "/contact", lastModified: STATIC_UPDATED },
