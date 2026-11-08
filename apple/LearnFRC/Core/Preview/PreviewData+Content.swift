@@ -416,8 +416,8 @@ Many teams mix both. The patterns rhyme: configure declaratively, then either se
         youtubeID: nil
     )
 
-    /// One of the two fact-checked lessons (verifiedAt set).
-    static let verifiedLessonBody = LessonBody(
+    /// A beginner programming lesson with a video and a three-question quiz.
+    static let variablesLessonBody = LessonBody(
         id: UUID(uuidString: "ae85a782-97d4-4bb7-af56-fe73906e217a")!,
         content: #"""
 Robot code has to **remember things** (a sensor reading, a motor output, whether a button is pressed) and **do math or comparisons** with them. Variables, data types, and operators are how you do both. Everything else in WPILib is built on top of these.
@@ -479,10 +479,6 @@ With just these three ideas you can already describe most of what a robot tracks
             QuizQuestion(question: "What is the result of the Java expression 5 / 2, and why?", options: ["It gives 2.5 because Java always keeps decimals", "It gives 3 after Java rounds the result up", "It gives 2 since int division truncates", "It gives 2.0 since the output stays a double"], answer: 2, explanation: "int / int performs integer division and drops the remainder, so 5 / 2 is 2; making one side a double (5.0 / 2) yields 2.5."),
             QuizQuestion(question: "Which operator checks whether two values are equal in Java?", options: ["The = symbol, which assigns a value to it", "The == symbol, which compares two values", "The => symbol, which defines a lambda body", "The word equals, used only for text objects"], answer: 1, explanation: "== is the equality comparison operator that produces a boolean, while a single = assigns a value — mixing them up is a classic beginner bug."),
         ],
-        verifiedAt: FlexibleDate.parse("2026-09-09T00:14:40.586+00:00"),
-        verifiedBy: nil,
-        verifiedNote: nil,
-        verifiedSources: nil,
         youtubeID: "Y34DRfpkhNM"
     )
 

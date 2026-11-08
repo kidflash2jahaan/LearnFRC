@@ -15,7 +15,7 @@ enum PreviewData {
 
     /// Every lesson body in the preview catalog.
     static let lessonBodies: [LessonBody] = [
-        budgetLessonBody, codeLessonBody, calloutLessonBody, codeAndTableLessonBody, verifiedLessonBody,
+        budgetLessonBody, codeLessonBody, calloutLessonBody, codeAndTableLessonBody, variablesLessonBody,
     ]
 
     /// Programming, Controls & Sensors.

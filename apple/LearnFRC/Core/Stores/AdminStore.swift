@@ -45,13 +45,6 @@ final class AdminStore {
     private(set) var feedback = Remote<AdminFeedbackPage>()
     private(set) var team = Remote<AdminTeamDesk>()
     private(set) var applyState = Remote<AdminApplyState>()
-    /// Verified marks changed from this device this session, by lesson, so the lesson footer
-    /// shows the new state straight away. `nil` inside means "removed".
-    private(set) var verifiedMarks: [UUID: VerifiedMark] = [:]
-
-    struct VerifiedMark: Hashable, Sendable {
-        let verifiedAt: Date?
-    }
 
     var isAdmin: Bool { role?.isAdmin ?? false }
     var isSuperAdmin: Bool { role?.isSuperAdmin ?? false }
@@ -127,7 +120,6 @@ final class AdminStore {
         feedback = Remote()
         team = Remote()
         applyState = Remote()
-        verifiedMarks = [:]
     }
 
     /// `GET /admin/summary`: the role and the counts. One request at a time.
@@ -177,7 +169,6 @@ final class AdminStore {
             summary = nil
             dashboard = Remote(locked: dashboard.locked ?? (dashboard.hasValue ? AdminError.adminOnly : nil))
             feedback = Remote(locked: feedback.locked ?? (feedback.hasValue ? AdminError.adminOnly : nil))
-            verifiedMarks = [:]
         }
         if !newRole.isSuperAdmin {
             team = Remote(locked: team.locked ?? (team.hasValue ? AdminError.superAdminOnly : nil))
@@ -286,25 +277,6 @@ final class AdminStore {
             return item
         } catch {
             if error.isForbidden, owner == ownerID { lostAdmin(error.message) }
-            throw error
-        }
-    }
-
-    // MARK: Verified mark
-
-    /// Puts the public verified mark on a lesson, or takes it off. Returns the new date.
-    func setVerified(lessonID: UUID, verified: Bool) async throws(AdminError) -> Date? {
-        guard let api, let owner = ownerID else { throw AdminError.unauthorized }
-        do throws(AdminError) {
-            let date = try await api.setVerified(lessonID: lessonID, verified: verified)
-            guard owner == ownerID else { throw AdminError.unauthorized }
-            verifiedMarks[lessonID] = VerifiedMark(verifiedAt: date)
-            return date
-        } catch {
-            if error.isForbidden, owner == ownerID {
-                summaryFetchedAt = nil
-                setRole(.member)
-            }
             throw error
         }
     }

@@ -279,6 +279,10 @@ struct QuizQuestion: Codable, Hashable, Sendable {
 }
 
 /// The body of a lesson: markdown, takeaways, resources and the quiz.
+///
+/// Lessons no longer show a verified mark, so the `verified_*` columns aren't read. They stay
+/// in the table because app copies from before that change still select them (API.md).
+/// A cached `lessons.json` from one of those copies still decodes: the extra keys are ignored.
 struct LessonBody: Codable, Hashable, Sendable, Identifiable {
     let id: UUID
     /// GitHub-flavored Markdown.
@@ -286,58 +290,38 @@ struct LessonBody: Codable, Hashable, Sendable, Identifiable {
     let keyTakeaways: [String]
     let resources: [SourceLink]
     let quiz: [QuizQuestion]
-    let verifiedAt: Date?
-    let verifiedBy: String?
-    let verifiedNote: String?
-    let verifiedSources: [String]?
     let youtubeID: String?
 
     init(
         id: UUID, content: String, keyTakeaways: [String] = [], resources: [SourceLink] = [],
-        quiz: [QuizQuestion] = [], verifiedAt: Date? = nil, verifiedBy: String? = nil,
-        verifiedNote: String? = nil, verifiedSources: [String]? = nil, youtubeID: String? = nil
+        quiz: [QuizQuestion] = [], youtubeID: String? = nil
     ) {
         self.id = id
         self.content = content
         self.keyTakeaways = keyTakeaways
         self.resources = resources
         self.quiz = quiz
-        self.verifiedAt = verifiedAt
-        self.verifiedBy = verifiedBy
-        self.verifiedNote = verifiedNote
-        self.verifiedSources = verifiedSources
         self.youtubeID = youtubeID
     }
 
     enum CodingKeys: String, CodingKey {
         case id, content, resources, quiz
         case keyTakeaways = "key_takeaways"
-        case verifiedAt = "verified_at"
-        case verifiedBy = "verified_by"
-        case verifiedNote = "verified_note"
-        case verifiedSources = "verified_sources"
         case youtubeID = "youtube_id"
     }
 
     init(from decoder: any Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         let youtube = c.flexibleString(forKey: .youtubeID)?.trimmingCharacters(in: .whitespaces)
-        let hasSources = c.contains(.verifiedSources) && (try? c.decodeNil(forKey: .verifiedSources)) == false
         self.init(
             id: try c.requiredUUID(forKey: .id),
             content: c.flexibleString(forKey: .content) ?? "",
             keyTakeaways: c.stringArray(forKey: .keyTakeaways),
             resources: c.lossyArray(SourceLink.self, forKey: .resources),
             quiz: c.lossyArray(QuizQuestion.self, forKey: .quiz),
-            verifiedAt: c.flexibleDate(forKey: .verifiedAt),
-            verifiedBy: c.flexibleString(forKey: .verifiedBy),
-            verifiedNote: c.flexibleString(forKey: .verifiedNote),
-            verifiedSources: hasSources ? c.stringArray(forKey: .verifiedSources) : nil,
             youtubeID: (youtube?.isEmpty ?? true) ? nil : youtube
         )
     }
-
-    var isVerified: Bool { verifiedAt != nil }
 
     /// Grades a full set of answers the way the server does: every question right.
     func passes(_ answers: [Int]) -> Bool {

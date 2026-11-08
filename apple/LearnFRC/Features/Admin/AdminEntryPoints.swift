@@ -1,99 +1,14 @@
 import SwiftUI
 
-// The small admin pieces other screens place: the lesson footer's verify control, the You
-// tab's admin box and "Help run it" row, the Settings identity card's "admin" tag, and the Go
-// menu's items. Each draws nothing unless the server has said this account holds the role, and
-// each keeps the role fresh for the signed-in account on its own (`AdminStore.sync`).
-
-// MARK: - Verify control (lesson footer)
-
-/// The admin-only verify control, where the lesson's verified mark goes (the site's
-/// `VerifyLessonIsland`). Puts the public mark on or takes it off; the lesson's own badge
-/// updates at once. Nothing at all for anyone who isn't an admin.
-struct AdminVerifyLessonControl: View {
-    let lessonID: UUID
-
-    @Environment(AdminStore.self) private var injected: AdminStore?
-    @Environment(AccountStore.self) private var account
-    @Environment(CatalogStore.self) private var catalog
-    @State private var isSaving = false
-    @State private var error: String?
-
-    private var admin: AdminStore { injected ?? .shared }
-
-    /// This session's change if there was one, else the catalog's copy of the lesson.
-    private var verifiedAt: Date? {
-        if let mark = admin.verifiedMarks[lessonID] { return mark.verifiedAt }
-        return catalog.lessonBody(lessonID)?.verifiedAt
-    }
-
-    var body: some View {
-        // A container that's always there (empty and zero-sized for everyone else), so the
-        // role check below runs before there's anything to show.
-        VStack(alignment: .leading, spacing: 0) {
-            if admin.isAdmin {
-                control
-                    .padding(.top, 12)
-            }
-        }
-        .task(id: account.userID) {
-            await admin.sync(userID: account.userID)
-        }
-    }
-
-    private var control: some View {
-        let verified = verifiedAt != nil
-        return VStack(alignment: .leading, spacing: 8) {
-            Button(isSaving ? "Saving" : (verified ? "Remove verified mark" : "Mark this lesson verified")) {
-                toggle(to: !verified)
-            }
-            .buttonStyle(verified ? InkButtonStyle(.ghost) : InkButtonStyle(.primary))
-            .disabled(isSaving)
-            .accessibilityAddTraits(.isToggle)
-            .accessibilityValue(verified ? "Verified" : "Not verified")
-            // Said next to the button: the mark is a public claim.
-            SlugText(verified ? "readers see a verified mark on this lesson" : "admin only, this puts a public verified mark on the lesson")
-                .fixedSize(horizontal: false, vertical: true)
-            if let error {
-                FieldError("Could not save: \(error)")
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private func toggle(to verified: Bool) {
-        guard !isSaving else { return }
-        isSaving = true
-        error = nil
-        Task {
-            do throws(AdminError) {
-                let date = try await admin.setVerified(lessonID: lessonID, verified: verified)
-                patchCatalog(verifiedAt: date)
-            } catch {
-                self.error = error.message
-            }
-            isSaving = false
-        }
-    }
-
-    /// Puts the new mark on the catalog's copy of the lesson, so the lesson's badge (and the
-    /// guides) show it straight away. The next catalog refresh brings the server's copy.
-    private func patchCatalog(verifiedAt date: Date?) {
-        guard let body = catalog.lessonBody(lessonID) else { return }
-        // The server records the checker's username with the mark and clears it with it.
-        let patched = LessonBody(
-            id: body.id, content: body.content, keyTakeaways: body.keyTakeaways, resources: body.resources,
-            quiz: body.quiz, verifiedAt: date, verifiedBy: date == nil ? nil : account.profile?.username,
-            verifiedNote: body.verifiedNote, verifiedSources: body.verifiedSources, youtubeID: body.youtubeID
-        )
-        catalog.apply(bodies: [patched], complete: false)
-    }
-}
+// The small admin pieces other screens place: the You tab's admin box and "Help run it" row,
+// the Settings identity card's "admin" tag, and the Go menu's items. Each draws nothing unless
+// the server has said this account holds the role, and each keeps the role fresh for the
+// signed-in account on its own (`AdminStore.sync`).
 
 // MARK: - You tab
 
-/// The You tab's "site admin" box: Admin (the numbers, the feedback inbox, the verified mark)
-/// for admins, and Admin team for super admins. Nothing for everyone else.
+/// The You tab's "site admin" box: Admin (the numbers and the feedback inbox) for admins, and
+/// Admin team for super admins. Nothing for everyone else.
 struct AdminYouSection: View {
     /// Space above the box when it shows (it draws nothing, and takes no room, otherwise).
     var topPadding: CGFloat = 36
@@ -130,7 +45,7 @@ struct AdminYouSection: View {
                 AdminLink(to: .dashboard) {
                     row(
                         title: "Admin",
-                        detail: "The numbers, the feedback inbox, the verified mark.",
+                        detail: "The numbers and the feedback inbox.",
                         badge: summary.flatMap { $0.openFeedback > 0 ? "\($0.openFeedback) open" : nil }
                     )
                 }
@@ -293,8 +208,6 @@ struct AdminMenuItems: View {
         VStack(alignment: .leading, spacing: 0) {
             AdminYouSection(topPadding: 0)
             ApplyLinkRow()
-            AdminVerifyLessonControl(lessonID: UUID())
-                .padding(.top, 24)
             HStack {
                 Text("Identity card tag").font(LF.Fonts.body(15))
                 AdminIdentityTag()

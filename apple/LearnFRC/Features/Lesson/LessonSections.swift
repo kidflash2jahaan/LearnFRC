@@ -1,7 +1,7 @@
 import SwiftUI
 
 // The blocks that follow the lesson body, in the website's order: key takeaways, the next
-// step, the verified mark, sources and corrections, and the articles clipped to the lesson.
+// step, sources and corrections, and the articles clipped to the lesson.
 
 // MARK: - Key takeaways
 
@@ -207,29 +207,6 @@ struct LessonInlineLink: View {
         #if os(macOS)
         .pointerStyle(.link)
         #endif
-    }
-}
-
-// MARK: - Verified
-
-/// The accuracy mark. Only shown once a lesson has been checked; "verified on 9 Sept 2026"
-/// is a claim a reader can weigh against a rule change.
-struct LessonVerifiedBadge: View {
-    let verifiedAt: Date
-
-    var body: some View {
-        LessonFlowLayout(spacing: 8, lineSpacing: 4) {
-            Image(systemName: "checkmark.circle")
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(LF.Palette.blue)
-                .accessibilityHidden(true)
-            SlugText("verified", color: LF.Palette.ink, weight: .bold)
-            Text("checked against primary sources on \(LessonText.verifiedDate(verifiedAt))")
-                .font(LF.Fonts.body(14.5, relativeTo: .footnote))
-                .foregroundStyle(LF.Palette.graphite)
-        }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Verified, checked against primary sources on \(LessonText.verifiedDate(verifiedAt))")
     }
 }
 

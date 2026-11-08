@@ -199,36 +199,9 @@ export type LessonContent = Pick<
   Lesson,
   "id" | "content" | "key_takeaways" | "resources" | "quiz"
 > & {
-  /** When a person last read this lesson against primary sources. */
-  verified_at: string | null;
-  /** Who did that check, by name. An unattributed check is not a check. */
-  verified_by: string | null;
-  verified_note: string | null;
-  verified_sources: string[] | null;
   /** The lesson's video on the LearnFRC YouTube channel, once it's uploaded. */
   youtube_id: string | null;
 };
-
-/**
- * How far the fact-check has got. Published rather than kept internal: the
- * whole point of the badge is that the claim can be audited, and "12 of 394"
- * is the only number that makes an individual badge meaningful.
- */
-export const getVerificationProgress = unstable_cache(
-  async () => {
-    const supabase = createPublicClient();
-    const [checked, total] = await Promise.all([
-      supabase
-        .from("lessons")
-        .select("id", { count: "exact", head: true })
-        .not("verified_at", "is", null),
-      supabase.from("lessons").select("id", { count: "exact", head: true }),
-    ]);
-    return { checked: checked.count ?? 0, total: total.count ?? 0 };
-  },
-  ["verification-progress"],
-  { revalidate: CATALOG_TTL, tags: ["catalog", "lessons"] }
-);
 
 /** One lesson video, with where it sits in the catalog. */
 export type CatalogVideo = {
@@ -287,9 +260,9 @@ export const getLessonContent = unstable_cache(
     const supabase = createPublicClient();
     const { data, error } = await supabase
       .from("lessons")
-      .select(
-        "id, content, key_takeaways, resources, quiz, verified_at, verified_by, verified_note, verified_sources, youtube_id"
-      )
+      // The verified_* columns stay in the table (installed app copies still
+      // select them) but nothing on the site reads them any more.
+      .select("id, content, key_takeaways, resources, quiz, youtube_id")
       .eq("id", lessonId)
       .maybeSingle();
     if (error) throw error;

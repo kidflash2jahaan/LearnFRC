@@ -23,7 +23,7 @@ export function isOwnerEmail(email?: string | null) {
  * role on their FRC team and is sent to the browser).
  *
  * - member: everyone.
- * - admin: can open /admin, answer feedback, review edits, verify lessons.
+ * - admin: can open /admin, answer feedback, review edits.
  * - superadmin: admin, plus accepting applications and managing the team.
  */
 export type SiteRole = "member" | "admin" | "superadmin";

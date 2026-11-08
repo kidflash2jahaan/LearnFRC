@@ -23,7 +23,7 @@ enum SiteRole: String, Codable, Hashable, Sendable {
         self = raw.flatMap { SiteRole(rawValue: $0.trimmingCharacters(in: .whitespaces).lowercased()) } ?? .member
     }
 
-    /// Opens /admin: the numbers, the feedback inbox, the verified mark.
+    /// Opens /admin: the numbers and the feedback inbox.
     var isAdmin: Bool { self != .member }
     /// Also opens /admin/team.
     var isSuperAdmin: Bool { self == .superadmin }
@@ -1244,18 +1244,6 @@ struct AdminApplyState: Decodable, Hashable, Sendable {
         Job(slug: "verifying lessons", text: "Lessons are drafted with AI help and checked by hand. Marking one verified means you read it against the documents it cites, found it held up, and put your account behind that."),
         Job(slug: "the numbers", text: "The same admin page I read: signups, lessons finished, where readers arrive from, which pages get opened and which ones never do."),
     ]
-}
-
-/// `PUT /api/app/admin/lessons/{lessonId}/verified`
-struct AdminVerifiedResult: Decodable, Hashable, Sendable {
-    let lessonId: UUID?
-    let verifiedAt: Date?
-
-    init(from decoder: any Decoder) throws {
-        let c = try decoder.container(keyedBy: AnyCodingKey.self)
-        lessonId = c.flexibleUUID(forKey: AnyCodingKey("lessonId"))
-        verifiedAt = c.flexibleDate(forKey: AnyCodingKey("verifiedAt"))
-    }
 }
 
 // MARK: - Decoding helper

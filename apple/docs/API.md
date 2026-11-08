@@ -810,7 +810,7 @@ Errors: 401, 500.
 
 ## Admin and applying (`/api/app/admin/*`, `/api/app/apply`)
 
-The website's four admin jobs (the numbers on `/admin`, the feedback inbox, the verified mark, and the super admin's desk on `/admin/team`) and the members' `/apply` page. Every route is a thin wrapper over a shared function in `src/lib/app/admin-*.ts`, and the website's `/admin`, `/admin/team` and `/apply` pages and their Server Actions call the very same functions, so the two doors check the same role, apply the same limits and print the same sentences.
+The website's three admin jobs (the numbers on `/admin`, the feedback inbox, and the super admin's desk on `/admin/team`) and the members' `/apply` page. The verified mark on lessons is gone; its route is retired (below). Every route is a thin wrapper over a shared function in `src/lib/app/admin-*.ts`, and the website's `/admin`, `/admin/team` and `/apply` pages and their Server Actions call the very same functions, so the two doors check the same role, apply the same limits and print the same sentences.
 
 **Roles.** Checked on the server on every call from the token's own user (`requireSiteRole` in `src/lib/app/admin-access.ts` over `getSiteRole`). Nothing from the request body, a header or the app's cached `siteRole` is trusted. Signed out gets 401 `unauthorized`; signed in without the role gets 403 `forbidden` with the site's sentence for that surface:
 
@@ -818,7 +818,6 @@ The website's four admin jobs (the numbers on `/admin`, the feedback inbox, the 
 |---|---|---|
 | summary, dashboard, feedback list | admin | `/admin holds the raw numbers for the whole site, so it is open to administrators only. Nothing is wrong with your account.` (the locked card's heading on the site is "This drawer is locked.") |
 | feedback reply | admin | `Not authorized.` |
-| lesson verified | admin | `not authorised` (the site prints it after "Could not save: ") |
 | team desk, decision, role change, removal | superadmin | `Only a super admin can do that. Try reloading the page and signing in again.` (the site's locked card: "This one stays with the super admins.") |
 
 **Privacy.** No email addresses, real names or sender user ids appear in any of these payloads. Applicants and team members are a handle and a team number; team members' `userId` goes only to super admins, because the role controls need it. Keep admin payloads in memory only (never the cache, the widget app group, Spotlight or App Intents) and drop them on sign-out.
@@ -1016,25 +1015,19 @@ Errors:
 | 500 | `server` | `Couldn't send the reply. Try again.` |
 | 401 | | |
 
-### PUT /api/app/admin/lessons/{lessonId}/verified
+### PUT /api/app/admin/lessons/{lessonId}/verified (retired)
 
-Bearer, admin. Puts the public verified mark on a lesson or takes it off (`setLessonVerifiedAs`, the function behind the button at the bottom of every lesson page). The caller's handle is recorded in `lessons.verified_by` (cleared again when the mark comes off), and the lesson, catalog and `/fact-check` caches are refreshed.
+Retired. Lessons no longer carry a verified mark, on the site or in the app, and nobody can put one on. The current app never calls this route and has no verify control.
 
-Request:
+The route stays for app copies built before the change, which still show "Mark this lesson verified" to admins at the foot of a lesson. Whatever they send, with or without a token, the answer is always:
 
-```json
-{ "verified": true }
-```
-
-Response 200:
+Response 410:
 
 ```json
-{ "ok": true, "lessonId": "eb956f1f-6624-4d0a-9f3b-048fe7db4f82", "verifiedAt": "2026-10-17T03:39:57.486Z" }
+{ "error": "Lessons don't carry a verified mark any more.", "code": "not_found" }
 ```
 
-`verifiedAt` is null after taking the mark off. Patch the cached lesson's `verified_at` (and `verified_by`) so the mark shows at once. The site's copy: "Mark this lesson verified" / "Remove verified mark" / "Saving"; under it "admin only, this puts a public verified mark on the lesson" / "readers see a verified mark on this lesson"; a failure prints "Could not save: {error}".
-
-Errors: 400 `validation` (`verified` isn't a boolean), 403 `forbidden` (`not authorised`), 404 `not_found` (`That lesson no longer exists.`, also for an id that isn't a UUID), 500 `server` (`something went wrong on our side, try again`), 401.
+Those copies read `not_found` with a sentence as a plain failure and print it after "Could not save: ". Nothing is written. Before the change the route answered `{ ok, lessonId, verifiedAt }` and wrote `lessons.verified_at` and `verified_by`; those columns stay in the table (see "What the app reads directly from Supabase").
 
 ### GET /api/app/admin/team
 
@@ -1240,4 +1233,6 @@ Errors: 404 `not_found` (`There's no open application to withdraw.`), 500 `serve
 
 ## What the app reads directly from Supabase
 
-Not covered here, read with the publishable key: `departments`, `modules`, `lessons` (including `quiz`), `articles`, `achievements`; the signed-in user's own `bookmarks` (read, insert, delete under RLS). The app never writes `lesson_progress` or `user_achievements` directly, and never reads `profiles`. Admin data (`site_admins`, `admin_applications`, `feedback`, the admin views) is RLS-locked to the service role, so it only ever comes through the routes above.
+Not covered here, read with the publishable key: `departments`, `modules`, `lessons` (including `quiz`), `articles`, `achievements`; the signed-in user's own `bookmarks` (read, insert, delete under RLS).
+
+`lessons.verified_at`, `verified_by`, `verified_note` and `verified_sources` are no longer shown anywhere and the current app doesn't select them. App copies built before the verified mark came off still put all four in their lesson-body select (`SupabaseQueries.lessonBodySelect`), and PostgREST fails the whole request if a named column is missing, so keep the columns in place and readable with the publishable key. Those copies show their old badge on any lesson where `verified_at` isn't null. The app never writes `lesson_progress` or `user_achievements` directly, and never reads `profiles`. Admin data (`site_admins`, `admin_applications`, `feedback`, the admin views) is RLS-locked to the service role, so it only ever comes through the routes above.
