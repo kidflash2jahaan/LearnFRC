@@ -64,8 +64,10 @@ struct UsernameSetupView: View {
     private var asksForUsername: Bool { mode != .team }
 
     /// The site's `suggestUsername`: the part of the email before the first @, cleaned, at
-    /// most 20 characters, or nothing when fewer than 3 survive.
+    /// most 20 characters, or nothing when fewer than 3 survive. Nothing for an Apple Hide My
+    /// Email address, whose first half is random letters.
     static func suggestion(from email: String?) -> String {
+        if AccountStore.isApplePrivateRelayEmail(email) { return "" }
         let local = (email ?? "").split(separator: "@", maxSplits: 1, omittingEmptySubsequences: false).first ?? ""
         let base = String(AccountStore.normalizeUsername(String(local)).prefix(maxLength))
         return base.count >= 3 ? base : ""
@@ -126,7 +128,7 @@ struct UsernameSetupView: View {
 
     private var explanation: String {
         switch mode {
-        case .required: "Signing in with Google skips the roster line, so an account can land without a handle. It is your profile link and it is how teammates find you. The team number is optional and can wait."
+        case .required: "Signing in with \(AppConfig.isAppleSignInEnabled ? "Google or Apple" : "Google") skips the roster line, so an account can land without a handle. It is your profile link and it is how teammates find you. The team number is optional and can wait."
         case .soft: "Your handle was minted for you, so it is not really yours. Pick one you would want next to your name on the leaderboard. The team number is optional."
         case .team: "Put your FRC team number in and you show up alongside your teammates on the team page and on the leaderboard."
         }

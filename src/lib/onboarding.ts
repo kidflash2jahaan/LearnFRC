@@ -19,6 +19,8 @@
  * needing `cookies()` or other request APIs belongs in `onboarding-server.ts`.
  */
 
+import { isApplePrivateRelayEmail } from "@/lib/auth-providers";
+
 /**
  * The 22 placeholder handles were written by a one-off backfill on 2026-08-04
  * (every row shares the same `updated_at` to the microsecond); the generator
@@ -94,10 +96,14 @@ export type ProfileSetupState =
  * the field is never an empty box. Runs the same normalisation the server
  * enforces; returns undefined when nothing usable survives it (the server is
  * still the authority — this is only a prefill).
+ *
+ * Nothing for an Apple "Hide My Email" address: its first half is random
+ * letters, not a name anyone would pick (the app's UsernameSetupView agrees).
  */
 export function suggestUsername(
   email: string | null | undefined
 ): string | undefined {
+  if (isApplePrivateRelayEmail(email)) return undefined;
   const base = (email ?? "")
     .split("@")[0]
     .toLowerCase()

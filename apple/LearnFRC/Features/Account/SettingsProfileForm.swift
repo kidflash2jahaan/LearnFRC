@@ -56,7 +56,10 @@ struct SettingsProfileForm: View {
             AccountReadOnlyField(
                 label: "Email",
                 value: me.user.email ?? "No email on file",
-                hint: "Your sign-in email. It can't be changed here."
+                // The site's words (`settings-form.tsx`), including the Hide My Email case.
+                hint: AccountStore.isApplePrivateRelayEmail(me.user.email)
+                    ? "A private address from Apple's Hide My Email. Mail sent to it reaches your own inbox. It can't be changed here."
+                    : "Your sign-in email. It can't be changed here."
             )
 
             AccountField(

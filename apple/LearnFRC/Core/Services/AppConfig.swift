@@ -37,6 +37,25 @@ enum AppConfig {
     /// `DeepLink` reads it as nothing to open (`DeepLink.isAuthCallback(_:)`).
     static let oauthCallbackURL = URL(string: "\(urlScheme)://auth-callback")!
 
+    /// Whether Sign in with Apple is offered (above Google, on the sign-in and sign-up sheets).
+    ///
+    /// Off until the paid developer team exists: the button needs the Sign in with Apple
+    /// capability on the App ID (`com.apple.developer.applesignin` in `LearnFRC.entitlements`,
+    /// which a free Personal Team can't sign) and Supabase's Apple provider set up with the
+    /// bundle id. The build setting `LF_APPLE_SIGN_IN` in `project.yml` (`NO` today) reaches the
+    /// app as the Info.plist key `LFAppleSignIn`; set it to `YES` with the paid team. Debug
+    /// builds also take `-LFAppleSignIn YES` as a launch argument, to look at the sheets with
+    /// the button (it can't sign in without the capability).
+    static let isAppleSignInEnabled: Bool = {
+        #if DEBUG
+        if let override = UserDefaults.standard.string(forKey: "LFAppleSignIn") {
+            return override.uppercased() == "YES"
+        }
+        #endif
+        let value = Bundle.main.object(forInfoDictionaryKey: "LFAppleSignIn") as? String
+        return value?.trimmingCharacters(in: .whitespaces).uppercased() == "YES"
+    }()
+
     /// Catalog and reference refresh when older than this (six hours).
     static let catalogMaxAge: TimeInterval = 6 * 60 * 60
 

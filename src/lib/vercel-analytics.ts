@@ -904,8 +904,11 @@ const REFERRER_RULES: {
   label: string;
   kind: ReferrerKind;
 }[] = [
-  // Our own round trips first.
+  // Our own round trips first. Apple's sign-in page is listed ahead of time
+  // (it only appears once Sign in with Apple is switched on), so it's never
+  // counted as a place people came from.
   { test: (h) => h.startsWith("accounts.google."), label: "Google sign-in", kind: "oauth" },
+  { test: (h) => h === "appleid.apple.com", label: "Apple sign-in", kind: "oauth" },
   { test: (h) => SELF_HOSTS.has(h), label: "Our own domains", kind: "internal" },
 
   // Assistants, before the search rules that would otherwise claim them.

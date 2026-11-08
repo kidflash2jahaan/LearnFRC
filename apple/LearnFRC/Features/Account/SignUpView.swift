@@ -1,12 +1,13 @@
 import SwiftUI
 
-/// Create an account (the site's `/signup`): Continue with Google at the top, like the site's
-/// (`ProviderSignInButtons`, carrying the invite), then full name, email, username, optional
+/// Create an account (the site's `/signup`): Continue with Google at the top (Sign in with Apple
+/// above it once that's on), like the site's (`ProviderSignInButtons`, carrying the invite),
+/// then full name, email, username, optional
 /// team number, password, and the reminder-email box, unticked, with the site's exact words.
 /// The form goes through `POST /api/app/auth/sign-up`, so the ban list, profanity check,
 /// username rules and email consent are the website's. Afterwards the person confirms by
-/// email (the link opens learnfrc.com) and signs in here. A Google account is in at once,
-/// and picks its username next (the gate, or the profile setup step for a made-up handle).
+/// email (the link opens learnfrc.com) and signs in here. A Google or Apple account is in at
+/// once, and picks its username next (the gate, or the profile setup step for a made-up handle).
 ///
 ///     SignUpView()                                        // in any NavigationStack
 ///     SignUpView(referrer: "maya_builds", via: "team-invite")
@@ -29,7 +30,7 @@ struct SignUpView: View {
     @State private var error: String?
     @State private var fieldErrors: [Field: String] = [:]
     @State private var isSubmitting = false
-    /// Continue with Google is running (its sheet, then the sign-in).
+    /// Continue with Google or Sign in with Apple is running (its sheet, then the sign-in).
     @State private var isUsingProvider = false
     @State private var sentTo: String?
     @State private var existingEmail: String?

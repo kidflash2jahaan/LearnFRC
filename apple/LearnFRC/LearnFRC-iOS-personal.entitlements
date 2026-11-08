@@ -3,7 +3,9 @@
 <plist version="1.0">
 <!-- iPhone/iPad device builds signed with a free Personal Team. A free team can't use App
      Groups, so the app and widgets don't share data (AppGroup.containerURL is nil and the
-     widgets show their empty state). With a paid team, delete the iphoneos override in
-     project.yml so device builds use the full entitlements again. -->
+     widgets show their empty state). It can't sign Sign in with Apple either, so that
+     entitlement is left out too (the button is off: LF_APPLE_SIGN_IN). With a paid team,
+     delete the iphoneos override in project.yml so device builds use the full entitlements
+     again, Sign in with Apple included. -->
 <dict/>
 </plist>
