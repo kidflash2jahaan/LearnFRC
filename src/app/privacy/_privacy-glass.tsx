@@ -7,15 +7,16 @@ import Link from "next/link";
  *
  * A privacy policy is read by someone asking three questions: what do you have
  * on me, why, and how do I make it stop. Ten paragraphs make the reader
- * reassemble that answer themselves. A four-row ledger hands it over, and the
- * sections underneath stay for the detail.
+ * reassemble that answer themselves. A short ledger hands it over, and the
+ * sections underneath stay for the detail. It covers the website and the app,
+ * which share one account.
  *
  * The file name is historical. What used to live here was a floating glass
  * gauge whose headline figure, "88% of what we store is not personal", was
  * invented. Nothing in this table is: every row restates something the policy
  * below actually says.
  *
- * Server Component. Four static rows cost no client JavaScript.
+ * Server Component. Static rows cost no client JavaScript.
  */
 
 type Row = { what: string; detail: string; why: string; remove: ReactNode };
@@ -25,7 +26,7 @@ export function DataLedger({ contactHref }: { contactHref: string }) {
     {
       what: "Account",
       detail:
-        "Email, display name, username, and optionally your team number, role, bio and avatar.",
+        "Email, name, username and password, plus your team number, role, bio and avatar if you add them. Signing in with Google or Apple shares your name and email, and Google your picture.",
       why: "Signs you in and fills your public profile.",
       remove: (
         <>
@@ -33,22 +34,39 @@ export function DataLedger({ contactHref }: { contactHref: string }) {
           <Link href="/settings" className="nb-link">
             settings
           </Link>
-          , or delete the whole account there.
+          , or delete the whole account there or in the app&rsquo;s Settings.
         </>
       ),
     },
     {
       what: "Learning activity",
       detail:
-        "Lessons finished, quiz results, XP, streaks, badges and bookmarks.",
+        "Lessons finished, quiz results, XP, streaks, badges, certificates and bookmarks.",
       why: "Shows your progress and issues department certificates.",
       remove: "Goes with the account when you delete it.",
     },
     {
+      what: "What you send",
+      detail:
+        "Contact messages, suggested edits, submitted lessons, helper applications, and reports and blocks.",
+      why: "So we can answer, review and act on them.",
+      remove: (
+        <>
+          Edits, submitted lessons and applications go with the account.{" "}
+          <Link href={contactHref} className="nb-link">
+            Ask
+          </Link>{" "}
+          for anything else.
+        </>
+      ),
+    },
+    {
       what: "Technical",
-      detail: "A temporary record of your IP address, plus standard server logs.",
-      why: "Rate-limits abuse and keeps the service up.",
-      remove: "Expires on its own. Nothing for you to do.",
+      detail:
+        "The IP address you signed up from, IP records for rate limits, when you were last active, server logs and page counts.",
+      why: "Stops abuse, keeps the service up, shows what is used.",
+      remove:
+        "Rate-limit records go after a day. The sign-up IP goes with the account.",
     },
     {
       what: "Newsletter",

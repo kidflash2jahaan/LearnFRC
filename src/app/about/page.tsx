@@ -2,13 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { getDepartments, getArticles } from "@/lib/queries";
 import { JsonLd } from "@/components/json-ld";
+import { PUBLIC_CONTACT_EMAIL } from "@/lib/email";
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com";
-// NOT an email address. learnfrc.com publishes no MX record, so anything
-// printed here bounced, and this page also emitted it as machine-readable
-// JSON-LD, so a bad address was being handed to crawlers as fact. A personal
-// mailbox is not an option: the maintainer is a minor. The JSON-LD below now
-// carries a `contactPoint` with this URL instead of an `email`.
+// The contact form. learnfrc.com publishes no MX record, so an @learnfrc.com
+// address would bounce; the form works without one. The address people can
+// write to directly is PUBLIC_CONTACT_EMAIL, which the JSON-LD below also
+// carries.
 const CONTACT_PATH = "/contact";
 const REPO = "https://github.com/kidflash2jahaan/LearnFRC";
 const AUTHOR = "Jahaan Pardhanani";
@@ -140,14 +140,15 @@ export default async function AboutPage() {
         description:
           "A free, complete learning platform for the FIRST Robotics Competition.",
         founder: { "@id": `${SITE}/#person` },
-        // `contactPoint` with a `url` instead of `email`: ContactPoint inherits
-        // `url` from Thing and `contactType` is one of its own properties, so
-        // this is valid schema.org, and unlike the address it replaces, it
-        // points somewhere that answers.
+        // ContactPoint inherits `url` from Thing and has `email` of its own,
+        // so this is valid schema.org: the form and the address, both of which
+        // answer. The address is the public contact one, never a personal
+        // mailbox, and it sits on the Organization, not the Person.
         contactPoint: {
           "@type": "ContactPoint",
           contactType: "customer support",
           url: `${SITE}${CONTACT_PATH}`,
+          email: PUBLIC_CONTACT_EMAIL,
           availableLanguage: "English",
         },
         sameAs: [REPO],
@@ -374,16 +375,16 @@ export default async function AboutPage() {
               , without an account.
             </p>
             <p>
-              It doesn&rsquo;t have to stay one person. If you&rsquo;ve been on
-              an FRC team and can spare a few hours a month, you can{" "}
+              It doesn&rsquo;t have to stay one person. If you want more teams
+              to find LearnFRC, you can{" "}
               <Link className="nb-link" href="/apply">
-                apply to help run the site
+                apply to help spread the word
               </Link>
-              : answering the feedback readers send in, reviewing suggested
-              edits, checking lessons against their sources.
+              : sharing it with your team and others, posting the trailer and
+              clips, and making your own videos if you want to.
             </p>
             <p>
-              LearnFRC is in beta and the code is public on{" "}
+              The code is public on{" "}
               <a
                 className="nb-link"
                 href={REPO}
@@ -434,9 +435,8 @@ export default async function AboutPage() {
             <div className="border-y border-dashed border-rule py-4">
               <dt className="font-bold">Not finished.</dt>
               <dd className="mt-1.5 text-[0.99rem] leading-relaxed text-graphite">
-                The site is in beta. Content is added and revised continuously,
-                and a lesson written for one season may need updating for the
-                next.
+                Content is added and revised continuously, and a lesson written
+                for one season may need updating for the next.
               </dd>
             </div>
           </dl>
@@ -500,6 +500,14 @@ export default async function AboutPage() {
         <div className="nb-hair mt-[clamp(2.4rem,5vw,3.6rem)] flex flex-wrap items-center justify-between gap-4 pt-6">
           <p className="max-w-[46ch] text-[0.99rem] text-graphite">
             Questions, corrections, or something you wish LearnFRC covered?
+            Use the form, or email{" "}
+            <a
+              className="nb-link [overflow-wrap:anywhere]"
+              href={`mailto:${PUBLIC_CONTACT_EMAIL}`}
+            >
+              {PUBLIC_CONTACT_EMAIL}
+            </a>
+            .
           </p>
           <Link href={CONTACT_PATH} className="nb-btn shrink-0">
             Message me
@@ -525,11 +533,6 @@ export default async function AboutPage() {
             Terms of service
           </Link>
         </div>
-
-        <p className="nb-hint mt-8 max-w-[68ch]">
-          LearnFRC is an independent educational project and is not affiliated
-          with or endorsed by FIRST®. FIRST® and FRC® are trademarks of FIRST.
-        </p>
       </div>
     </>
   );

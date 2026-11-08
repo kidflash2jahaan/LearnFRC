@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ResendButton } from "@/components/auth/resend-button";
 import { Postmark } from "./_signal-beacon";
+import { ResendConfirmation } from "./_resend-form";
 
 export const metadata: Metadata = {
   title: "Verify your email",
@@ -44,9 +44,11 @@ const CHECKS = [
  * across the room. Everything after it is troubleshooting, because that is the
  * only thing left to say.
  *
- * BEHAVIOUR IS UNCHANGED: same `email` search param, same resend action behind
- * the same button, still only rendered when there is an address to resend to,
- * same metadata, same links out.
+ * Same `email` search param, same metadata, same links out. Two additions:
+ * resending works without the param too (it asks for the address), with the
+ * site's own rate limits on top of Supabase's; and the way back to the lessons
+ * is a real link under the instruction, because the guides never needed the
+ * account this page is waiting on.
  */
 export default async function VerifyEmailPage({
   searchParams,
@@ -67,6 +69,17 @@ export default async function VerifyEmailPage({
           One click confirms the address is yours and signs you in on the spot.
           There is no code to copy and no second password to type.
         </p>
+        {/* The other thing to do while the mail is in flight. Ghost, not
+            filled: opening the inbox is still the instruction. */}
+        <div className="mt-[clamp(1.2rem,2.6vw,1.6rem)] flex flex-wrap items-center gap-x-4 gap-y-2">
+          <Link href="/guides" className="nb-btn-ghost">
+            Keep learning while you wait
+          </Link>
+          <p className="nb-hint max-w-[40ch]">
+            Lessons you finish now still count. They move into your account
+            once you&rsquo;re signed in on this browser.
+          </p>
+        </div>
       </section>
 
       {/* ── The address, stamped on the one inverted surface ─────────── */}
@@ -123,7 +136,7 @@ export default async function VerifyEmailPage({
             <p className="nb-marker">if all three fail</p>
 
             <div className="flex flex-col items-start gap-3">
-              {email && <ResendButton email={email} />}
+              <ResendConfirmation email={email} />
               <Link href="/login" className="nb-btn-ghost">
                 Already confirmed, sign me in
               </Link>

@@ -2,6 +2,34 @@ import "server-only";
 
 const FROM = process.env.EMAIL_FROM || "LearnFRC <onboarding@resend.dev>";
 
+/**
+ * Where a reply to any LearnFRC email lands. learnfrc.com can't receive mail,
+ * so without a reply-to, hitting Reply on a welcome email or an application
+ * decision went to the sending address and vanished. EMAIL_REPLY_TO overrides
+ * it without a code change.
+ */
+export const DEFAULT_REPLY_TO = "kidflash2jahaan@gmail.com";
+
+/**
+ * The public contact address, printed on the site, the privacy policy and the
+ * terms. Not the reply-to above: this is the one people are told to write to.
+ */
+export const PUBLIC_CONTACT_EMAIL = "29pardhananij@sagehillschool.org";
+
+/** The reply-to for this send: the caller's own, or the site default. */
+function replyToFor(callerReplyTo?: string): string {
+  return (
+    callerReplyTo?.trim() ||
+    process.env.EMAIL_REPLY_TO?.trim() ||
+    DEFAULT_REPLY_TO
+  );
+}
+
+/**
+ * Every outgoing email goes through here, so every one carries a reply-to.
+ * A caller that passes `replyTo` (the contact form forwarding a reader's
+ * message, say) keeps its own; everything else gets the default.
+ */
 export async function sendEmail({
   to,
   subject,
@@ -27,7 +55,7 @@ export async function sendEmail({
         to: Array.isArray(to) ? to : [to],
         subject,
         html,
-        ...(replyTo ? { reply_to: replyTo } : {}),
+        reply_to: replyToFor(replyTo),
       }),
     });
     if (!res.ok) {

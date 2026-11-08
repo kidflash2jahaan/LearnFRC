@@ -58,6 +58,56 @@ const INDEXABLE_HOSTS = new Set([
   "[::1]",
 ]);
 
+/**
+ * How long the sign-in check may hold up a request. It runs on every page, so
+ * a slow Supabase used to slow every page by the same amount, and a stuck one
+ * hung them all. 1.5 s is several times what a healthy check takes, and still
+ * short enough that a reader sees the page instead of a blank tab.
+ */
+const AUTH_CHECK_TIMEOUT_MS = 1500;
+
+/**
+ * Run the sign-in check, but give up on it after AUTH_CHECK_TIMEOUT_MS and let
+ * the request through as if the visitor were signed out.
+ *
+ * "As if signed out" here means the middleware does nothing on their behalf:
+ * no cookie is written or cleared, so nobody is logged out, and their next
+ * request simply checks again. If the check was halfway through refreshing
+ * their tokens, Supabase Auth accepts the old refresh token once more and hands
+ * back the one it already issued, so an abandoned refresh doesn't end the
+ * session either.
+ *
+ * It also skips the redirect to /login for the account pages. Every one of
+ * those pages runs its own check and redirects a signed-out visitor itself, so
+ * nothing is exposed, and redirecting someone who might well be signed in
+ * would bounce between /login (which sends a signed-in visitor back) and the
+ * page for as long as Supabase stays slow.
+ *
+ * A check that throws is treated the same way, for the same reason: a broken
+ * auth call should cost the account pages, not every page on the site.
+ */
+async function updateSessionWithTimeout(
+  request: NextRequest
+): Promise<NextResponse> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<null>((resolve) => {
+    timer = setTimeout(() => resolve(null), AUTH_CHECK_TIMEOUT_MS);
+  });
+  try {
+    const response = await Promise.race([updateSession(request), timeout]);
+    if (response) return response;
+    console.warn(
+      `[middleware] sign-in check passed ${AUTH_CHECK_TIMEOUT_MS} ms on ${request.nextUrl.pathname}, continuing without it`
+    );
+  } catch (e) {
+    console.error("[middleware] sign-in check failed:", e);
+  } finally {
+    clearTimeout(timer);
+  }
+  // A plain pass-through: no cookies set, none cleared, the request untouched.
+  return NextResponse.next();
+}
+
 function requestHostname(request: NextRequest): string {
   const host = request.headers.get("host");
   if (!host) return request.nextUrl.hostname.toLowerCase();
@@ -103,7 +153,7 @@ export async function middleware(request: NextRequest) {
     return res;
   }
 
-  const response = await updateSession(request);
+  const response = await updateSessionWithTimeout(request);
 
   // Never redirect a preview, they have to stay usable. Just mark them noindex.
   if (!INDEXABLE_HOSTS.has(requestHostname(request))) {
