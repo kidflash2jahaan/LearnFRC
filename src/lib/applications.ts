@@ -58,11 +58,14 @@ export const OFFICIAL_POSTING =
   "Anything you make comes to me, and I may post it on LearnFRC’s official YouTube, Instagram and TikTok if I choose. Sending something in doesn’t mean it goes up.";
 
 /**
- * The disclaimer the site prints on /about, /contact, /privacy and /terms,
- * word for word. Marketers put it on what they post.
+ * FIRST's own disclaimer wording, from its "Policy on the Use of FIRST
+ * Trademarks and Copyrighted Materials" (section IV.A), naming the marks a post
+ * about LearnFRC uses. Marketers put it on what they post. The footer's
+ * FirstTrademarkNotice (src/components/footer.tsx), which the terms reuse, is
+ * the same sentence with every mark the lessons use.
  */
 export const FIRST_DISCLAIMER =
-  "LearnFRC is an independent educational project and is not affiliated with or endorsed by FIRST®. FIRST® and FRC® are trademarks of FIRST.";
+  "FIRST®, FIRST® Robotics Competition, and FRC® are registered trademarks of FIRST® (www.firstinspires.org) which is not overseeing, involved with, or responsible for this activity, product, or service.";
 
 /** The rules, printed on /apply and in the acceptance email. */
 export const MARKETING_RULES: string[] = [

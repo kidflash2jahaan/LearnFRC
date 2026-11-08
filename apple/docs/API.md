@@ -1419,7 +1419,7 @@ Response 200:
   "posting": "Anything you make comes to me, and I may post it on LearnFRC’s official YouTube, Instagram and TikTok if I choose. Sending something in doesn’t mean it goes up.",
   "rules": [
     "Don’t present LearnFRC as official FIRST material, or as something FIRST runs or recommends. It’s an independent project.",
-    "Put the FIRST disclaimer on anything you post about it: “LearnFRC is an independent educational project ...”",
+    "Put the FIRST disclaimer on anything you post about it: “FIRST®, FIRST® Robotics Competition, and FRC® are registered trademarks of FIRST® ...”",
     "Don’t name other teams without their permission."
   ],
   "marketer": null

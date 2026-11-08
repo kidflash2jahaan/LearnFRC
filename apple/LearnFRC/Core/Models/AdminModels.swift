@@ -1407,7 +1407,7 @@ struct AdminApplyState: Decodable, Hashable, Sendable {
     /// /apply's `MARKETING_RULES`.
     static let siteRules: [String] = [
         "Don’t present LearnFRC as official FIRST material, or as something FIRST runs or recommends. It’s an independent project.",
-        "Put the FIRST disclaimer on anything you post about it: “LearnFRC is an independent educational project and is not affiliated with or endorsed by FIRST®. FIRST® and FRC® are trademarks of FIRST.”",
+        "Put the FIRST disclaimer on anything you post about it: “FIRST®, FIRST® Robotics Competition, and FRC® are registered trademarks of FIRST® (www.firstinspires.org) which is not overseeing, involved with, or responsible for this activity, product, or service.”",
         "Don’t name other teams without their permission.",
     ]
 }
