@@ -7,6 +7,17 @@ import { normalizeUsername } from "@/lib/app/profile";
 import { textField } from "@/lib/app/admin-access";
 import { mailAfter } from "@/lib/app/admin-notify";
 import { fail, type AppUser, type Result } from "@/lib/app/result";
+import { endClassForReports } from "@/lib/app/classes-room";
+import { holdClass } from "@/lib/classes/holds";
+import { adminClassUrl, ownerEmail, safetyEmail } from "@/lib/classes/config";
+import { classEmailHtml, escapeHtml, mailClass, pacificTime } from "@/lib/classes/emails";
+import { isLiveNow, withinReportWindow } from "@/lib/classes/room-rules";
+import {
+  CLASS_ONLY_REPORT_REASONS,
+  CLASS_REPORT_REASONS,
+  REPORT_REASONS,
+  reasonLabel,
+} from "@/lib/report-reasons";
 
 /**
  * Reporting what another member made, shared by the website (the report
@@ -17,7 +28,16 @@ import { fail, type AppUser, type Result } from "@/lib/app/result";
  *   - `profile`: the handle, the avatar, the bio and the team number, as shown
  *     on /u/<username>, the leaderboards and the team sheet;
  *   - `edit`: the note on a suggested edit, quoted on /contributions;
- *   - `submission`: the title and note on a lesson proposal, same page.
+ *   - `submission`: the title and note on a lesson proposal, same page;
+ *   - `class`: someone in a live class (classes-design.md section 10.2): its
+ *     teacher (anyone signed in can report them, from the class's listing,
+ *     page or room, on the site or in the app), or anyone else who was in it
+ *     (only by someone who was in the class too, within 30 days). contentId
+ *     is the class, username the person. Class reports take three more
+ *     reasons, keep the class's evidence (keep_evidence and a hold), go to the
+ *     safety lead as well as the owner, say LIVE CLASS when the class is on
+ *     now, and two different people from a live class reporting its teacher
+ *     end the class.
  *
  * A report is a row in `user_reports` (service role only: a reporter never
  * reads it back, and the person reported can never find out who filed it)
@@ -25,21 +45,15 @@ import { fail, type AppUser, type Result } from "@/lib/app/result";
  * that answers it is src/lib/app/admin-reports.ts.
  */
 
-export const REPORT_REASONS = [
-  { id: "harassment", label: "Bullying or harassment" },
-  { id: "offensive", label: "Offensive or inappropriate" },
-  { id: "personal_info", label: "Sharing someone's personal information" },
-  { id: "impersonation", label: "Pretending to be someone else" },
-  { id: "spam", label: "Spam or cheating" },
-  { id: "other", label: "Something else" },
-] as const;
+// The reason lists live in src/lib/report-reasons.ts (no imports, so the
+// report form and the class report panel can list them); re-exported here.
+export { CLASS_ONLY_REPORT_REASONS, CLASS_REPORT_REASONS, REPORT_REASONS, reasonLabel };
+export type { ClassReportReason, ReportReason } from "@/lib/report-reasons";
+export type ReportContentKind = "profile" | "edit" | "submission" | "class";
 
-export type ReportReason = (typeof REPORT_REASONS)[number]["id"];
-export type ReportContentKind = "profile" | "edit" | "submission";
-
-const CONTENT_KINDS: readonly ReportContentKind[] = ["profile", "edit", "submission"];
+const CONTENT_KINDS: readonly ReportContentKind[] = ["profile", "edit", "submission", "class"];
 /** Where the reporter was. Allow-listed; anything else is stored as null. */
-const SURFACES = ["profile", "leaderboard", "team", "contributions"] as const;
+const SURFACES = ["profile", "leaderboard", "team", "contributions", "class", "classes_list"] as const;
 const PLATFORMS = ["web", "ios", "ipados", "macos"] as const;
 
 export const REPORT_DETAILS_MAX = 1000;
@@ -49,13 +63,10 @@ const REPORT_RATE_WINDOW = 3600;
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com";
 
-export function reasonLabel(id: string | null | undefined): string {
-  return REPORT_REASONS.find((r) => r.id === id)?.label ?? "Something else";
-}
-
 export function contentKindLabel(kind: string | null | undefined): string {
   if (kind === "edit") return "Suggested edit";
   if (kind === "submission") return "Lesson proposal";
+  if (kind === "class") return "Live class";
   return "Profile";
 }
 
@@ -67,6 +78,10 @@ export const REPORT_SENTENCES = {
   self: "You can't report yourself.",
   noPerson: "There's no learner with that username.",
   noContent: "That suggestion no longer exists.",
+  noClass: "That class doesn't exist.",
+  notInClass: "That person wasn't in this class.",
+  needsClass: "You can report this class's teacher, or anyone from a class you were in.",
+  classWindow: "Reports from a class stay open for 30 days after it.",
   rate: "That's a lot of reports in an hour. Try again in a bit, or write to us from the contact page.",
   save: "Couldn't send that report. Try again.",
 } as const;
@@ -83,9 +98,9 @@ export type ReportInput = {
   /** The person reported. Required for a profile; ignored for an edit or a
       proposal, whose author is read from the row itself. */
   username?: unknown;
-  /** `profile` (default), `edit` or `submission`. */
+  /** `profile` (default), `edit`, `submission` or `class`. */
   contentKind?: unknown;
-  /** The edit's or proposal's id. */
+  /** The edit's or proposal's id, or the class's. */
   contentId?: unknown;
   reason: unknown;
   details?: unknown;
@@ -105,7 +120,84 @@ type Target = {
   userId: string;
   username: string | null;
   snapshot: Record<string, unknown>;
+  /** A class report: the class and the reported person's place in it. */
+  cls?: ClassTarget;
 };
+
+type ClassTarget = {
+  id: string;
+  title: string;
+  startsAt: string;
+  teacherId: string | null;
+  role: "teacher" | "student" | "staff";
+  liveNow: boolean;
+};
+
+type ClassRefusal = "noClass" | "noPerson" | "notInClass" | "needsClass" | "classWindow";
+
+/**
+ * The person reported from a class (section 10.2), resolved from the class
+ * id and their username: its teacher (anyone signed in may report them), or
+ * someone with a class_participants row in it, whom only someone who was in
+ * the class too (or teaches it) may report, within 30 days of it.
+ */
+async function classTarget(
+  reporterId: string,
+  classId: string,
+  rawUsername: string
+): Promise<Target | { refusal: ClassRefusal }> {
+  const admin = createAdminClient();
+  const { data: cls } = await admin
+    .from("classes")
+    .select("id, title, starts_at, hard_end_at, status, teacher_id")
+    .eq("id", classId)
+    .maybeSingle();
+  if (!cls) return { refusal: "noClass" };
+  const username = normalizeUsername(rawUsername);
+  if (!username) return { refusal: "noPerson" };
+  const { data: prof } = await admin.from("profiles").select("id, username").eq("username", username).maybeSingle();
+  if (!prof) return { refusal: "noPerson" };
+  const userId = prof.id as string;
+
+  let role: ClassTarget["role"];
+  if (userId === cls.teacher_id) {
+    role = "teacher";
+  } else {
+    const [{ data: theirs }, { data: mine }] = await Promise.all([
+      admin.from("class_participants").select("role").eq("class_id", classId).eq("user_id", userId).maybeSingle(),
+      admin.from("class_participants").select("role").eq("class_id", classId).eq("user_id", reporterId).maybeSingle(),
+    ]);
+    if (!theirs) return { refusal: "notInClass" };
+    if (!mine && reporterId !== cls.teacher_id) return { refusal: "needsClass" };
+    if (!withinReportWindow(cls.hard_end_at as string)) return { refusal: "classWindow" };
+    role = theirs.role as ClassTarget["role"];
+  }
+
+  const target: ClassTarget = {
+    id: cls.id as string,
+    title: cls.title as string,
+    startsAt: new Date(cls.starts_at as string).toISOString(),
+    teacherId: (cls.teacher_id as string | null) ?? null,
+    role,
+    liveNow: isLiveNow({
+      status: cls.status as string,
+      starts_at: cls.starts_at as string,
+      hard_end_at: cls.hard_end_at as string,
+    }),
+  };
+  return {
+    userId,
+    username: (prof.username as string | null) ?? null,
+    snapshot: {
+      classId: target.id,
+      classTitle: target.title,
+      startsAt: target.startsAt,
+      role,
+      liveNow: target.liveNow,
+    },
+    cls: target,
+  };
+}
 
 /** The reported account and what it showed, for a profile report. */
 async function profileTarget(rawUsername: string): Promise<Target | null> {
@@ -233,7 +325,9 @@ export async function fileReport(user: AppUser, input: ReportInput): Promise<Res
 
   const kind = (kindRaw || "profile") as ReportContentKind;
   if (!CONTENT_KINDS.includes(kind)) return fail("validation", REPORT_SENTENCES.bad);
-  const reason = REPORT_REASONS.find((r) => r.id === reasonRaw)?.id;
+  // The class-only reasons are accepted for a class report only.
+  const reasons: readonly { id: string }[] = kind === "class" ? CLASS_REPORT_REASONS : REPORT_REASONS;
+  const reason = reasons.find((r) => r.id === reasonRaw)?.id;
   if (!reason) return { ...fail("validation", REPORT_SENTENCES.reason), field: "reason" };
   if (details.length > REPORT_DETAILS_MAX)
     return { ...fail("validation", REPORT_SENTENCES.tooLong), field: "details" };
@@ -245,6 +339,15 @@ export async function fileReport(user: AppUser, input: ReportInput): Promise<Res
     if (!usernameRaw) return fail("validation", REPORT_SENTENCES.noPerson);
     target = await profileTarget(usernameRaw);
     if (!target) return fail("not_found", REPORT_SENTENCES.noPerson);
+  } else if (kind === "class") {
+    if (!isUuid(contentIdRaw)) return fail("not_found", REPORT_SENTENCES.noClass);
+    if (!usernameRaw) return fail("validation", REPORT_SENTENCES.noPerson);
+    const found = await classTarget(user.id, contentIdRaw.toLowerCase(), usernameRaw);
+    if ("refusal" in found) {
+      const code = found.refusal === "needsClass" || found.refusal === "classWindow" ? "forbidden" : "not_found";
+      return fail(code, REPORT_SENTENCES[found.refusal]);
+    }
+    target = found;
   } else {
     if (!isUuid(contentIdRaw)) return fail("not_found", REPORT_SENTENCES.noContent);
     target = await contributionTarget(kind, contentIdRaw.toLowerCase());
@@ -313,6 +416,23 @@ export async function fileReport(user: AppUser, input: ReportInput): Promise<Res
     return fail("server", REPORT_SENTENCES.save);
   }
 
+  if (target.cls) {
+    await afterClassReport(user, {
+      reportId: row.id as string,
+      reason,
+      details,
+      surface,
+      target: { userId: target.userId, username: target.username },
+      cls: target.cls,
+    });
+    return {
+      ok: true,
+      reportId: row.id as string,
+      alreadyReported: false,
+      message: reportThanks(target.username, false),
+    };
+  }
+
   // The row is the record; the email is how it reaches a person in time.
   const ownerEmail = (process.env.ADMIN_EMAILS || "").split(",")[0]?.trim();
   if (ownerEmail) {
@@ -351,4 +471,111 @@ export async function fileReport(user: AppUser, input: ReportInput): Promise<Res
     alreadyReported: false,
     message: reportThanks(target.username, false),
   };
+}
+
+/* ── After a class report (section 10.2) ───────────────────────────── */
+
+/**
+ * Everything a class report sets off once its row is stored: the class keeps
+ * its evidence (keep_evidence, and a hold on the person reported), its audit
+ * trail gets a `reported` row, and the report goes to the safety lead and the
+ * owner, as "LIVE CLASS:" with a button to the class's review page when it's
+ * on now. Then the two-reporter check: a second different person from the
+ * class reporting its teacher while it's live ends it (endClassForReports in
+ * src/lib/app/classes-room.ts). Each step stands alone, and none can lose the
+ * report, which is already saved.
+ */
+async function afterClassReport(
+  reporter: AppUser,
+  input: {
+    reportId: string;
+    reason: string;
+    details: string;
+    surface: string | null;
+    target: { userId: string; username: string | null };
+    cls: ClassTarget;
+  }
+) {
+  const admin = createAdminClient();
+  const { cls, target } = input;
+
+  const { error: keepErr } = await admin.from("classes").update({ keep_evidence: true }).eq("id", cls.id);
+  if (keepErr) console.error("class report keep_evidence:", keepErr.message);
+  const { error: eventErr } = await admin.from("class_events").insert({
+    class_id: cls.id,
+    actor_id: reporter.id,
+    kind: "reported",
+    detail: {
+      reportId: input.reportId,
+      reason: input.reason,
+      reportedUserId: target.userId,
+      role: cls.role,
+      liveNow: cls.liveNow,
+      surface: input.surface,
+    },
+  });
+  if (eventErr) console.error("class report event:", eventErr.message);
+  try {
+    await holdClass(cls.id, { reason: "class_report", subjectUserId: target.userId, createdBy: null });
+  } catch (e) {
+    console.error("class report hold:", e);
+  }
+
+  const to = [...new Set([ownerEmail(), safetyEmail()].filter((x): x is string => !!x))];
+  if (to.length) {
+    const { data: me } = await admin.from("profiles").select("username").eq("id", reporter.id).maybeSingle();
+    const from = (me?.username as string | null) ?? null;
+    const who = target.username ? `@${target.username}` : "someone";
+    const place = cls.role === "teacher" ? "the teacher" : cls.role === "staff" ? "LearnFRC staff" : "a student";
+    mailClass("class report", cls.id, {
+      to,
+      subject: cls.liveNow ? `LIVE CLASS: report about ${who} in ${cls.title}` : `LearnFRC: class report about ${who}`,
+      html: classEmailHtml({
+        heading: cls.liveNow ? `Someone reported ${who} in a class that's on now.` : `Someone reported ${who} from a class.`,
+        rows: [
+          { label: "Reason", value: reasonLabel(input.reason) },
+          { label: "Class", value: `${cls.title}, ${pacificTime(cls.startsAt)}` },
+          { label: "Their place in it", value: place },
+          { label: "From", value: from ? `@${from}` : "a member with no username" },
+        ],
+        bodyHtml: input.details
+          ? `<p style="margin:14px 0 4px;font-weight:700">What they wrote</p><p style="margin:0;white-space:pre-wrap">${escapeHtml(input.details)}</p>`
+          : "",
+        buttons: [
+          { text: cls.liveNow ? "Open the class now" : "Open the class", url: adminClassUrl(cls.id) },
+          { text: "The reports desk", url: `${SITE}/admin/reports`, tone: "plain" },
+        ],
+        note: "The class's recording, transcript and chat are being kept. The person reported is never told who filed it.",
+      }),
+    });
+  } else {
+    console.error("[reports] No owner or safety address is set. Class report stored, nobody notified.");
+  }
+
+  // Two different people from the class reporting its teacher while it's live.
+  if (cls.role !== "teacher" || !cls.liveNow || !cls.teacherId) return;
+  try {
+    const { data: open } = await admin
+      .from("user_reports")
+      .select("reporter_id")
+      .eq("content_kind", "class")
+      .eq("content_id", cls.id)
+      .eq("reported_user_id", cls.teacherId)
+      .eq("status", "open");
+    const reporters = [
+      ...new Set((open ?? []).map((r) => r.reporter_id as string | null).filter((x): x is string => !!x)),
+    ];
+    if (reporters.length < 2) return;
+    // Only people who were in the class count, so nobody outside it can end
+    // a class by reporting it from its listing.
+    const { data: inClass } = await admin
+      .from("class_participants")
+      .select("user_id")
+      .eq("class_id", cls.id)
+      .in("user_id", reporters);
+    const counted = (inClass ?? []).length;
+    if (counted >= 2) await endClassForReports(cls.id, { teacherId: cls.teacherId, reporters: counted });
+  } catch (e) {
+    console.error("class report auto-end:", e);
+  }
 }

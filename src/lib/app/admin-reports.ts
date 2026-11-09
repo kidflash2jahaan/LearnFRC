@@ -14,6 +14,9 @@ import {
 } from "@/lib/app/admin-access";
 import { deleteAccountData } from "@/lib/app/profile";
 import { contentKindLabel, reasonLabel, type ReportContentKind } from "@/lib/app/reports";
+import { endClass, isClassStaff, removeFromClass } from "@/lib/app/classes-room";
+import { suspendTeacher } from "@/lib/app/class-teachers";
+import { pacificTime } from "@/lib/classes/emails";
 import { fail, type AppUser, type Result } from "@/lib/app/result";
 
 /**
@@ -35,6 +38,14 @@ import { fail, type AppUser, type Result } from "@/lib/app/result";
  *
  * A report about anyone on the admin team, the person answering included, is
  * a super admin's to resolve or act on (mayAnswerAbout below).
+ *
+ * Live-class reports (content kind `class`, "Live class" on the desk) carry
+ * the class in their snapshot. Their Remove is a class action, so it's for
+ * class staff (a super admin or the safety lead): someone else in the class
+ * is removed from it for good (removeFromClass), and the class's teacher has
+ * their teaching suspended (which cancels their upcoming classes) and the
+ * class ended if it's still on. A ban takes its evidence hold first
+ * (deleteAccountData with reason "ban").
  *
  * Privacy: handles only. No real names and no email addresses, and the
  * reporter's handle is shown only here, to the people who answer reports.
@@ -72,8 +83,17 @@ export type DeskReport = {
     teamNumber: number | null;
     title: string | null;
     note: string | null;
+    /** For a class report, one readable line: the class, its time and their place in it. */
     target: string | null;
     newModuleTitle: string | null;
+    /** Class reports only (null otherwise). */
+    classId: string | null;
+    classTitle: string | null;
+    classStartsAt: string | null;
+    /** "teacher", "student" or "staff": the reported person's place in the class. */
+    classRole: string | null;
+    /** The class was on when it was reported. */
+    liveNow: boolean | null;
   };
   details: string | null;
   surface: string | null;
@@ -132,6 +152,19 @@ const str = (v: unknown): string | null =>
 const num = (v: unknown): number | null =>
   typeof v === "number" && Number.isFinite(v) ? v : null;
 
+/**
+ * A class report's snapshot as the one line the desk's "on" row shows:
+ * "Wiring a CAN bus, Thu, Nov 20, 5:00 PM PT. Reported as the teacher, while
+ * the class was on."
+ */
+function classLine(title: string | null, startsAt: string | null, role: string | null, live: boolean): string | null {
+  if (!title) return null;
+  const when = startsAt && !Number.isNaN(Date.parse(startsAt)) ? `, ${pacificTime(startsAt)}` : "";
+  const place = role === "teacher" ? "the teacher" : role === "staff" ? "LearnFRC staff" : role ? "a student" : null;
+  const tail = [place ? `Reported as ${place}` : null, live ? "while the class was on" : null].filter(Boolean).join(", ");
+  return `${title}${when}.${tail ? ` ${tail}.` : ""}`;
+}
+
 function toDesk(
   r: Row,
   handles: Map<string, string | null>,
@@ -140,10 +173,13 @@ function toDesk(
   const status = (["open", "resolved", "removed", "banned"].includes(r.status)
     ? r.status
     : "open") as ReportStatus;
-  const kind = (["profile", "edit", "submission"].includes(r.content_kind)
+  const kind = (["profile", "edit", "submission", "class"].includes(r.content_kind)
     ? r.content_kind
     : "profile") as ReportContentKind;
   const snap = r.content_snapshot ?? {};
+  const isClass = kind === "class";
+  const classRole = isClass ? str(snap.role) : null;
+  const classStartsAt = isClass ? str(snap.startsAt) : null;
   const created = toIso(r.created_at);
   const exists = !!r.reported_user_id && handles.has(r.reported_user_id);
   return {
@@ -166,8 +202,13 @@ function toDesk(
       teamNumber: num(snap.teamNumber),
       title: str(snap.title),
       note: str(snap.note),
-      target: str(snap.target),
+      target: isClass ? classLine(str(snap.classTitle), classStartsAt, classRole, snap.liveNow === true) : str(snap.target),
       newModuleTitle: str(snap.newModuleTitle),
+      classId: isClass ? str(snap.classId) : null,
+      classTitle: isClass ? str(snap.classTitle) : null,
+      classStartsAt,
+      classRole,
+      liveNow: isClass ? snap.liveNow === true : null,
     },
     details: r.details,
     surface: r.surface,
@@ -447,6 +488,8 @@ export async function removeReportedContent(
   const refused = await refusalAbout(gate.role, row);
   if (refused) return refused;
 
+  if (row.content_kind === "class") return removeFromReportedClass(user, row, p.note || null);
+
   const admin = createAdminClient();
   const note = p.note || null;
   let newUsername: string | null = null;
@@ -541,6 +584,67 @@ export async function removeReportedContent(
   return { ok: true, status: "removed", newUsername };
 }
 
+const CLASS_STAFF_ONLY =
+  "Taking action in a live class is for a super admin or the safety lead. Close the report, or ask one of them.";
+
+/**
+ * Remove, for a live-class report: the class action, as class staff. Someone
+ * else in the class is removed from it for good (removeFromClass). The
+ * class's teacher can't be removed from their own class, so their teaching is
+ * suspended instead (which cancels their upcoming classes) and the class is
+ * ended if it's still on. Closes every open report about the same person in
+ * the same class.
+ */
+async function removeFromReportedClass(
+  user: AppUser,
+  row: Row,
+  note: string | null
+): Promise<Result<{ status: ReportStatus; newUsername: string | null }>> {
+  if (!(await isClassStaff(user))) return fail("forbidden", CLASS_STAFF_ONLY);
+  const gone = "That account is already gone. Close the report instead.";
+  if (!row.reported_user_id || !row.content_id) return fail("conflict", gone);
+
+  const { data: cls } = await createAdminClient()
+    .from("classes")
+    .select("id, teacher_id, status")
+    .eq("id", row.content_id)
+    .maybeSingle();
+  if (!cls) return fail("conflict", "That class no longer exists. Close the report instead.");
+
+  const stamp = await closeReports(row, "removed", user.id, note, "content");
+  if (!stamp) return fail("conflict", ALREADY);
+
+  if (cls.teacher_id === row.reported_user_id) {
+    const suspended = await suspendTeacher(user, {
+      userId: row.reported_user_id,
+      reason: `A report from their class: ${reasonLabel(row.reason)}${note ? ` (${note})` : ""}`,
+    });
+    if (!suspended.ok) {
+      await reopen(row, stamp);
+      return fail("server", suspended.error);
+    }
+    if (cls.status === "scheduled" || cls.status === "live") {
+      const ended = await endClass(user, { classId: cls.id as string, reason: "admin" });
+      if (!ended.ok) console.error("removeFromReportedClass end:", ended.error);
+    }
+  } else {
+    const removed = await removeFromClass(user, {
+      classId: cls.id as string,
+      userId: row.reported_user_id,
+      reason: `report: ${reasonLabel(row.reason)}${note ? ` (${note})` : ""}`,
+    });
+    if (!removed.ok) {
+      await reopen(row, stamp);
+      return fail(removed.code, removed.error);
+    }
+  }
+
+  await logDecision(row, "removed", note);
+  revalidatePath("/admin");
+  revalidatePath("/admin/reports");
+  return { ok: true, status: "removed", newUsername: null };
+}
+
 /**
  * Bans the reported account with the site's existing ban, deletes it, and
  * closes every open report about it. Super admins only.
@@ -615,9 +719,11 @@ export async function banReportedAccount(
     }
   }
 
+  // reason "ban": live classes take their evidence hold before anything goes.
   const deleted = await deleteAccountData(
     { id: targetId, email: email ?? undefined, created_at: authUser.user.created_at },
-    { supabase: admin, admin }
+    { supabase: admin, admin },
+    { reason: "ban" }
   );
   if (!deleted.ok) {
     await reopen(row, stamp);

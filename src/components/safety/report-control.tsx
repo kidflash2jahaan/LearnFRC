@@ -4,7 +4,11 @@ import * as React from "react";
 import { useActionState } from "react";
 import { reportContent, type ReportState } from "@/app/actions/safety";
 
-/** Mirrors REPORT_REASONS in src/lib/app/reports.ts, which the server checks against. */
+/**
+ * One of REPORT_REASONS or CLASS_REPORT_REASONS (src/lib/report-reasons.ts),
+ * which fileReport checks against: a class report may use the class-only
+ * three, anything else the usual six.
+ */
 export type ReasonOption = { id: string; label: string };
 
 /**
@@ -26,20 +30,25 @@ export function ReportControl({
   surface,
   label,
   what,
+  defaultOpen = false,
 }: {
+  /** REPORT_REASONS, or CLASS_REPORT_REASONS for a class report. */
   reasons: readonly ReasonOption[];
-  /** The person reported (a profile report). */
+  /** The person reported (a profile or a class report). */
   username?: string;
-  contentKind?: "profile" | "edit" | "submission";
+  contentKind?: "profile" | "edit" | "submission" | "class";
+  /** The edit's or proposal's id, or the class's. */
   contentId?: string;
-  surface: "profile" | "contributions" | "team" | "leaderboard";
+  surface: "profile" | "contributions" | "team" | "leaderboard" | "class";
   /** The closed button's words, e.g. "Report @maya_254". */
   label: string;
   /** What is being reported, for the heading: "this profile", "this suggestion". */
   what: string;
+  /** Start with the form open (the class report panel, once a person is picked). */
+  defaultOpen?: boolean;
 }) {
   const [state, action, pending] = useActionState<ReportState, FormData>(reportContent, undefined);
-  const [open, setOpen] = React.useState(false);
+  const [open, setOpen] = React.useState(defaultOpen);
   // Controlled, so a refusal ("Tell us a little about what's wrong") never
   // wipes what was typed: React resets an uncontrolled form on every dispatch.
   const [reason, setReason] = React.useState("");
