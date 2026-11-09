@@ -31,8 +31,10 @@ export const metadata: Metadata = {
  * the request button, and every letter they've asked for.
  *
  * Nothing about classes shows while classes are hidden (section 1), so this
- * page 404s then. getSession() reads the auth cookie, so the route is dynamic.
+ * page 404s then. It 404s before getSession() reads the auth cookie, so the
+ * route is marked dynamic, or the build would prerender the hidden 404.
  */
+export const dynamic = "force-dynamic";
 
 const STATUS_WORD: Record<TeacherLetter["status"], string> = {
   requested: "waiting",

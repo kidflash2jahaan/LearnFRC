@@ -22,6 +22,10 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
+// Per teacher, and a 404 while classes are hidden: never prerendered, so the
+// hidden 404 can't outlive the switch being turned on.
+export const dynamic = "force-dynamic";
+
 /**
  * The teacher's desk (classes-design.md section 11): schedule a class, see
  * who signed up for the upcoming ones and cancel them, the past ones with

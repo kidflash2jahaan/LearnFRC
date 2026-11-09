@@ -11,12 +11,8 @@
 //     viewers, the dev/prod app guard, the emails in the dev outbox, and
 //     everything hidden while classes are switched off.
 //
-// The teachers and safety-holds packages own getTeacher and
-// requireClassReviewer, which are still Foundation stubs on this branch
-// (getTeacher returns null, requireClassReviewer denies). This check swaps
-// in fakes with the same signatures and the design's rules
-// (checks/fakes/*.ts) and records that the letters code called them;
-// integration runs it against the real ones.
+// Since integration it runs against the real getTeacher (teachers) and
+// requireClassReviewer (safety-holds).
 //
 // "Approved through the admin action": decideClass (webhooks-and-review)
 // isn't on this branch, so the check approves its test classes the way the
@@ -28,9 +24,6 @@
 //   node --import ./scripts/classes/register.mjs scripts/classes/checks/letters.check.ts
 
 import assert from "node:assert/strict";
-// First: swaps the two neighbour stubs for fakes before anything imports
-// them (every src import below is dynamic).
-import { fakeCalls as recordedCalls } from "./fakes/use-fakes.mjs";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { createClient } from "@supabase/supabase-js";
@@ -40,8 +33,6 @@ import { create, cleanup, check, readCredentials } from "../test-data.mjs";
 loadEnv();
 process.env.CLASSES_DEV_SWITCHES = "1";
 delete process.env.VERCEL_ENV;
-
-const fakeCalls = recordedCalls() as { name: string; arg: unknown }[];
 
 const PKG = "letters";
 const results: { name: string; ok: boolean; error?: string }[] = [];
@@ -209,7 +200,6 @@ async function main() {
       assert.equal(d.desk.defaultPeriod.start, rules.schoolYearStart(today));
       const inDefault = d.desk.classes.filter((c) => c.date >= period.start && c.date <= period.end);
       assert.deepEqual(rules.letterTotals(inDefault), { totalMinutes: 135, classCount: 3 });
-      assert.ok(fakeCalls.some((c) => c.name === "getTeacher" && c.arg === acc.t1.id), "getTeacher was called");
     });
 
     await step("bad ranges are refused with the field they're about", async () => {
@@ -304,7 +294,6 @@ async function main() {
       if (!r.ok) assert.equal(r.error, S.signerOnly);
       const { data: row } = await admin.from("hours_letters").select("status, code").eq("id", firstId).single();
       assert.deepEqual(row, { status: "requested", code: null });
-      assert.ok(fakeCalls.some((c) => c.name === "requireClassReviewer"), "requireClassReviewer was called");
     });
 
     await setSafetyLead(acc.lead.id);

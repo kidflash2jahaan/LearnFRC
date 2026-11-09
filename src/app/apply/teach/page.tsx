@@ -23,6 +23,10 @@ export const metadata: Metadata = {
   alternates: { canonical: "/apply/teach" },
 };
 
+// Per viewer, and a 404 while classes are hidden: never prerendered, so the
+// hidden 404 can't outlive the switch being turned on.
+export const dynamic = "force-dynamic";
+
 /**
  * Applying to teach live classes (classes-design.md sections 2, 3.1 and 11).
  *

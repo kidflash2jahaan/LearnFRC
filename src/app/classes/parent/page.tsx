@@ -17,6 +17,10 @@ export const metadata: Metadata = {
   referrer: "no-referrer",
 };
 
+// Reads the lf_parent cookie, and is a 404 while classes are hidden: never
+// prerendered, so the hidden 404 can't outlive the switch being turned on.
+export const dynamic = "force-dynamic";
+
 /**
  * Where a parent or guardian decides (classes-design.md section 5.1). No
  * account needed. The emailed link goes through

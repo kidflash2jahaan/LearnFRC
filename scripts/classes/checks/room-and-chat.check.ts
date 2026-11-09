@@ -18,20 +18,20 @@
 // the join rotation, remove, kick-all and INACTIVE calls are checked by what
 // they send. The real calls are "needs keys" for integration.
 //
-// Two stubs that deny or return nothing until their packages merge are
-// swapped for test doubles (scripts/classes/checks/doubles): who's class
-// staff (class-reviewers) and getTeacher (class-teachers). suspendTeacher,
-// holdClass and holdAccount stay the real stubs; the check sees their
-// "[stub]" calls.
+// Since integration it runs against the real neighbours: who's class staff
+// (class-reviewers, safety-holds), getTeacher and suspendTeacher (teachers),
+// cancelTeacherClasses (pages) and holdClass and holdAccount (safety-holds).
+// Their effects are checked in the database: the hold rows, the teacher's
+// suspension and the classes it cancels. After each suspension the check
+// puts the teacher and their other test classes back, so later steps can
+// use them.
 //
 //   node --import ./scripts/classes/register.mjs scripts/classes/checks/room-and-chat.check.ts
 
 import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import * as nodeModule from "node:module";
-import { dirname, join } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { join } from "node:path";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { loadEnv } from "../env.mjs";
 import { create, cleanup, check, readCredentials } from "../test-data.mjs";
@@ -48,25 +48,6 @@ const FAKE_RTK = {
 };
 Object.assign(process.env, FAKE_RTK);
 
-const HERE = dirname(fileURLToPath(import.meta.url));
-const DOUBLES: Record<string, string> = {
-  "@/lib/app/class-reviewers": pathToFileURL(join(HERE, "doubles", "class-reviewers.double.ts")).href,
-  "@/lib/app/class-teachers": pathToFileURL(join(HERE, "doubles", "class-teachers.double.ts")).href,
-};
-// module.registerHooks (Node 22.15+); @types/node 20 doesn't declare it yet.
-type ResolveNext = (specifier: string, context: unknown) => unknown;
-const { registerHooks } = nodeModule as unknown as {
-  registerHooks(hooks: { resolve(specifier: string, context: unknown, next: ResolveNext): unknown }): void;
-};
-// Hooks registered later run first, so these win over register.mjs's "@/" mapping.
-registerHooks({
-  resolve(specifier, context, nextResolve) {
-    const double = DOUBLES[specifier];
-    if (double) return { url: double, shortCircuit: true };
-    return nextResolve(specifier, context);
-  },
-});
-
 const PKG = "room-and-chat";
 const results: { name: string; ok: boolean; error?: string }[] = [];
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -76,18 +57,35 @@ const admin = createClient(url, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const openClients: SupabaseClient[] = [];
 
-/* ── [stub] calls ──────────────────────────────────────────────────── */
+/* ── Holds and the teacher's suspension, as stored ─────────────────── */
 
-const stubCalls: { name: string; detail: unknown }[] = [];
-const warn = console.warn.bind(console);
-console.warn = (...args: unknown[]) => {
-  const first = String(args[0] ?? "");
-  if (first.startsWith("[stub] ")) {
-    stubCalls.push({ name: first.slice(7), detail: args[1] });
-    return;
-  }
-  warn(...args);
-};
+async function holdReasons(classId: string, subjectUserId?: string): Promise<string[]> {
+  let q = admin.from("class_safety_holds").select("reason").eq("class_id", classId);
+  if (subjectUserId) q = q.eq("subject_user_id", subjectUserId);
+  const { data } = await q;
+  return ((data ?? []) as { reason: string }[]).map((h) => h.reason);
+}
+
+async function suspendedAt(userId: string): Promise<string | null> {
+  const { data } = await admin.from("class_teachers").select("suspended_at").eq("user_id", userId).single();
+  return (data?.suspended_at as string | null) ?? null;
+}
+
+/**
+ * A suspension cancels the teacher's other upcoming classes (the real
+ * cancelTeacherClasses). After checking that, put the teacher and those test
+ * classes back so later steps can use them. Returns what it restored.
+ */
+async function restoreTeacher(userId: string, classIds: string[]): Promise<string[]> {
+  await admin.from("class_teachers").update({ suspended_at: null, suspended_reason: null }).eq("user_id", userId);
+  const { data } = await admin
+    .from("classes")
+    .update({ status: "scheduled", canceled_at: null, canceled_by: null, cancel_reason: null })
+    .in("id", classIds)
+    .eq("status", "canceled")
+    .select("id");
+  return ((data ?? []) as { id: string }[]).map((c) => c.id);
+}
 
 /* ── A fake RealtimeKit ────────────────────────────────────────────── */
 
@@ -707,7 +705,6 @@ async function main() {
 
   await step("reports: a class report reaches the desk with the class, the new reason and the username", async () => {
     const since = Date.now();
-    const stubsBefore = stubCalls.length;
     const r = await fileClassReport("s1", handle("t1"), "private_contact");
     assert.ok(r.ok && !r.alreadyReported, r.ok ? "" : r.error);
     const { data: row } = await admin
@@ -735,9 +732,7 @@ async function main() {
       .eq("class_id", nowId)
       .eq("kind", "reported");
     assert.equal(count, 1);
-    const holds = stubCalls.slice(stubsBefore).filter((s) => s.name === "holdClass");
-    assert.equal(holds.length, 1, "holdClass was called");
-    assert.deepEqual(holds[0].detail, { classId: nowId, reason: "class_report" });
+    assert.deepEqual(await holdReasons(nowId, acc.t1.id), ["class_report"], "a class_report hold about the teacher");
     const mail = outbox(since).find((m) => m.subject.startsWith("LIVE CLASS:"));
     assert.ok(mail, "LIVE CLASS email in the outbox");
     assert.deepEqual([...mail!.to].sort(), [process.env.ADMIN_EMAILS!, process.env.CLASSES_SAFETY_EMAIL!].sort());
@@ -792,8 +787,16 @@ async function main() {
 
   await step("reports: a second reporter from a live class ends it, suspends and holds the teacher", async () => {
     const since = Date.now();
-    const stubsBefore = stubCalls.length;
     const n = rtkCalls.length;
+    // The teacher's other upcoming classes, which the suspension will cancel.
+    const { data: upcomingRows } = await admin
+      .from("classes")
+      .select("id, rtk_meeting_id")
+      .eq("teacher_id", acc.t1.id)
+      .eq("status", "scheduled")
+      .neq("id", nowId);
+    const upcoming = (upcomingRows ?? []) as { id: string; rtk_meeting_id: string | null }[];
+    assert.ok(upcoming.length > 0, "the teacher has other upcoming test classes");
     // An outsider's report about the teacher doesn't count towards the two.
     const outsider = await fileClassReport("out", handle("t1"), "unsafe");
     assert.ok(outsider.ok);
@@ -804,19 +807,31 @@ async function main() {
     assert.ok(second.ok, second.ok ? "" : second.error);
     ({ data: cls } = await admin.from("classes").select("status, end_reason").eq("id", nowId).single());
     assert.deepEqual(cls, { status: "ended", end_reason: "reports" });
-    assert.deepEqual(
-      rtkCalls.slice(n).map((c) => `${c.method} ${c.path} ${c.body ? JSON.stringify(c.body) : ""}`.trim()),
-      [
-        `POST /meetings/lftest-meeting-${nowId}/active-session/kick-all {}`,
-        `PATCH /meetings/lftest-meeting-${nowId} {"status":"INACTIVE"}`,
-      ]
-    );
-    const calls = stubCalls.slice(stubsBefore).map((s) => s.name);
-    assert.ok(calls.includes("suspendTeacher"), `stubs: ${calls.join(",")}`);
+    // GETs are the hold's peer-report reads (the mock has none to give).
+    const sent = rtkCalls
+      .slice(n)
+      .filter((c) => c.method !== "GET")
+      .map((c) => `${c.method} ${c.path} ${c.body ? JSON.stringify(c.body) : ""}`.trim());
+    assert.deepEqual(sent.slice(0, 2), [
+      `POST /meetings/lftest-meeting-${nowId}/active-session/kick-all {}`,
+      `PATCH /meetings/lftest-meeting-${nowId} {"status":"INACTIVE"}`,
+    ]);
+    // The real suspendTeacher (teachers) and cancelTeacherClasses (pages):
+    // every other upcoming class is canceled and its meeting set INACTIVE.
+    assert.ok(await suspendedAt(acc.t1.id), "the teacher is suspended");
+    const { data: afterRows } = await admin.from("classes").select("id, status").in("id", upcoming.map((c) => c.id));
     assert.ok(
-      stubCalls.slice(stubsBefore).some((s) => s.name === "holdClass" && (s.detail as { reason: string }).reason === "auto_end"),
-      "holdClass auto_end"
+      (afterRows ?? []).every((c) => c.status === "canceled"),
+      `the teacher's other classes are canceled: ${JSON.stringify(afterRows)}`
     );
+    assert.deepEqual(
+      sent.slice(2).sort(),
+      upcoming
+        .filter((c) => c.rtk_meeting_id)
+        .map((c) => `PATCH /meetings/${c.rtk_meeting_id} {"status":"INACTIVE"}`)
+        .sort()
+    );
+    assert.ok((await holdReasons(nowId, acc.t1.id)).includes("auto_end"), "an auto_end hold about the teacher");
     const { count } = await admin
       .from("class_events")
       .select("id", { count: "exact", head: true })
@@ -832,11 +847,19 @@ async function main() {
     assert.deepEqual(status, { status: "ended", endReason: "reports", removed: false });
     const closed = await send("s1", "is it over?");
     assert.ok(!closed.ok && closed.error === chat.CHAT_SENTENCES.closed);
-    // A third report doesn't end it twice.
-    const before = stubCalls.length;
+    // Put the teacher and their other classes back for the steps below.
+    const restored = await restoreTeacher(acc.t1.id, upcoming.map((c) => c.id));
+    assert.equal(restored.length, upcoming.length);
+    // A third report doesn't end it twice, or suspend the teacher again.
     const third = await fileClassReport("s1", handle("t1"), "harassment");
     assert.ok(third.ok);
-    assert.ok(!stubCalls.slice(before).some((s) => s.name === "suspendTeacher"));
+    assert.equal(await suspendedAt(acc.t1.id), null);
+    const { count: ends } = await admin
+      .from("class_events")
+      .select("id", { count: "exact", head: true })
+      .eq("class_id", nowId)
+      .eq("kind", "auto_ended");
+    assert.equal(ends, 1);
   });
 
   await step("desk: Remove on a class report removes the student from the class", async () => {
@@ -869,10 +892,16 @@ async function main() {
     assert.ok(d.ok);
     const report = d.open.find((x) => x.contentKind === "class" && x.reportedUsername === handle("t1"));
     assert.ok(report, "an open report about the teacher");
-    const before = stubCalls.length;
+    const { data: upcomingRows } = await admin
+      .from("classes")
+      .select("id")
+      .eq("teacher_id", acc.t1.id)
+      .eq("status", "scheduled");
     const r = await desk.removeReportedContent(user("staff"), { id: report!.id });
     assert.ok(r.ok, r.ok ? "" : r.error);
-    assert.ok(stubCalls.slice(before).some((s) => s.name === "suspendTeacher"));
+    assert.ok(await suspendedAt(acc.t1.id), "the teacher is suspended");
+    // Put the teacher and their other classes back for the steps below.
+    await restoreTeacher(acc.t1.id, ((upcomingRows ?? []) as { id: string }[]).map((c) => c.id));
     const { count } = await admin
       .from("user_reports")
       .select("id", { count: "exact", head: true })
@@ -888,12 +917,20 @@ async function main() {
     assert.ok(d.ok);
     const report = d.open.find((x) => x.contentKind === "profile" && x.reportedUsername === handle("out"));
     assert.ok(report, "the profile report about out");
-    const before = stubCalls.length;
     const r = await desk.banReportedAccount(user("staff"), { id: report!.id, note: "lftest" });
     assert.ok(r.ok, r.ok ? "" : r.error);
-    const held = stubCalls.slice(before).find((s) => s.name === "holdAccount");
-    assert.ok(held, "holdAccount was called");
-    assert.deepEqual(held!.detail, { userId: acc.out.id, reason: "ban" });
+    // The real holdAccount (safety-holds): a ban hold that outlives the account.
+    const { data: held } = await admin
+      .from("class_safety_holds")
+      .select("reason, subject_handle, subject_user_id")
+      .eq("subject_handle", handle("out"));
+    assert.deepEqual(
+      ((held ?? []) as { reason: string }[]).map((h) => h.reason),
+      ["ban"],
+      "a ban hold with the handle kept"
+    );
+    const { data: gone } = await admin.auth.admin.getUserById(acc.out.id);
+    assert.equal(gone?.user ?? null, null, "the account is deleted");
   });
 
   /* end */

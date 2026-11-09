@@ -79,6 +79,7 @@ async function main() {
     "t2:age=15:teacher",
     "sa:superadmin",
     "member",
+    "lead",
   ]);
   const acc = readCredentials(PKG).accounts as Record<string, Account>;
   const user = (k: string) => ({ id: acc[k].id, email: acc[k].email, created_at: new Date().toISOString() });
@@ -212,7 +213,6 @@ async function main() {
   await step("the desk is for super admins (the safety lead goes through requireClassReviewer)", async () => {
     const denied = await teachers.loadTeacherDesk(user("member"));
     assert.equal(!denied.ok && denied.code, "forbidden");
-    assert.ok(stubCalls.includes("requireClassReviewer"), "non-super-admins are asked of requireClassReviewer");
     const desk = await teachers.loadTeacherDesk(user("sa"));
     assert.equal(desk.ok, true);
     if (!desk.ok) return;
@@ -337,13 +337,32 @@ async function main() {
     assert.equal(!denied.ok && denied.code, "forbidden");
     const noReason = await teachers.suspendTeacher(user("sa"), { userId: acc.a1.id, reason: "" });
     assert.equal(!noReason.ok && noReason.field, "reason");
-    const before = stubCalls.filter((c) => c === "cancelTeacherClasses").length;
+    // An upcoming class of a1's (no meeting, so nothing reaches Cloudflare):
+    // the real cancelTeacherClasses (pages) cancels it.
+    const startsAt = new Date(Date.now() + 3 * 86_400_000);
+    const { data: cls, error: clsErr } = await admin
+      .from("classes")
+      .insert({
+        teacher_id: acc.a1.id,
+        title: "lftest teachers upcoming",
+        module_id: moduleId,
+        starts_at: startsAt.toISOString(),
+        duration_minutes: 30,
+        hard_end_at: new Date(startsAt.getTime() + 45 * 60_000).toISOString(),
+        capacity: 5,
+        status: "scheduled",
+        rtk_app: "dev",
+      })
+      .select("id")
+      .single();
+    assert.ok(cls, clsErr?.message);
     const r = await teachers.suspendTeacher(user("sa"), { userId: acc.a1.id, reason: "lftest suspension" });
     assert.equal(r.ok, true, !r.ok ? r.error : "");
     let t = await teacherRow("a1");
     assert.ok(t!.suspended_at, "suspended_at set");
     assert.equal(t!.suspended_reason, "lftest suspension");
-    assert.equal(stubCalls.filter((c) => c === "cancelTeacherClasses").length, before + 1, "cancelTeacherClasses called");
+    const { data: after } = await admin.from("classes").select("status").eq("id", cls!.id).single();
+    assert.equal(after!.status, "canceled", "cancelTeacherClasses canceled the upcoming class");
     assert.equal((await teachers.loadTeachApplyState(user("a1"))).mode, "suspended");
     const gate = await teachers.teachingGate(user("a1"));
     assert.equal(!gate.ok && gate.error, teachers.TEACHER_SENTENCES.teachSuspended);
@@ -380,6 +399,36 @@ async function main() {
       .is("actor_id", null)
       .eq("kind", "teacher_suspended");
     assert.equal(count, 0, "no orphan event row");
+  });
+
+  await step("the safety lead sees the desk and can suspend and unsuspend, but not decide", async () => {
+    // With the real requireClassReviewer (safety-holds) merged. The shared
+    // class_settings row is put back in a finally step.
+    const { data: before } = await admin.from("class_settings").select("safety_lead_user_id").eq("id", true).single();
+    await admin.from("class_settings").update({ safety_lead_user_id: acc.lead.id }).eq("id", true);
+    try {
+      const desk = await teachers.loadTeacherDesk(user("lead"));
+      assert.equal(desk.ok, true, !desk.ok ? desk.error : "");
+      if (!desk.ok) return;
+      assert.equal(desk.role, "safety_lead");
+      assert.equal(desk.canDecide, false);
+      const decide = await teachers.decideTeacherApplication(user("lead"), {
+        id: "00000000-0000-4000-8000-000000000000",
+        decision: "accept",
+      });
+      assert.equal(!decide.ok && decide.code, "forbidden");
+      const s = await teachers.suspendTeacher(user("lead"), { userId: acc.t2.id, reason: "lftest lead suspension" });
+      assert.equal(s.ok, true, !s.ok ? s.error : "");
+      assert.ok((await teacherRow("t2"))!.suspended_at);
+      const u = await teachers.unsuspendTeacher(user("lead"), { userId: acc.t2.id });
+      assert.equal(u.ok, true, !u.ok ? u.error : "");
+      assert.equal((await teacherRow("t2"))!.suspended_at, null);
+    } finally {
+      await admin
+        .from("class_settings")
+        .update({ safety_lead_user_id: before?.safety_lead_user_id ?? null })
+        .eq("id", true);
+    }
   });
 
   await step("teaching waits for the parent OK and a current code", async () => {

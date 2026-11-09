@@ -4,13 +4,10 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { rateLimit, rateLimitKey } from "@/lib/rate-limit";
 import { isUuid } from "@/lib/app/http";
 import { fail, type AppUser, type Failure, type Result, type Success } from "@/lib/app/result";
-import {
-  CLASS_SENTENCES,
-  blockedEitherWay,
-  classEligibilityDetail,
-  classRoster,
-  eligibilitySentence,
-} from "@/lib/app/classes";
+import { blockedEitherWay, classEligibilityDetail, classRoster, eligibilitySentence } from "@/lib/app/classes";
+// From the leaf module, not classes.ts: ROOM_SENTENCES reads it at load time,
+// and this file is in an import cycle with classes.ts (sentences.ts says why).
+import { CLASS_SENTENCES } from "@/lib/classes/sentences";
 import { getTeacher, suspendTeacher } from "@/lib/app/class-teachers";
 import { requireClassReviewer } from "@/lib/app/class-reviewers";
 import { holdClass } from "@/lib/classes/holds";

@@ -10,11 +10,9 @@
 //
 // The requests, signing and withdrawing run in this process through the
 // shared functions (the pages' server actions are one-line wrappers over
-// them), with the same fakes as letters.check.ts for the two neighbour
-// stubs. The dev server needs the real getTeacher and requireClassReviewer
-// for the teacher desk and the reviewers' views, so before integration
-// those steps only pass with the stubs swapped for checks/fakes on the dev
-// server too (not committed). Everything is deleted at the end.
+// them), against the real getTeacher (teachers) and requireClassReviewer
+// (safety-holds), here and on the dev server. Everything is deleted at the
+// end.
 //
 // With LETTERS_HIDDEN_URL instead, it checks a dev server started with both
 // switches off (CLASSES_DEV_SWITCHES=0 CLASSES_VISIBLE=0 next dev; Next
@@ -27,8 +25,6 @@
 //   node --import ./scripts/classes/register.mjs scripts/classes/checks/letters-pages.check.ts
 
 import assert from "node:assert/strict";
-// First: swaps the two neighbour stubs for fakes in this process.
-import "./fakes/use-fakes.mjs";
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";

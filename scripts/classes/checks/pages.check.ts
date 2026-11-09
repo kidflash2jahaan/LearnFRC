@@ -36,11 +36,11 @@ delete process.env.VERCEL_ENV;
 delete process.env.CLASSES_ENROLL_EMAILS;
 const DEV_URL = (process.env.PAGES_DEV_URL || "").replace(/\/$/, "");
 
-// The teachers package builds getTeacher and Cloudflare keys aren't in yet,
-// so two modules are swapped for test doubles (scripts/classes/checks/doubles).
+// Cloudflare keys aren't in yet, so RealtimeKit is swapped for a recorded
+// double (scripts/classes/checks/doubles). getTeacher is the real one
+// (teachers) since integration.
 const HERE = fileURLToPath(new URL(".", import.meta.url));
 const DOUBLES: Record<string, string> = {
-  "@/lib/app/class-teachers": pathToFileURL(join(HERE, "doubles", "class-teachers.ts")).href,
   "@/lib/classes/realtimekit": pathToFileURL(join(HERE, "doubles", "realtimekit.ts")).href,
 };
 // module.registerHooks is newer than this repo's @types/node.

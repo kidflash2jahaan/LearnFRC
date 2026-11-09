@@ -4,7 +4,9 @@ import { rateLimitKey } from "@/lib/rate-limit";
 import { chatHasProfanity } from "@/lib/classes/chat-profanity";
 import { isUuid } from "@/lib/app/http";
 import { fail, type AppUser, type Result } from "@/lib/app/result";
-import { CLASS_SENTENCES } from "@/lib/app/classes";
+// From the leaf module, not classes.ts: CHAT_SENTENCES reads it at load time
+// (see src/lib/classes/sentences.ts).
+import { CLASS_SENTENCES } from "@/lib/classes/sentences";
 import { CHAT_LIMITS, classesVisible, rtkApp } from "@/lib/classes/config";
 import {
   CHAT_BLOCKED_NOTE,

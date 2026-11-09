@@ -32,8 +32,11 @@ export const metadata: Metadata = {
  * TIMES. Rows and day headings are in Pacific time on the server and switch
  * to the reader's own zone after hydration (LocalTime, ClassDayList).
  *
- * Reading the session reads cookies, so this route is dynamic on its own.
+ * Dynamic on purpose: while classes are hidden the page 404s before it reads
+ * the session, so without this the build prerenders that 404 as a static
+ * page, which would outlive the switch being turned on.
  */
+export const dynamic = "force-dynamic";
 
 async function viewerOf() {
   try {

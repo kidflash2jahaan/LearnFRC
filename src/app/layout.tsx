@@ -208,7 +208,9 @@ export default async function RootLayout({
         </a>
         <Providers>
           <ScrollProgress />
-          <Navbar classesVisible={classesVisible} />
+          {/* The prop only when it's true: Navbar is a client component, so a
+              false prop would still ride along in every page's payload. */}
+          <Navbar {...(classesVisible ? { classesVisible: true } : {})} />
           <main id="main-content" className="flex-1">
             {children}
           </main>

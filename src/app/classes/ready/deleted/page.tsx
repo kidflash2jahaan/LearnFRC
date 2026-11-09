@@ -11,6 +11,10 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
+// Reads cookies, and is a 404 while classes are hidden: never prerendered, so
+// the hidden 404 can't outlive the switch being turned on.
+export const dynamic = "force-dynamic";
+
 /**
  * Where an under-13 answer on /classes/ready lands (classes-design.md
  * section 5). By now the account is deleted and the browser signed out, so

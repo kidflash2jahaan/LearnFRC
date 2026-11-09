@@ -53,18 +53,13 @@ const admin: any = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.e
   auth: { autoRefreshToken: false, persistSession: false },
 });
 
-/* ── Stub calls, the outbox and fakes ──────────────────────────────── */
+/* ── Holds, the outbox and fakes ───────────────────────────────────── */
 
-const stubCalls: { name: string; detail: Record<string, unknown> }[] = [];
-const realWarn = console.warn;
-console.warn = (...args: unknown[]) => {
-  if (typeof args[0] === "string" && args[0].startsWith("[stub] ")) {
-    stubCalls.push({ name: args[0].slice(7), detail: (args[1] as Record<string, unknown>) ?? {} });
-    return;
-  }
-  realWarn(...args);
-};
-const holdsFor = (classId: string) => stubCalls.filter((c) => c.name === "holdClass" && c.detail.classId === classId);
+/** The class's evidence holds (the real holdClass from safety-holds, since integration). */
+async function holdsFor(classId: string): Promise<{ detail: { reason: string } }[]> {
+  const { data } = await admin.from("class_safety_holds").select("reason").eq("class_id", classId);
+  return ((data ?? []) as { reason: string }[]).map((h) => ({ detail: { reason: h.reason } }));
+}
 
 const outbox = process.env.EMAIL_DEV_OUTBOX!;
 type Mail = { to: string[]; subject: string; html: string };
@@ -218,7 +213,6 @@ before(async () => {
 });
 
 after(async () => {
-  console.warn = realWarn;
   try {
     for (const m of unknownMeetingIds) {
       await admin.from("class_events").delete().eq("kind", "unknown_meeting").contains("detail", { meetingId: m });
@@ -605,7 +599,7 @@ for (const [name, f] of Object.entries(REVIEW_FIXTURES)) {
     assert.equal(cls.status, "in_review");
     assert.ok(cls.credited_minutes_computed > 0);
 
-    assert.equal(holdsFor(id).length > 0, f.expect.hold, "a hold for urgent classes only");
+    assert.equal((await holdsFor(id)).length > 0, f.expect.hold, "a hold for urgent classes only");
 
     const mails = readOutbox();
     const owner = process.env.ADMIN_EMAILS!.split(",")[0];
@@ -675,7 +669,7 @@ test("B a refusal is stored restricted and urgent, held, and routed to the safet
   assert.equal(rev.verdict, "urgent");
   assert.equal(rev.restricted, true);
   assert.equal(rev.refusal_category, "child_safety");
-  assert.deepEqual(holdsFor(id).map((h) => h.detail.reason), ["refusal"]);
+  assert.deepEqual((await holdsFor(id)).map((h) => h.detail.reason), ["refusal"]);
   const mails = readOutbox();
   const owner = process.env.ADMIN_EMAILS!.split(",")[0];
   const ownerMail = mails.find((m) => m.to[0] === owner)!;
@@ -729,7 +723,7 @@ test("B a class that ended minutes ago waits for its transcript; after 30 minute
   assert.equal(nt.severity, "urgent");
   assert.ok((rev.code_flags as { kind: string }[]).some((x) => x.kind === "report_filed"));
   assert.equal(readOutbox().length, 2);
-  assert.ok(holdsFor(late).length > 0);
+  assert.ok((await holdsFor(late)).length > 0);
 });
 
 /* ── C. The sweep ──────────────────────────────────────────────────── */
@@ -901,7 +895,7 @@ test("D rejecting for safety keeps evidence, takes a hold and can tell the teach
   assert.ok(r.ok);
   const { data: cls } = await admin.from("classes").select("status, credited_minutes, keep_evidence").eq("id", reviewClass.phone).single();
   assert.deepEqual(cls, { status: "rejected", credited_minutes: 0, keep_evidence: true });
-  assert.ok(holdsFor(reviewClass.phone).some((h) => h.detail.reason === "reject_safety"));
+  assert.ok((await holdsFor(reviewClass.phone)).some((h) => h.detail.reason === "reject_safety"));
   const mail = readOutbox().find((m) => m.to[0] === acc.t1.email)!;
   assert.ok(mail.html.includes("A phone number was shared in class."));
 });
