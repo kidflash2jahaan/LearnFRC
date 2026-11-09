@@ -21,7 +21,17 @@ import Link from "next/link";
 
 type Row = { what: string; detail: string; why: string; remove: ReactNode };
 
-export function DataLedger({ contactHref }: { contactHref: string }) {
+export function DataLedger({
+  contactHref,
+  classesHref = null,
+}: {
+  contactHref: string;
+  /**
+   * The policy's "Live classes" section, only while classes are visible.
+   * Null leaves the row out, so a release without classes has no trace.
+   */
+  classesHref?: string | null;
+}) {
   const rows: Row[] = [
     {
       what: "Account",
@@ -45,6 +55,27 @@ export function DataLedger({ contactHref }: { contactHref: string }) {
       why: "Shows your progress and issues department certificates.",
       remove: "Goes with the account when you delete it.",
     },
+    ...(classesHref
+      ? [
+          {
+            what: "Live classes",
+            detail:
+              "Birth month and year, a parent’s email and OK, join and leave times, video recordings, transcripts, class chat and AI notes, and the name on a teacher’s hours letter.",
+            why: "Gets a parent’s OK, keeps every class safe and on topic, and counts teachers’ hours.",
+            remove: (
+              <>
+                Recordings go after 7 days, transcripts and chat after a year,
+                and most of the rest with the account. Consent proof and safety
+                evidence stay longer:{" "}
+                <a href={classesHref} className="nb-link">
+                  see Live classes
+                </a>
+                .
+              </>
+            ),
+          },
+        ]
+      : []),
     {
       what: "What you send",
       detail:
