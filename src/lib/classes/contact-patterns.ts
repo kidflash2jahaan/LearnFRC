@@ -26,7 +26,10 @@
  *
  * One message at a time can't see a detail split across several; the chat
  * filter (./chat-filter.ts, checkChatSequence) runs this on the sender's last
- * few messages joined together too.
+ * few messages joined together too, and findGluedContactPatterns on them
+ * glued with nothing between them. Glued, a symbol only stands in for a
+ * letter when it touches one in its own message, so "step 1" then "message"
+ * never reads "imessage".
  *
  * Pure, no imports, unit tested. Tested modules import nothing from `@/`, so
  * the link allowlists live here too.
@@ -156,15 +159,27 @@ const LEET_COMMON: Record<string, string> = {
 };
 
 /**
+ * Offsets in a glued text where one message ends and the next begins
+ * (findGluedContactPatterns). Empty for a single message.
+ */
+type Breaks = ReadonlySet<number>;
+const NO_BREAKS: Breaks = new Set();
+
+const isLetter = (c: string | undefined) => c !== undefined && c >= "a" && c <= "z";
+
+/**
  * Two letter-for-digit readings, since "1" stands in for both i and l. Only a
  * symbol touching a letter is swapped ("d1scord", "5nap"), so plain numbers
- * like "team 19" never turn into words.
+ * like "team 19" never turn into words. Across a break the letter doesn't
+ * count: it has to be in the symbol's own message.
  */
-function unLeet(s: string): string[] {
+function unLeet(s: string, breaks: Breaks = NO_BREAKS): string[] {
   const swap = (one: string) =>
-    s.replace(/(?<=[a-z])[0134578@$!|+9]|[0134578@$!|+9](?=[a-z])/g, (c) =>
-      c === "1" ? one : (LEET_COMMON[c] ?? c)
-    );
+    s.replace(/(?<=[a-z])[0134578@$!|+9]|[0134578@$!|+9](?=[a-z])/g, (c: string, at: number) => {
+      if (breaks.size > 0 && !((isLetter(s[at - 1]) && !breaks.has(at)) || (isLetter(s[at + 1]) && !breaks.has(at + 1))))
+        return c;
+      return c === "1" ? one : (LEET_COMMON[c] ?? c);
+    });
   return [swap("i"), swap("l")];
 }
 
@@ -174,9 +189,9 @@ function collapseSpacedLetters(s: string): string {
 }
 
 /** The versions of the text that app names and phrases are matched against. */
-function letterForms(base: string): string[] {
+function letterForms(base: string, breaks: Breaks = NO_BREAKS): string[] {
   const forms = new Set<string>([base, collapseSpacedLetters(base)]);
-  for (const f of unLeet(base)) {
+  for (const f of unLeet(base, breaks)) {
     forms.add(f);
     forms.add(collapseSpacedLetters(f));
   }
@@ -253,26 +268,55 @@ function findBareDomains(text: string, allowlist: readonly string[], out: Contac
   }
 }
 
+/** A piece of text and the breaks in it (offsets into `text`). */
+type Piece = { text: string; breaks: number[] };
+
+/** The breaks inside s[from, to), counted from `from`, in order. */
+function breaksWithin(breaks: Breaks, from: number, to: number): number[] {
+  return [...breaks].filter((b) => b > from && b < to).map((b) => b - from).sort((a, b) => a - b);
+}
+
+/** Where each part after the first starts once `parts` are joined. */
+function joinsOf(parts: readonly string[]): number[] {
+  const out: number[] = [];
+  let at = 0;
+  for (const p of parts.slice(0, -1)) out.push((at += p.length));
+  return out;
+}
+
 /**
  * Finds links and blanks them out. Returns the text without them, plus the
  * allowed links themselves (scheme dropped, path and query kept, as written
- * and percent-decoded once). The caller runs the app pass on those too, and
- * the bare-domain pass already ran on them here, so a link to an allowed site
- * can't carry another one in its query ("learnfrc.com/login?next=//t.me/x").
+ * and percent-decoded once, each with the breaks inside it). The caller runs
+ * the app pass on those too, and the bare-domain pass already ran on them
+ * here, so a link to an allowed site can't carry another one in its query
+ * ("learnfrc.com/login?next=//t.me/x").
  */
-function findLinks(base: string, allowlist: readonly string[], out: ContactMatch[]): { rest: string; allowed: string[] } {
-  const allowed: string[] = [];
+function findLinks(
+  base: string,
+  allowlist: readonly string[],
+  breaks: Breaks,
+  out: ContactMatch[]
+): { rest: string; allowed: Piece[] } {
+  const allowed: Piece[] = [];
   // Scheme links first; blank them out so the bare-domain pass doesn't see
   // their host a second time.
-  let rest = base.replace(SCHEME_URL, (m) => {
+  let rest = base.replace(SCHEME_URL, (m: string, at: number) => {
     const url = m.replace(/[.,;:!?)\]]+$/, "");
     const host = hostOf(url);
     if (!host || !isAllowedHost(host, allowlist)) out.push({ kind: "link", text: url });
     else {
       const tail = url.replace(/^[a-z]+:\/\//, "");
-      allowed.push(tail);
-      const decoded = safeDecode(tail);
-      if (decoded !== tail) allowed.push(normalizeForContact(decoded));
+      const start = at + url.length - tail.length;
+      const inner = breaksWithin(breaks, start, start + tail.length);
+      allowed.push({ text: tail, breaks: inner });
+      // Decoded a message's part at a time, so the breaks stay put.
+      const parts = [0, ...inner].map((from, i) => tail.slice(from, inner[i] ?? tail.length));
+      const decoded = parts.map(safeDecode);
+      if (decoded.some((d, i) => d !== parts[i])) {
+        const normal = decoded.map(normalizeForContact);
+        allowed.push({ text: normal.join(""), breaks: joinsOf(normal) });
+      }
     }
     return " ".repeat(m.length);
   });
@@ -282,7 +326,7 @@ function findLinks(base: string, allowlist: readonly string[], out: ContactMatch
   });
   findBareDomains(rest, allowlist, out);
   // Each allowed link on its own: its own host passes, anything else in it doesn't.
-  for (const a of allowed) findBareDomains(a, allowlist, out);
+  for (const a of allowed) findBareDomains(a.text, allowlist, out);
   return { rest, allowed };
 }
 
@@ -561,11 +605,16 @@ const CONTACT_PHRASES: RegExp[] = [
 /** App names written with a symbol for a letter, which aren't caught as plain words ("sn@p", "5nap"). */
 const LEET_ONLY_WORDS = new Set(["snap"]);
 
-function findLeetWords(base: string, out: ContactMatch[]) {
-  for (const token of base.split(/\s+/)) {
+function findLeetWords(base: string, breaks: Breaks, out: ContactMatch[]) {
+  // Swapped once over the whole text: a token's ends touch spaces, so each
+  // token reads the same as it would on its own.
+  const readings = unLeet(base, breaks);
+  for (const m of base.matchAll(/\S+/g)) {
+    const token = m[0];
     if (!/[a-z]/.test(token) || !/[0134578@$!|+9]/.test(token)) continue;
-    for (const form of unLeet(token)) {
-      const word = form.replace(/^[^a-z]+|[^a-z]+$/g, "");
+    const at = m.index ?? 0;
+    for (const form of readings) {
+      const word = form.slice(at, at + token.length).replace(/^[^a-z]+|[^a-z]+$/g, "");
       if (LEET_ONLY_WORDS.has(word)) {
         out.push({ kind: "contact_app", text: token });
         return;
@@ -601,19 +650,46 @@ function findApps(forms: string[], out: ContactMatch[]) {
  * and text) are reported once.
  */
 export function findContactPatterns(text: string, opts: ContactOptions = {}): ContactMatch[] {
-  if (!text) return [];
+  return findInPieces([text], opts);
+}
+
+/**
+ * findContactPatterns on several messages glued together with nothing between
+ * them (checkChatSequence, for a detail split across messages: "disc" then
+ * "ord", "maya" then "@gmail.com"). A symbol stands in for a letter only when
+ * it touches a letter in its own message: "d1" then "scord" is still
+ * "discord", but "step 1" then "message" isn't "imessage" and "give me 5"
+ * then "nap time" isn't "snap".
+ */
+export function findGluedContactPatterns(messages: readonly string[], opts: ContactOptions = {}): ContactMatch[] {
+  return findInPieces(messages, opts);
+}
+
+function findInPieces(pieces: readonly string[], opts: ContactOptions): ContactMatch[] {
+  const normal = pieces.filter(Boolean).map(normalizeForContact);
+  if (normal.length === 0) return [];
   const allowlist = opts.allowlist ?? CHAT_LINK_ALLOWLIST;
   const allowHandles = new Set([...(opts.allowHandles ?? [])].map((h) => h.toLowerCase().replace(/^@/, "")));
-  const base = normalizeForContact(text);
+  const base = normal.join("");
+  // Finding emails and links blanks them out with as many spaces, so these
+  // offsets hold in what's left too.
+  const breaks: Breaks = new Set(joinsOf(normal));
   const out: ContactMatch[] = [];
 
   const noEmails = findEmails(base, out);
-  const { rest: noLinks, allowed } = findLinks(noEmails, allowlist, out);
+  const { rest: noLinks, allowed } = findLinks(noEmails, allowlist, breaks, out);
   findHandles(noLinks, allowHandles, out);
   findPhones(noLinks, noLinks, out);
   // App names and phrases in the text, and in the path or query of an allowed link.
-  findApps(letterForms([noLinks, ...allowed].join("\n")), out);
-  findLeetWords(noLinks, out);
+  const appText = [noLinks, ...allowed.map((a) => a.text)].join("\n");
+  const appBreaks = new Set(breaks);
+  let at = noLinks.length + 1;
+  for (const a of allowed) {
+    for (const b of a.breaks) appBreaks.add(at + b);
+    at += a.text.length + 1;
+  }
+  findApps(letterForms(appText, appBreaks), out);
+  findLeetWords(noLinks, breaks, out);
 
   const seen = new Set<string>();
   return out.filter((m) => {

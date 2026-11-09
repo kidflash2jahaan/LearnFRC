@@ -14,7 +14,12 @@ import type { ChatMessage, ClassRole } from "@/lib/classes/types";
  * under its members-only read policy, with the signed-in session. New ones
  * arrive through Supabase Realtime (postgres_changes on this class); if the
  * channel isn't SUBSCRIBED within 5 seconds, or drops, the panel reads the
- * same table every 4 seconds instead. Neither path touches a Vercel function.
+ * same table every 4 seconds instead. SUBSCRIBED can come a few seconds
+ * before Realtime actually delivers changes, and a row sent in that gap never
+ * arrives over it, so every time the channel subscribes (the first time, and
+ * again after an error or timeout) the panel reads the table at once, then 3
+ * and 8 seconds later. Reads and Realtime rows merge by id, so nothing shows
+ * twice and the order stays by id. Neither path touches a Vercel function.
  * Someone removed from the class stops getting messages at once, because the
  * policy stops matching (as does a student who left the class or lost their
  * parent's OK). Messages from accounts the viewer blocked are left out here.
@@ -37,6 +42,8 @@ type Row = {
 
 const COLS = "id, class_id, sender_id, sender_username, sender_role, body, sent_at";
 const KEEP = 300;
+/** When to read the table after each SUBSCRIBED, while Realtime's change feed settles. */
+const CATCH_UP_MS = [0, 3_000, 8_000];
 
 function toMessage(r: Row): ChatMessage {
   return {
@@ -71,7 +78,6 @@ export function ChatPanel({
   const [text, setText] = React.useState("");
   const [note, setNote] = React.useState<string | null>(null);
   const [sending, setSending] = React.useState(false);
-  const lastId = React.useRef(0);
   const listRef = React.useRef<HTMLOListElement>(null);
   const stick = React.useRef(true);
   const uid = React.useId();
@@ -83,7 +89,6 @@ export function ChatPanel({
   const merge = React.useCallback(
     (rows: ChatMessage[]) => {
       if (rows.length === 0) return;
-      for (const r of rows) if (r.id > lastId.current) lastId.current = r.id;
       const hidden = new Set(hiddenKey ? hiddenKey.split(",") : []);
       const shown = rows.filter((r) => !r.senderId || !hidden.has(r.senderId));
       if (shown.length === 0) return;
@@ -101,27 +106,57 @@ export function ChatPanel({
     let cancelled = false;
     let subscribed = false;
     let poll: number | null = null;
+    let catchUps: number[] = [];
+    // The newest id a read of the table has returned. Realtime rows and our
+    // own sends don't move it, so a row Realtime missed is still read even
+    // when a newer one reached us first.
+    let readTo = 0;
+    let reading = false;
+    let readAgain = false;
 
-    async function load(after: number) {
-      let q = supabase
-        .from("class_chat_messages")
-        .select(COLS)
-        .eq("class_id", classId)
-        .order("id", { ascending: false })
-        .limit(200);
-      if (after > 0) q = q.gt("id", after);
-      const { data, error } = await q;
-      if (cancelled || error) return;
-      merge(((data ?? []) as Row[]).map(toMessage));
+    // One read at a time. A read asked for while one is running runs right
+    // after it, from where it got to, so it can't miss what landed meanwhile.
+    async function load() {
+      if (reading) {
+        readAgain = true;
+        return;
+      }
+      reading = true;
+      try {
+        do {
+          readAgain = false;
+          let q = supabase
+            .from("class_chat_messages")
+            .select(COLS)
+            .eq("class_id", classId)
+            .order("id", { ascending: false })
+            .limit(200);
+          if (readTo > 0) q = q.gt("id", readTo);
+          const { data, error } = await q;
+          if (cancelled) return;
+          if (error) continue;
+          const rows = ((data ?? []) as Row[]).map(toMessage);
+          for (const r of rows) if (r.id > readTo) readTo = r.id;
+          merge(rows);
+        } while (readAgain && !cancelled);
+      } finally {
+        reading = false;
+      }
+    }
+
+    function stopCatchUps() {
+      for (const t of catchUps) window.clearTimeout(t);
+      catchUps = [];
     }
 
     function startPolling() {
+      stopCatchUps();
       if (poll !== null || cancelled) return;
       setMode("polling");
-      poll = window.setInterval(() => void load(lastId.current), CHAT_LIMITS.pollEveryMs);
+      poll = window.setInterval(() => void load(), CHAT_LIMITS.pollEveryMs);
     }
 
-    void load(0);
+    void load();
     const channel = supabase
       .channel(`class-chat:${classId}`)
       .on(
@@ -142,8 +177,10 @@ export function ChatPanel({
             poll = null;
           }
           setMode("live");
-          // Catch up on anything sent while connecting.
-          void load(lastId.current);
+          // Anything sent while connecting or while the channel was down,
+          // then whatever lands before the change feed is really delivering.
+          stopCatchUps();
+          catchUps = CATCH_UP_MS.map((ms) => window.setTimeout(() => void load(), ms));
         } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
           subscribed = false;
           startPolling();
@@ -156,6 +193,7 @@ export function ChatPanel({
     return () => {
       cancelled = true;
       window.clearTimeout(fallback);
+      stopCatchUps();
       if (poll !== null) window.clearInterval(poll);
       void supabase.removeChannel(channel);
     };

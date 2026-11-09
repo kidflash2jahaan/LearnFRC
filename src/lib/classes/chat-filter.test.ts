@@ -154,6 +154,66 @@ test("the sequence check leaves ordinary chat and already-stopped messages alone
   assert.equal(CHAT_SEQUENCE.messages, 5);
 });
 
+/** What sendClassChat decides: the message on its own, then with the sender's last few. */
+function sends(previous: string[], text: string, opts: { allowHandles?: string[] } = {}): boolean {
+  return checkChatMessage(text, opts).ok && checkChatSequence(previous, text, opts).ok;
+}
+
+test("a symbol is read as a letter only inside its own message", () => {
+  // "1" ending one message and "message" starting the next read "imessage"
+  // when the messages were glued and then swapped (Nov 9 verification).
+  for (const [previous, text] of [
+    [["check step 1"], "message the mentor channel on the docs page if stuck"],
+    [["message number 1"], "message number 2"],
+    [["message number 1", "message number 2"], "message number 3"],
+    [["see slide 1"], "message board is pinned"],
+    [["lesson 1 is https://learnfrc.com/guides/1"], "message the mentor channel if stuck"],
+    [["give me 5"], "nap time lol"],
+  ] as [string[], string][]) {
+    assert.deepEqual(checkChatSequence(previous, text), { ok: true }, `${JSON.stringify(previous)} then ${JSON.stringify(text)}`);
+    assert.ok(sends(previous, text), `${JSON.stringify(previous)} then ${JSON.stringify(text)}`);
+  }
+});
+
+test("contact details split over 2 to 4 messages are still stopped", () => {
+  for (const [previous, text] of [
+    // Emails.
+    [["maya"], "@gmail.com"],
+    [["maya", "@gmail"], ".com"],
+    [["maya at"], "gmail dot com"],
+    [["m a y a"], "@ g m a i l . c o m"],
+    // Phone numbers.
+    [["202", "555"], "0143"],
+    [["202-555"], "-0143"],
+    [["(202)", "555", "01"], "43"],
+    // @handles.
+    [["@"], "maya_42"],
+    [["follow me", "@"], "maya_42 on there"],
+    // Discord, Snap and Insta, as names and links, symbols included when
+    // they touch a letter in their own message.
+    [["disc"], "ord maya_42"],
+    [["d", "is", "co"], "rd"],
+    [["d1"], "scord"],
+    [["disc"], "0rd"],
+    [["disc"], "ord.gg/abc"],
+    [["https://learnfrc.com/x?u=disc"], "ord"],
+    [["sn"], "ap me"],
+    [["5n"], "ap"],
+    [["snap"], "maya_42"],
+    [["snap maya"], "42"],
+    [["in", "sta"], "gram"],
+    [["ins"], "ta: maya_42"],
+    [["insta"], "gram.com/maya"],
+    // A link with its dot spelled out.
+    [["coolbot"], "dot com"],
+  ] as [string[], string][]) {
+    assert.equal(sends(previous, text), false, `expected ${JSON.stringify(previous)} then ${JSON.stringify(text)} to be blocked`);
+  }
+  // A classmate's handle split the same way still sends.
+  assert.ok(sends(["@"], "maya same question", { allowHandles: ["maya"] }));
+  assert.ok(sends(["@"], "5835 is our team"));
+});
+
 test("length rules", () => {
   assert.equal(chatLengthProblem("   "), "empty");
   assert.equal(chatLengthProblem("x".repeat(CHAT_MAX_CHARS)), null);

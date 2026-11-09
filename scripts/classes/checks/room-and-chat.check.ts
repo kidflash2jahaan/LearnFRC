@@ -546,9 +546,8 @@ async function main() {
     assert.ok(!long.ok && long.error === chat.CHAT_SENTENCES.tooLong);
     const outsider = await send("out", "hello");
     assert.ok(!outsider.ok && outsider.error === chat.CHAT_SENTENCES.notMember);
-    // Texts with no digits: the filter reads a sender's last messages glued
-    // together, so "message number 1" then "message number 2" reads
-    // "...1message..." and "1" stands in for "i": "imessage", stopped.
+    // Twenty-one different texts with no digits, so nothing here depends on
+    // how the filter reads a sender's last few messages together.
     const words = ["alpha", "bravo", "charlie", "delta", "echo", "foxtrot", "golf", "hotel", "india", "juliet", "kilo",
       "lima", "mike", "november", "oscar", "papa", "quebec", "romeo", "sierra", "tango", "uniform"];
     const outcomes: string[] = [];
@@ -583,9 +582,11 @@ async function main() {
     assert.equal(status, "SUBSCRIBED");
     // SUBSCRIBED can come a moment before Realtime delivers changes (a lone
     // subscriber may have to wait for the project's change feed to start), and
-    // a row sent in that gap is never delivered. The panel's polling covers
-    // that gap in the room; here, send until one arrives, so the checks below
-    // run on a live stream.
+    // a row sent in that gap is never delivered over Realtime. In the room the
+    // panel stops polling at SUBSCRIBED but reads the table again at once, 3
+    // seconds and 8 seconds later (and the same after every re-subscribe), so
+    // such a row still shows. This raw channel has no such reads, so send
+    // until one arrives and the checks below run on a live stream.
     const warm = ["alpha", "bravo", "charlie", "delta", "echo", "foxtrot"].map((w) => `realtime warm up ${w}`);
     for (let n = 0; n < warm.length && !got.some((b) => warm.includes(b)); n++) {
       const sent = await send("t1", warm[n]);
