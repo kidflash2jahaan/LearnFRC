@@ -86,14 +86,25 @@ export default function Meeting({
   const [failed, setFailed] = React.useState(false);
   const config = React.useMemo(() => roomUiConfig(), []);
   const started = React.useRef<string | null>(null);
+  // Whether this component is mounted right now. The join below runs once per
+  // token, so in React's development double-run of effects the second run
+  // returns early; a per-run "cancelled" flag would then drop the result of
+  // the only join and leave the room on "connecting" forever.
+  const mounted = React.useRef(false);
+
+  React.useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
 
   React.useEffect(() => {
     if (started.current === authToken) return;
     started.current = authToken;
-    let cancelled = false;
     initMeeting({ authToken, defaults: { audio: false, video: false } })
       .then(async (m) => {
-        if (!m || cancelled) return;
+        if (!m) return;
         // Belt and braces: everyone starts muted with no camera, even if the
         // defaults above were ignored.
         try {
@@ -102,14 +113,11 @@ export default function Meeting({
         } catch {
           // Nothing was on to turn off.
         }
-        if (!cancelled) setReady(true);
+        if (mounted.current) setReady(true);
       })
       .catch(() => {
-        if (!cancelled) setFailed(true);
+        if (mounted.current) setFailed(true);
       });
-    return () => {
-      cancelled = true;
-    };
   }, [authToken, initMeeting]);
 
   React.useEffect(() => {
