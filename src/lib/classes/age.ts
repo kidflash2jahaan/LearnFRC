@@ -1,12 +1,20 @@
 /**
  * Age from a birth month and year, computed conservatively (section 5).
  *
- * We only ask for the month and year, so the exact birthday is unknown. The
- * rule treats everyone as having their birthday on the FIRST DAY OF THE MONTH
- * AFTER their birth month: someone born in March 2008 turns 18 on April 1,
- * 2026, never earlier. That keeps a 17-year-old from being counted as 18 a
- * few weeks early, and a 12-year-old from being counted as 13. Dates are read
- * in UTC.
+ * We only ask for the month and year, so the exact birthday is unknown, and
+ * each cutoff is rounded the way that keeps classes safe:
+ *
+ *   - ageOn treats everyone as having their birthday on the FIRST DAY OF THE
+ *     MONTH AFTER their birth month, so a 12-year-old is never counted as 13
+ *     (and the safety lead, who has to be an adult, is never counted as 18
+ *     early).
+ *   - isAdultOn treats the 18th birthday as the FIRST DAY OF THE BIRTH MONTH,
+ *     so nobody who may already be 18 counts as 17: someone born in March
+ *     2008 is 18+ for classes from March 1, 2026. Classes are for 13 to 17
+ *     with no adult in the room, so here the early side is the safe one.
+ *
+ * ageBandOn uses both: under13 by ageOn, 18+ by isAdultOn. Dates are read in
+ * UTC.
  *
  * Pure, no imports, unit tested (age.test.ts).
  */
@@ -36,8 +44,25 @@ export function ageBand(age: number): AgeBand {
   return "18+";
 }
 
-/** ageBand(ageOn(...)) in one call. */
+/**
+ * True from the first day of someone's 18th birth month: the side that keeps
+ * anyone who may already be 18 out of classes for 13 to 17 year olds.
+ */
+export function isAdultOn(date: Date, birthYear: number, birthMonth: number): boolean {
+  const year = date.getUTCFullYear();
+  const month = date.getUTCMonth() + 1;
+  const age = year - birthYear - (month < birthMonth ? 1 : 0);
+  return age >= 18;
+}
+
+/**
+ * The band for classes: 18+ from the first day of the 18th birth month
+ * (isAdultOn), under 13 until the month after the 13th (ageOn), otherwise by
+ * ageOn. Eligibility, the age screen, teacher applications and the review's
+ * code flags all use this.
+ */
 export function ageBandOn(date: Date, birthYear: number, birthMonth: number): AgeBand {
+  if (isAdultOn(date, birthYear, birthMonth)) return "18+";
   return ageBand(ageOn(date, birthYear, birthMonth));
 }
 

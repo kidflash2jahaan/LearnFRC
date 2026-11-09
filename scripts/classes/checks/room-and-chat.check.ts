@@ -733,11 +733,20 @@ async function main() {
       .eq("kind", "reported");
     assert.equal(count, 1);
     assert.deepEqual(await holdReasons(nowId, acc.t1.id), ["class_report"], "a class_report hold about the teacher");
-    const mail = outbox(since).find((m) => m.subject.startsWith("LIVE CLASS:"));
-    assert.ok(mail, "LIVE CLASS email in the outbox");
-    assert.deepEqual([...mail!.to].sort(), [process.env.ADMIN_EMAILS!, process.env.CLASSES_SAFETY_EMAIL!].sort());
+    // A private-contact report restricts the class at once: the details go
+    // to the safety lead alone, and the owner (a minor) gets the one line.
+    const live = outbox(since).filter((m) => m.subject.startsWith("LIVE CLASS:"));
+    const mail = live.find((m) => [...m.to].includes(process.env.CLASSES_SAFETY_EMAIL!));
+    assert.ok(mail, "LIVE CLASS email to the safety lead in the outbox");
+    assert.deepEqual([...mail!.to], [process.env.CLASSES_SAFETY_EMAIL!]);
     assert.ok(mail!.html.includes(`/admin/classes/${nowId}`), "the button opens the class's review page");
     assert.ok(mail!.html.includes("Asked me to talk privately or meet up"));
+    const ownerMail = live.find((m) => [...m.to].includes(process.env.ADMIN_EMAILS!.split(",")[0]));
+    assert.ok(ownerMail, "the owner's one-line email");
+    assert.ok(ownerMail!.html.includes("A class needs a safety review. Dhiren has it."));
+    assert.ok(!ownerMail!.html.includes("Asked me to talk privately or meet up"), "no report details for the owner");
+    const { data: rv } = await admin.from("class_reviews").select("restricted").eq("class_id", nowId).single();
+    assert.equal(rv!.restricted, true, "the report restricted the class before any review");
 
     const d = await desk.loadReportsDesk(user("staff"));
     assert.ok(d.ok);

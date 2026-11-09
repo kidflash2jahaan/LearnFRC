@@ -114,9 +114,10 @@ export default async function ClassPage({ params }: Params) {
   const blocked = c.blockedEitherWay && !isTeacher;
   const showHandle = !!viewer && !!c.teacher && !blocked;
 
-  // Report: the people who were in it see the whole roster for 30 days; any
-  // other signed-in reader can report the class itself (its teacher).
-  const canReport = !!viewer && !isTeacher && (c.canReportFromClass || !t.over);
+  // Report: the people who were in it, its teacher included, see the whole
+  // roster for 30 days; any other signed-in reader can report the class
+  // itself (its teacher) while it's scheduled or on.
+  const canReport = !!viewer && (isTeacher ? c.canReportFromClass : c.canReportFromClass || !t.over);
   const roster = canReport ? await classRoster(c.id) : [];
   const reportRoster = c.canReportFromClass ? roster : roster.filter((r) => r.role === "teacher");
 

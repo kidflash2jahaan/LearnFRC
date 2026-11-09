@@ -7,10 +7,13 @@
  *   |                                                |                | the playbook                |
  *   | urgent and restricted, or a refusal            | one line       | full notes, recording,      |
  *   |                                                |                | the playbook                |
+ *   | restricted, not urgent                         | one line       | full notes, the playbook    |
  *
- * Restricted means grooming, sexual content, sextortion, or a refusal. Jahaan
- * is a minor, so those reach him only as "A class needs a safety review.
- * Dhiren has it."
+ * Restricted means grooming, sexual content, sextortion or signs of abuse in
+ * the model's flags, a refusal, a student's camera or screen share being on,
+ * or a class report with reason `sexual` (review.ts and reports.ts set it).
+ * Jahaan is a minor, so those reach him only as "A class needs a safety
+ * review. Dhiren has it.", whatever the verdict.
  *
  * Every message: no quotes of anything said or typed (flags are described,
  * never quoted, and quoted text in a description is cut out), the line saying
@@ -40,8 +43,29 @@ export type Routing = {
 /** Section 7.5's table. */
 export function routeReview(r: { verdict: ReviewVerdict; restricted: boolean; refused: boolean }): Routing {
   if (r.refused || (r.verdict === "urgent" && r.restricted)) return { owner: "one_line", safety: "full", urgent: true };
+  // Restricted but not urgent (a "check" grooming flag, a report): still the
+  // safety lead's alone, so the owner gets the one line.
+  if (r.restricted) return { owner: "one_line", safety: "full", urgent: false };
   if (r.verdict === "urgent") return { owner: "full", safety: "full", urgent: true };
   return { owner: "full", safety: "none", urgent: false };
+}
+
+/**
+ * Whether a review run leaves the class restricted: what the run found (the
+ * model's restricted categories or a refusal), a student's camera or screen
+ * share being on (urgent code flags the AI can't judge, since it never sees
+ * video), or a restriction already in place. A run never lowers one; only the
+ * safety lead's release does (releaseReview, releaseHold).
+ */
+export function reviewRestricted(input: {
+  runRestricted: boolean;
+  codeFlags: readonly Pick<CodeFlag, "kind" | "severity">[];
+  alreadyRestricted: boolean;
+}): boolean {
+  const studentMedia = input.codeFlags.some(
+    (f) => (f.kind === "camera_minutes" || f.kind === "screenshare_minutes") && f.severity === "urgent"
+  );
+  return input.runRestricted || studentMedia || input.alreadyRestricted;
 }
 
 export const VIDEO_LINE =

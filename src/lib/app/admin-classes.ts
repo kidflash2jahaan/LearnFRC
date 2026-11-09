@@ -8,7 +8,7 @@ import {
   safetyLeadCandidateError,
   type ClassReviewerRole,
 } from "@/lib/app/class-reviewers";
-import { endClass, setJoinsPaused } from "@/lib/app/classes-room";
+import { endClass, participantMinutesSoFar, setJoinsPaused } from "@/lib/app/classes-room";
 import { revokeParentConsentBy } from "@/lib/app/class-consent";
 import { refreshClassesOnStaticPages } from "@/lib/classes/static-pages";
 import {
@@ -51,7 +51,9 @@ import type {
  * WHO. A super admin or the safety lead (class_settings.safety_lead_user_id),
  * through requireClassReviewer (src/lib/app/class-reviewers.ts). The safety
  * lead gets these pages and nothing else in /admin. Restricted reviews
- * (grooming, sexual content, sextortion, a refusal) show their notes,
+ * (grooming, sexual content, sextortion, signs of abuse, a refusal, a
+ * student's camera or screen share, a class report of sexual content, which
+ * restricts the class before the review runs) show their notes,
  * transcript, chat and recording only to someone canSeeRestricted allows (the
  * safety lead); everyone else sees "Dhiren is handling this one" until he
  * releases it. Settings and visibility are a super admin's.
@@ -160,21 +162,13 @@ export function compareWaiting(a: DeskClass, b: DeskClass): number {
   return when(a) - when(b) || (VERDICT_ORDER[a.verdict ?? ""] ?? 3) - (VERDICT_ORDER[b.verdict ?? ""] ?? 3);
 }
 
-/** Participant-minutes so far this month (UTC), staff excluded: the cap's measure. */
+/**
+ * Participant-minutes so far this month (UTC), the cap's own measure
+ * (participantMinutesSoFar in classes-room.ts, staff included, since
+ * Cloudflare bills them), so the desk's figure is the number joinClass checks.
+ */
 export async function participantMinutesThisMonth(now: Date = new Date()): Promise<number> {
-  const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
-  const { data } = await createAdminClient()
-    .from("class_attendance")
-    .select("joined_at, left_at, role")
-    .gte("joined_at", monthStart)
-    .neq("role", "staff")
-    .limit(50_000);
-  let ms = 0;
-  for (const a of data ?? []) {
-    const end = a.left_at ? Date.parse(a.left_at as string) : now.getTime();
-    ms += Math.max(0, end - Date.parse(a.joined_at as string));
-  }
-  return Math.floor(ms / 60_000);
+  return participantMinutesSoFar(now);
 }
 
 export async function loadClassesDeskAs(r: ClassReviewer, now: Date = new Date()): Promise<ClassesDesk> {
@@ -361,6 +355,12 @@ export type ReviewPageAttendance = {
   username: string | null;
   role: ClassRole;
   ageBand: AgeBand | null;
+  /**
+   * A student's parent or guardian's email, from their newest agreed parent
+   * OK: what the playbook sends the safety lead here for. Null for anyone
+   * else, and behind the same restricted gate as the transcript.
+   */
+  parentEmail: string | null;
   accountAgeDays: number | null;
   joinedAt: string;
   leftAt: string | null;
@@ -432,14 +432,30 @@ export async function loadClassReviewAs(
   const facts = await loadReviewFacts(classId);
   if (!facts || facts.cls.rtk_app !== rtkApp()) return fail("not_found", NOT_FOUND);
   const admin = createAdminClient();
-  const [reviewQ, eventsQ, holdsQ] = await Promise.all([
+  const studentIds = [
+    ...new Set(facts.attendance.filter((a) => a.role === "student" && a.user_id).map((a) => a.user_id as string)),
+  ];
+  const [reviewQ, eventsQ, holdsQ, parentsQ] = await Promise.all([
     admin.from("class_reviews").select("*").eq("class_id", classId).maybeSingle(),
     admin.from("class_events").select("kind, actor_id, detail, created_at").eq("class_id", classId).order("created_at", { ascending: true }).limit(200),
     admin.from("class_safety_holds").select("id", { count: "exact", head: true }).eq("class_id", classId),
+    studentIds.length
+      ? admin
+          .from("class_parent_consents")
+          .select("student_id, parent_email, decided_at")
+          .in("student_id", studentIds)
+          .eq("status", "agreed")
+          .order("decided_at", { ascending: false })
+      : Promise.resolve({ data: [] as { student_id: string; parent_email: string; decided_at: string | null }[] }),
   ]);
   const review = reviewQ.data as ClassReviewRow | null;
   const restricted = !!review?.restricted;
   const hidden = restricted && !r.canSeeRestricted;
+  // Newest agreed parent OK per student (the query is newest first).
+  const parentEmailOf = new Map<string, string>();
+  for (const p of (parentsQ.data ?? []) as { student_id: string; parent_email: string }[]) {
+    if (!parentEmailOf.has(p.student_id)) parentEmailOf.set(p.student_id, p.parent_email);
+  }
   const c = facts.cls;
   const name = (id: string | null | undefined) => (id ? (facts.usernames.get(id) ?? null) : null);
   const roleOf = new Map(facts.people.map((p) => [p.userId, p]));
@@ -510,6 +526,7 @@ export async function loadClassReviewAs(
             username: name(a.user_id),
             role: a.role,
             ageBand: p?.ageBand ?? null,
+            parentEmail: a.role === "student" && a.user_id ? (parentEmailOf.get(a.user_id) ?? null) : null,
             accountAgeDays: a.account_age_days,
             joinedAt: a.joined_at,
             leftAt: a.left_at,
@@ -546,7 +563,13 @@ export async function loadClassReviewAs(
           const available = !!s.recording_url && (!s.recording_expires_at || Date.parse(s.recording_expires_at) > now.getTime());
           return { sessionId: s.id, url: available ? s.recording_url : null, expiresAt: s.recording_expires_at, available };
         }),
-    reports: facts.reports.map((x) => ({ ...x, reporterUsername: anyName(x.reporterId) })),
+    // What reporters wrote is for the safety lead: a super admin answers
+    // reports on /admin/reports, which leaves out the restricted ones.
+    reports: facts.reports.map((x) => ({
+      ...x,
+      details: r.canSeeRestricted ? x.details : null,
+      reporterUsername: anyName(x.reporterId),
+    })),
     events: hidden
       ? []
       : events.map((e) => ({ kind: e.kind, at: e.created_at, actorUsername: anyName(e.actor_id), detail: e.detail ?? {} })),
@@ -893,11 +916,15 @@ export async function setSafetyLeadAs(r: ClassReviewer, handle: string): Promise
   const clean = handle.trim().replace(/^@/, "");
   const admin = createAdminClient();
   let userId: string | null = null;
+  let username: string | null = null;
   if (clean) {
     if (!/^[a-zA-Z0-9_]{1,40}$/.test(clean)) return { ...fail("validation", "That isn't a username."), field: "handle" };
-    const { data } = await admin.from("profiles").select("id").ilike("username", clean).maybeSingle();
-    if (!data) return { ...fail("not_found", `No account has the username @${clean}.`), field: "handle" };
+    // Exact match: usernames are stored lowercase, and in ILIKE "_" matches
+    // any character, so "dhiren_p" would also find "dhirenxp".
+    const { data } = await admin.from("profiles").select("id, username").eq("username", clean.toLowerCase()).maybeSingle();
+    if (!data) return { ...fail("not_found", `No account has the username @${clean.toLowerCase()}.`), field: "handle" };
     userId = data.id as string;
+    username = (data.username as string | null) ?? clean.toLowerCase();
     const refusal = await safetyLeadCandidateError(userId);
     if (refusal) return { ...fail("validation", refusal), field: "handle" };
   }
@@ -906,7 +933,7 @@ export async function setSafetyLeadAs(r: ClassReviewer, handle: string): Promise
     .update({ safety_lead_user_id: userId, updated_at: nowIso(), updated_by: r.userId })
     .eq("id", true);
   if (error) return fail("server", "Couldn't save that. Try again.");
-  return { ok: true, message: userId ? `@${clean} is the safety lead.` : "No safety lead is set." };
+  return { ok: true, message: userId ? `@${username} is the safety lead.` : "No safety lead is set." };
 }
 
 /* ── Parent consents (lookup and revoke) ───────────────────────────── */
@@ -929,13 +956,16 @@ export async function findParentConsentsAs(r: ClassReviewer, handle: string): Pr
   const clean = handle.trim().replace(/^@/, "");
   if (!/^[a-zA-Z0-9_]{1,40}$/.test(clean)) return { ...fail("validation", "Type a username."), field: "handle" };
   const admin = createAdminClient();
-  const { data: prof } = await admin.from("profiles").select("id").ilike("username", clean).maybeSingle();
+  // Exact matches: usernames and handle snapshots are lowercase, and in ILIKE
+  // "_" matches any character, so a lookup could return someone else's rows.
+  const handleLower = clean.toLowerCase();
+  const { data: prof } = await admin.from("profiles").select("id").eq("username", handleLower).maybeSingle();
   let q = admin
     .from("class_parent_consents")
     .select("id, student_id, student_handle, status, parent_email, parent_name, sent_at, decided_at, same_network, revoked_at")
     .order("sent_at", { ascending: false })
     .limit(20);
-  q = prof ? q.or(`student_id.eq.${prof.id},student_handle.ilike.${clean}`) : q.ilike("student_handle", clean);
+  q = prof ? q.or(`student_id.eq.${prof.id},student_handle.eq.${handleLower}`) : q.eq("student_handle", handleLower);
   const { data, error } = await q;
   if (error) return fail("server", "Couldn't look that up. Try again.");
   return {

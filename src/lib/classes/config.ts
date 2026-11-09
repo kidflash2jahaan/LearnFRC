@@ -6,6 +6,7 @@ import {
   rtkAppFor,
   type ClassSwitches,
 } from "@/lib/classes/constants";
+import { COORDINATOR } from "@/lib/classes/coordinator";
 import type { ClassSettingsRow, RtkApp } from "@/lib/classes/types";
 
 export * from "@/lib/classes/constants";
@@ -87,11 +88,17 @@ export function reviewModel(): string {
 }
 
 /**
- * Where safety email goes: Dhiren's address in production, a test address on
- * dev servers. Null when unset, and the caller falls back to the owner.
+ * Where safety email goes (class reports, auto-ends, pauses, urgent reviews,
+ * holds, letter requests): CLASSES_SAFETY_EMAIL, and in a production build
+ * Dhiren's address (COORDINATOR.email) when that's unset, so one missing
+ * Vercel variable can't drop the safety lead from every path. Null on a dev
+ * server without it: dev servers write mail to EMAIL_DEV_OUTBOX, and nothing
+ * there should reach Dhiren's real inbox by default.
  */
 export function safetyEmail(): string | null {
-  return process.env.CLASSES_SAFETY_EMAIL?.trim() || null;
+  const set = process.env.CLASSES_SAFETY_EMAIL?.trim();
+  if (set) return set;
+  return isProductionBuild() ? COORDINATOR.email : null;
 }
 
 /** The owner's address (the first ADMIN_EMAILS entry), as reports use. */

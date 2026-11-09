@@ -23,7 +23,7 @@ import {
   ownerEmail,
   teachUrl,
 } from "@/lib/classes/config";
-import { ageBand, ageOn } from "@/lib/classes/age";
+import { ageBandOn } from "@/lib/classes/age";
 import { findContactPatterns } from "@/lib/classes/contact-patterns";
 import { TEACHER_CODE_VERSION } from "@/lib/classes/notice";
 import {
@@ -155,7 +155,7 @@ async function logTeacherEvent(actorId: string, kind: string, detail: Record<str
 }
 
 function ageBandFrom(row: { birth_year: number; birth_month: number } | null | undefined, now = new Date()) {
-  return row ? ageBand(ageOn(now, row.birth_year, row.birth_month)) : null;
+  return row ? ageBandOn(now, row.birth_year, row.birth_month) : null;
 }
 
 /** Topic titles for lesson or module ids, in the order given. Unknown ids are left out. */

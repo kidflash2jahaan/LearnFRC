@@ -6,6 +6,7 @@ import {
   VIDEO_LINE,
   codeFlagLine,
   reviewMails,
+  reviewRestricted,
   routeReview,
   unknownMeetingMail,
   type ReviewMail,
@@ -88,6 +89,26 @@ test("routing follows section 7.5's table", () => {
   assert.deepEqual(routeReview({ verdict: "urgent", restricted: false, refused: false }), { owner: "full", safety: "full", urgent: true });
   assert.deepEqual(routeReview({ verdict: "urgent", restricted: true, refused: false }), { owner: "one_line", safety: "full", urgent: true });
   assert.deepEqual(routeReview({ verdict: "needs_review", restricted: true, refused: true }), { owner: "one_line", safety: "full", urgent: true });
+  // A run never lowers a restriction: a restricted review rerun with a clean answer stays restricted.
+  assert.equal(reviewRestricted({ runRestricted: false, codeFlags: [], alreadyRestricted: true }), true);
+  assert.equal(reviewRestricted({ runRestricted: false, codeFlags: [], alreadyRestricted: false }), false);
+  assert.equal(reviewRestricted({ runRestricted: true, codeFlags: [], alreadyRestricted: false }), true);
+  // A student's camera or screen share (urgent) restricts; the teacher's (info) doesn't.
+  assert.equal(
+    reviewRestricted({ runRestricted: false, codeFlags: [{ kind: "camera_minutes", severity: "urgent" }], alreadyRestricted: false }),
+    true
+  );
+  assert.equal(
+    reviewRestricted({ runRestricted: false, codeFlags: [{ kind: "screenshare_minutes", severity: "urgent" }], alreadyRestricted: false }),
+    true
+  );
+  assert.equal(
+    reviewRestricted({ runRestricted: false, codeFlags: [{ kind: "camera_minutes", severity: "info" }], alreadyRestricted: false }),
+    false
+  );
+  // Restricted without being urgent still keeps the owner to one line.
+  assert.deepEqual(routeReview({ verdict: "needs_review", restricted: true, refused: false }), { owner: "one_line", safety: "full", urgent: false });
+  assert.deepEqual(routeReview({ verdict: "looks_fine", restricted: true, refused: false }), { owner: "one_line", safety: "full", urgent: false });
 });
 
 test("routine notes go to the owner only, with usernames, the video line and no quotes", () => {

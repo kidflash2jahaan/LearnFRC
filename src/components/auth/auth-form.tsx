@@ -7,6 +7,7 @@ import { signIn, signUp, type AuthState } from "@/app/actions/auth";
 import { AppleSignInButton } from "@/components/auth/apple-button";
 import { GoogleSignInButton } from "@/components/auth/google-button";
 import { APPLE_SIGN_IN_ENABLED } from "@/lib/auth-providers";
+import { safeNextPath } from "@/lib/safe-next";
 
 type Mode = "login" | "signup";
 
@@ -70,7 +71,7 @@ export function AuthForm({
 
   const [showPassword, setShowPassword] = React.useState(false);
 
-  const nextValue = next && next.startsWith("/") ? next : "";
+  const nextValue = safeNextPath(next) ?? "";
   const switchHref = isSignup
     ? `/login${nextValue ? `?next=${encodeURIComponent(nextValue)}` : ""}`
     : `/signup${nextValue ? `?next=${encodeURIComponent(nextValue)}` : ""}`;

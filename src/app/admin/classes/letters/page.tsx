@@ -38,6 +38,7 @@ function when(iso: string | null): string {
 
 function ClassRow({ c }: { c: DeskClass }) {
   const notes: string[] = [];
+  if (c.onOtherLetter) notes.push(`already on ${c.onOtherLetter}`);
   if (c.currentStatus && c.currentStatus !== "approved") notes.push(`now ${c.currentStatus}`);
   if (c.restrictedHidden) notes.push(`safety review, ${COORDINATOR.name.split(" ")[0]} has it`);
   else {

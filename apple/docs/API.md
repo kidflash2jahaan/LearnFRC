@@ -1445,6 +1445,7 @@ Response 200 (one of each):
       "reporterUsername": "maya_254",
       "snapshot": { "username": "kai_cad", "avatarUrl": null, "bio": "…", "teamNumber": 254, "title": null, "note": null, "target": null, "newModuleTitle": null },
       "details": "The bio.",
+      "detailsWithheld": false,
       "surface": "leaderboard",
       "platform": "ios",
       "createdAt": "2026-11-08T18:02:11.123Z",
@@ -1467,6 +1468,8 @@ Response 200 (one of each):
 | `reportedUsername` / `currentUsername` | String? | The handle when reported, and now (null once the account is gone). |
 | `reporterUsername` | String? | Shown only on this desk. |
 | `snapshot` | object | The public fields as they stood when it was reported: `username`, `avatarUrl`, `bio`, `teamNumber` for a profile; `target` (the lesson or article), `note`, `title`, `newModuleTitle` for an edit or proposal. For a live-class report (`contentKind` `class`, `contentKindLabel` "Live class"), `target` is one readable line about the class and the reported person's place in it, and these were added with live classes (2026-11; null on every other kind, so decode them as optional): `classId`, `classTitle`, `classStartsAt` (String?), `classRole` (`teacher`, `student` or `staff`), `liveNow` (Bool?, the class was on when it was reported). Remove on a class report is the class action (the student leaves the class for good; a teacher's teaching is suspended and the class ended) and needs a super admin or the safety lead. |
+| `details` | String? | What the reporter wrote. Null on a live-class report with reason `sexual`: that goes to the safety lead only (added 2026-11). |
+| `detailsWithheld` | Bool | True when the reporter wrote something that `details` leaves out for that reason (added 2026-11; decode as optional, default false). |
 | `answerBy` | String | `createdAt` plus 24 hours. |
 | `openAboutAccount` | Int | Open reports about the same account, this one included. |
 

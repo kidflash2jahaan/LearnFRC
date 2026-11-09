@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
+import { safeNextPath } from "@/lib/safe-next";
 import {
   registerAccount,
   requestIp,
@@ -20,11 +21,9 @@ export type AuthState =
     }
   | undefined;
 
-/** Only allow same-origin relative paths (blocks //evil.com, /\evil.com). */
+/** Only allow same-origin relative paths (blocks //evil.com, /\evil.com, /\t/evil.com). */
 function safeNext(n: string): string {
-  return n.startsWith("/") && !n.startsWith("//") && !n.startsWith("/\\")
-    ? n
-    : "/dashboard";
+  return safeNextPath(n) ?? "/dashboard";
 }
 
 export async function signIn(

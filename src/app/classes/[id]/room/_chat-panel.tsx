@@ -16,7 +16,8 @@ import type { ChatMessage, ClassRole } from "@/lib/classes/types";
  * channel isn't SUBSCRIBED within 5 seconds, or drops, the panel reads the
  * same table every 4 seconds instead. Neither path touches a Vercel function.
  * Someone removed from the class stops getting messages at once, because the
- * policy stops matching.
+ * policy stops matching (as does a student who left the class or lost their
+ * parent's OK). Messages from accounts the viewer blocked are left out here.
  *
  * Sending: sendClassChatAction, which runs the filter. A blocked message
  * comes back as the note, the text stays in the box so it can be fixed, and
@@ -55,7 +56,16 @@ const TAG: Record<ClassRole, string | null> = {
   student: null,
 };
 
-export function ChatPanel({ classId, viewerId }: { classId: string; viewerId: string }) {
+export function ChatPanel({
+  classId,
+  viewerId,
+  hiddenSenderIds = [],
+}: {
+  classId: string;
+  viewerId: string;
+  /** Accounts the viewer blocked: their messages never show here. */
+  hiddenSenderIds?: string[];
+}) {
   const [messages, setMessages] = React.useState<ChatMessage[]>([]);
   const [mode, setMode] = React.useState<"connecting" | "live" | "polling">("connecting");
   const [text, setText] = React.useState("");
@@ -68,15 +78,23 @@ export function ChatPanel({ classId, viewerId }: { classId: string; viewerId: st
   const boxId = `${uid}-box`;
   const noteId = `${uid}-note`;
 
-  const merge = React.useCallback((rows: ChatMessage[]) => {
-    if (rows.length === 0) return;
-    for (const r of rows) if (r.id > lastId.current) lastId.current = r.id;
-    setMessages((prev) => {
-      const byId = new Map(prev.map((m) => [m.id, m]));
-      for (const r of rows) byId.set(r.id, r);
-      return [...byId.values()].sort((a, b) => a.id - b.id).slice(-KEEP);
-    });
-  }, []);
+  // A stable key, so the effect below doesn't resubscribe on every render.
+  const hiddenKey = hiddenSenderIds.join(",");
+  const merge = React.useCallback(
+    (rows: ChatMessage[]) => {
+      if (rows.length === 0) return;
+      for (const r of rows) if (r.id > lastId.current) lastId.current = r.id;
+      const hidden = new Set(hiddenKey ? hiddenKey.split(",") : []);
+      const shown = rows.filter((r) => !r.senderId || !hidden.has(r.senderId));
+      if (shown.length === 0) return;
+      setMessages((prev) => {
+        const byId = new Map(prev.map((m) => [m.id, m]));
+        for (const r of shown) byId.set(r.id, r);
+        return [...byId.values()].sort((a, b) => a.id - b.id).slice(-KEEP);
+      });
+    },
+    [hiddenKey]
+  );
 
   React.useEffect(() => {
     const supabase = createClient();

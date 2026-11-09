@@ -1,6 +1,7 @@
 import { AuthForm } from "@/components/auth/auth-form";
 import { HardRedirect } from "@/components/auth/hard-redirect";
 import { getSession } from "@/lib/auth";
+import { safeNextPath } from "@/lib/safe-next";
 import { SignInSheet, SignInAside } from "./_auth-scene";
 
 export const metadata = {
@@ -18,9 +19,11 @@ export const metadata = {
  * what the account is for. The form is the first thing in the reading order
  * and the first thing in the tab order.
  *
- * BEHAVIOUR IS UNCHANGED: same `next` sanitising, same session check, and the
- * same HardRedirect rather than an RSC redirect() when a session already
- * exists, because a soft navigation would leave the navbar showing "Log in".
+ * The same session check, and the same HardRedirect rather than an RSC
+ * redirect() when a session already exists, because a soft navigation would
+ * leave the navbar showing "Log in". `next` goes through safeNextPath
+ * (src/lib/safe-next.ts), so "?next=//host" can't send a signed-in reader to
+ * another site.
  */
 export default async function LoginPage({
   searchParams,
@@ -28,7 +31,7 @@ export default async function LoginPage({
   searchParams: Promise<{ next?: string; notice?: string; email?: string }>;
 }) {
   const { next, notice, email } = await searchParams;
-  const safeNext = next && next.startsWith("/") ? next : undefined;
+  const safeNext = safeNextPath(next);
   const { user } = await getSession();
   // Already signed in (including right after the sign-in action sets cookies
   // and Next refreshes this route): HARD redirect so every layout picks up the

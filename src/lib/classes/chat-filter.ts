@@ -10,6 +10,9 @@
  *
  * A stopped message is stored as `blocked` with its kinds (it goes into the
  * review and holds) and the sender sees CHAT_BLOCKED_NOTE; nobody else sees it.
+ * checkChatSequence also looks at the sender's last few messages together,
+ * so a phone number or app name split across messages is stopped when the
+ * last piece arrives.
  *
  * Pure, imports only ./contact-patterns.ts, unit tested (chat-filter.test.ts).
  */
@@ -64,4 +67,61 @@ export function checkChatMessage(
   });
   if (matches.length === 0) return { ok: true };
   return { ok: false, kinds: contactKinds(matches) };
+}
+
+/** How far back checkChatSequence looks: the sender's last 5 messages in the last 3 minutes. */
+export const CHAT_SEQUENCE = { messages: 5, windowMs: 3 * 60_000 } as const;
+
+/** Mostly digits: at least half of what isn't a space is a digit ("202", "555-"). */
+function mostlyDigits(s: string): boolean {
+  const compact = s.replace(/\s+/g, "");
+  const digits = compact.replace(/\D/g, "").length;
+  return digits > 0 && digits * 2 >= compact.length;
+}
+
+/**
+ * A message that's fine on its own but finishes a contact detail split across
+ * the sender's last few messages: "202", "555", "0143", or "disc" then "ord
+ * maya_42". `previous` is the sender's recent messages in this class, oldest
+ * first, whatever happened to them (the caller picks them with
+ * CHAT_SEQUENCE). They're joined with spaces, with nothing between them, and
+ * (for the run of mostly-digit messages that ends with this one) as digits
+ * only. Only details that no single message carries count, so a message the
+ * filter already stopped doesn't stop the next one too.
+ */
+export function checkChatSequence(
+  previous: readonly string[],
+  text: string,
+  opts: { allowHandles?: Iterable<string> } = {}
+): ChatCheck {
+  const recent = previous.map(cleanChatText).filter(Boolean).slice(-CHAT_SEQUENCE.messages);
+  const current = cleanChatText(text);
+  if (recent.length === 0 || !current) return { ok: true };
+  const handles = opts.allowHandles ? [...opts.allowHandles] : undefined;
+  const scan = (s: string) =>
+    findContactPatterns(s, { allowlist: CHAT_LINK_ALLOWLIST, allowHandles: handles });
+  const key = (m: { kind: string; text: string }) => `${m.kind}\u0000${m.text}`;
+
+  const all = [...recent, current];
+  const alone = new Set<string>();
+  for (const m of all) for (const found of scan(m)) alone.add(key(found));
+
+  // Joined with spaces, every kind counts. Glued together, words run into
+  // each other ("go to" + "learnfrc.com" reads "tolearnfrc.com", "@maya" +
+  // "same" reads "@mayasame"), so only app names, phrases and emails count.
+  // The digits-only run counts only as a full 10 or 11 digit number.
+  const found = [
+    ...scan(all.join(" ")),
+    ...scan(all.join("")).filter((m) => m.kind === "contact_app" || m.kind === "contact_phrase" || m.kind === "email"),
+  ];
+  const digitRun: string[] = [];
+  for (let i = all.length - 1; i >= 0 && mostlyDigits(all[i]); i--) digitRun.unshift(all[i].replace(/\D/g, ""));
+  const digits = digitRun.join("");
+  if (digitRun.length >= 2 && (digits.length === 10 || digits.length === 11)) {
+    found.push(...scan(digits).filter((m) => m.kind === "phone"));
+  }
+
+  const added = found.filter((m) => !alone.has(key(m)));
+  if (added.length === 0) return { ok: true };
+  return { ok: false, kinds: contactKinds(added) };
 }

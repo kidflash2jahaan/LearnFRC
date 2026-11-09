@@ -130,6 +130,10 @@ function OpenReport({ r, canBan }: { r: DeskReport; canBan: boolean }) {
           <p className="nb-slug">what the reporter wrote</p>
           <p className="mt-1 whitespace-pre-wrap text-[0.93rem] leading-snug">{r.details}</p>
         </div>
+      ) : r.detailsWithheld ? (
+        <p className="nb-hint mt-3 max-w-[62ch]">
+          The reporter wrote more. It went to the safety lead, who has this one.
+        </p>
       ) : null}
 
       <div className="mt-3.5 grid gap-3">

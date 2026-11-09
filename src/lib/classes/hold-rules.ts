@@ -76,9 +76,13 @@ export function laterOf(a: string | Date | null | undefined, b: Date): Date {
 
 /**
  * A hold is restricted (the safety lead only) while it hasn't been released
- * and either its class's review is restricted (grooming, sexual content,
- * sextortion, a refusal) or the hold itself was taken for a refusal (which can
- * land before the review row says so). Section 7.6.
+ * and either its class's review is restricted or the hold itself was taken
+ * for a refusal (which can land before the review row says so). Section 7.6.
+ * The review is restricted by the AI (grooming, sexual content, sextortion,
+ * signs of abuse, a refusal), by a student's camera or screen share, and at
+ * once by a class report with reason `sexual`, which writes the review row
+ * before it takes its hold (src/lib/app/reports.ts), so a report's hold is
+ * restricted from the start.
  */
 export function isHoldRestricted(input: {
   reason: HoldReason;

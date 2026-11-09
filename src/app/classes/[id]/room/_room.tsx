@@ -281,7 +281,7 @@ export function Room(view: RoomView) {
             onLeft={onLeft}
           />
         </div>
-        <ChatPanel classId={classId} viewerId={view.viewerId} />
+        <ChatPanel classId={classId} viewerId={view.viewerId} hiddenSenderIds={view.hiddenSenderIds} />
       </div>
       <p className="nb-hint mt-3">
         You&rsquo;re in as <b>{grant.displayName}</b>. Everyone in the class sees your username.

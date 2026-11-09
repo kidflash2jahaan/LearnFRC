@@ -13,7 +13,12 @@ import {
   type StaffRole,
 } from "@/lib/app/admin-access";
 import { deleteAccountData } from "@/lib/app/profile";
-import { contentKindLabel, reasonLabel, type ReportContentKind } from "@/lib/app/reports";
+import {
+  RESTRICTING_CLASS_REPORT_REASONS,
+  contentKindLabel,
+  reasonLabel,
+  type ReportContentKind,
+} from "@/lib/app/reports";
 import { endClass, isClassStaff, removeFromClass } from "@/lib/app/classes-room";
 import { suspendTeacher } from "@/lib/app/class-teachers";
 import { pacificTime } from "@/lib/classes/emails";
@@ -96,6 +101,8 @@ export type DeskReport = {
     liveNow: boolean | null;
   };
   details: string | null;
+  /** The reporter wrote something, kept for the safety lead (a class report of sexual content). */
+  detailsWithheld: boolean;
   surface: string | null;
   platform: string | null;
   createdAt: string | null;
@@ -210,7 +217,11 @@ function toDesk(
       classRole,
       liveNow: isClass ? snap.liveNow === true : null,
     },
-    details: r.details,
+    // A class report of sexual content: what the reporter wrote is the
+    // safety lead's alone (it went to him by email, and shows on the class's
+    // review page for him). The owner, a minor, reads only the reason.
+    details: isClass && RESTRICTING_CLASS_REPORT_REASONS.has(r.reason) ? null : r.details,
+    detailsWithheld: isClass && RESTRICTING_CLASS_REPORT_REASONS.has(r.reason) && !!r.details,
     surface: r.surface,
     platform: r.platform,
     createdAt: created,

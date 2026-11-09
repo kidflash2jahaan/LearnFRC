@@ -12,6 +12,7 @@ import { holdClass } from "@/lib/classes/holds";
 import { adminClassUrl, ownerEmail, safetyEmail } from "@/lib/classes/config";
 import { classEmailHtml, escapeHtml, mailClass, pacificTime } from "@/lib/classes/emails";
 import { isLiveNow, withinReportWindow } from "@/lib/classes/room-rules";
+import { OWNER_RESTRICTED_LINE } from "@/lib/classes/safety-routing";
 import {
   CLASS_ONLY_REPORT_REASONS,
   CLASS_REPORT_REASONS,
@@ -82,6 +83,7 @@ export const REPORT_SENTENCES = {
   notInClass: "That person wasn't in this class.",
   needsClass: "You can report this class's teacher, or anyone from a class you were in.",
   classWindow: "Reports from a class stay open for 30 days after it.",
+  classOver: "This class is over, so only people who were in it can report it now.",
   rate: "That's a lot of reports in an hour. Try again in a bit, or write to us from the contact page.",
   save: "Couldn't send that report. Try again.",
 } as const;
@@ -133,13 +135,16 @@ type ClassTarget = {
   liveNow: boolean;
 };
 
-type ClassRefusal = "noClass" | "noPerson" | "notInClass" | "needsClass" | "classWindow";
+type ClassRefusal = "noClass" | "noPerson" | "notInClass" | "needsClass" | "classWindow" | "classOver";
 
 /**
  * The person reported from a class (section 10.2), resolved from the class
- * id and their username: its teacher (anyone signed in may report them), or
- * someone with a class_participants row in it, whom only someone who was in
- * the class too (or teaches it) may report, within 30 days of it.
+ * id and their username: its teacher, whom anyone signed in may report while
+ * the class is scheduled or on, and anyone who was in it within 30 days
+ * after; or someone with a class_participants row in it, whom only someone
+ * who was in the class too (or teaches it) may report, within 30 days of it.
+ * Every class report keeps the class's evidence and alerts the safety lead,
+ * so nobody outside a class can keep reporting it once it's over.
  */
 async function classTarget(
   reporterId: string,
@@ -162,6 +167,19 @@ async function classTarget(
   let role: ClassTarget["role"];
   if (userId === cls.teacher_id) {
     role = "teacher";
+    const { data: mine } = await admin
+      .from("class_participants")
+      .select("role")
+      .eq("class_id", classId)
+      .eq("user_id", reporterId)
+      .maybeSingle();
+    if (mine) {
+      if (!withinReportWindow(cls.hard_end_at as string)) return { refusal: "classWindow" };
+    } else {
+      const open =
+        (cls.status === "scheduled" || cls.status === "live") && Date.now() < Date.parse(cls.hard_end_at as string);
+      if (!open) return { refusal: "classOver" };
+    }
   } else {
     const [{ data: theirs }, { data: mine }] = await Promise.all([
       admin.from("class_participants").select("role").eq("class_id", classId).eq("user_id", userId).maybeSingle(),
@@ -344,7 +362,10 @@ export async function fileReport(user: AppUser, input: ReportInput): Promise<Res
     if (!usernameRaw) return fail("validation", REPORT_SENTENCES.noPerson);
     const found = await classTarget(user.id, contentIdRaw.toLowerCase(), usernameRaw);
     if ("refusal" in found) {
-      const code = found.refusal === "needsClass" || found.refusal === "classWindow" ? "forbidden" : "not_found";
+      const code =
+        found.refusal === "needsClass" || found.refusal === "classWindow" || found.refusal === "classOver"
+          ? "forbidden"
+          : "not_found";
       return fail(code, REPORT_SENTENCES[found.refusal]);
     }
     target = found;
@@ -476,14 +497,29 @@ export async function fileReport(user: AppUser, input: ReportInput): Promise<Res
 /* ── After a class report (section 10.2) ───────────────────────────── */
 
 /**
- * Everything a class report sets off once its row is stored: the class keeps
- * its evidence (keep_evidence, and a hold on the person reported), its audit
- * trail gets a `reported` row, and the report goes to the safety lead and the
- * owner, as "LIVE CLASS:" with a button to the class's review page when it's
- * on now. Then the two-reporter check: a second different person from the
- * class reporting its teacher while it's live ends it (endClassForReports in
- * src/lib/app/classes-room.ts). Each step stands alone, and none can lose the
- * report, which is already saved.
+ * Class report reasons that make the class restricted at once (the safety
+ * lead only, section 8.1), before any AI review: Jahaan is a minor, and a
+ * report of sexual content, or of someone asking a student to talk privately
+ * or meet up (the reported form of grooming), is what he must not read or
+ * watch. "I feel unsafe" isn't here: it covers too much to lock every such
+ * class away from the owner, and the review still restricts what it finds.
+ */
+export const RESTRICTING_CLASS_REPORT_REASONS: ReadonlySet<string> = new Set(["sexual", "private_contact"]);
+
+/**
+ * Everything a class report sets off once its row is stored: a report of
+ * sexual content or private contact restricts the class first
+ * (class_reviews.restricted, which
+ * hides its transcript, chat, recording and holds from everyone but the
+ * safety lead), then the class keeps its evidence (keep_evidence, and a hold
+ * on the person reported), its audit trail gets a `reported` row, and the
+ * report goes to the safety lead and the owner, as "LIVE CLASS:" with a
+ * button to the class's review page when it's on now. For a restricting
+ * report, the owner gets only the one line and the details go to the safety
+ * lead alone. Then the two-reporter check: a second different person from
+ * the class reporting its teacher while it's live ends it
+ * (endClassForReports in src/lib/app/classes-room.ts). Each step stands
+ * alone, and none can lose the report, which is already saved.
  */
 async function afterClassReport(
   reporter: AppUser,
@@ -498,6 +534,16 @@ async function afterClassReport(
 ) {
   const admin = createAdminClient();
   const { cls, target } = input;
+  const restricting = RESTRICTING_CLASS_REPORT_REASONS.has(input.reason);
+
+  // First, before the hold or any email: the review row (made now if the
+  // review hasn't run) is restricted, and a later review run never lowers it.
+  if (restricting) {
+    const { error } = await admin
+      .from("class_reviews")
+      .upsert({ class_id: cls.id, restricted: true, updated_at: new Date().toISOString() }, { onConflict: "class_id" });
+    if (error) console.error("class report restrict:", error.message);
+  }
 
   const { error: keepErr } = await admin.from("classes").update({ keep_evidence: true }).eq("id", cls.id);
   if (keepErr) console.error("class report keep_evidence:", keepErr.message);
@@ -521,7 +567,27 @@ async function afterClassReport(
     console.error("class report hold:", e);
   }
 
-  const to = [...new Set([ownerEmail(), safetyEmail()].filter((x): x is string => !!x))];
+  const owner = ownerEmail();
+  const safety = safetyEmail();
+  // A restricting report's details go to the safety lead alone; the owner
+  // gets the one line (unless the two addresses are the same, on a dev server).
+  const ownerOneLine = restricting && !!owner && owner !== safety;
+  if (ownerOneLine) {
+    mailClass("class report (restricted)", cls.id, {
+      to: [owner],
+      subject: cls.liveNow
+        ? "LIVE CLASS: a class that's on now needs a safety review"
+        : "LearnFRC safety: a class needs a safety review",
+      html: classEmailHtml({
+        heading: OWNER_RESTRICTED_LINE,
+        buttons: [{ text: "Open the class page", url: adminClassUrl(cls.id) }],
+        note: cls.liveNow
+          ? "The class is on now. You or Dhiren can end it from the classes desk. The report itself went to Dhiren."
+          : "The report itself went to Dhiren. Nothing from it is in this email.",
+      }),
+    });
+  }
+  const to = [...new Set([ownerOneLine ? null : owner, safety].filter((x): x is string => !!x))];
   if (to.length) {
     const { data: me } = await admin.from("profiles").select("username").eq("id", reporter.id).maybeSingle();
     const from = (me?.username as string | null) ?? null;

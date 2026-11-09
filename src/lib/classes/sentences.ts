@@ -30,6 +30,8 @@ export const CLASS_SENTENCES = {
   ownClass: "You're teaching this one.",
   blocked: "You can't join this class.",
   bio: "Take contact details out of your bio before you join a class.",
+  username:
+    "Change your username in Settings before you join a class. Usernames in a class can't carry app names or numbers that look like contact details.",
   rate: "That's a lot of tries. Wait a few minutes and try again.",
   save: "Couldn't save that. Try again.",
 } as const;

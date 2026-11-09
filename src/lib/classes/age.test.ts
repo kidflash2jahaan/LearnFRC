@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { ageBand, ageBandOn, ageOn, birthMonthYearForAge, isValidBirthMonthYear } from "./age.ts";
+import { ageBand, ageBandOn, ageOn, birthMonthYearForAge, isAdultOn, isValidBirthMonthYear } from "./age.ts";
 
 const d = (s: string) => new Date(`${s}T12:00:00Z`);
 
@@ -21,9 +21,26 @@ test("January births tick over on February 1", () => {
   assert.equal(ageOn(d("2026-02-01"), 2013, 1), 13);
 });
 
-test("the 18th birthday month itself is still 17", () => {
-  assert.equal(ageBandOn(d("2026-11-15"), 2008, 11), "16-17");
-  assert.equal(ageBandOn(d("2026-12-01"), 2008, 11), "18+");
+test("for classes, the 18th birth month itself already counts as 18+", () => {
+  // Born March 2008: maybe 18 on March 1, 2026, so out of classes from then.
+  assert.equal(ageBandOn(d("2026-02-28"), 2008, 3), "16-17");
+  assert.equal(ageBandOn(d("2026-03-01"), 2008, 3), "18+");
+  assert.equal(ageBandOn(d("2026-11-15"), 2008, 11), "18+");
+  assert.equal(ageBandOn(d("2026-10-31"), 2008, 11), "16-17");
+  assert.equal(isAdultOn(d("2026-03-01"), 2008, 3), true);
+  assert.equal(isAdultOn(d("2026-02-28"), 2008, 3), false);
+  // ageOn stays conservative the other way (the safety lead's adult check).
+  assert.equal(ageOn(d("2026-03-15"), 2008, 3), 17);
+});
+
+test("the 13 cutoff stays on the month after the birth month", () => {
+  assert.equal(ageBandOn(d("2026-01-15"), 2013, 1), "under13");
+  assert.equal(ageBandOn(d("2026-02-01"), 2013, 1), "13-15");
+});
+
+test("December 18th birthdays", () => {
+  assert.equal(ageBandOn(d("2026-11-30"), 2008, 12), "16-17");
+  assert.equal(ageBandOn(d("2026-12-01"), 2008, 12), "18+");
 });
 
 test("bands", () => {

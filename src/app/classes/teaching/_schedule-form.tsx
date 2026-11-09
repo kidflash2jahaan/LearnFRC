@@ -236,6 +236,14 @@ export function ScheduleForm({ topics, allowSoon }: { topics: TopicGroup[]; allo
               </Link>
             </>
           )}
+          {state.field === "username" && (
+            <>
+              {" "}
+              <Link href="/settings" className="nb-link">
+                Change your username
+              </Link>
+            </>
+          )}
         </p>
       )}
       {state?.ok && (

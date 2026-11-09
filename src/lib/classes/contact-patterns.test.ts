@@ -7,6 +7,7 @@ import {
   findContactPatterns,
   hasContactPatterns,
   isAllowedHost,
+  usernameHasContact,
   type ContactKind,
 } from "./contact-patterns.ts";
 
@@ -196,6 +197,133 @@ test("robotics talk is left alone", () => {
     "id 21 22 23 24",
   ]) {
     expectClean(t);
+  }
+});
+
+test("an allowed link's path and query are scanned too", () => {
+  expectKind("https://learnfrc.com/login?next=//t.me/maya", "link");
+  expectKind("https://learnfrc.com/login?next=//wa.me/12025550143", "link");
+  expectKind("https://docs.wpilib.org/x?u=//linktr.ee/maya", "link");
+  expectKind("https://learnfrc.com/x?u=%2F%2Ft%2Eme%2Fmaya", "link");
+  expectKind("https://learnfrc.com/x?ref=discord", "contact_app");
+  expectClean("https://learnfrc.com/u/maya");
+  expectClean("learnfrc.com/u/maya");
+  expectClean("https://docs.wpilib.org/en/stable/docs/software/basic-programming/java-units.html");
+});
+
+test("lookalike letters, invisible characters and ideographic dots", () => {
+  expectKind("my ѕnapchat is maya", "contact_app"); // Cyrillic s
+  expectKind("discοrd: maya_42", "contact_app"); // Greek o
+  expectKind("DІSCORD", "contact_app"); // Cyrillic capital I
+  expectKind("disc⁦ord: maya", "contact_app");
+  expectKind("disc\u{E0020}ord", "contact_app");
+  expectKind("disc\u{1D173}ord", "contact_app");
+  expectKind("disc⠀ord", "contact_app");
+  expectKind("202⁦555⁦0143", "phone");
+  expectKind("bit。ly/xyz", "link");
+  expectKind("bit｡ly/xyz", "link");
+});
+
+test("more phone formats", () => {
+  for (const t of [
+    "202 5550143",
+    "202555 0143",
+    "20255 50143",
+    "2025550 143",
+    "202/555/0143",
+    "202_555_0143",
+    "202*555*0143",
+    "202,555,0143",
+    "maya2025550143",
+    "two oh two, five fifty five, oh one forty three",
+    "eight hundred five five five zero one nine nine",
+  ]) {
+    expectKind(t, "phone");
+  }
+  for (const t of [
+    "teams 5835, 254, 1678 all run swerve",
+    "set IDs 1, 2, 3, 4, 5, 6, 7",
+    "IDs 1,2,3,4,5,6,7",
+    "1,000,000,000 ticks",
+    "the match is 11/08/2026",
+    "the roboRIO 2 at 192.168.1.110",
+    "we scored twenty two points in thirty seconds",
+    "your # of motors",
+  ]) {
+    expectClean(t);
+  }
+});
+
+test("spaced-out emails", () => {
+  expectKind("m a y a @ g m a i l . c o m", "email");
+  expectKind("maya @ gmail . com", "email");
+  expectClean("meet @ 5 in the shop");
+});
+
+test("more apps, short names and asking for someone's details", () => {
+  for (const [t, k] of [
+    ["signal: maya", "contact_app"],
+    ["add me on signal", "contact_app"],
+    ["my roblox is maya", "contact_app"],
+    ["facebook: maya", "contact_app"],
+    ["my fb is maya", "contact_app"],
+    ["my messenger", "contact_app"],
+    ["twitter: maya", "contact_app"],
+    ["u/maya_42", "contact_app"],
+    ["imessage me", "contact_app"],
+    ["facetime me", "contact_app"],
+    ["wanna facetime", "contact_app"],
+    ["my dc is maya_42", "contact_app"],
+    ["dc: maya_42", "contact_app"],
+    ["sc: maya_42", "contact_app"],
+    ["snap maya_42", "contact_app"],
+    ["sn@p", "contact_app"],
+    ["5nap", "contact_app"],
+    ["my tele is coolkid", "contact_app"],
+    ["msg me on reddit u/coolkid", "contact_app"],
+    ["add me on steam", "contact_app"],
+    ["groupme", "contact_app"],
+    ["d.m. me", "contact_phrase"],
+    ["pls dm", "contact_phrase"],
+    ["dms open", "contact_phrase"],
+    ["inbox me", "contact_phrase"],
+    ["msg me", "contact_phrase"],
+    ["send me your number", "contact_phrase"],
+    ["can i have your number", "contact_phrase"],
+    ["whats ur phone number", "contact_phrase"],
+    ["give me your email", "contact_phrase"],
+    ["reach me at robo kid on gmail", "contact_phrase"],
+  ] as const) {
+    expectKind(t, k);
+  }
+});
+
+test("robotics words near the new patterns are left alone", () => {
+  for (const t of [
+    "DC motor",
+    "my dc motor is hot",
+    "your DC power supply",
+    "the signal wire",
+    "check my signal wire",
+    "the PWM signal is 50 Hz",
+    "my signal is weak in the shop",
+    "your number of motors",
+    "your number one priority is safety",
+    "check your email for the link",
+    "add FF and FB terms",
+    "a STEAM night at school",
+    "the snap ring",
+  ]) {
+    expectClean(t);
+  }
+});
+
+test("usernames that work as contact details", () => {
+  for (const u of ["snapchat_maya", "maya_on_insta", "dm_me_maya", "add_me_on_ig", "maya2025550143", "hmu_maya", "kik_maya"]) {
+    assert.equal(usernameHasContact(u), true, u);
+  }
+  for (const u of ["maya_42", "lftest_roomandchat_t1", "team5835_coder", "my_dc_motor", "big_robot", "frc_2026", "snap_ring", null, ""]) {
+    assert.equal(usernameHasContact(u), false, String(u));
   }
 });
 

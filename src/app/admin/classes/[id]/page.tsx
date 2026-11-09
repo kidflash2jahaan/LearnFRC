@@ -269,6 +269,7 @@ export default async function ClassReviewPage({
                       <th scope="col">username</th>
                       <th scope="col">role</th>
                       <th scope="col">age</th>
+                      <th scope="col">parent email</th>
                       <th scope="col">account</th>
                       <th scope="col">joined</th>
                       <th scope="col">left</th>
@@ -281,6 +282,17 @@ export default async function ClassReviewPage({
                         <td>{a.username ? `@${a.username}` : "a deleted account"}</td>
                         <td>{a.role}</td>
                         <td>{a.ageBand ?? (a.role === "staff" ? "staff" : "unknown")}</td>
+                        <td className="break-all">
+                          {a.parentEmail ? (
+                            <a href={`mailto:${a.parentEmail}`} className="nb-link">
+                              {a.parentEmail}
+                            </a>
+                          ) : a.role === "student" ? (
+                            "none on file"
+                          ) : (
+                            ""
+                          )}
+                        </td>
                         <td>{a.accountAgeDays != null ? `${a.accountAgeDays} days` : "?"}</td>
                         <td className="whitespace-nowrap">{pacificTime(a.joinedAt)}</td>
                         <td className="whitespace-nowrap">{a.leftAt ? pacificTime(a.leftAt) : "still in"}</td>
@@ -365,6 +377,9 @@ export default async function ClassReviewPage({
                 <span className="nb-tag mr-2">{r.status}</span>
                 about {r.reportedUsername ? `@${r.reportedUsername}` : "someone"}: {REASON_WORD[r.reason] ?? r.reason}
                 <span className="nb-slug ml-2">{pacificTime(r.createdAt)}</span>
+                {r.details ? (
+                  <span className="mt-1 block whitespace-pre-wrap text-[0.9rem] text-graphite">They wrote: {r.details}</span>
+                ) : null}
               </li>
             ))}
           </ul>

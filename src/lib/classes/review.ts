@@ -13,7 +13,6 @@ import {
   rtkApp,
   safetyEmail,
 } from "@/lib/classes/config";
-import { COORDINATOR } from "@/lib/classes/coordinator";
 import { classEmailHtml, emailListHtml, escapeHtml, pacificTime, sendClassEmail } from "@/lib/classes/emails";
 import { ageBandOn } from "@/lib/classes/age";
 import { creditedMinutes, toMs, type AttendanceSpan } from "@/lib/classes/minutes";
@@ -40,8 +39,9 @@ import {
   parseModelReview,
   type StoredModelFlag,
 } from "@/lib/classes/review-prompt";
-import { reviewMails, type ReviewAudience, type ReviewMail } from "@/lib/classes/safety-routing";
+import { reviewMails, reviewRestricted, type ReviewAudience, type ReviewMail } from "@/lib/classes/safety-routing";
 import { holdClass } from "@/lib/classes/holds";
+import { allClassRows } from "@/lib/classes/paged";
 import type {
   ClassAttendanceRow,
   ClassChatMessageRow,
@@ -123,6 +123,8 @@ export type ReviewReport = {
   reason: string;
   status: string;
   createdAt: string;
+  /** What the reporter wrote. The review page shows it to the safety lead only. */
+  details: string | null;
 };
 
 export type ReviewFacts = {
@@ -202,13 +204,20 @@ export async function loadReviewFacts(classId: string): Promise<ReviewFacts | nu
       admin.from("class_sessions").select("*").eq("class_id", classId).order("started_at", { ascending: true }),
       admin.from("class_attendance").select("*").eq("class_id", classId).order("joined_at", { ascending: true }),
       admin.from("class_participants").select("user_id, role, first_joined_at").eq("class_id", classId),
-      admin.from("class_chat_messages").select("*").eq("class_id", classId).order("id", { ascending: true }).limit(5000),
+      // Paged: production answers at most 1000 rows a request, and a long
+      // chat's latest messages (blocked ones included) must reach the review.
+      allClassRows<ClassChatMessageRow>(admin, "class_chat_messages", "*", classId).then((data) => ({ data })),
       admin.from("class_transcripts").select("session_id, lines, word_count").eq("class_id", classId),
-      admin.from("class_media_events").select("subject_user_id, kind, is_on, at, reported_by").eq("class_id", classId).limit(20000),
+      allClassRows<{ id: number; subject_user_id: string | null; kind: "camera" | "screenshare"; is_on: boolean; at: string; reported_by: string | null }>(
+        admin,
+        "class_media_events",
+        "id, subject_user_id, kind, is_on, at, reported_by",
+        classId
+      ).then((data) => ({ data })),
       admin.from("class_events").select("kind, detail").eq("class_id", classId).in("kind", ["duplicate_peer", "removed_participant"]),
       admin
         .from("user_reports")
-        .select("id, reporter_id, reported_user_id, reported_username, reason, status, created_at")
+        .select("id, reporter_id, reported_user_id, reported_username, reason, status, created_at, details")
         .eq("content_kind", "class")
         .eq("content_id", classId)
         .order("created_at", { ascending: true }),
@@ -354,6 +363,7 @@ export async function loadReviewFacts(classId: string): Promise<ReviewFacts | nu
     reason: r.reason as string,
     status: r.status as string,
     createdAt: r.created_at as string,
+    details: r.details ?? null,
   }));
 
   return {
@@ -431,9 +441,12 @@ export function minutesWithoutFlagged(f: ReviewFacts, flags: readonly CodeFlag[]
 
 /* ── Email ─────────────────────────────────────────────────────────── */
 
-/** Where each audience's mail goes. The safety lead falls back to Dhiren's address, never the owner's. */
+/**
+ * Where each audience's mail goes. The safety lead's is safetyEmail(), which
+ * falls back to Dhiren's address in production (config.ts), never the owner's.
+ */
 export function addressFor(audience: ReviewAudience): string | null {
-  return audience === "owner" ? ownerEmail() : (safetyEmail() ?? COORDINATOR.email);
+  return audience === "owner" ? ownerEmail() : safetyEmail();
 }
 
 /** A ReviewMail in the classes email layout. Every string is escaped here. */
@@ -607,7 +620,11 @@ async function run(classId: string, opts: RunReviewOptions): Promise<Result<{ st
   if (!existing) {
     await admin.from("class_reviews").upsert({ class_id: classId }, { onConflict: "class_id", ignoreDuplicates: true });
   }
-  const { data: fresh } = await admin.from("class_reviews").select("attempts, verdict, emailed_at, status").eq("class_id", classId).maybeSingle();
+  const { data: fresh } = await admin
+    .from("class_reviews")
+    .select("attempts, verdict, emailed_at, status, restricted")
+    .eq("class_id", classId)
+    .maybeSingle();
   const attempts = (fresh?.attempts as number | undefined) ?? 0;
   const { data: claimed } = await admin
     .from("class_reviews")
@@ -742,6 +759,18 @@ async function run(classId: string, opts: RunReviewOptions): Promise<Result<{ st
     }
   }
 
+  // Restricted (the safety lead only) when the model or a refusal says so,
+  // when a student had a camera or screen share on (the AI can't see video,
+  // and that's the sextortion signal), or when it already was: a class report
+  // with reason `sexual` restricts the class at once (reports.ts), and a
+  // forced rerun never lifts a restriction. Only releaseReview and
+  // releaseHold lower it.
+  const restricted = reviewRestricted({
+    runRestricted: outcome.restricted,
+    codeFlags,
+    alreadyRestricted: fresh?.restricted === true,
+  });
+
   const summaryMd = outcome.summary.length || outcome.oneLine
     ? [outcome.oneLine, outcome.summary.map((s) => `- ${s}`).join("\n")].filter(Boolean).join("\n\n")
     : null;
@@ -756,7 +785,9 @@ async function run(classId: string, opts: RunReviewOptions): Promise<Result<{ st
       summary_md: summaryMd,
       flags: outcome.modelFlags,
       refusal_category: outcome.refusalCategory,
-      restricted: outcome.restricted,
+      // Only ever raised here, so a report that restricts the class while
+      // this run is going isn't undone by it.
+      ...(restricted ? { restricted: true } : {}),
       input_tokens: outcome.inputTokens,
       output_tokens: outcome.outputTokens,
       error: null,
@@ -793,7 +824,7 @@ async function run(classId: string, opts: RunReviewOptions): Promise<Result<{ st
     const mails = mailsFor(facts, {
       status: outcome.status,
       verdict: outcome.verdict,
-      restricted: outcome.restricted,
+      restricted,
       summary: outcome.summary,
       oneLine: outcome.oneLine,
       codeFlags,

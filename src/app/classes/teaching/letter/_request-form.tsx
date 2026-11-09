@@ -103,7 +103,9 @@ export function LetterRequestForm({
         {inRange.length === 0 ? (
           <p className="mt-2 max-w-[60ch] text-[0.95rem] leading-snug text-graphite">
             No approved classes in those dates yet. A class counts once it&rsquo;s
-            been reviewed and approved, with at least one student in the room.
+            been reviewed and approved, with at least one student in the room,
+            and it goes on one letter only, so classes already on a letter you
+            asked for or got aren&rsquo;t counted again.
           </p>
         ) : (
           <>

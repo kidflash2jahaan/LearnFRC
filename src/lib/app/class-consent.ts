@@ -17,7 +17,7 @@ import {
   auditSalt,
   classesVisible,
 } from "@/lib/classes/config";
-import { ageBand, ageOn, isValidBirthMonthYear } from "@/lib/classes/age";
+import { ageBandOn, isValidBirthMonthYear } from "@/lib/classes/age";
 import {
   UNDER_13_COOKIE_SECONDS,
   cleanParentName,
@@ -240,7 +240,7 @@ export async function recordAgeCheck(
     return fail("conflict", CONSENT_SENTENCES.alreadySaved);
   }
 
-  const band = ageBand(ageOn(now, birthYear, birthMonth));
+  const band = ageBandOn(now, birthYear, birthMonth);
   if (band === "under13") return deleteUnder13(user, clients, door);
 
   const { error } = await clients.admin

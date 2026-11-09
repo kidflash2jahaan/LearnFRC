@@ -76,6 +76,9 @@ export const LETTER_SENTENCES = {
   tooManyOpen: `You have ${LETTER_LIMITS.maxOpenRequests} requests waiting already. ${COORDINATOR.name.split(" ")[0]} will answer them soon.`,
   tooManyToday: "That's a lot of requests for one day. Try again tomorrow.",
   noClasses: "No approved classes fall in those dates yet.",
+  allLettered:
+    "Every approved class in those dates is already on a letter you asked for or got. A class's minutes go on one letter only.",
+  overlap: "Some of these classes are already on a signed letter, so this one can't be signed. Decline it, and the teacher can ask again for the rest.",
   notFound: "That letter doesn't exist.",
   answered: "That request has already been answered. Reload the page to see it.",
   notIssued: "Only a signed letter can be withdrawn.",
@@ -204,6 +207,39 @@ async function countableClasses(teacherId: string): Promise<LetterSourceClass[]>
 
 const EVERY_DATE = { start: "2000-01-01", end: "2100-12-31" } as const;
 
+/**
+ * The classes already on one of the teacher's letters that's waiting or
+ * signed, and which letter each is on (its code, or null while it's a
+ * request). A class's minutes are certified once: a new request leaves these
+ * out, and signing refuses a request that overlaps a signed letter.
+ * Declined and withdrawn letters free their classes again.
+ */
+async function letteredClasses(
+  teacherId: string,
+  exceptLetterId?: string
+): Promise<Map<string, { letterId: string; code: string | null; status: LetterStatus }>> {
+  let q = createAdminClient()
+    .from("hours_letters")
+    .select("id, code, status, classes")
+    .eq("teacher_id", teacherId)
+    .in("status", ["requested", "issued"])
+    .limit(500);
+  if (exceptLetterId) q = q.neq("id", exceptLetterId);
+  const { data, error } = await q;
+  if (error) throw new Error(`letters: lettered classes: ${error.message}`);
+  const out = new Map<string, { letterId: string; code: string | null; status: LetterStatus }>();
+  for (const l of (data ?? []) as Pick<HoursLetterRow, "id" | "code" | "status" | "classes">[]) {
+    for (const c of l.classes ?? []) {
+      // A signed letter wins over a waiting request for the same class.
+      const had = out.get(c.classId);
+      if (!had || (had.status !== "issued" && l.status === "issued")) {
+        out.set(c.classId, { letterId: l.id, code: l.code, status: l.status });
+      }
+    }
+  }
+  return out;
+}
+
 /* ── The teacher's page (/classes/teaching/letter) ─────────────────── */
 
 /** One of the teacher's own letters, as their page lists it. */
@@ -253,7 +289,7 @@ export async function loadTeacherLetterDesk(
   let source: LetterSourceClass[];
   let own: TeacherLetter[];
   try {
-    const [b, s, letters] = await Promise.all([
+    const [b, s, letters, lettered] = await Promise.all([
       lettersBlockedFor(user.id, user.email, teacher),
       countableClasses(user.id),
       createAdminClient()
@@ -262,10 +298,13 @@ export async function loadTeacherLetterDesk(
         .eq("teacher_id", user.id)
         .order("requested_at", { ascending: false })
         .limit(50),
+      letteredClasses(user.id),
     ]);
     if (letters.error) throw new Error(letters.error.message);
     blocked = b;
-    source = s;
+    // The preview shows what a new letter would count: classes not already
+    // on a waiting or signed letter.
+    source = s.filter((c) => !lettered.has(c.id));
     own = (letters.data ?? []) as TeacherLetter[];
   } catch (e) {
     console.error("loadTeacherLetterDesk:", (e as Error).message);
@@ -328,19 +367,23 @@ export async function requestHoursLetter(
     return fail("rate_limited", LETTER_SENTENCES.tooManyToday, 86_400);
 
   let source: LetterSourceClass[];
+  let lettered: Awaited<ReturnType<typeof letteredClasses>>;
   try {
-    source = await countableClasses(user.id);
+    [source, lettered] = await Promise.all([countableClasses(user.id), letteredClasses(user.id)]);
   } catch (e) {
     console.error("requestHoursLetter:", (e as Error).message);
     return fail("server", LETTER_SENTENCES.save);
   }
-  const classes = classesForLetter(source, {
+  const inRange = classesForLetter(source, {
     teacherId: user.id,
     app: rtkApp(),
     start: period.start,
     end: period.end,
   });
-  if (classes.length === 0) return { ...fail("validation", LETTER_SENTENCES.noClasses), field: "start" };
+  if (inRange.length === 0) return { ...fail("validation", LETTER_SENTENCES.noClasses), field: "start" };
+  // A class's minutes go on one letter only.
+  const classes = inRange.filter((c) => !lettered.has(c.classId));
+  if (classes.length === 0) return { ...fail("validation", LETTER_SENTENCES.allLettered), field: "start" };
   const totals = letterTotals(classes);
 
   const { data: row, error } = await admin
@@ -410,6 +453,11 @@ export type DeskClass = HoursLetterClass & {
   reports: number;
   /** "Credited 40 of 52 computed minutes: <note>" when the reviewer overrode it. */
   minutesNote: string | null;
+  /**
+   * Already on another of the teacher's letters: "signed letter K7QX-2M9P"
+   * or "another request". Requests only; null otherwise.
+   */
+  onOtherLetter: string | null;
 };
 
 export type DeskLetter = {
@@ -564,12 +612,33 @@ export async function loadLettersDesk(user: AppUser): Promise<Result<{ desk: Let
         })
       ),
       isLetterSigner(user.id),
+      // Every waiting or signed letter of the teachers with requests, so each
+      // request's classes can say when they're on another letter already.
+      reqRows.length
+        ? admin
+            .from("hours_letters")
+            .select("id, code, status, teacher_id, classes")
+            .in("teacher_id", [...new Set(reqRows.map((r) => r.teacher_id))])
+            .in("status", ["requested", "issued"])
+            .limit(1000)
+        : none,
     ]);
   } catch (e) {
     console.error("loadLettersDesk:", (e as Error).message);
     return fail("server", LETTER_SENTENCES.load);
   }
-  const [handles, teacherRows, current, reviews, reports, seeRestricted, blockedIds, canSign] = enriched;
+  const [handles, teacherRows, current, reviews, reports, seeRestricted, blockedIds, canSign, openLetters] = enriched;
+  const openRows = (openLetters.data ?? []) as Pick<HoursLetterRow, "id" | "code" | "status" | "teacher_id" | "classes">[];
+  /** Where else a class is, for a request: a signed letter's code wins over another request. */
+  const otherLetterFor = (letterId: string, classId: string): string | null => {
+    let found: string | null = null;
+    for (const l of openRows) {
+      if (l.id === letterId || !(l.classes ?? []).some((c) => c.classId === classId)) continue;
+      if (l.status === "issued") return `signed letter ${l.code ?? ""}`.trim();
+      found = "another request";
+    }
+    return found;
+  };
 
   const teachers = new Map<string, Record<string, unknown>>();
   for (const t of teacherRows.data ?? []) teachers.set(t.user_id as string, t);
@@ -607,6 +676,7 @@ export async function loadLettersDesk(user: AppUser): Promise<Result<{ desk: Let
           withClasses && credited !== null && computed !== null && credited !== computed
             ? `Credited ${credited} of ${computed} computed minutes${cur?.decision_note ? `: ${cur.decision_note}` : ""}`
             : null,
+        onOtherLetter: withClasses ? otherLetterFor(r.id, c.classId) : null,
       };
     });
     return {
@@ -688,6 +758,26 @@ export async function approveHoursLetter(
   if (teacher.letter_name !== letter.letter_name) return fail("conflict", LETTER_SENTENCES.nameChanged);
   const drift = driftFor(letter, await currentClasses((letter.classes ?? []).map((c) => c.classId)));
   if (drift.length > 0) return fail("conflict", `${LETTER_SENTENCES.drifted} ${drift.join(" ")}`);
+  // Hours are certified once: no class on this request may already be on a
+  // signed letter (two overlapping requests, or a wider range asked later).
+  let lettered: Awaited<ReturnType<typeof letteredClasses>>;
+  try {
+    lettered = await letteredClasses(letter.teacher_id, letter.id);
+  } catch (e) {
+    console.error("approveHoursLetter:", (e as Error).message);
+    return fail("server", LETTER_SENTENCES.save);
+  }
+  const signedCodes = [
+    ...new Set(
+      (letter.classes ?? [])
+        .map((c) => lettered.get(c.classId))
+        .filter((x): x is NonNullable<typeof x> => !!x && x.status === "issued")
+        .map((x) => x.code ?? "")
+    ),
+  ];
+  if (signedCodes.length > 0) {
+    return fail("conflict", `${LETTER_SENTENCES.overlap} Already on ${signedCodes.filter(Boolean).join(", ") || "a signed letter"}.`);
+  }
 
   const admin = createAdminClient();
   let code: string | null = null;

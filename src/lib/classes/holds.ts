@@ -21,6 +21,7 @@ import {
 import { peerReport } from "@/lib/classes/realtimekit";
 import { classEmailHtml, sendClassEmail } from "@/lib/classes/emails";
 import { copyUrlToR2, deletePrefix, presignGet, type R2Config } from "@/lib/classes/r2";
+import { allClassRows } from "@/lib/classes/paged";
 import {
   HOLD_NOTE_MAX,
   HOLD_REASON_LABELS,
@@ -207,12 +208,14 @@ async function snapshotClass(
   const [sessions, transcripts, chat] = await Promise.all([
     admin.from("class_sessions").select("id, started_at").eq("class_id", classId),
     admin.from("class_transcripts").select("session_id, lines").eq("class_id", classId),
-    admin
-      .from("class_chat_messages")
-      .select("id, class_id, sender_id, sender_username, sender_role, body, status, blocked_kinds, sent_at")
-      .eq("class_id", classId)
-      .order("id", { ascending: true })
-      .limit(10_000),
+    // Paged: production answers at most 1000 rows a request, and the latest
+    // messages (blocked ones included) are the ones a hold most needs.
+    allClassRows<ClassChatMessageRow>(
+      admin,
+      "class_chat_messages",
+      "id, class_id, sender_id, sender_username, sender_role, body, status, blocked_kinds, sent_at",
+      classId
+    ).then((data) => ({ data })),
   ]);
   const order = new Map(
     (sessions.data ?? [])
@@ -288,7 +291,10 @@ const HOLD_COLUMNS =
 /**
  * One row per subject per class: takes it, or refreshes the one that's there
  * (newer transcript and chat, more peer reports, a year from now at least,
- * and back to unreleased, since new evidence arrived).
+ * and back to unreleased, since new evidence arrived). A refresh from another
+ * class report doesn't push the expiry out: anyone in a class can file one,
+ * so repeat reports would keep minors' data forever. Extending is
+ * extendHold's, a reviewer's choice.
  */
 async function holdOne(
   admin: Admin,
@@ -326,7 +332,10 @@ async function holdOne(
         peer_reports: mergePeerReports(existing.peer_reports as HoldPeerReport[] | null, peers),
         subject_email: (existing.subject_email as string | null) ?? subject?.email ?? null,
         subject_handle: (existing.subject_handle as string | null) ?? subject?.handle ?? null,
-        expires_at: laterOf(existing.expires_at as string, holdExpiry(now)).toISOString(),
+        expires_at:
+          input.reason === "class_report"
+            ? (existing.expires_at as string)
+            : laterOf(existing.expires_at as string, holdExpiry(now)).toISOString(),
         notes,
         released_at: null,
         released_by: null,

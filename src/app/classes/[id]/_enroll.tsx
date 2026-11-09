@@ -45,6 +45,14 @@ export function EnrollButton({ classId, waitingParent }: { classId: string; wait
               </Link>
             </>
           )}
+          {state.field === "username" && (
+            <>
+              {" "}
+              <Link href="/settings" className="nb-link">
+                Change your username
+              </Link>
+            </>
+          )}
         </p>
       )}
     </form>

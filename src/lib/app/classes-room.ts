@@ -9,6 +9,7 @@ import { blockedEitherWay, classEligibilityDetail, classRoster, eligibilitySente
 // and this file is in an import cycle with classes.ts (sentences.ts says why).
 import { CLASS_SENTENCES } from "@/lib/classes/sentences";
 import { getTeacher, suspendTeacher } from "@/lib/app/class-teachers";
+import { blockedSetFor } from "@/lib/app/blocks";
 import { requireClassReviewer } from "@/lib/app/class-reviewers";
 import { holdClass } from "@/lib/classes/holds";
 import {
@@ -26,7 +27,7 @@ import {
   safetyEmail,
 } from "@/lib/classes/config";
 import { CLASS_NOTICE_VERSION } from "@/lib/classes/notice";
-import { findContactPatterns } from "@/lib/classes/contact-patterns";
+import { findContactPatterns, usernameHasContact } from "@/lib/classes/contact-patterns";
 import {
   addParticipant,
   deleteParticipant,
@@ -46,6 +47,7 @@ import {
   withinReportWindow,
 } from "@/lib/classes/room-rules";
 import { MEDIA_LOG_LIMITS, parseMediaBatch } from "@/lib/classes/media";
+import { allRowsById } from "@/lib/classes/paged";
 import { classEmailHtml, mailClass, pacificTime } from "@/lib/classes/emails";
 import {
   SYSTEM_ACTOR,
@@ -93,6 +95,7 @@ export const ROOM_SENTENCES = {
   suspended: "Your teaching is paused, so you can't open this class. If that's a mistake, write to us.",
   blocked: CLASS_SENTENCES.blocked,
   bio: CLASS_SENTENCES.bio,
+  username: CLASS_SENTENCES.username,
   noticeMissing: "Tick the box to say you understand the class is recorded.",
   noticeOld: "The recording notice changed. Read it again and tick the box to join.",
   cap: "Live classes have reached this month's limit. They'll open again next month.",
@@ -131,6 +134,7 @@ export type JoinRefusal =
   | "blocked"
   | "eligibility"
   | "bio"
+  | "username"
   | "notice"
   | "cap"
   | "rtk"
@@ -161,7 +165,7 @@ function refuse(reason: JoinRefusal, error: string, extra: { opensAt?: string } 
         ? "not_found"
         : reason === "rtk" || reason === "save" || reason === "not_configured"
           ? "server"
-          : reason === "notice" || reason === "bio"
+          : reason === "notice" || reason === "bio" || reason === "username"
             ? "validation"
             : reason === "closed" || reason === "canceled" || reason === "over" || reason === "early" || reason === "not_ready"
               ? "conflict"
@@ -304,6 +308,11 @@ async function checkJoin(user: AppUser, cls: RoomClass, staff: boolean, now: Dat
     if ((await blockedEitherWay(user.id, [cls.teacher_id])).size > 0) return refuse("blocked", ROOM_SENTENCES.blocked);
   }
 
+  // Everyone in the room sees each other's full username, so neither it nor
+  // the bio it links to may carry a way to reach someone.
+  if (usernameHasContact(detail.username)) {
+    return { ...refuse("username", ROOM_SENTENCES.username), field: "username" };
+  }
   const { data: prof } = await createAdminClient().from("profiles").select("bio").eq("id", user.id).maybeSingle();
   if (findContactPatterns((prof?.bio as string | null) ?? "").length > 0) {
     return { ...refuse("bio", ROOM_SENTENCES.bio), field: "bio" };
@@ -314,23 +323,33 @@ async function checkJoin(user: AppUser, cls: RoomClass, staff: boolean, now: Dat
 
 /* ── The monthly cap (section 12) ──────────────────────────────────── */
 
+/**
+ * Participant-minutes so far this month (UTC): every join in every class,
+ * staff included, since Cloudflare bills every participant minute and the cap
+ * is the cost control on that bill. An open row counts up to now or the
+ * class's hard end, whichever is first. Read in pages of 1000, because
+ * production answers at most 1000 rows a request. The cap (joinClass) and
+ * the /admin/classes figure both use this, so they always agree.
+ */
+export async function participantMinutesSoFar(now: Date = new Date()): Promise<number> {
+  const rows = await allRowsById<{
+    id: string;
+    joined_at: string;
+    left_at: string | null;
+    classes: { hard_end_at: string } | null;
+  }>(createAdminClient(), "class_attendance", "id, joined_at, left_at, classes(hard_end_at)", {
+    gte: { joined_at: monthStartUtc(now).toISOString() },
+  });
+  return participantMinutes(
+    rows.map((r) => ({ joinedAt: r.joined_at, leftAt: r.left_at ?? null, closesAt: r.classes?.hard_end_at ?? null })),
+    now
+  );
+}
+
 async function monthlyCap(now: Date): Promise<"ok" | "warn" | "over"> {
   try {
     const settings = await getClassSettings();
-    const { data, error } = await createAdminClient()
-      .from("class_attendance")
-      .select("joined_at, left_at, classes(hard_end_at)")
-      .gte("joined_at", monthStartUtc(now).toISOString())
-      .limit(50_000);
-    if (error) {
-      console.error("monthlyCap:", error.message);
-      return "ok";
-    }
-    const rows = (data ?? []).map((r) => {
-      const cls = (r as unknown as { classes: { hard_end_at: string } | null }).classes;
-      return { joinedAt: r.joined_at as string, leftAt: (r.left_at as string | null) ?? null, closesAt: cls?.hard_end_at ?? null };
-    });
-    const used = participantMinutes(rows, now);
+    const used = await participantMinutesSoFar(now);
     const state = capState(used, settings.monthly_minute_cap);
     if (state !== "ok") await warnCapOnce(now, used, settings.monthly_minute_cap);
     return state;
@@ -535,6 +554,12 @@ export type RoomView = {
   roster: ClassRosterEntry[];
   /** The viewer can report from this class (they were in it, or teach it, within 30 days). */
   canReport: boolean;
+  /**
+   * Accounts the viewer has blocked: the chat panel leaves their messages
+   * out. One way, like blocks everywhere on the site (blocks.ts): it hides
+   * them from the person who blocked them, and tells nobody else anything.
+   */
+  hiddenSenderIds: string[];
 };
 
 export type RoomViewResult =
@@ -557,10 +582,11 @@ export async function getRoomView(user: AppUser | null, classId: string): Promis
 
   const now = new Date();
   const staff = await isClassStaff(user);
-  const [check, m, teacherUsername] = await Promise.all([
+  const [check, m, teacherUsername, blocks] = await Promise.all([
     checkJoin(user, cls, staff, now),
     membership(cls.id, user.id),
     cls.teacher_id ? usernameOf(cls.teacher_id) : Promise.resolve(null),
+    blockedSetFor(user.id),
   ]);
 
   let refusal: RoomView["refusal"] = null;
@@ -602,6 +628,7 @@ export async function getRoomView(user: AppUser | null, classId: string): Promis
       refusal,
       roster,
       canReport: (wasIn || staff) && withinReportWindow(cls.hard_end_at, now),
+      hiddenSenderIds: [...blocks.ids],
     },
   };
 }

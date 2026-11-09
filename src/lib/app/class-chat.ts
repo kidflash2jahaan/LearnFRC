@@ -7,14 +7,17 @@ import { fail, type AppUser, type Result } from "@/lib/app/result";
 // From the leaf module, not classes.ts: CHAT_SENTENCES reads it at load time
 // (see src/lib/classes/sentences.ts).
 import { CLASS_SENTENCES } from "@/lib/classes/sentences";
+import { classEligibility } from "@/lib/app/classes";
 import { CHAT_LIMITS, classesVisible, rtkApp } from "@/lib/classes/config";
 import {
   CHAT_BLOCKED_NOTE,
   CHAT_EMPTY_NOTE,
   CHAT_PROFANITY_NOTE,
+  CHAT_SEQUENCE,
   CHAT_TOO_LONG_NOTE,
   chatLengthProblem,
   checkChatMessage,
+  checkChatSequence,
   cleanChatText,
 } from "@/lib/classes/chat-filter";
 import type { ChatBlockedKind, ChatMessage, ClassRole } from "@/lib/classes/types";
@@ -25,10 +28,13 @@ import type { ChatBlockedKind, ChatMessage, ClassRole } from "@/lib/classes/type
  * the teacher, students and staff alike.
  *
  * sendClassChat is the one way a message gets in. It checks the sender is in
- * the class and hasn't been removed, rate-limits, runs the chat filter
- * (links outside LearnFRC and the docs, @handles, emails, phone numbers,
- * other apps' contact names) and the site's profanity check, and stores the
- * message as `shown` or `blocked`. Shown rows reach the class through
+ * the class and hasn't been removed (a student also still has to be signed up
+ * and cleared for classes, so leaving the class or a parent withdrawing their
+ * OK closes the chat), rate-limits, runs the chat filter (links outside
+ * LearnFRC and the docs, @handles, emails, phone numbers, other apps' contact
+ * names, on this message and on it with the sender's last few, so a detail
+ * split across messages is caught) and the site's profanity check, and stores
+ * the message as `shown` or `blocked`. Shown rows reach the class through
  * Supabase Realtime and the panel's polling fallback, both under the
  * members-only read policy; blocked rows are never readable by members and
  * go to the review and holds. The sender of a blocked message sees the note,
@@ -51,6 +57,8 @@ export const CHAT_SENTENCES = {
   closed: "This class is over, so its chat is closed.",
   notMember: "Join the class to use its chat.",
   removed: "You were removed from this class, so you can't send messages here.",
+  left: "You left this class, so you can't send messages here. Sign up again on the class page to come back.",
+  notReady: "You can't send messages in this class right now. Check the class page for what's needed.",
   rate: "You're sending messages quickly. Wait a moment and try again.",
   empty: CHAT_EMPTY_NOTE,
   tooLong: CHAT_TOO_LONG_NOTE,
@@ -109,17 +117,44 @@ export async function sendClassChat(
     return fail("conflict", CHAT_SENTENCES.closed);
   if (!part) return fail("forbidden", CHAT_SENTENCES.notMember);
   if (part.revoked_at) return fail("forbidden", CHAT_SENTENCES.removed);
+  // A student who left the class, or who isn't cleared for classes any more
+  // (a parent withdrew their OK), is out of the chat as well as the video.
+  if (part.role === "student" && cls.teacher_id !== user.id) {
+    const [{ data: enr }, state] = await Promise.all([
+      admin.from("class_enrollments").select("status").eq("class_id", classId).eq("user_id", user.id).maybeSingle(),
+      classEligibility(user),
+    ]);
+    if (enr?.status === "removed") return fail("forbidden", CHAT_SENTENCES.removed);
+    if (enr?.status !== "enrolled") return fail("forbidden", CHAT_SENTENCES.left);
+    if (state !== "ready") return fail("forbidden", CHAT_SENTENCES.notReady);
+  }
 
   if (!(await rateLimitKey("class-chat", CHAT_LIMITS.perMinute, 60, user.id)))
     return fail("rate_limited", CHAT_SENTENCES.rate, 60);
 
   const text = cleanChatText(input.text);
-  const [handles, { data: prof }] = await Promise.all([
+  const since = new Date(Date.now() - CHAT_SEQUENCE.windowMs).toISOString();
+  const [handles, { data: prof }, { data: recent }] = await Promise.all([
     rosterHandles(classId, (cls.teacher_id as string | null) ?? null),
     admin.from("profiles").select("username").eq("id", user.id).maybeSingle(),
+    // The sender's last few messages, whatever happened to them, for a
+    // detail split across messages ("202", "555", "0143").
+    admin
+      .from("class_chat_messages")
+      .select("body")
+      .eq("class_id", classId)
+      .eq("sender_id", user.id)
+      .gte("sent_at", since)
+      .order("id", { ascending: false })
+      .limit(CHAT_SEQUENCE.messages),
   ]);
   const check = checkChatMessage(text, { allowHandles: handles });
   const kinds: ChatBlockedKind[] = check.ok ? [] : [...check.kinds];
+  if (check.ok) {
+    const previous = ((recent ?? []) as { body: string }[]).map((r) => r.body).reverse();
+    const sequence = checkChatSequence(previous, text, { allowHandles: handles });
+    if (!sequence.ok) kinds.push(...sequence.kinds);
+  }
   if (chatHasProfanity(text)) kinds.push("profanity");
   const status = kinds.length ? "blocked" : "shown";
 

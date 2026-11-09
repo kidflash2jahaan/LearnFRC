@@ -16,9 +16,10 @@ import { ageOn } from "@/lib/classes/age";
  * site role), while every /admin/classes page checks requireClassReviewer and
  * lets him in. That's "the class pages and nothing else in /admin".
  *
- * Restricted material (a review flagged for grooming, sexual content or
- * sextortion, or one the AI refused, and the holds that go with it) is the
- * safety lead's alone. Super admins see RESTRICTED_PLACEHOLDER until he
+ * Restricted material (a review flagged for grooming, sexual content,
+ * sextortion or signs of abuse, one the AI refused, one where a student had a
+ * camera or screen share on, a class reported for sexual content, and the
+ * holds that go with them) is the safety lead's alone. Super admins see RESTRICTED_PLACEHOLDER until he
  * releases it (releaseHold in src/lib/classes/holds.ts). Jahaan is a minor,
  * and he isn't the one who reads or watches that material.
  *
@@ -75,8 +76,12 @@ export async function canSeeRestricted(user: AppUser): Promise<boolean> {
 /**
  * Whether an account may be set as the safety lead (for the settings form on
  * /admin/classes). The point of the role is an adult reading what a minor
- * shouldn't, so it refuses an owner account (Jahaan's, in ADMIN_EMAILS) and an
- * account whose classes age answer says under 18. Returns the refusal, or null.
+ * shouldn't, so it refuses an owner account (Jahaan's, in ADMIN_EMAILS), and
+ * it needs a classes age answer that says 18 or older by the conservative
+ * rule (ageOn): an account that never answered isn't known to be an adult,
+ * and most accounts on the site are teens. The safety lead answers the age
+ * screen on /classes/ready once, as 18 or older, which writes that row.
+ * Returns the refusal, or null.
  */
 export async function safetyLeadCandidateError(userId: string): Promise<string | null> {
   const admin = createAdminClient();
@@ -87,7 +92,9 @@ export async function safetyLeadCandidateError(userId: string): Promise<string |
   if (!authUser?.user) return "That account doesn't exist.";
   if (isOwnerEmail(authUser.user.email))
     return "The site owner's account can't be the safety lead. Restricted material is for an adult volunteer.";
-  if (age && ageOn(new Date(), age.birth_year as number, age.birth_month as number) < 18)
+  if (!age)
+    return "The safety lead has to be an adult. Have them sign in and answer the age question on /classes/ready first, then set them here.";
+  if (ageOn(new Date(), age.birth_year as number, age.birth_month as number) < 18)
     return "The safety lead has to be an adult.";
   return null;
 }

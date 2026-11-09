@@ -19,7 +19,7 @@ import {
   ownerEmail,
   rtkApp,
 } from "@/lib/classes/config";
-import { hasContactPatterns } from "@/lib/classes/contact-patterns";
+import { hasContactPatterns, usernameHasContact } from "@/lib/classes/contact-patterns";
 import { TEACHER_CODE_VERSION } from "@/lib/classes/notice";
 import { createMeeting, meetingConfigFor, setMeetingStatus } from "@/lib/classes/realtimekit";
 import {
@@ -121,7 +121,7 @@ async function teachingGate(user: AppUser, known?: ClassTeacherRow | null): Prom
   return { ok: true, teacher };
 }
 
-function refuse(code: Failure["code"], error: string, field?: ScheduleField | "bio"): Failure {
+function refuse(code: Failure["code"], error: string, field?: ScheduleField | "bio" | "username"): Failure {
   return field ? { ...fail(code, error), field } : fail(code, error);
 }
 
@@ -228,6 +228,9 @@ export async function scheduleClass(
 
   const admin = createAdminClient();
   const { data: profile } = await admin.from("profiles").select("username, bio").eq("id", user.id).maybeSingle();
+  // The class sees the teacher's full username, so it can't be a contact detail.
+  if (usernameHasContact(profile?.username as string | null | undefined))
+    return refuse("validation", CLASS_SENTENCES.username, "username");
   if (hasContactPatterns((profile?.bio as string | null) ?? null))
     return refuse("validation", SCHEDULE_SENTENCES.bio, "bio");
 

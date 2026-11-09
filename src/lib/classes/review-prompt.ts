@@ -119,8 +119,12 @@ export const FLAG_CATEGORIES = [
 ] as const;
 export type FlagCategory = (typeof FLAG_CATEGORIES)[number];
 
-/** Categories only the safety lead sees in full (section 8.1). */
-export const RESTRICTED_CATEGORIES: ReadonlySet<string> = new Set(["grooming", "sexual_content", "sextortion"]);
+/**
+ * Categories only the safety lead sees in full (section 8.1). `abuse` is
+ * here because a student disclosing abuse is often sexual abuse, and Jahaan
+ * is a minor.
+ */
+export const RESTRICTED_CATEGORIES: ReadonlySet<string> = new Set(["grooming", "sexual_content", "sextortion", "abuse"]);
 
 /** The output schema, word for word from section 7.4. */
 export const REVIEW_SCHEMA = {

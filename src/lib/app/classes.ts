@@ -16,9 +16,9 @@ import {
   rtkApp,
   scheduledEndFor,
 } from "@/lib/classes/config";
-import { ageBand, ageOn } from "@/lib/classes/age";
+import { ageBandOn, ageOn } from "@/lib/classes/age";
 import { CLASS_SENTENCES } from "@/lib/classes/sentences";
-import { findContactPatterns } from "@/lib/classes/contact-patterns";
+import { findContactPatterns, usernameHasContact } from "@/lib/classes/contact-patterns";
 import { deleteParticipant } from "@/lib/classes/realtimekit";
 import { holdAccount } from "@/lib/classes/holds";
 import { cancelTeacherClasses } from "@/lib/app/classes-teaching";
@@ -150,7 +150,9 @@ export async function classEligibilityDetail(
 
   const birthYear = ageRow.birth_year as number;
   const age = ageOn(now, birthYear, ageRow.birth_month as number);
-  const band = ageBand(age);
+  // 18+ from the first day of the 18th birth month, so nobody who may
+  // already be an adult is in a class of 13 year olds (age.ts).
+  const band = ageBandOn(now, birthYear, ageRow.birth_month as number);
   const facts = { username, age, ageBand: band, birthYear };
   // An under-13 answer deletes the account, so this row shouldn't exist.
   // If it ever does, classes stay closed.
@@ -431,8 +433,9 @@ export async function getClassDetail(
 /**
  * Enrolls a student (section 4): eligible (`ready`, or `waiting_parent`,
  * since joining waits for the parent OK anyway), not the teacher, no block
- * either way, a bio free of contact details, and a seat taken safely by
- * class_enroll (which locks the class row and closes 10 minutes after start).
+ * either way, a username and bio free of contact details, and a seat taken
+ * safely by class_enroll (which locks the class row and closes 10 minutes
+ * after start).
  */
 export async function enrollInClass(
   user: AppUser,
@@ -461,7 +464,12 @@ export async function enrollInClass(
   if ((await blockedEitherWay(user.id, [cls.teacher_id as string])).size > 0)
     return fail("forbidden", CLASS_SENTENCES.blocked);
 
-  const { data: profile } = await admin.from("profiles").select("bio").eq("id", user.id).maybeSingle();
+  const { data: profile } = await admin.from("profiles").select("username, bio").eq("id", user.id).maybeSingle();
+  // Everyone in a class sees each other's full username, so it can't be a
+  // standing contact detail ("snapchat_maya", "maya2025550143").
+  if (usernameHasContact(profile?.username as string | null | undefined)) {
+    return { ...fail("validation", CLASS_SENTENCES.username), field: "username" };
+  }
   if (findContactPatterns((profile?.bio as string | null) ?? "").length > 0) {
     return { ...fail("validation", CLASS_SENTENCES.bio), field: "bio" };
   }
@@ -490,10 +498,18 @@ export async function enrollInClass(
   }
 }
 
-/** Gives up a seat. Idempotent; a removal stays a removal. */
+/**
+ * Gives up a seat. Idempotent; a removal stays a removal. Someone who had
+ * already joined loses the room as well: their RealtimeKit participant is
+ * deleted (every token they hold stops working), and the chat refuses them
+ * (sendClassChat and the read policy only count enrolled students). They can
+ * sign up and join again while the class is open. A participant the video
+ * service couldn't delete goes to class_rtk_cleanup for the sweep.
+ */
 export async function leaveClass(user: AppUser, input: { classId: string }): Promise<Result> {
   if (!isUuid(input.classId)) return fail("not_found", CLASS_SENTENCES.notFound);
-  const { error } = await createAdminClient()
+  const admin = createAdminClient();
+  const { error } = await admin
     .from("class_enrollments")
     .update({ status: "canceled", updated_at: new Date().toISOString() })
     .eq("class_id", input.classId)
@@ -502,6 +518,40 @@ export async function leaveClass(user: AppUser, input: { classId: string }): Pro
   if (error) {
     console.error("leaveClass:", error.message);
     return fail("server", CLASS_SENTENCES.save);
+  }
+
+  // The room: a student who joined and then left the class keeps no token.
+  try {
+    const { data: part } = await admin
+      .from("class_participants")
+      .select("role, rtk_participant_id, classes(rtk_meeting_id, rtk_app, teacher_id)")
+      .eq("class_id", input.classId)
+      .eq("user_id", user.id)
+      .maybeSingle();
+    const cls = (part as unknown as { classes: { rtk_meeting_id: string | null; rtk_app: RtkApp; teacher_id: string | null } | null } | null)
+      ?.classes;
+    const pid = (part?.rtk_participant_id as string | null | undefined) ?? null;
+    if (part && part.role === "student" && pid && cls?.rtk_meeting_id && cls.teacher_id !== user.id) {
+      const res =
+        cls.rtk_app === rtkApp()
+          ? await deleteParticipant(cls.rtk_meeting_id, pid, { app: cls.rtk_app })
+          : ({ ok: false, status: 0, error: "other_app" } as const);
+      if (res.ok || res.status === 404) {
+        await admin
+          .from("class_participants")
+          .update({ rtk_participant_id: null })
+          .eq("class_id", input.classId)
+          .eq("user_id", user.id)
+          .eq("rtk_participant_id", pid);
+      } else {
+        await admin.from("class_rtk_cleanup").upsert(
+          { rtk_app: cls.rtk_app, meeting_id: cls.rtk_meeting_id, participant_id: pid, last_error: res.error.slice(0, 300) },
+          { onConflict: "meeting_id,participant_id" }
+        );
+      }
+    }
+  } catch (e) {
+    console.error("leaveClass: participant:", e);
   }
   return { ok: true };
 }

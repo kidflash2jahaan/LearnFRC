@@ -252,7 +252,10 @@ export function SafetyLeadForm({ current }: { current: string | null }) {
           aria-invalid={state?.field === "handle" || undefined}
           className="nb-input max-w-[20rem]"
         />
-        <p className="nb-hint">They get the class pages, restricted reviews and every urgent email. Nothing else in /admin.</p>
+        <p className="nb-hint">
+          They get the class pages, restricted reviews and every urgent email. Nothing else in /admin. They have to be an
+          adult: before you set them, they sign in and answer the age question on /classes/ready as 18 or older.
+        </p>
       </div>
       <button type="submit" disabled={pending} aria-busy={pending} className="nb-btn nb-btn-sm mt-2">
         {pending ? "Saving" : "Save"}

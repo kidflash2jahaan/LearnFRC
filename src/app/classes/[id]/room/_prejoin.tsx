@@ -25,6 +25,7 @@ const BLOCKING = new Set([
   "blocked",
   "eligibility",
   "bio",
+  "username",
   "cap",
   "early",
   "paused",
@@ -161,6 +162,11 @@ export function Prejoin({ title, teacherUsername, role, displayName, classId, jo
             {refusal.reason === "bio" ? (
               <Link href="/settings" className="nb-link mt-2 inline-block">
                 Edit your bio in Settings
+              </Link>
+            ) : null}
+            {refusal.reason === "username" ? (
+              <Link href="/settings" className="nb-link mt-2 inline-block">
+                Change your username in Settings
               </Link>
             ) : null}
           </div>
