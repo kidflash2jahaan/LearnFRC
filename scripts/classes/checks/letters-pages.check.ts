@@ -239,7 +239,7 @@ async function main() {
       assert.ok(r.text.includes("Request the letter"));
       assert.ok(r.text.includes("2 hours 15 minutes"), "total");
       assert.ok(r.text.includes("Wiring the CAN bus"));
-      assert.equal(r.html.includes("—"), false, "no em dash");
+      assert.equal(r.html.includes("\u2014"), false, "no em dash");
     });
 
     await step("/classes/teaching/letter: an owner account gets the no-letters note, a student the teachers-only card", async () => {
@@ -275,7 +275,7 @@ async function main() {
       assert.ok(r.text.includes("Approve and sign"));
       assert.ok(r.html.includes(`/admin/classes/${c1}`), "links each class's review");
       assert.equal(r.text.includes("signs letters, since each one carries his signature"), false);
-      assert.equal(r.html.includes("—"), false, "no em dash");
+      assert.equal(r.html.includes("\u2014"), false, "no em dash");
     });
 
     await step("/admin/classes/letters: a super admin sees it but is told only the safety lead signs", async () => {
@@ -328,7 +328,7 @@ async function main() {
       ]) {
         assert.ok(r.text.includes(s), s);
       }
-      assert.equal(article.includes("—"), false, "no em dash in the letter");
+      assert.equal(article.includes("\u2014"), false, "no em dash in the letter");
     });
 
     await step("/letters/[code]: the QR payload is the verify URL", async () => {
@@ -352,7 +352,7 @@ async function main() {
       assert.ok(v.text.includes("2 hours 15 minutes, 3 classes"));
       assert.ok(v.text.includes("Dhiren Pardhanani, Volunteer Coordinator"));
       assert.ok(v.text.includes("Wiring the CAN bus"));
-      assert.equal(v.html.includes("—"), false);
+      assert.equal(v.html.includes("\u2014"), false);
       const lower = await get(`/verify/${code.toLowerCase()}`);
       assert.ok(lower.text.includes("Valid letter."));
       for (const bad of ["LF-22222-22222", "nope", "LF-0000O-11111"]) {

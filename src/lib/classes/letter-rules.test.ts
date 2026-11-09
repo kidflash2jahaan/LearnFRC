@@ -223,6 +223,6 @@ test("the letter's sentences carry the facts, with no em dashes", () => {
   assert.match(p.howChecked, /An adult volunteer wasn't present for every class\.$/);
   const one = letterParagraphs({ name: "A B", start: "2026-08-01", end: "2026-08-01", classCount: 1, totalMinutes: 60 });
   assert.match(one.confirms, /taught 1 live online class, for 1 hour of teaching time/);
-  for (const s of [p.confirms, p.howChecked, one.confirms]) assert.equal(s.includes("—"), false);
+  for (const s of [p.confirms, p.howChecked, one.confirms]) assert.equal(s.includes("\u2014"), false);
   assert.equal(longDate("2026-11-08"), "November 8, 2026");
 });

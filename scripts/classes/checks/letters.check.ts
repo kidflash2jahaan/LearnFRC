@@ -549,8 +549,8 @@ async function main() {
       const all = outboxMessages();
       assert.ok(all.length >= 6, `outbox has ${all.length}`);
       for (const m of all) {
-        assert.equal(m.subject.includes("—"), false, m.subject);
-        assert.equal(m.html.includes("—"), false, m.subject);
+        assert.equal(m.subject.includes("\u2014"), false, m.subject);
+        assert.equal(m.html.includes("\u2014"), false, m.subject);
       }
     });
   } finally {
