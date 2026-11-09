@@ -17,6 +17,9 @@ import SwiftUI
 struct ReportSheet: View {
     let username: String
     let surface: ReportSurface
+    /// Set when reporting a live class from the classes list: the report is about the class
+    /// (its title and description), filed against its teacher, `username`.
+    var reportedClass: ReportedClass? = nil
 
     @Environment(SafetyStore.self) private var injected: SafetyStore?
     @Environment(\.dismiss) private var dismiss
@@ -48,7 +51,7 @@ struct ReportSheet: View {
             }
             .scrollDismissesKeyboard(.interactively)
             .paperBackground()
-            .navigationTitle("Report @\(username)")
+            .navigationTitle(reportedClass == nil ? "Report @\(username)" : "Report this class")
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
@@ -70,8 +73,8 @@ struct ReportSheet: View {
 
     private var form: some View {
         VStack(alignment: .leading, spacing: 0) {
-            SlugText("report / this profile")
-            Text("What's wrong with @\(username)'s profile?")
+            SlugText(reportedClass == nil ? "report / this profile" : "report / this class")
+            Text(reportedClass.map { "What's wrong with \u{201C}\($0.title)\u{201D}?" } ?? "What's wrong with @\(username)'s profile?")
                 .lfTitle(.h2)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, 10)
@@ -166,7 +169,12 @@ struct ReportSheet: View {
         isSending = true
         defer { isSending = false }
         do {
-            let message = try await safety.report(username: username, reason: reason, details: trimmed, surface: surface)
+            let message: String
+            if let reportedClass {
+                message = try await safety.report(class: reportedClass, teacher: username, reason: reason, details: trimmed)
+            } else {
+                message = try await safety.report(username: username, reason: reason, details: trimmed, surface: surface)
+            }
             error = nil
             withAnimation(LF.Motion.arrive) { sent = message }
             Haptics.success()
@@ -206,9 +214,11 @@ extension View {
     /// The site's Block confirmation, worded the same: what is hidden, and that they aren't told.
     /// Two ways to go ahead: Block, or Block and report (`perform(true)`), which sends a report
     /// about them as well, so the LearnFRC team hears about it (App Review 1.2).
+    /// `hidesClasses` (the classes list) says their live classes go too.
     func blockConfirmation(
         isPresented: Binding<Bool>,
         username: String,
+        hidesClasses: Bool = false,
         perform: @escaping @MainActor (_ thenReport: Bool) async -> Void
     ) -> some View {
         confirmationDialog("Block @\(username)?", isPresented: isPresented, titleVisibility: .visible) {
@@ -220,7 +230,9 @@ extension View {
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("You won't see their profile, their rows on the leaderboards or their row on your team sheet. They aren't told. You can undo it in Settings.")
+            Text(hidesClasses
+                ? "You won't see their live classes, their profile, their rows on the leaderboards or their row on your team sheet. They aren't told. You can undo it in Settings."
+                : "You won't see their profile, their rows on the leaderboards or their row on your team sheet. They aren't told. You can undo it in Settings.")
         }
     }
 }

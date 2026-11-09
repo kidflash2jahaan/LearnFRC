@@ -37,6 +37,9 @@ enum AppRoute: Hashable, Codable, Sendable {
     case adminTeam
     /// Help run it (learnfrc.com/apply).
     case apply
+    /// Live classes (learnfrc.com/classes): Live now and Upcoming. Each class opens on the
+    /// website in Safari; there's no class screen in the app.
+    case classes
 
     /// The glossary catalogue (learnfrc.com/glossary, `GlossaryView`): the glossary-term route
     /// with an empty slug, which `GlossaryTermView` shows as the catalogue. Kept as a
@@ -65,6 +68,7 @@ enum AppRoute: Hashable, Codable, Sendable {
 ///     learnfrc://team  learnfrc://leaderboard  learnfrc://settings  learnfrc://videos  learnfrc://achievements
 ///     learnfrc://bookmarks
 ///     learnfrc://admin  learnfrc://admin/feedback  learnfrc://admin/team  learnfrc://apply
+///     learnfrc://classes
 ///
 /// Two links aren't routes: `learnfrc://home` and `learnfrc://continue` (see `AppModel.handle(url:)`).
 extension AppRoute {
@@ -95,6 +99,7 @@ extension AppRoute {
         case .adminFeedback: components.host = "admin"; components.path = "/feedback"
         case .adminTeam: components.host = "admin"; components.path = "/team"
         case .apply: components.host = "apply"
+        case .classes: components.host = "classes"
         }
         return components.url ?? URL(string: "\(Self.scheme)://home")!
     }
@@ -127,6 +132,7 @@ extension AppRoute {
             default: self = .admin
             }
         case "apply": self = .apply
+        case "classes": self = .classes
         default: return nil
         }
     }

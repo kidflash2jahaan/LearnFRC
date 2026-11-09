@@ -27,6 +27,8 @@ struct ApplyView: View {
             // mid-answer keeps what's written.
             FoldPages(layout.pages) {
                 header
+                // The site's second role on /apply: teaching a live class, once classes are open.
+                ClassesTeachCard()
                 work(layout)
                 onceIn
                 whoItSuits

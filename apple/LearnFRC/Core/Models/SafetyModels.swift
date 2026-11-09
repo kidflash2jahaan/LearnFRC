@@ -42,19 +42,46 @@ struct ReportReasonsPayload: Decodable, Sendable {
 /// Where a report was filed from (the site allow-lists these).
 enum ReportSurface: String, Codable, Sendable {
     case profile, leaderboard, team
+    /// A row in the live classes list (`ClassesListView`).
+    case classesList = "classes_list"
 }
 
-/// `POST /api/app/reports` body. The app only reports profiles; edits and proposals are
-/// reported on learnfrc.com/contributions, which the app has no screen for.
+/// `POST /api/app/reports` body. The app reports profiles, and live classes from the classes
+/// list (`contentKind: "class"`, the class in `contentId`, its teacher in `username`); edits
+/// and proposals are reported on learnfrc.com/contributions, which the app has no screen for.
 struct ReportRequest: Encodable, Sendable {
     let username: String
-    let contentKind = "profile"
+    let contentKind: String
+    /// The class's id for a class report; left out of the body for a profile.
+    let contentId: String?
     let reason: String
     let details: String?
     let surface: ReportSurface
     let platform: String
 
-    private enum CodingKeys: String, CodingKey { case username, contentKind, reason, details, surface, platform }
+    /// A report about `username`'s profile.
+    init(username: String, reason: String, details: String?, surface: ReportSurface, platform: String) {
+        self.username = username
+        self.contentKind = "profile"
+        self.contentId = nil
+        self.reason = reason
+        self.details = details
+        self.surface = surface
+        self.platform = platform
+    }
+
+    /// A report about a live class, filed against its teacher, `username`.
+    init(reportedClass: ReportedClass, teacher username: String, reason: String, details: String?, platform: String) {
+        self.username = username
+        self.contentKind = "class"
+        self.contentId = reportedClass.id.uuidString.lowercased()
+        self.reason = reason
+        self.details = details
+        self.surface = .classesList
+        self.platform = platform
+    }
+
+    private enum CodingKeys: String, CodingKey { case username, contentKind, contentId, reason, details, surface, platform }
 }
 
 /// `POST /api/app/reports` answer.

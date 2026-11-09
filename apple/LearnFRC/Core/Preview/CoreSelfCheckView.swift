@@ -180,13 +180,37 @@ struct CoreSelfCheckView: View {
             add("Decodes /api/app/me", false, JSONCoding.describe(error))
         }
 
+        // /api/app/classes as docs/API.md shows it: one good row, one without an id (dropped),
+        // and a class link to another site (replaced by the class's own learnfrc.com page).
+        let classesJSON = """
+        {"visible":true,"classes":[
+          {"id":"4f1d2c3b-8a9e-4b7c-9d6e-1a2b3c4d5e6f","title":"Wiring a CAN bus","description":null,
+           "startsAt":"2026-11-20T01:00:00.000Z","endsAt":"2026-11-20T02:00:00.000Z","durationMinutes":60,"status":"live",
+           "teacher":{"username":"maya"},"teacherLabel":"Taught by an FRC student",
+           "topic":{"kind":"lesson","id":"0b7f9a52-3c1e-4d8a-b2f6-7e5d4c3b2a19","title":"CAN Bus Wiring","url":"https://learnfrc.com/guides/a/b/c"},
+           "seats":{"capacity":15,"taken":6,"left":9},"url":"https://example.com/classes/x","enrolled":true},
+          {"title":"No id"}],
+         "liveNow":1,"teachUrl":"https://learnfrc.com/apply/teach","version":"1"}
+        """
+        do {
+            let feed = try JSONCoding.decoder().decode(ClassesFeed.self, from: Data(classesJSON.utf8))
+            let row = feed.classes.first
+            let ok = feed.visible && feed.classes.count == 1 && row?.isLive == true && row?.teacherUsername == "maya"
+                && row?.seats.left == 9 && row?.enrolled == true
+                && row?.webURL.absoluteString == "https://learnfrc.com/classes/4f1d2c3b-8a9e-4b7c-9d6e-1a2b3c4d5e6f"
+            let hidden = try JSONCoding.decoder().decode(ClassesFeed.self, from: Data(#"{"visible":false,"classes":[]}"#.utf8))
+            add("Decodes /api/app/classes", ok && !hidden.visible && hidden.teachURL == nil, "\(feed.classes.count) row, live \(feed.liveNow)")
+        } catch {
+            add("Decodes /api/app/classes", false, JSONCoding.describe(error))
+        }
+
         // Deep links.
         let routes: [AppRoute] = [
             .department(PreviewData.department.id), .module(PreviewData.module.id), .lesson(PreviewData.lesson.id),
             .article("frc-brownout"), .glossaryTerm("wpilib"), .path("game-day-ready"), .profile("kai_cad"),
             .team, .leaderboard, .settings, .certificate(PreviewData.department.id), .videos, .achievements,
             .bookmarks, .tools, .tool("frc-gear-ratio-calculator"), .resources,
-            .admin, .adminFeedback, .adminTeam, .apply,
+            .admin, .adminFeedback, .adminTeam, .apply, .classes,
         ]
         let broken = routes.filter { AppRoute(deepLink: $0.deepLinkURL) != $0 }
         add("Deep links round trip", broken.isEmpty, broken.isEmpty ? "\(routes.count) routes, e.g. \(routes[2].deepLinkURL.absoluteString)" : "\(broken)")

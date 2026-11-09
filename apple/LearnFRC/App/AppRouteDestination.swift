@@ -46,6 +46,7 @@ struct AppRouteDestination: View {
         case .adminFeedback: AdminFeedbackView()
         case .adminTeam: AdminTeamView()
         case .apply: ApplyView()
+        case .classes: ClassesListView()
         }
     }
 }
@@ -118,6 +119,7 @@ extension AppRoute {
         case .adminFeedback: "Feedback"
         case .adminTeam: "Admin team"
         case .apply: "Help run it"
+        case .classes: "Live classes"
         }
     }
 }

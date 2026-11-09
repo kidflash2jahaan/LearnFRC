@@ -339,6 +339,7 @@ final class AppModel {
         case .glossaryTerm: .search
         case .profile, .team, .leaderboard, .achievements: .community
         case .settings, .bookmarks, .admin, .adminFeedback, .adminTeam, .apply: .profile
+        case .classes: .home
         }
     }
 
