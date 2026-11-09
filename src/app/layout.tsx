@@ -8,9 +8,9 @@ import { ScrollProgress } from "@/components/scroll-progress";
 import { JsonLd } from "@/components/json-ld";
 import { PresenceBeacon } from "@/components/presence-beacon";
 import { SourceCapture } from "@/components/source-capture";
-import { Analytics } from "@vercel/analytics/next";
-import { SpeedInsights } from "@vercel/speed-insights/next";
+import { SiteAnalytics } from "@/components/site-analytics";
 import { getOverviewStats } from "@/lib/queries";
+import { classesVisibleOnStaticPages } from "@/lib/classes/static-pages";
 
 /* Three faces with fixed jobs, per docs/NOTEBOOK-SYSTEM.md. Nothing else is
    loaded, and nothing else may be. */
@@ -131,9 +131,14 @@ export const viewport: Viewport = {
   themeColor: "#E6E8E3",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  // Live classes' nav entry and footer link (classes-design.md section 11).
+  // False with no database read while CLASSES_VISIBLE is off, so the layout
+  // stays as static as it was; once it's on, a cached read of the database
+  // switch that the /admin/classes toggle refreshes. See static-pages.ts.
+  const classesVisible = await classesVisibleOnStaticPages();
   return (
     <html
       lang="en"
@@ -203,20 +208,22 @@ export default function RootLayout({
         </a>
         <Providers>
           <ScrollProgress />
-          <Navbar />
+          <Navbar classesVisible={classesVisible} />
           <main id="main-content" className="flex-1">
             {children}
           </main>
-          <Footer />
+          <Footer classesVisible={classesVisible} />
         </Providers>
-        <Analytics />
-        <SpeedInsights />
+        {/* Vercel Web Analytics and Speed Insights. A client component so it
+            can hand both a `beforeSend` that strips the private part of any
+            /classes/parent/, /letters/ or /verify/ URL before it's sent. */}
+        <SiteAnalytics />
         <PresenceBeacon />
         {/* First-touch acquisition cookie (lf_src). Still load-bearing: the
             signup action reads the cookie off the request and stores it on the
             profile, which is where referral credit comes from. It never touched
             the pageview beacon's table, so it is unaffected by traffic moving
-            to Vercel. <Analytics/> above is what counts pageviews now. */}
+            to Vercel. <SiteAnalytics/> above is what counts pageviews now. */}
         <SourceCapture />
       </body>
     </html>

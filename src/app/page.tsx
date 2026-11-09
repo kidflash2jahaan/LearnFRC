@@ -8,6 +8,8 @@ import { RevealGroup } from "@/components/motion/primitives";
 import { HeroPanel, type HeroDept } from "./_hero-panel";
 import { VideoTour } from "@/components/video-tour";
 import { TOUR_VIDEO_URL } from "@/lib/tour-video";
+import { homeClasses } from "@/lib/classes/static-pages";
+import { HomeClassesHeroLine, HomeClassesSection } from "@/components/classes/home-section";
 
 // Title/description/OG are inherited from the root layout defaults (which are
 // written for the home page); we only pin the self-referential canonical.
@@ -156,7 +158,7 @@ const TOOLS = [
 ];
 
 export default async function HomePage() {
-  const [departmentsRaw, stats] = await Promise.all([
+  const [departmentsRaw, stats, classes] = await Promise.all([
     getDepartments().catch(() => []),
     getOverviewStats().catch(() => ({
       deptCount: 11,
@@ -164,6 +166,10 @@ export default async function HomePage() {
       lessonCount: 394,
       learners: 0,
     })),
+    // Live classes: null while they're hidden (no hero line, no section, and
+    // no database read while the env switch is off), else the next three,
+    // cached and without handles. See src/lib/classes/static-pages.ts.
+    homeClasses(),
   ]);
 
   const departments =
@@ -220,6 +226,7 @@ export default async function HomePage() {
               Browse the departments
             </Link>
           </div>
+          {classes ? <HomeClassesHeroLine /> : null}
         </div>
 
         <HeroPanel
@@ -228,6 +235,13 @@ export default async function HomePage() {
           depts={heroDepts}
         />
       </section>
+
+      {/* =================== 1a. LIVE CLASSES ====================
+          Only while classes are visible: the next three, or the empty
+          state, right under the hero so they read as part of what the site
+          is. No handles, signed in or not, because this page is cached and
+          shared by everyone. */}
+      {classes ? <HomeClassesSection classes={classes} /> : null}
 
       {/* ================= 1b. THE 60-SECOND TOUR ================
           The ad from the LearnFRC channel, placed where a first-time visitor
