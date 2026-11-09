@@ -48,11 +48,16 @@ function noteBlock(label: string, note: string | null | undefined): string {
 
 const p = (text: string) => `<p style="margin:0 0 14px">${escapeHtml(text)}</p>`;
 
-/** To the applicant, the moment they apply. */
+/**
+ * To the applicant, the moment they apply. Says how the seasons get checked,
+ * and, only when they named a mentor or coach, that we may email that person
+ * once if the event results don't settle it.
+ */
 export function teacherApplicationReceivedMail(input: {
   to: string;
   username: string | null;
   parentStep: ParentStep | null;
+  hasReference: boolean;
 }): ClassMail {
   const parent =
     input.parentStep && input.parentStep !== "agreed"
@@ -69,6 +74,12 @@ export function teacherApplicationReceivedMail(input: {
         p(
           "Your application to teach live classes on LearnFRC is in. A person reads every application, and you'll get an email either way."
         ) +
+        p(
+          "We check the FRC seasons you listed against official event results." +
+            (input.hasReference
+              ? " If we can't confirm them that way, we may email the mentor or coach you named, once, to ask whether you were on the team."
+              : "")
+        ) +
         parent +
         p("If your plans change, you can withdraw it from the page you applied on."),
       buttons:
@@ -80,17 +91,23 @@ export function teacherApplicationReceivedMail(input: {
   };
 }
 
-/** To the owner (the first ADMIN_EMAILS entry), who decides. */
+/**
+ * To the owner (the first ADMIN_EMAILS entry), who decides. Facts only: no
+ * written answers, no name for the letters and no reference in the email.
+ */
 export function teacherApplicationNotifyMail(input: {
   to: string;
   username: string;
   ageBand: AgeBand | null;
   parentStep: ParentStep | null;
   sameNetwork: boolean;
+  /** The newest season's team. */
   teamNumber: number | null;
+  /** Oldest first. */
+  seasonYears: number[];
   teamRoleLabel: string;
-  topics: string;
   topicTitles: string[];
+  sampleLessonTitle: string;
 }): ClassMail {
   const rows = [
     { label: "Handle", value: `@${input.username}` },
@@ -100,10 +117,11 @@ export function teacherApplicationNotifyMail(input: {
       value: `${input.parentStep ? PARENT_STEP_WORDS[input.parentStep] : "not asked yet"}${input.sameNetwork ? " (decided from the student's own network)" : ""}`,
     },
     { label: "Team", value: input.teamNumber ? String(input.teamNumber) : "not given" },
+    { label: "Seasons", value: input.seasonYears.join(", ") },
     { label: "Team role", value: input.teamRoleLabel },
-    { label: "Topics", value: input.topics },
+    { label: "Picked", value: input.topicTitles.join(", ") },
+    { label: "Sample lesson", value: input.sampleLessonTitle },
   ];
-  if (input.topicTitles.length) rows.push({ label: "Picked", value: input.topicTitles.join(", ") });
   return {
     to: input.to,
     subject: `LearnFRC: teacher application from @${input.username}`,
@@ -111,7 +129,7 @@ export function teacherApplicationNotifyMail(input: {
       heading: "Someone applied to teach live classes",
       rows,
       buttons: [{ text: "Open the teacher desk", url: deskUrl() }],
-      note: "The name for hours letters, their experience, the sample plan and their reference are on the desk. Accepting locks the name.",
+      note: "Their answers, the seasons to check on The Blue Alliance, and their reference are on the desk. Accepting locks the name.",
     }),
   };
 }

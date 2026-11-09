@@ -40,6 +40,7 @@ import {
   type CanceledBy,
 } from "@/lib/classes/emails-enroll";
 import type { ClassStatus, ClassTeacherRow, Eligibility, RtkApp, SystemActor } from "@/lib/classes/types";
+import type { CatalogGroup } from "@/lib/classes/teacher-rules";
 
 /**
  * Scheduling and cancelling classes (classes-design.md section 11,
@@ -142,12 +143,17 @@ async function topicFor(lessonId: string | null, moduleId: string | null): Promi
   return null;
 }
 
-export type TopicGroup = {
-  department: string;
-  modules: { id: string; title: string; lessons: { id: string; title: string }[] }[];
-};
+/**
+ * The catalog by department. The type lives in the pure teacher-rules.ts
+ * (CatalogGroup), so client forms import it from there; this name stays for
+ * the schedule form.
+ */
+export type TopicGroup = CatalogGroup;
 
-/** Every lesson and module, by department, for the schedule form's picker. */
+/**
+ * Every lesson and module, by department, for the schedule form's picker and
+ * the teacher application's module and sample-lesson pickers (/apply/teach).
+ */
 export async function scheduleTopicOptions(): Promise<TopicGroup[]> {
   const { data, error } = await createAdminClient()
     .from("departments")

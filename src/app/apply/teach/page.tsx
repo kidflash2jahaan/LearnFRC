@@ -3,7 +3,6 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { createPublicClient } from "@/lib/supabase/public";
 import { PUBLIC_CONTACT_EMAIL } from "@/lib/email";
 import { classesVisible } from "@/lib/classes/config";
 import { CLASS_LIMITS } from "@/lib/classes/constants";
@@ -11,15 +10,15 @@ import { COORDINATOR } from "@/lib/classes/coordinator";
 import { TEACHER_CODE } from "@/lib/classes/notice";
 import { canApplyIn, type TeachApplyMode } from "@/lib/classes/teacher-rules";
 import { loadTeachApplyState, type TeachApplyState } from "@/lib/app/class-teachers";
-import { RoleHeader } from "../_role-header";
-import { TeachForm, type TopicGroup } from "./_teach-form";
+import { scheduleTopicOptions } from "@/lib/app/classes-teaching";
+import { TeachForm } from "./_teach-form";
 import { WithdrawTeachForm } from "./_withdraw-form";
 import { CodeAgreeForm } from "./_code-form";
 
 export const metadata: Metadata = {
   title: "Teach a live class",
   description:
-    "FRC students teach short, free live classes on LearnFRC lessons to other FRC students. Every class is recorded on video and reviewed. Apply to teach.",
+    "Experienced FRC students teach short, free live classes on LearnFRC lessons to other FRC students. Every class is recorded on video and reviewed. Apply to teach.",
   alternates: { canonical: "/apply/teach" },
 };
 
@@ -32,8 +31,9 @@ export const dynamic = "force-dynamic";
  *
  * Hidden (404) until live classes are visible: both switches (section 1).
  *
- * The page reads like /apply: what the role is, what it needs, then where
- * you stand. Where you stand comes from loadTeachApplyState
+ * What the role is, what it needs, then where you stand. Teaching is the
+ * only role LearnFRC takes applications for (/apply sends people here while
+ * classes are visible). Where you stand comes from loadTeachApplyState
  * (src/lib/app/class-teachers.ts), the same answer the app's
  * GET /api/app/apply gives in `roles`.
  *
@@ -42,8 +42,12 @@ export const dynamic = "force-dynamic";
  * to anyone who hasn't answered it yet. Once the answer is stored, the
  * requirements say 13 to 17 plainly.
  *
- * Nothing here promises anyone a host at their first class. Every class, the
- * first included, is recorded on video and reviewed afterwards.
+ * Teachers need at least one full FRC season (FULL_SEASON_SENTENCE in
+ * src/lib/classes/teacher-rules.ts): the form asks it first, and the server
+ * refuses without it.
+ *
+ * Nothing here promises that an adult sits in on a first class. Every class,
+ * the first included, is recorded on video and reviewed afterwards.
  */
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -68,28 +72,9 @@ const HEADS: Record<TeachApplyMode, { title: string; slug: string }> = {
   "code-outdated": { title: "The teacher code changed", slug: "agree again to keep teaching" },
   teacher: { title: "You’re a teacher", slug: "nothing to apply for" },
   pending: { title: "Your application", slug: "waiting on a decision" },
-  again: { title: "Apply again", slug: "a few questions and the code" },
-  new: { title: "Apply", slug: "a few questions and the code" },
+  again: { title: "Apply again", slug: "about 25 minutes, saves as you go" },
+  new: { title: "Apply", slug: "about 25 minutes, saves as you go" },
 };
-
-/** Every department's modules, in catalog order, for the topic picker. */
-async function topicGroups(): Promise<TopicGroup[]> {
-  const { data, error } = await createPublicClient()
-    .from("departments")
-    .select("id, name, sort_order, modules(id, title, sort_order, is_prerequisite)")
-    .order("sort_order");
-  if (error || !data) return [];
-  return data.map((d) => ({
-    id: d.id as string,
-    name: d.name as string,
-    modules: [...((d.modules as { id: string; title: string; sort_order: number; is_prerequisite: boolean }[]) ?? [])]
-      .sort(
-        (a, b) =>
-          (a.is_prerequisite ? 0 : 1) - (b.is_prerequisite ? 0 : 1) || a.sort_order - b.sort_order
-      )
-      .map((m) => ({ id: m.id, title: m.title })),
-  }));
-}
 
 /** One state card: tape, slug, a sentence or two, and its controls. */
 function StateCard({
@@ -177,7 +162,8 @@ export default async function TeachApplyPage() {
   const head = HEADS[mode];
   // The age range and the code are printed only once the age is known.
   const ageKnown = state.ageBand !== null;
-  const groups = canApplyIn(mode) ? await topicGroups() : [];
+  // Modules and their lessons, for the module picker and the sample lesson.
+  const groups = canApplyIn(mode) ? await scheduleTopicOptions() : [];
   const closed =
     state.application?.status === "rejected" || state.application?.status === "withdrawn"
       ? state.application
@@ -185,15 +171,13 @@ export default async function TeachApplyPage() {
 
   return (
     <div className="nb-wrap max-w-[52rem] py-[clamp(2.2rem,5vw,3.8rem)]">
-      <RoleHeader active="teacher" />
-
       <header>
         <p className="nb-marker">apply / teach</p>
         <h1 className="text-[clamp(2.2rem,1.2rem+3.4vw,3.4rem)]">
           Teach a <span className="nb-mark">live</span> class.
         </h1>
         <p className="nb-lede mt-5">
-          FRC students teach short live classes on LearnFRC lessons, to other FRC students. It&rsquo;s free
+          Experienced FRC students teach short live classes on LearnFRC lessons, to other FRC students. It&rsquo;s free
           for everyone, it runs on learnfrc.com, and every class is recorded on video and reviewed
           afterwards.
         </p>
@@ -257,7 +241,10 @@ export default async function TeachApplyPage() {
         <div className="nb-prose mt-4 max-w-[64ch]">
           <ul>
             <li>A LearnFRC account with a username.</li>
-            <li>Time on an FRC team, now or before.</li>
+            <li>
+              At least one full FRC season: a build season and at least one official event. FTC or FLL
+              experience is welcome, but it doesn&rsquo;t count on its own.
+            </li>
             <li>
               {ageKnown
                 ? "To be 13 to 17. Live classes are for students, teachers included."
@@ -268,6 +255,7 @@ export default async function TeachApplyPage() {
               schedule a class until they say OK.
             </li>
             <li>To agree to the teacher code{ageKnown ? ", below" : ""}.</li>
+            <li>About 25 minutes for the application. It saves on this device as you go.</li>
           </ul>
         </div>
       </section>
@@ -344,12 +332,7 @@ export default async function TeachApplyPage() {
         {mode === "adult" && (
           <StateCard slug="live classes">
             <p className={body}>
-              Live classes are for students 13 to 17, teachers included. Lessons are all still yours, and
-              you can still help by{" "}
-              <Link href="/apply" className="nb-link">
-                spreading LearnFRC
-              </Link>
-              .
+              Live classes are for students 13 to 17, teachers included. Lessons are all still yours.
             </p>
           </StateCard>
         )}
@@ -441,7 +424,9 @@ export default async function TeachApplyPage() {
                 <p className="mt-2 max-w-[60ch] text-[0.99rem] leading-relaxed">
                   {closed.status === "withdrawn"
                     ? "You pulled that one back before it was decided. You can send another whenever you like."
-                    : "That one was turned down, which isn't a permanent answer. If something has changed, say so in your experience."}
+                    : state.previousAnswers
+                      ? "That one was turned down, which isn’t a permanent answer. Your last answers are filled in below. Read what the reviewer wrote, change what needs changing, and send it again."
+                      : "That one was turned down, which isn’t a permanent answer. Read what the reviewer wrote, change what needs changing, and send it again."}
                 </p>
                 {closed.reviewNote && (
                   <div className="nb-note mt-4 max-w-[64ch]">
@@ -460,6 +445,9 @@ export default async function TeachApplyPage() {
                 again={!!closed}
                 groups={groups}
                 codeVersion={state.codeVersion}
+                draftKey={`lf-teach-draft:v2:${user?.id ?? ""}`}
+                previous={state.previousAnswers}
+                thisYear={new Date().getUTCFullYear()}
               />
             </div>
           </>
