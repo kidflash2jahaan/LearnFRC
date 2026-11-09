@@ -79,7 +79,7 @@ export function DataLedger({
     {
       what: "What you send",
       detail:
-        "Contact messages, suggested edits, submitted lessons, helper applications, and reports and blocks.",
+        "Contact messages, suggested edits, submitted lessons, teacher applications, and reports and blocks.",
       why: "So we can answer, review and act on them.",
       remove: (
         <>

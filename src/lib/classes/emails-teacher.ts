@@ -189,7 +189,7 @@ export function teacherRejectedMail(input: { to: string; username: string | null
         p("Your application to teach live classes wasn't accepted this time.") +
         noteBlock("note from the reviewer", input.note) +
         p("That isn't a permanent answer. If something changes, you can apply again from the same page. Every lesson on LearnFRC is still yours."),
-      buttons: [{ text: "Open the teaching page", url: teachUrl(), tone: "plain" }],
+      buttons: [{ text: "Open the application page", url: teachUrl(), tone: "plain" }],
     }),
   };
 }

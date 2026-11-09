@@ -199,7 +199,7 @@ async function main() {
     // "Yes" in the browser, so the server's HTML has the question, the
     // requirements and the before-you-start note.
     assert.ok(ready.includes("Have you finished at least one full FRC season?"));
-    assert.ok(ready.includes("about 25 minutes") || ready.includes("About 25 minutes"));
+    assert.ok(ready.includes("about 30 to 45 minutes") || ready.includes("About 30 to 45 minutes"));
     assert.ok(ready.includes("At least one full FRC season"), "the requirement");
     assert.ok(ready.includes("before you start"));
     assert.ok(ready.includes(`@${acc.ready.username}`));

@@ -2,7 +2,7 @@ import SwiftUI
 
 /// learnfrc.com/apply in the app. Teaching a live class is the only application LearnFRC takes
 /// (the marketing role was removed on 2026-11-09), and its form is on learnfrc.com/apply/teach,
-/// opened in Safari: it asks about FRC seasons and takes about 25 minutes of writing, which is
+/// opened in Safari: it asks about FRC seasons and takes about 30 to 45 minutes of writing, which is
 /// a job for a keyboard and a browser draft, not this screen.
 ///
 /// While classes are open: what teaching involves and the way to apply (`ClassesTeachCard`).
@@ -24,7 +24,7 @@ struct ApplyView: View {
                     AccountHeader(
                         marker: "apply / teach",
                         title: "Teach a live class.",
-                        lede: "Experienced FRC students teach short, free live classes on LearnFRC lessons. You apply on learnfrc.com, and it takes about 25 minutes."
+                        lede: "Experienced FRC students teach short, free live classes on LearnFRC lessons. You apply on learnfrc.com, and it takes about 30 to 45 minutes."
                     )
                     ClassesTeachCard(topPadding: 20)
                 } else if classes.feed == nil, classes.lastError == nil {

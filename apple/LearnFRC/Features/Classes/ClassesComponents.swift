@@ -356,7 +356,7 @@ struct ClassesTeachCard: View {
                         .fixedSize(horizontal: false, vertical: true)
                         .accessibilityAddTraits(.isHeader)
                         .padding(.top, 8)
-                    Text("FRC students aged 13 to 17 who’ve finished at least one full FRC season can teach a free live class on a LearnFRC lesson or module. Every class is recorded on video and reviewed, the first one included. You apply on learnfrc.com, and it takes about 25 minutes.")
+                    Text("Students who’ve finished at least one full FRC season (a build season and at least one official event) can teach a free live class on a LearnFRC lesson or module. FTC or FLL alone doesn’t count. Every class is recorded on video and reviewed, the first one included. You apply on learnfrc.com, where we ask one quick question about your age first, and it takes about 30 to 45 minutes.")
                         .lfProse(15.5, lineHeight: 1.5, color: LF.Palette.graphite)
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.top, 8)
