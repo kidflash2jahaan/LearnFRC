@@ -25,12 +25,15 @@ import {
   marketerInviteUrl,
 } from "@/lib/app/admin-apply-marketing";
 import { fail, type AppUser, type Result } from "@/lib/app/result";
+import { teacherApplyRole } from "@/lib/app/class-teachers";
 
 /**
  * Applying for the marketing role, the one role /apply takes applications
  * for. Shared by /apply (its page and the submitAdminApplication /
  * withdrawAdminApplication Server Actions) and the app's GET, POST and DELETE
- * /api/app/apply.
+ * /api/app/apply. Teaching live classes is a second role with its own page
+ * (/apply/teach, src/lib/app/class-teachers.ts); the state here only lists it
+ * in `roles`.
  *
  * The table is still `admin_applications` and the functions keep their names,
  * because the app copies already installed call the same routes with the same
@@ -46,6 +49,25 @@ const esc = (s: string) =>
 
 /** Where a signed-in account stands on /apply. ("signed-out" is the page's own.) */
 export type SignedInApplyMode = Exclude<ApplyMode, "signed-out">;
+
+/**
+ * One role someone can apply for, as GET /api/app/apply lists them (newer
+ * than the app copies already installed, which ignore it). `marketing` is
+ * /apply; `teacher` is /apply/teach, listed only while live classes are
+ * visible (classes-design.md sections 1 and 14). `status` is that role's own
+ * mode string: ApplyMode for marketing, TeachApplyMode
+ * (src/lib/classes/teacher-rules.ts) for teaching. Add roles and fields,
+ * never rename them.
+ */
+export type ApplyRole = {
+  id: "marketing" | "teacher";
+  title: string;
+  /** The page that takes the application. */
+  url: string;
+  /** Whether the role takes applications right now. */
+  open: boolean;
+  status: string;
+};
 
 export type ApplyState = {
   applicationsOpen: boolean;
@@ -94,13 +116,20 @@ export type ApplyState = {
     trailerUrl: string | null;
     brandKit: typeof BRAND_KIT;
   } | null;
+  /** The roles there are to apply for, marketing first. See ApplyRole. */
+  roles: ApplyRole[];
 };
 
 export async function loadApplyState(user: AppUser): Promise<Result<ApplyState>> {
-  const [role, profile, tag] = await Promise.all([
+  const [role, profile, tag, teacherRole] = await Promise.all([
     siteRoleFor(user),
     getProfile(user.id),
     getMarketerTag(user.id),
+    // A classes problem must never take /apply down with it.
+    teacherApplyRole(user).catch((e) => {
+      console.error("loadApplyState: teacher role:", e);
+      return null;
+    }),
   ]);
   const isAdmin = role !== "member";
   const isMarketer = !isAdmin && tag !== null;
@@ -161,6 +190,10 @@ export async function loadApplyState(user: AppUser): Promise<Result<ApplyState>>
             brandKit: BRAND_KIT,
           }
         : null,
+    roles: [
+      { id: "marketing", title: "Spread LearnFRC", url: `${SITE}/apply`, open: APPLICATIONS_OPEN, status: mode },
+      ...(teacherRole ? [teacherRole] : []),
+    ],
   };
 }
 
