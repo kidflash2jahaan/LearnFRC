@@ -26,6 +26,56 @@ function replyToFor(callerReplyTo?: string): string {
 }
 
 /**
+ * The dev outbox. On a dev server with EMAIL_DEV_OUTBOX set to a folder,
+ * sendEmail writes each message there as a JSON file (OutboxMessage) instead
+ * of calling Resend, so tests can read what was sent (a parent's link, say)
+ * and nobody is ever mailed. Production builds ignore it.
+ */
+function devOutbox(): string | null {
+  if (process.env.NODE_ENV === "production") return null;
+  return process.env.EMAIL_DEV_OUTBOX?.trim() || null;
+}
+
+export type OutboxMessage = {
+  to: string[];
+  subject: string;
+  html: string;
+  replyTo: string;
+  from: string;
+  sentAt: string;
+};
+
+async function writeToOutbox(
+  folder: string,
+  msg: { to: string | string[]; subject: string; html: string; replyTo: string }
+): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const { mkdir, writeFile } = await import("node:fs/promises");
+    const { join } = await import("node:path");
+    await mkdir(folder, { recursive: true });
+    const sentAt = new Date().toISOString();
+    const slug = msg.subject
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "")
+      .slice(0, 60);
+    const name = `${sentAt.replace(/[:.]/g, "-")}-${Math.random().toString(36).slice(2, 8)}-${slug || "email"}.json`;
+    const body: OutboxMessage = {
+      to: Array.isArray(msg.to) ? msg.to : [msg.to],
+      subject: msg.subject,
+      html: msg.html,
+      replyTo: msg.replyTo,
+      from: FROM,
+      sentAt,
+    };
+    await writeFile(join(folder, name), JSON.stringify(body, null, 2));
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: `outbox: ${(e as Error).message}` };
+  }
+}
+
+/**
  * Every outgoing email goes through here, so every one carries a reply-to.
  * A caller that passes `replyTo` (the contact form forwarding a reader's
  * message, say) keeps its own; everything else gets the default.
@@ -41,6 +91,8 @@ export async function sendEmail({
   html: string;
   replyTo?: string;
 }): Promise<{ ok: boolean; error?: string }> {
+  const outbox = devOutbox();
+  if (outbox) return writeToOutbox(outbox, { to, subject, html, replyTo: replyToFor(replyTo) });
   const key = process.env.RESEND_API_KEY;
   if (!key) return { ok: false, error: "missing RESEND_API_KEY" };
   try {
@@ -69,7 +121,7 @@ export async function sendEmail({
 }
 
 /** The one shared email frame. Every LearnFRC email renders inside this. */
-const emailShell = (inner: string) => `
+export const emailShell = (inner: string) => `
 <div style="background:#E6E8E3;padding:40px 20px;font-family:'Helvetica Neue',Arial,sans-serif">
   <div style="max-width:520px;margin:0 auto;background:#F5F6F2;border:2px solid #16181B;border-radius:6px;overflow:hidden">
     <div style="background:#F5F6F2;padding:26px 32px;border-bottom:2px solid #16181B">
