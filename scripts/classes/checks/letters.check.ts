@@ -28,10 +28,11 @@
 //   node --import ./scripts/classes/register.mjs scripts/classes/checks/letters.check.ts
 
 import assert from "node:assert/strict";
-import { registerHooks } from "node:module";
+// First: swaps the two neighbour stubs for fakes before anything imports
+// them (every src import below is dynamic).
+import { fakeCalls as recordedCalls } from "./fakes/use-fakes.mjs";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { pathToFileURL } from "node:url";
 import { createClient } from "@supabase/supabase-js";
 import { loadEnv, repoRoot } from "../env.mjs";
 import { create, cleanup, check, readCredentials } from "../test-data.mjs";
@@ -40,21 +41,7 @@ loadEnv();
 process.env.CLASSES_DEV_SWITCHES = "1";
 delete process.env.VERCEL_ENV;
 
-// The two neighbour stubs, swapped for fakes. Registered before anything
-// imports them (every src import below is dynamic).
-const FAKES: Record<string, string> = {
-  "@/lib/app/class-teachers": pathToFileURL(join(repoRoot, "scripts/classes/checks/fakes/class-teachers.ts")).href,
-  "@/lib/app/class-reviewers": pathToFileURL(join(repoRoot, "scripts/classes/checks/fakes/class-reviewers.ts")).href,
-};
-registerHooks({
-  resolve(specifier, context, nextResolve) {
-    const fake = FAKES[specifier];
-    if (fake) return { url: fake, shortCircuit: true };
-    return nextResolve(specifier, context);
-  },
-});
-const fakeCalls = ((globalThis as unknown as { __lettersFakeCalls?: { name: string; arg: unknown }[] })
-  .__lettersFakeCalls ??= []);
+const fakeCalls = recordedCalls() as { name: string; arg: unknown }[];
 
 const PKG = "letters";
 const results: { name: string; ok: boolean; error?: string }[] = [];
