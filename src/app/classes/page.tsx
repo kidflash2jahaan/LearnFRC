@@ -51,7 +51,10 @@ async function viewerOf() {
 }
 
 const FACTS: { slug: string; text: string }[] = [
-  { slug: "who teaches", text: "FRC students aged 13 to 17 who know a topic well, on a LearnFRC lesson or module." },
+  {
+    slug: "who teaches",
+    text: "FRC students aged 13 to 17 who’ve finished at least one full FRC season, on a LearnFRC lesson or module.",
+  },
   { slug: "cost", text: "Free. No ads, nothing to buy, the same as the lessons." },
   { slug: "length", text: "15 to 90 minutes, up to 15 students in each class." },
   {
@@ -204,7 +207,8 @@ export default async function ClassesPage() {
         </h2>
         <div className="mt-4 flex max-w-[64ch] flex-col gap-4 text-[0.99rem] leading-relaxed text-graphite">
           <p>
-            Teachers are FRC students aged 13 to 17 who know a topic well. Once you&rsquo;re accepted,
+            Teachers are FRC students aged 13 to 17 who&rsquo;ve finished at least one full FRC season. Once
+            you&rsquo;re accepted,
             you schedule classes on any LearnFRC lesson or module, for up to 15 students each. Every
             class is recorded on video and reviewed, the first one included.
           </p>

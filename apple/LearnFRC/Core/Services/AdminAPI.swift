@@ -1,6 +1,9 @@
 import Foundation
 
-/// Calls the website's admin routes (`/api/app/admin/*`) and `/api/app/apply`.
+/// Calls the website's admin routes (`/api/app/admin/*`). This app doesn't call
+/// `/api/app/apply`: applying is closed there, and the one application LearnFRC takes (teaching
+/// a live class) is a form on learnfrc.com/apply/teach, opened in Safari. The route stays on the
+/// server for copies of the app already installed.
 ///
 /// Every call carries the signed-in person's Bearer token, refreshed first when it has expired
 /// and retried once after a 401, exactly like `APIClient`. The role is never sent: the server
@@ -94,30 +97,6 @@ final class AdminAPI: Sendable {
     /// `DELETE /api/app/admin/team/{userId}`: off the team. Their account and progress stay.
     func removeFromTeam(userID: UUID) async throws(AdminError) {
         let _: OK = try await send("DELETE", "/api/app/admin/team/\(Self.pathID(userID))")
-    }
-
-    /// `DELETE /api/app/admin/marketers/{userId}`: takes the marketing tag off. Their account,
-    /// progress and the signups already counted stay.
-    func removeMarketer(userID: UUID) async throws(AdminError) {
-        let _: OK = try await send("DELETE", "/api/app/admin/marketers/\(Self.pathID(userID))")
-    }
-
-    // MARK: Apply (any signed-in member)
-
-    /// `GET /api/app/apply`
-    func applyState() async throws(AdminError) -> AdminApplyState {
-        try await send("GET", "/api/app/apply")
-    }
-
-    /// `POST /api/app/apply`
-    func submitApplication(experience: String, why: String, availability: String?) async throws(AdminError) {
-        struct Body: Encodable { let experience: String; let why: String; let availability: String? }
-        let _: OK = try await send("POST", "/api/app/apply", body: Body(experience: experience, why: why, availability: availability))
-    }
-
-    /// `DELETE /api/app/apply`: pulls this account's pending application back.
-    func withdrawApplication() async throws(AdminError) {
-        let _: OK = try await send("DELETE", "/api/app/apply")
     }
 
     // MARK: Transport

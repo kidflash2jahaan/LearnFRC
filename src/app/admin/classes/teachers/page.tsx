@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
@@ -7,7 +8,7 @@ import {
   type DeskTeacher,
   type DeskTeacherApplication,
 } from "@/lib/app/class-teachers";
-import { PARENT_STEP_WORDS } from "@/lib/classes/teacher-rules";
+import { PARENT_STEP_WORDS, TEACH_ANSWERS } from "@/lib/classes/teacher-rules";
 import { CollapsiblePanel } from "@/components/admin/collapsible-panel";
 import { DecisionControls } from "./_decision-controls";
 import { LetterNameControls, SuspendControls } from "./_teacher-controls";
@@ -20,7 +21,11 @@ export const metadata: Metadata = {
 /**
  * The teacher desk (classes-design.md section 7.6): pending applications
  * with everything the applicant wrote, their age group and parent status;
- * Accept (copies the name to the locked letter name) and Reject; current
+ * an experience check box per application (every season with The Blue
+ * Alliance and FRC Events links, the soft flags, the reference), the answers
+ * grouped with word counts, and a folded scoring guide; Accept (needs the
+ * "I checked their seasons" tick; copies the name to the locked letter name;
+ * never offered on a first-form application) and Reject; current
  * teachers with their classes and approved minutes, Suspend, Unsuspend and
  * "Change letter name" (super admins, with a note).
  *
@@ -57,17 +62,124 @@ function minutesWord(n: number): string {
   return `${Math.floor(n / 60)}h ${n % 60}m`;
 }
 
-function Answer({ label, text }: { label: string; text: string }) {
+function Answer({ label, text, words }: { label: string; text: string; words?: number }) {
   return (
     <div className="min-w-0">
-      <p className="nb-slug">{label}</p>
+      <p className="nb-slug">
+        {label}
+        {words != null ? <span className="ml-2 font-bold text-ink">{words} words</span> : null}
+      </p>
       <p className="mt-1 max-w-[68ch] break-words whitespace-pre-wrap text-[0.98rem] leading-snug">{text}</p>
+    </div>
+  );
+}
+
+/** A group of answers under one slug. */
+function AnswerGroup({ slug, children }: { slug: string; children: ReactNode }) {
+  return (
+    <div className="min-w-0 border-t border-dashed border-rule pt-3">
+      <p className="nb-slug font-bold text-ink">{slug}</p>
+      <div className="mt-2.5 grid gap-3.5">{children}</div>
+    </div>
+  );
+}
+
+/** The scoring guide, folded above the list (spec section 5). */
+function HowToScore() {
+  return (
+    <details className="nb-note mb-5 max-w-[72ch]">
+      <summary className="nb-slug cursor-pointer font-bold text-ink">how to score one</summary>
+      <div className="mt-3 grid gap-2.5 text-[0.95rem] leading-relaxed">
+        <p>
+          Score four things 0 to 2. Experience: the events check out and their answer is specific. Explanation:
+          the rookie explanation is correct and starts from what a rookie knows. Planning: one clear goal,
+          students do something, and it works with cameras off. Judgment: both situations.
+        </p>
+        <p>
+          Accept when the seasons check out, the explanation is correct and scores 2, and the total is 6 or more
+          out of 8.
+        </p>
+        <p>
+          Any one of these is a no: agreeing to a DM or another app, asking for or sharing contact details,
+          treating the code as optional, or making up an answer for a student.
+        </p>
+        <p>When you turn someone down, give one concrete thing to change. They can apply again.</p>
+      </div>
+    </details>
+  );
+}
+
+/**
+ * The first thing in an entry: every season with the two places to check
+ * it, the soft flags, and the reference (emailed only when the event results
+ * can't confirm the seasons, and only to ask whether they were on the team).
+ */
+function ExperienceCheck({ app }: { app: DeskTeacherApplication }) {
+  return (
+    <div className="nb-note mt-3.5 max-w-[72ch]">
+      <p className="nb-slug font-bold text-ink">experience check</p>
+      {app.seasons.length ? (
+        <ul className="mt-2 grid gap-1.5">
+          {app.seasons.map((s) => (
+            <li key={s.year} className="min-w-0 text-[0.95rem] leading-snug">
+              <span className="font-bold">
+                {s.year} / team {s.team}
+              </span>
+              <span className="break-words"> / {s.events}</span>
+              <span className="nb-slug ml-2 inline-flex flex-wrap gap-x-3">
+                <a href={s.tbaUrl} className="nb-link" target="_blank" rel="noopener noreferrer">
+                  The Blue Alliance
+                </a>
+                <a href={s.frcEventsUrl} className="nb-link" target="_blank" rel="noopener noreferrer">
+                  FRC Events
+                </a>
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="mt-2 text-[0.95rem]">No seasons listed.</p>
+      )}
+      {app.flags.length ? (
+        <ul className="mt-3 grid gap-1">
+          {app.flags.map((f) => (
+            <li key={f} className="nb-slug font-bold text-ink">
+              flag / {f}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      <p className="nb-slug mt-3">
+        reference /{" "}
+        {app.referenceName || app.referenceEmail ? (
+          <>
+            {app.referenceName}
+            {app.referenceEmail ? (
+              <>
+                {", "}
+                <a
+                  // Encoded, so an address can't add a recipient or a header
+                  // (the server also refuses URL characters in it).
+                  href={`mailto:${encodeURIComponent(app.referenceEmail).replace(/%40/g, "@")}?subject=${encodeURIComponent("Checking a LearnFRC teacher application")}`}
+                  className="nb-link break-all"
+                >
+                  {app.referenceEmail}
+                </a>
+              </>
+            ) : null}
+          </>
+        ) : (
+          "none given"
+        )}
+      </p>
     </div>
   );
 }
 
 function ApplicationEntry({ app, canDecide }: { app: DeskTeacherApplication; canDecide: boolean }) {
   const handle = app.username ? `@${app.username}` : "this account";
+  const firstForm = app.formVersion == null;
+  const years = [...app.seasons].map((s) => s.year).sort((a, b) => a - b);
   return (
     <li className="nb-hair py-5 first:border-t-0 first:pt-0">
       <p className="nb-slug flex min-w-0 flex-wrap items-baseline gap-x-4 gap-y-1">
@@ -79,7 +191,15 @@ function ApplicationEntry({ app, canDecide }: { app: DeskTeacherApplication; can
         <span className="whitespace-nowrap">team / {app.teamNumber ?? "not given"}</span>
         <span className="min-w-0 max-w-full truncate">role / {app.teamRoleLabel}</span>
         <span className="whitespace-nowrap">came in {timeAgo(app.createdAt)}</span>
+        {firstForm ? <span className="nb-tag">first form: no season check</span> : null}
       </p>
+      {!firstForm ? (
+        <p className="nb-slug mt-1 min-w-0 break-words">
+          FRC / {app.seasons.length} {app.seasons.length === 1 ? "season" : "seasons"} ({years.join(", ")}) / team{" "}
+          {app.seasons[0]?.team ?? "not given"}
+          {app.roles.length ? ` / ${app.roles.join(", ")}` : ""}
+        </p>
+      ) : null}
       {app.parentSameNetwork ? (
         <p className="nb-slug mt-1.5 font-bold text-ink">
           parent OK / decided from the student&rsquo;s own network, which families and schools often share
@@ -96,41 +216,128 @@ function ApplicationEntry({ app, canDecide }: { app: DeskTeacherApplication; can
         </p>
       ) : null}
 
+      {!firstForm ? <ExperienceCheck app={app} /> : null}
+
       <div className="mt-3.5 grid gap-3.5">
         <div className="min-w-0">
           <p className="nb-slug">name for hours letters, locked on accept</p>
           <p className="mt-1 text-[1.02rem] font-bold">{app.legalName}</p>
         </div>
-        <Answer label="topics they’d teach" text={app.topics} />
-        {app.pickedTopics.length ? (
-          <div className="min-w-0">
-            <p className="nb-slug">picked from LearnFRC</p>
-            <ul className="mt-1.5 flex flex-wrap gap-1.5">
-              {app.pickedTopics.map((t) => (
-                <li key={t.id} className="nb-tag">
-                  {t.kind} / {t.title}
-                </li>
-              ))}
-            </ul>
-          </div>
-        ) : null}
-        <Answer label="FRC experience" text={app.experience} />
-        <Answer label="how they’d teach one lesson" text={app.samplePlan} />
-        {app.availability ? <Answer label="availability" text={app.availability} /> : null}
-        {app.referenceName || app.referenceEmail ? (
-          <Answer
-            label="adult reference"
-            text={[app.referenceName, app.referenceEmail].filter(Boolean).join(", ")}
-          />
-        ) : null}
+
+        {firstForm ? (
+          <>
+            <Answer label="topics they’d teach" text={app.topics} />
+            {app.pickedTopics.length ? <PickedTopics app={app} /> : null}
+            <Answer label="FRC experience" text={app.experience} />
+            <Answer label="how they’d teach one lesson" text={app.samplePlan} />
+            {app.availability ? <Answer label="availability" text={app.availability} /> : null}
+            {app.referenceName || app.referenceEmail ? (
+              <Answer
+                label="adult reference"
+                text={[app.referenceName, app.referenceEmail].filter(Boolean).join(", ")}
+              />
+            ) : null}
+          </>
+        ) : (
+          <>
+            <AnswerGroup slug="experience">
+              {app.roles.length ? <Answer label="what they worked on" text={app.roles.join(", ")} /> : null}
+              <Answer
+                label={TEACH_ANSWERS.experience.label}
+                text={app.experience}
+                words={app.wordCounts.experience}
+              />
+              {app.otherPrograms ? <Answer label="other robotics programs" text={app.otherPrograms} /> : null}
+            </AnswerGroup>
+
+            <AnswerGroup slug="the lesson">
+              {app.pickedTopics.length ? <PickedTopics app={app} /> : null}
+              <div className="min-w-0">
+                <p className="nb-slug">sample lesson</p>
+                {app.sampleLesson ? (
+                  <p className="mt-1 text-[0.98rem]">
+                    <a href={app.sampleLesson.url} className="nb-link" target="_blank" rel="noopener noreferrer">
+                      {app.sampleLesson.title}
+                    </a>
+                    {app.sampleLesson.moduleTitle ? (
+                      <span className="nb-slug ml-2">in {app.sampleLesson.moduleTitle}</span>
+                    ) : null}
+                  </p>
+                ) : (
+                  <p className="mt-1 text-[0.98rem]">That lesson is no longer on LearnFRC.</p>
+                )}
+              </div>
+              {app.teachingSample ? (
+                <Answer
+                  label={TEACH_ANSWERS.teachingSample.label}
+                  text={app.teachingSample}
+                  words={app.wordCounts.teachingSample}
+                />
+              ) : null}
+              <Answer label={TEACH_ANSWERS.samplePlan.label} text={app.samplePlan} words={app.wordCounts.samplePlan} />
+            </AnswerGroup>
+
+            <AnswerGroup slug="two situations">
+              {app.scenarioSafety ? (
+                <div className="min-w-0">
+                  <p className="nb-slug max-w-[68ch]">{TEACH_ANSWERS.scenarioSafety.situation}</p>
+                  <div className="mt-2">
+                    <Answer
+                      label={TEACH_ANSWERS.scenarioSafety.label}
+                      text={app.scenarioSafety}
+                      words={app.wordCounts.scenarioSafety}
+                    />
+                  </div>
+                </div>
+              ) : null}
+              {app.scenarioTeaching ? (
+                <div className="min-w-0">
+                  <p className="nb-slug max-w-[68ch]">{TEACH_ANSWERS.scenarioTeaching.situation}</p>
+                  <div className="mt-2">
+                    <Answer
+                      label={TEACH_ANSWERS.scenarioTeaching.label}
+                      text={app.scenarioTeaching}
+                      words={app.wordCounts.scenarioTeaching}
+                    />
+                  </div>
+                </div>
+              ) : null}
+            </AnswerGroup>
+
+            <AnswerGroup slug="practical">
+              {app.motivation ? (
+                <Answer label={TEACH_ANSWERS.motivation.label} text={app.motivation} words={app.wordCounts.motivation} />
+              ) : null}
+              <Answer label="how often" text={app.teachOften ?? "not given"} />
+              {app.availability ? <Answer label="availability" text={app.availability} /> : null}
+              {app.codeQuestions ? <Answer label="about the teacher code" text={app.codeQuestions} /> : null}
+              <Answer label="wrote it themselves" text={app.ownWords ? "yes" : "no"} />
+            </AnswerGroup>
+          </>
+        )}
       </div>
 
       {canDecide ? (
-        <DecisionControls id={app.id} handle={handle} legalName={app.legalName} />
+        <DecisionControls id={app.id} handle={handle} legalName={app.legalName} canAccept={!firstForm} />
       ) : (
         <p className="nb-hint mt-4">A super admin decides applications.</p>
       )}
     </li>
+  );
+}
+
+function PickedTopics({ app }: { app: DeskTeacherApplication }) {
+  return (
+    <div className="min-w-0">
+      <p className="nb-slug">picked from LearnFRC</p>
+      <ul className="mt-1.5 flex flex-wrap gap-1.5">
+        {app.pickedTopics.map((t) => (
+          <li key={t.id} className="nb-tag">
+            {t.kind} / {t.title}
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 
@@ -243,6 +450,7 @@ export default async function TeacherDeskPage() {
             </p>
           ) : (
             <>
+              <HowToScore />
               <ul className="min-w-0">
                 {pending.map((app) => (
                   <ApplicationEntry key={app.id} app={app} canDecide={canDecide} />

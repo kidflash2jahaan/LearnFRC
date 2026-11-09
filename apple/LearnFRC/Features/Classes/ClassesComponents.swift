@@ -1,7 +1,7 @@
 import SwiftUI
 
 // Live classes, the pieces other screens place: the Home card (`HomeLiveClassesCard`) and
-// "Teach a live class" on Help run it (`ClassesTeachCard`), plus the row, the words and the
+// "Teach a live class" on the Apply screen (`ClassesTeachCard`), plus the row, the words and the
 // Safari hand-off the classes list uses (`ClassesListView`). Each piece shows nothing until the
 // site has said classes are open (`ClassesStore.isVisible`). Classes themselves are joined on
 // learnfrc.com: every class opens in Safari, where the site's account, age step, parent OK and
@@ -331,10 +331,11 @@ struct HomeLiveClassesCard: View {
     }
 }
 
-// MARK: - Help run it
+// MARK: - Teach a class
 
-/// "Teach a live class" on Help run it (learnfrc.com/apply's second role). Nothing until the
-/// site says classes are open. Applying happens on learnfrc.com/apply/teach, in Safari.
+/// Teach a live class, on the Apply screen. Mirrors FULL_SEASON_SENTENCE in
+/// src/lib/classes/teacher-rules.ts. Nothing until the site says classes are open. Applying
+/// happens on learnfrc.com/apply/teach, in Safari.
 struct ClassesTeachCard: View {
     var topPadding: CGFloat = 28
 
@@ -355,7 +356,7 @@ struct ClassesTeachCard: View {
                         .fixedSize(horizontal: false, vertical: true)
                         .accessibilityAddTraits(.isHeader)
                         .padding(.top, 8)
-                    Text("FRC students aged 13 to 17 can teach a free live class on a LearnFRC lesson or module. Every class is recorded on video and reviewed, the first one included. You apply on learnfrc.com.")
+                    Text("FRC students aged 13 to 17 who’ve finished at least one full FRC season can teach a free live class on a LearnFRC lesson or module. Every class is recorded on video and reviewed, the first one included. You apply on learnfrc.com, and it takes about 25 minutes.")
                         .lfProse(15.5, lineHeight: 1.5, color: LF.Palette.graphite)
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.top, 8)

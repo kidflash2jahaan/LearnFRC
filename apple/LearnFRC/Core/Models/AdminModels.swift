@@ -1,6 +1,8 @@
 import Foundation
 
-// The admin shapes from `/api/app/admin/*` and `/api/app/apply` (camelCase, apple/docs/API.md).
+// The admin shapes from `/api/app/admin/*` (camelCase, apple/docs/API.md). This app doesn't
+// read `/api/app/apply`: applying there is closed, and teaching a class is applied for on
+// learnfrc.com/apply/teach.
 //
 // Privacy, the same line the website draws: nothing here carries an email address, a real
 // name or (outside the super admins' team list) a user id. Every label, hint and footnote the
@@ -39,7 +41,8 @@ enum AdminDestination: String, Hashable, Codable, Sendable, CaseIterable {
     case feedback
     /// learnfrc.com/admin/team (super admins).
     case team
-    /// learnfrc.com/apply
+    /// learnfrc.com/apply, which sends people to /apply/teach while classes are open. Teaching a
+    /// live class is the only application LearnFRC takes.
     case apply
 
     /// The navigation title, in the site's words.
@@ -48,7 +51,7 @@ enum AdminDestination: String, Hashable, Codable, Sendable, CaseIterable {
         case .dashboard: "Admin"
         case .feedback: "Feedback"
         case .team: "Admin team"
-        case .apply: "Help run it"
+        case .apply: "Teach a class"
         }
     }
 
@@ -973,52 +976,6 @@ struct AdminTeamDesk: Decodable, Hashable, Sendable {
         }
     }
 
-    /// Somebody with the marketing tag, and how many people signed up through their invite
-    /// link. The tag never opens /admin; it lives in its own table on the server.
-    struct Marketer: Decodable, Hashable, Sendable, Identifiable {
-        let userId: UUID
-        let username: String?
-        let teamNumber: Int?
-        let grantedAt: Date?
-        let note: String?
-        /// Every account that signed up through their link, whenever it joined.
-        let signups: Int
-        /// The same, only accounts created after the tag was granted.
-        let signupsSinceAccepted: Int
-        /// Their invite link, nil until they pick a handle.
-        let inviteUrl: URL?
-
-        var id: UUID { userId }
-
-        init(userId: UUID, username: String?, teamNumber: Int?, grantedAt: Date?, note: String?,
-             signups: Int, signupsSinceAccepted: Int, inviteUrl: URL?) {
-            self.userId = userId
-            self.username = username
-            self.teamNumber = teamNumber
-            self.grantedAt = grantedAt
-            self.note = note
-            self.signups = signups
-            self.signupsSinceAccepted = signupsSinceAccepted
-            self.inviteUrl = inviteUrl
-        }
-
-        init(from decoder: any Decoder) throws {
-            let c = try decoder.container(keyedBy: AnyCodingKey.self)
-            self.init(
-                userId: try c.requiredUUID(forKey: AnyCodingKey("userId")),
-                username: c.nonEmptyString(AnyCodingKey("username")),
-                teamNumber: c.flexibleInt(forKey: AnyCodingKey("teamNumber")),
-                grantedAt: c.flexibleDate(forKey: AnyCodingKey("grantedAt")),
-                note: c.nonEmptyString(AnyCodingKey("note")),
-                signups: c.flexibleInt(forKey: AnyCodingKey("signups")) ?? 0,
-                signupsSinceAccepted: c.flexibleInt(forKey: AnyCodingKey("signupsSinceAccepted")) ?? 0,
-                inviteUrl: c.nonEmptyString(AnyCodingKey("inviteUrl")).flatMap(URL.init(string:))
-            )
-        }
-
-        var handle: String { username.map { "@\($0)" } ?? "this account" }
-    }
-
     /// A decided application in the log.
     struct Decided: Decodable, Hashable, Sendable, Identifiable {
         let id: UUID
@@ -1057,26 +1014,26 @@ struct AdminTeamDesk: Decodable, Hashable, Sendable {
     }
 
     let grants: [Grant]
+    /// Applications left from before /apply closed. They can only be turned down.
     let pending: [Application]
     let pendingTruncated: Bool
-    /// Everyone with the marketing tag, longest-standing first. Empty from an older site.
-    let marketers: [Marketer]
     /// The admin team (`site_admins` plus the owners).
     let team: [Member]
     let decided: [Decided]
     let decidedTruncated: Bool
 
-    init(grants: [Grant], pending: [Application], pendingTruncated: Bool, marketers: [Marketer] = [],
+    init(grants: [Grant], pending: [Application], pendingTruncated: Bool,
          team: [Member], decided: [Decided], decidedTruncated: Bool) {
         self.grants = grants
         self.pending = pending
         self.pendingTruncated = pendingTruncated
-        self.marketers = marketers
         self.team = team
         self.decided = decided
         self.decidedTruncated = decidedTruncated
     }
 
+    /// The server still sends `marketers` (always empty: the marketing role was removed before
+    /// release). It's ignored here.
     init(from decoder: any Decoder) throws {
         let c = try decoder.container(keyedBy: AnyCodingKey.self)
         let pending = c.lossyArray(Application.self, forKey: AnyCodingKey("pending"))
@@ -1086,19 +1043,16 @@ struct AdminTeamDesk: Decodable, Hashable, Sendable {
             grants: grants.isEmpty ? Self.siteGrants : grants,
             pending: pending,
             pendingTruncated: c.flexibleBool(forKey: AnyCodingKey("pendingTruncated")) ?? (pending.count == 60),
-            marketers: c.lossyArray(Marketer.self, forKey: AnyCodingKey("marketers")),
             team: c.lossyArray(Member.self, forKey: AnyCodingKey("team")),
             decided: decided,
             decidedTruncated: c.flexibleBool(forKey: AnyCodingKey("decidedTruncated")) ?? (decided.count == 30)
         )
     }
 
-    /// /admin/team's `GRANTS` (src/lib/applications.ts), for a payload that doesn't send them.
+    /// /admin/team's `CLOSED_GRANTS` (src/lib/applications.ts), for a payload that doesn't send
+    /// them: applying is closed, so accepting hands over nothing.
     static let siteGrants: [Grant] = [
-        Grant(label: "A marketing tag", hint: "on their account, seen only on this page"),
-        Grant(label: "The welcome email", hint: "the trailer, their invite link, the brand kit and the rules"),
-        Grant(label: "A signup count", hint: "people who join through their invite link, shown here"),
-        Grant(label: "No admin access", hint: "no /admin, no site numbers, no feedback inbox"),
+        Grant(label: "Nothing", hint: "applying here is closed, so an old application can only be turned down"),
     ]
 
     /// After a decision: the application leaves the waiting list and heads the log.
@@ -1109,307 +1063,22 @@ struct AdminTeamDesk: Decodable, Hashable, Sendable {
                             statusWord: decision == .accept ? "accepted" : "turned down",
                             reviewedAt: date, createdAt: app.createdAt, reviewNote: note)
         return AdminTeamDesk(grants: grants, pending: pending.filter { $0.id != id }, pendingTruncated: pendingTruncated,
-                             marketers: marketers, team: team,
+                             team: team,
                              decided: Array(([entry] + decided).prefix(30)), decidedTruncated: decidedTruncated)
     }
 
     /// After a role change.
     func setting(_ userID: UUID, to role: SiteRole) -> AdminTeamDesk {
-        AdminTeamDesk(grants: grants, pending: pending, pendingTruncated: pendingTruncated, marketers: marketers,
+        AdminTeamDesk(grants: grants, pending: pending, pendingTruncated: pendingTruncated,
                       team: team.map { $0.userId == userID ? $0.with(role: role) : $0 },
                       decided: decided, decidedTruncated: decidedTruncated)
     }
 
     /// After a removal from the admin team.
     func removing(_ userID: UUID) -> AdminTeamDesk {
-        AdminTeamDesk(grants: grants, pending: pending, pendingTruncated: pendingTruncated, marketers: marketers,
+        AdminTeamDesk(grants: grants, pending: pending, pendingTruncated: pendingTruncated,
                       team: team.filter { $0.userId != userID }, decided: decided, decidedTruncated: decidedTruncated)
     }
-
-    /// After the marketing tag comes off somebody.
-    func removingMarketer(_ userID: UUID) -> AdminTeamDesk {
-        AdminTeamDesk(grants: grants, pending: pending, pendingTruncated: pendingTruncated,
-                      marketers: marketers.filter { $0.userId != userID },
-                      team: team, decided: decided, decidedTruncated: decidedTruncated)
-    }
-}
-
-// MARK: - Apply
-
-/// `GET /api/app/apply`: where this account stands on /apply, which takes applications for the
-/// marketing role only.
-struct AdminApplyState: Decodable, Hashable, Sendable {
-    enum Mode: String, Hashable, Sendable {
-        case onTheTeam = "on-the-team"
-        /// Already has the marketing tag: their invite link and brand kit instead of a form.
-        case marketer
-        case pending
-        case noHandle = "no-handle"
-        case again
-        case new
-    }
-
-    struct Heading: Decodable, Hashable, Sendable {
-        let title: String
-        let slug: String
-
-        init(title: String, slug: String) {
-            self.title = title
-            self.slug = slug
-        }
-
-        init(from decoder: any Decoder) throws {
-            let c = try decoder.container(keyedBy: AnyCodingKey.self)
-            self.init(title: c.flexibleString(forKey: AnyCodingKey("title")) ?? "", slug: c.flexibleString(forKey: AnyCodingKey("slug")) ?? "")
-        }
-    }
-
-    /// What the reviewer sees.
-    struct Record: Decodable, Hashable, Sendable {
-        let username: String?
-        let teamNumber: Int?
-        let teamRoleLabel: String?
-
-        static let empty = Record(username: nil, teamNumber: nil, teamRoleLabel: nil)
-
-        init(username: String?, teamNumber: Int?, teamRoleLabel: String?) {
-            self.username = username
-            self.teamNumber = teamNumber
-            self.teamRoleLabel = teamRoleLabel
-        }
-
-        init(from decoder: any Decoder) throws {
-            let c = try decoder.container(keyedBy: AnyCodingKey.self)
-            self.init(
-                username: c.nonEmptyString(AnyCodingKey("username")),
-                teamNumber: c.flexibleInt(forKey: AnyCodingKey("teamNumber")),
-                teamRoleLabel: c.nonEmptyString(AnyCodingKey("teamRoleLabel"))
-            )
-        }
-    }
-
-    /// This account's latest application, when it matters to the page.
-    struct Application: Decodable, Hashable, Sendable {
-        /// `pending`, `rejected` or `withdrawn`.
-        let status: String
-        let createdAt: Date?
-        let reviewedAt: Date?
-        let reviewNote: String?
-
-        init(status: String, createdAt: Date?, reviewedAt: Date?, reviewNote: String?) {
-            self.status = status
-            self.createdAt = createdAt
-            self.reviewedAt = reviewedAt
-            self.reviewNote = reviewNote
-        }
-
-        init(from decoder: any Decoder) throws {
-            let c = try decoder.container(keyedBy: AnyCodingKey.self)
-            self.init(
-                status: c.flexibleString(forKey: AnyCodingKey("status"))?.lowercased() ?? "pending",
-                createdAt: c.flexibleDate(forKey: AnyCodingKey("createdAt")),
-                reviewedAt: c.flexibleDate(forKey: AnyCodingKey("reviewedAt")),
-                reviewNote: c.nonEmptyString(AnyCodingKey("reviewNote"))
-            )
-        }
-
-        var isWithdrawn: Bool { status == "withdrawn" }
-        var isTurnedDown: Bool { status == "rejected" }
-    }
-
-    struct Job: Decodable, Hashable, Sendable {
-        let slug: String
-        let text: String
-
-        init(slug: String, text: String) {
-            self.slug = slug
-            self.text = text
-        }
-
-        init(from decoder: any Decoder) throws {
-            let c = try decoder.container(keyedBy: AnyCodingKey.self)
-            self.init(slug: c.flexibleString(forKey: AnyCodingKey("slug")) ?? "", text: c.flexibleString(forKey: AnyCodingKey("text")) ?? "")
-        }
-    }
-
-    struct Limits: Decodable, Hashable, Sendable {
-        let minChars: Int
-        let maxChars: Int
-        let availabilityMax: Int
-
-        static let site = Limits(minChars: 40, maxChars: 3000, availabilityMax: 200)
-
-        init(minChars: Int, maxChars: Int, availabilityMax: Int) {
-            self.minChars = minChars
-            self.maxChars = maxChars
-            self.availabilityMax = availabilityMax
-        }
-
-        init(from decoder: any Decoder) throws {
-            let c = try decoder.container(keyedBy: AnyCodingKey.self)
-            self.init(
-                minChars: c.flexibleInt(forKey: AnyCodingKey("minChars")) ?? 40,
-                maxChars: c.flexibleInt(forKey: AnyCodingKey("maxChars")) ?? 3000,
-                availabilityMax: c.flexibleInt(forKey: AnyCodingKey("availabilityMax")) ?? 200
-            )
-        }
-    }
-
-    /// What the marketing tag gives a marketer to work with (`marketer` mode only).
-    struct MarketerKit: Decodable, Hashable, Sendable {
-        struct Link: Decodable, Hashable, Sendable {
-            let label: String
-            let url: URL
-
-            init(label: String, url: URL) {
-                self.label = label
-                self.url = url
-            }
-
-            init(from decoder: any Decoder) throws {
-                let c = try decoder.container(keyedBy: AnyCodingKey.self)
-                guard let url = c.nonEmptyString(AnyCodingKey("url")).flatMap(URL.init(string:)) else {
-                    throw DecodingError.dataCorrupted(.init(codingPath: c.codingPath, debugDescription: "No url"))
-                }
-                self.init(label: c.flexibleString(forKey: AnyCodingKey("label")) ?? url.absoluteString, url: url)
-            }
-        }
-
-        struct Colour: Decodable, Hashable, Sendable {
-            let name: String
-            let hex: String
-            let use: String
-
-            init(name: String, hex: String, use: String) {
-                self.name = name
-                self.hex = hex
-                self.use = use
-            }
-
-            init(from decoder: any Decoder) throws {
-                let c = try decoder.container(keyedBy: AnyCodingKey.self)
-                self.init(
-                    name: c.flexibleString(forKey: AnyCodingKey("name")) ?? "",
-                    hex: c.flexibleString(forKey: AnyCodingKey("hex")) ?? "",
-                    use: c.flexibleString(forKey: AnyCodingKey("use")) ?? ""
-                )
-            }
-        }
-
-        /// Their invite link; nil until they pick a handle.
-        let inviteUrl: URL?
-        let since: Date?
-        /// Nil until the trailer is public.
-        let trailerUrl: URL?
-        let logos: [Link]
-        let colors: [Colour]
-        let fonts: String
-        let clips: [Link]
-
-        init(inviteUrl: URL?, since: Date?, trailerUrl: URL?, logos: [Link], colors: [Colour], fonts: String, clips: [Link]) {
-            self.inviteUrl = inviteUrl
-            self.since = since
-            self.trailerUrl = trailerUrl
-            self.logos = logos
-            self.colors = colors
-            self.fonts = fonts
-            self.clips = clips
-        }
-
-        init(from decoder: any Decoder) throws {
-            let c = try decoder.container(keyedBy: AnyCodingKey.self)
-            let kit = try? c.nestedContainer(keyedBy: AnyCodingKey.self, forKey: AnyCodingKey("brandKit"))
-            self.init(
-                inviteUrl: c.nonEmptyString(AnyCodingKey("inviteUrl")).flatMap(URL.init(string:)),
-                since: c.flexibleDate(forKey: AnyCodingKey("since")),
-                trailerUrl: c.nonEmptyString(AnyCodingKey("trailerUrl")).flatMap(URL.init(string:)),
-                logos: kit?.lossyArray(Link.self, forKey: AnyCodingKey("logos")) ?? [],
-                colors: kit?.lossyArray(Colour.self, forKey: AnyCodingKey("colors")) ?? [],
-                fonts: kit?.flexibleString(forKey: AnyCodingKey("fonts")) ?? "",
-                clips: kit?.lossyArray(Link.self, forKey: AnyCodingKey("clips")) ?? []
-            )
-        }
-    }
-
-    let applicationsOpen: Bool
-    let mode: Mode
-    let heading: Heading
-    let record: Record
-    let application: Application?
-    let jobs: [Job]
-    let limits: Limits
-    /// Where what a marketer makes ends up, said plainly.
-    let posting: String
-    /// The rules a marketer agrees to.
-    let rules: [String]
-    /// Only in `marketer` mode.
-    let marketer: MarketerKit?
-
-    init(applicationsOpen: Bool, mode: Mode, heading: Heading, record: Record, application: Application?, jobs: [Job],
-         limits: Limits = .site, posting: String = AdminApplyState.sitePosting, rules: [String] = AdminApplyState.siteRules,
-         marketer: MarketerKit? = nil) {
-        self.applicationsOpen = applicationsOpen
-        self.mode = mode
-        self.heading = heading
-        self.record = record
-        self.application = application
-        self.jobs = jobs
-        self.limits = limits
-        self.posting = posting
-        self.rules = rules
-        self.marketer = marketer
-    }
-
-    init(from decoder: any Decoder) throws {
-        let c = try decoder.container(keyedBy: AnyCodingKey.self)
-        let mode = Mode(rawValue: c.flexibleString(forKey: AnyCodingKey("mode")) ?? "") ?? .new
-        let heading = (try? c.decodeIfPresent(Heading.self, forKey: AnyCodingKey("heading"))) ?? Self.heads[mode] ?? Heading(title: "Apply", slug: "")
-        let jobs = c.lossyArray(Job.self, forKey: AnyCodingKey("jobs"))
-        let rules = c.lossyArray(String.self, forKey: AnyCodingKey("rules"))
-        self.init(
-            applicationsOpen: c.flexibleBool(forKey: AnyCodingKey("applicationsOpen")) ?? false,
-            mode: mode,
-            heading: heading.title.isEmpty ? (Self.heads[mode] ?? heading) : heading,
-            record: (try? c.decodeIfPresent(Record.self, forKey: AnyCodingKey("record"))) ?? .empty,
-            application: try? c.decodeIfPresent(Application.self, forKey: AnyCodingKey("application")),
-            jobs: jobs.isEmpty ? Self.siteJobs : jobs,
-            limits: (try? c.decodeIfPresent(Limits.self, forKey: AnyCodingKey("limits"))) ?? .site,
-            posting: c.nonEmptyString(AnyCodingKey("posting")) ?? Self.sitePosting,
-            rules: rules.isEmpty ? Self.siteRules : rules,
-            marketer: try? c.decodeIfPresent(MarketerKit.self, forKey: AnyCodingKey("marketer"))
-        )
-    }
-
-    /// /apply's `HEADS`, for a payload that leaves them out, and for the signed-out state the
-    /// app draws without asking the server.
-    static let heads: [Mode: Heading] = [
-        .onTheTeam: Heading(title: "You’re already on the team", slug: "nothing to apply for"),
-        .marketer: Heading(title: "You’re on the marketing team", slug: "nothing to apply for"),
-        .pending: Heading(title: "Your application", slug: "waiting on a decision"),
-        .noHandle: Heading(title: "Pick a handle first", slug: "one step, then the three questions"),
-        .again: Heading(title: "Apply again", slug: "three questions, nothing else"),
-        .new: Heading(title: "Apply", slug: "three questions, nothing else"),
-    ]
-    static let signedOutHeading = Heading(title: "Applying needs an account", slug: "free, and it takes a minute")
-
-    /// /apply's `JOBS` (src/lib/applications.ts), for a payload that leaves them out and for the
-    /// signed-out page.
-    static let siteJobs: [Job] = [
-        Job(slug: "your own team", text: "Show LearnFRC to the team you’re on. Put the link in your team’s Discord or group chat, bring it up at a meeting, and point new members at it when they join."),
-        Job(slug: "other teams", text: "Share it with teams you already know, at competitions, scrimmages and outreach events, or online. Post the trailer and the clips where FRC people will see them."),
-        Job(slug: "places to post", text: "Tell me where LearnFRC should show up and doesn’t yet: a Discord server, a forum, a subreddit, a newsletter, a league’s resource page."),
-        Job(slug: "your own videos", text: "Only if you want to: make a video, a clip or a short explainer of your own and send it to me. I may post it on LearnFRC’s official YouTube, Instagram and TikTok."),
-    ]
-
-    /// /apply's `OFFICIAL_POSTING`.
-    static let sitePosting = "Anything you make comes to me, and I may post it on LearnFRC’s official YouTube, Instagram and TikTok if I choose. Sending something in doesn’t mean it goes up."
-
-    /// /apply's `MARKETING_RULES`.
-    static let siteRules: [String] = [
-        "Don’t present LearnFRC as official FIRST material, or as something FIRST runs or recommends. It’s an independent project.",
-        "Put the FIRST disclaimer on anything you post about it: “FIRST®, FIRST® Robotics Competition, and FRC® are registered trademarks of FIRST® (www.firstinspires.org) which is not overseeing, involved with, or responsible for this activity, product, or service.”",
-        "Don’t name other teams without their permission.",
-    ]
 }
 
 // MARK: - Decoding helper

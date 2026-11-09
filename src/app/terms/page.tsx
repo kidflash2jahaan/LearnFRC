@@ -9,11 +9,11 @@ import { ClauseIndex, type Clause } from "./_contents-rail";
 export const metadata: Metadata = {
   title: "Terms of Service",
   description:
-    "The terms for using LearnFRC on the website and in the app, including the rules for what you post and for marketing helpers.",
+    "The terms for using LearnFRC on the website and in the app, including the rules for what you post.",
   alternates: { canonical: "/terms" },
 };
 
-const UPDATED = "November 8, 2026";
+const UPDATED = "November 9, 2026";
 // The contact form, which needs no account and no email address. The public
 // address is the other way in, printed beside it.
 const CONTACT_PATH = "/contact";
@@ -35,10 +35,10 @@ type Rule = Clause & { body: ReactNode };
 
 /**
  * The live classes rule (classes-design.md section 11), shown only while
- * classes are visible. It sits before "Marketing helpers" because that
- * clause points at "the next clause" for the FIRST disclaimer, and has to
- * stay right above Trademarks. Keep it in step with TEACHER_CODE and the
- * recording notice in src/lib/classes/notice.ts.
+ * classes are visible. It sits right above Trademarks. Keep it in step with
+ * TEACHER_CODE and the recording notice in src/lib/classes/notice.ts, and
+ * the Teachers bullet with FULL_SEASON_SENTENCE in
+ * src/lib/classes/teacher-rules.ts.
  */
 const CLASSES_RULE: Rule = {
   id: "classes",
@@ -90,7 +90,9 @@ const CLASSES_RULE: Rule = {
           rule above covers everything said and sent in a class.
         </li>
         <li>
-          <strong>Teachers.</strong>{" "}You agree to the teacher code when you
+          <strong>Teachers.</strong>{" "}Teachers have finished at least one
+          full FRC season: a build season and at least one official event. You
+          agree to the teacher code when you
           apply: teach the topic you scheduled, remove anyone who breaks these
           rules and report it, and don&rsquo;t present a class as
           FIRST&rsquo;s or your team&rsquo;s official outreach. Report your
@@ -247,42 +249,6 @@ function rulesFor(classes: boolean): Rule[] {
       ),
     },
     ...(classes ? [CLASSES_RULE] : []),
-    {
-      id: "helpers",
-      title: "Marketing helpers",
-      body: (
-        <>
-          <p>
-            If you&rsquo;re accepted to help spread the word about LearnFRC, these
-            apply too. Helping is unpaid volunteer work, and helpers&rsquo; names
-            are never shown publicly.
-          </p>
-          <ul>
-            <li>
-              Anything you send in, like videos, clips, graphics or posts, may be
-              posted on LearnFRC&rsquo;s official YouTube, Instagram and TikTok
-              accounts if Jahaan chooses. It may be trimmed or edited, and it
-              goes up without your name.
-            </li>
-            <li>
-              You keep owning what you make. Sending it in gives LearnFRC free
-              permission to edit it and post it on those accounts.
-            </li>
-            <li>
-              Only send work you made or have the right to share, with the OK of
-              anyone who appears in it. Ask and we&rsquo;ll take anything of
-              yours down from LearnFRC&rsquo;s accounts.
-            </li>
-            <li>
-              Don&rsquo;t present LearnFRC as official FIRST material or as
-              endorsed by FIRST, and put the FIRST disclaimer from the next
-              clause on anything you post about LearnFRC.
-            </li>
-            <li>Jahaan can end a helper role at any time, and so can you.</li>
-          </ul>
-        </>
-      ),
-    },
     {
       id: "trademarks",
       title: "Trademarks",

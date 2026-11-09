@@ -2,7 +2,7 @@ import Foundation
 import Observation
 
 /// Admin data for the signed-in account: its site role, the counts behind the You tab's admin
-/// rows, /admin, the feedback inbox, the super admins' team desk and the member's /apply.
+/// rows, /admin, the feedback inbox and the super admins' team desk.
 ///
 /// Memory only, on purpose (security, apple/docs/ARCHITECTURE.md): nothing here is written to
 /// the cache, the widgets' app group, Spotlight or App Intents, and all of it goes the moment
@@ -44,7 +44,6 @@ final class AdminStore {
     private(set) var dashboard = Remote<AdminDashboard>()
     private(set) var feedback = Remote<AdminFeedbackPage>()
     private(set) var team = Remote<AdminTeamDesk>()
-    private(set) var applyState = Remote<AdminApplyState>()
 
     var isAdmin: Bool { role?.isAdmin ?? false }
     var isSuperAdmin: Bool { role?.isSuperAdmin ?? false }
@@ -55,7 +54,6 @@ final class AdminStore {
     @ObservationIgnored private var dashboardTask: Task<Void, Never>?
     @ObservationIgnored private var feedbackTask: Task<Void, Never>?
     @ObservationIgnored private var teamTask: Task<Void, Never>?
-    @ObservationIgnored private var applyTask: Task<Void, Never>?
 
     /// How long the role and counts are trusted before a screen that shows them asks again.
     private static let summaryMaxAge: TimeInterval = 60
@@ -106,12 +104,10 @@ final class AdminStore {
         dashboardTask?.cancel()
         feedbackTask?.cancel()
         teamTask?.cancel()
-        applyTask?.cancel()
         summaryTask = nil
         dashboardTask = nil
         feedbackTask = nil
         teamTask = nil
-        applyTask = nil
         ownerID = nil
         role = nil
         summary = nil
@@ -119,7 +115,6 @@ final class AdminStore {
         dashboard = Remote()
         feedback = Remote()
         team = Remote()
-        applyState = Remote()
     }
 
     /// `GET /admin/summary`: the role and the counts. One request at a time.
@@ -379,64 +374,6 @@ final class AdminStore {
         }
     }
 
-    /// Takes the marketing tag off somebody. Their account, progress and counted signups stay.
-    func removeMarketer(_ userID: UUID) async throws(AdminError) {
-        guard let api, let owner = ownerID else { throw AdminError.unauthorized }
-        do throws(AdminError) {
-            try await api.removeMarketer(userID: userID)
-            guard owner == ownerID else { throw AdminError.unauthorized }
-            if let desk = team.value { team.value = desk.removingMarketer(userID) }
-        } catch {
-            if error.isForbidden, owner == ownerID { team.locked = error.message }
-            throw error
-        }
-    }
-
-    // MARK: Apply
-
-    /// `GET /apply` for this account.
-    func loadApply() async {
-        if let applyTask {
-            await applyTask.value
-            return
-        }
-        guard let api, let owner = ownerID else { return }
-        applyState.isLoading = true
-        let task = Task { [weak self] in
-            let result: Result<AdminApplyState, AdminError>
-            do throws(AdminError) { result = .success(try await api.applyState()) } catch { result = .failure(error) }
-            self?.receive(applyState: result, owner: owner)
-        }
-        applyTask = task
-        await task.value
-        applyTask = nil
-    }
-
-    private func receive(applyState result: Result<AdminApplyState, AdminError>, owner: UUID) {
-        guard owner == ownerID else { return }
-        applyState.isLoading = false
-        switch result {
-        case .success(let fresh):
-            applyState = Remote(value: fresh, fetchedAt: .now)
-        case .failure(let error):
-            applyState.error = error
-        }
-    }
-
-    /// Sends an application. The page then reads its new state (pending).
-    func submitApplication(experience: String, why: String, availability: String?) async throws(AdminError) {
-        guard let api, ownerID != nil else { throw AdminError.unauthorized }
-        try await api.submitApplication(experience: experience, why: why, availability: availability)
-        await loadApply()
-    }
-
-    /// Withdraws this account's pending application.
-    func withdrawApplication() async throws(AdminError) {
-        guard let api, ownerID != nil else { throw AdminError.unauthorized }
-        try await api.withdrawApplication()
-        await loadApply()
-    }
-
     // MARK: Previews
 
     /// A store holding fixed data, for previews. Never touches the network.
@@ -446,7 +383,6 @@ final class AdminStore {
         dashboard: AdminDashboard? = nil,
         feedback: AdminFeedbackPage? = nil,
         team: AdminTeamDesk? = nil,
-        apply: AdminApplyState? = nil,
         lockedDashboard: String? = nil,
         lockedTeam: String? = nil,
         error: AdminError? = nil
@@ -459,7 +395,6 @@ final class AdminStore {
         store.dashboard = Remote(value: dashboard, fetchedAt: dashboard == nil ? nil : .now, error: dashboard == nil ? error : nil, locked: lockedDashboard)
         store.feedback = Remote(value: feedback, fetchedAt: feedback == nil ? nil : .now, error: feedback == nil ? error : nil)
         store.team = Remote(value: team, fetchedAt: team == nil ? nil : .now, error: team == nil ? error : nil, locked: lockedTeam)
-        store.applyState = Remote(value: apply, fetchedAt: apply == nil ? nil : .now, error: apply == nil ? error : nil)
         return store
     }
 }

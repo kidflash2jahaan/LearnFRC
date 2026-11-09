@@ -1,66 +1,43 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getProfile } from "@/lib/queries";
-import { rateLimit } from "@/lib/rate-limit";
 import { teamRoleLabel } from "@/lib/team-roles";
-import { adminNotifyHtml, applicationReceivedHtml } from "@/lib/email";
 import { getMyApplication } from "@/lib/admin-team";
-import {
-  APPLICATIONS_OPEN,
-  APPLY_LIMITS,
-  BRAND_KIT,
-  HEADS,
-  JOBS,
-  MARKETING_RULES,
-  OFFICIAL_POSTING,
-  TRAILER_URL,
-  type ApplyMode,
-} from "@/lib/applications";
+import { APPLICATIONS_OPEN, APPLY_LIMITS, HEADS, type ApplyMode } from "@/lib/applications";
 import { toIso } from "@/lib/app/format";
-import { BAD_REQUEST, siteRoleFor, textField } from "@/lib/app/admin-access";
-import { mailAfter, revalidateTeamPages } from "@/lib/app/admin-notify";
-import {
-  APPLICATION_REPLY_TO,
-  getMarketerTag,
-  marketerInviteUrl,
-} from "@/lib/app/admin-apply-marketing";
+import { siteRoleFor } from "@/lib/app/admin-access";
+import { revalidateTeamPages } from "@/lib/app/admin-notify";
 import { fail, type AppUser, type Result } from "@/lib/app/result";
 import { teacherApplyRole } from "@/lib/app/class-teachers";
 
 /**
- * Applying for the marketing role, the one role /apply takes applications
- * for. Shared by /apply (its page and the submitAdminApplication /
- * withdrawAdminApplication Server Actions) and the app's GET, POST and DELETE
- * /api/app/apply. Teaching live classes is a second role with its own page
- * (/apply/teach, src/lib/app/class-teachers.ts); the state here only lists it
- * in `roles`.
+ * The closed /apply contract for installed app copies (GET, POST, DELETE
+ * /api/app/apply). Applying here is closed; the only role is teaching, on
+ * /apply/teach (src/lib/app/class-teachers.ts).
  *
- * The table is still `admin_applications` and the functions keep their names,
- * because the app copies already installed call the same routes with the same
- * fields. What an accepted application grants changed: a marketing tag
- * (admin-apply-marketing.ts), never a `site_admins` row.
+ * The marketing role this used to take applications for was removed on
+ * 2026-11-09 (it may come back; git history has it). The app copies already
+ * on people's phones still call these routes and read every key, so every
+ * key stays: `applicationsOpen` is false, `jobs` is empty (those copies then
+ * show their own built-in list), `posting`, `rules` and `marketer` are always
+ * empty, and `roles` lists only the teacher role while classes are visible.
+ * The `admin_applications` table is kept: a pending row from before can
+ * still be withdrawn from an installed copy, or turned down on /admin/team.
  */
-
-const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com";
-const { minChars: MIN_CHARS, maxChars: MAX_CHARS, availabilityMax: AVAIL_MAX } = APPLY_LIMITS;
-
-const esc = (s: string) =>
-  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
 /** Where a signed-in account stands on /apply. ("signed-out" is the page's own.) */
 export type SignedInApplyMode = Exclude<ApplyMode, "signed-out">;
 
 /**
  * One role someone can apply for, as GET /api/app/apply lists them (newer
- * than the app copies already installed, which ignore it). `marketing` is
- * /apply; `teacher` is /apply/teach, listed only while live classes are
- * visible (classes-design.md sections 1 and 14). `status` is that role's own
- * mode string: ApplyMode for marketing, TeachApplyMode
- * (src/lib/classes/teacher-rules.ts) for teaching. Add roles and fields,
- * never rename them.
+ * than the app copies already installed, which ignore it). Only `teacher`
+ * (/apply/teach), listed only while live classes are visible
+ * (classes-design.md sections 1 and 14). `"marketing"` was retired before
+ * release and never shipped. `status` is the TeachApplyMode
+ * (src/lib/classes/teacher-rules.ts). Add roles and fields, never rename them.
  */
 export type ApplyRole = {
-  id: "marketing" | "teacher";
+  id: "teacher";
   title: string;
   /** The page that takes the application. */
   url: string;
@@ -70,27 +47,15 @@ export type ApplyRole = {
 };
 
 export type ApplyState = {
+  /** Always false: applying here is closed. */
   applicationsOpen: boolean;
-  /**
-   * `marketer` is newer than the app copies already installed, which decode an
-   * unknown mode as `new`. That is why `record` is empty in that mode: those
-   * copies print the form only when `record.username` is set, so an old copy
-   * shows a marketer the heading ("You're on the marketing team") and nothing
-   * under it, rather than a form to apply for what they already have.
-   */
   mode: SignedInApplyMode;
   heading: { title: string; slug: string };
-  /**
-   * What the reviewer would see: a handle, a team number, a role word. All
-   * null in `marketer` mode, where there is nothing left to review.
-   */
+  /** What a reviewer would have seen: a handle, a team number, a role word. */
   record: { username: string | null; teamNumber: number | null; teamRoleLabel: string | null };
   /**
    * The account's latest application when it still says something: pending,
-   * turned down or withdrawn. An accepted one whose account no longer has the
-   * tag is treated as none at all (they were removed, and the old acceptance
-   * is not an answer to "can I apply"). Always null for an admin or a
-   * marketer.
+   * turned down or withdrawn. Always null for an admin.
    */
   application: {
     status: "pending" | "rejected" | "withdrawn";
@@ -98,44 +63,33 @@ export type ApplyState = {
     reviewedAt: string | null;
     reviewNote: string | null;
   } | null;
-  /** What a marketer does: four of them, in order. */
+  /** Always empty. Kept for installed copies, which fall back to their own list. */
   jobs: { slug: string; text: string }[];
   limits: typeof APPLY_LIMITS;
-  /** Where what a marketer makes ends up, said plainly. */
+  /** Always "". Kept for installed copies. */
   posting: string;
-  /** The rules a marketer agrees to. */
+  /** Always empty. Kept for installed copies. */
   rules: string[];
-  /**
-   * Only in `marketer` mode: what the tag gives them to work with. Their own
-   * invite link (null until they pick a handle), when they were accepted, the
-   * trailer (null until it is public) and the brand kit.
-   */
-  marketer: {
-    inviteUrl: string | null;
-    since: string;
-    trailerUrl: string | null;
-    brandKit: typeof BRAND_KIT;
-  } | null;
-  /** The roles there are to apply for, marketing first. See ApplyRole. */
+  /** Always null. Kept for installed copies. */
+  marketer: null;
+  /** The roles there are to apply for: the teacher role while classes are visible, else none. */
   roles: ApplyRole[];
 };
 
 export async function loadApplyState(user: AppUser): Promise<Result<ApplyState>> {
-  const [role, profile, tag, teacherRole] = await Promise.all([
+  const [role, profile, teacherRole] = await Promise.all([
     siteRoleFor(user),
     getProfile(user.id),
-    getMarketerTag(user.id),
-    // A classes problem must never take /apply down with it.
+    // A classes problem must never take /api/app/apply down with it.
     teacherApplyRole(user).catch((e) => {
       console.error("loadApplyState: teacher role:", e);
       return null;
     }),
   ]);
   const isAdmin = role !== "member";
-  const isMarketer = !isAdmin && tag !== null;
-  // Only fetched when it can change what renders: an admin or a marketer has
-  // nothing to apply for.
-  const latest = isAdmin || isMarketer ? null : await getMyApplication(user.id);
+  // Only fetched when it can change what renders: an admin has nothing to
+  // apply for.
+  const latest = isAdmin ? null : await getMyApplication(user.id);
   const application =
     latest && (latest.status === "pending" || latest.status === "rejected" || latest.status === "withdrawn")
       ? {
@@ -146,170 +100,53 @@ export async function loadApplyState(user: AppUser): Promise<Result<ApplyState>>
         }
       : null;
 
-  // A handle is the only thing on an application that identifies a person, so
-  // the page asks for one before the form rather than warning beside it.
   const handle = profile?.username ?? null;
-  const open = application?.status === "pending";
   const mode: SignedInApplyMode = isAdmin
     ? "on-the-team"
-    : isMarketer
-      ? "marketer"
-      : open
-        ? "pending"
-        : !handle
-          ? "no-handle"
-          : application
-            ? "again"
-            : "new";
+    : application?.status === "pending"
+      ? "pending"
+      : !handle
+        ? "no-handle"
+        : application
+          ? "again"
+          : "new";
 
   return {
     ok: true,
     applicationsOpen: APPLICATIONS_OPEN,
     mode,
     heading: { ...HEADS[mode] },
-    record: isMarketer
-      ? { username: null, teamNumber: null, teamRoleLabel: null }
-      : {
-          username: handle,
-          teamNumber: profile?.team_number ?? null,
-          // The word, not the stored slug: `profiles.role` holds `other` for a
-          // fifth of accounts, and nobody calls themselves that.
-          teamRoleLabel: profile?.role ? teamRoleLabel(profile.role) : null,
-        },
+    record: {
+      username: handle,
+      teamNumber: profile?.team_number ?? null,
+      // The word, not the stored slug: `profiles.role` holds `other` for a
+      // fifth of accounts, and nobody calls themselves that.
+      teamRoleLabel: profile?.role ? teamRoleLabel(profile.role) : null,
+    },
     application,
-    jobs: JOBS,
+    jobs: [],
     limits: APPLY_LIMITS,
-    posting: OFFICIAL_POSTING,
-    rules: MARKETING_RULES,
-    marketer:
-      isMarketer && tag
-        ? {
-            inviteUrl: marketerInviteUrl(handle),
-            since: tag.grantedAt,
-            trailerUrl: TRAILER_URL,
-            brandKit: BRAND_KIT,
-          }
-        : null,
-    roles: [
-      { id: "marketing", title: "Spread LearnFRC", url: `${SITE}/apply`, open: APPLICATIONS_OPEN, status: mode },
-      ...(teacherRole ? [teacherRole] : []),
-    ],
+    posting: "",
+    rules: [],
+    marketer: null,
+    roles: teacherRole ? [teacherRole] : [],
   };
 }
 
+/**
+ * POST /api/app/apply. Always refused: applying here is closed. The input is
+ * still accepted so the route's contract doesn't change.
+ */
 export async function submitApplication(
   user: AppUser,
   input: { experience: unknown; why: unknown; availability?: unknown }
 ): Promise<Result> {
-  const [role, profile, tag] = await Promise.all([
-    siteRoleFor(user),
-    getProfile(user.id),
-    getMarketerTag(user.id),
-  ]);
-  if (role !== "member") return fail("conflict", "You're already on the team.");
-  if (tag) return fail("conflict", "You're already on the marketing team.");
-  if (!APPLICATIONS_OPEN)
-    return fail("conflict", "Applications are closed for now. Check back later.");
-
-  const experience = textField(input.experience);
-  const why = textField(input.why);
-  const availability = textField(input.availability);
-  if (experience === null || why === null || availability === null)
-    return fail("validation", BAD_REQUEST);
-
-  // The page shows the "Pick a handle first" state instead of the form, and
-  // this is the same rule on the server, so no door can file an application
-  // that reaches the desk with nothing on it to identify anybody. The invite
-  // link a marketer is counted through is keyed on the handle too.
-  const username = profile?.username ?? null;
-  if (!username)
-    return fail("validation", "Pick a handle on your settings page first, then apply.");
-
-  if (experience.length < MIN_CHARS)
-    return fail("validation", "Say a bit more about your FRC experience (a few sentences).");
-  if (why.length < MIN_CHARS)
-    return fail("validation", "Say a bit more about why you want to help (a few sentences).");
-  if (experience.length > MAX_CHARS || why.length > MAX_CHARS)
-    return fail(
-      "validation",
-      "That's longer than it needs to be. Keep each answer under 3000 characters."
-    );
-  if (availability.length > AVAIL_MAX) return fail("validation", "Keep availability to a line.");
-
-  // Keyed on the ACCOUNT, the way every other signed-in action in this repo
-  // keys its bucket. An IP-only bucket would give a whole school or shop behind
-  // one NAT three applications a day between everybody, and this audience is
-  // FRC teams, who share exactly that. The looser IP bucket under it is still
-  // worth having against somebody cycling throwaway accounts.
-  if (
-    !(await rateLimit("admin-apply", 3, 86400, user.id)) ||
-    !(await rateLimit("admin-apply-ip", 25, 86400))
-  )
-    return fail("rate_limited", "That's a lot of applications today. Try again tomorrow.", 86400);
-
-  const admin = createAdminClient();
-  const { data: open } = await admin
-    .from("admin_applications")
-    .select("id")
-    .eq("user_id", user.id)
-    .eq("status", "pending")
-    .maybeSingle();
-  if (open) return fail("conflict", "You already have an application waiting. Sit tight.");
-
-  const { error } = await admin.from("admin_applications").insert({
-    user_id: user.id,
-    team_number: profile?.team_number ?? null,
-    team_role: profile?.role ?? null,
-    experience,
-    why,
-    availability: availability || null,
-  });
-  if (error) {
-    // The partial unique index catches a double submit that raced the check.
-    if (error.code === "23505")
-      return fail("conflict", "You already have an application waiting. Sit tight.");
-    return fail("server", "Couldn't save that. Please try again.");
-  }
-
-  // The row is the record and the mail is a courtesy, but it is a courtesy the
-  // page promises out loud, so both sends run in `after` and log their failure.
-  if (user.email) {
-    mailAfter("receipt", {
-      to: user.email,
-      subject: "Your LearnFRC application is in",
-      html: applicationReceivedHtml(username),
-      replyTo: APPLICATION_REPLY_TO,
-    });
-  }
-  const ownerEmail = (process.env.ADMIN_EMAILS || "").split(",")[0]?.trim();
-  if (ownerEmail) {
-    mailAfter("owner notification", {
-      to: ownerEmail,
-      subject: `LearnFRC: marketing application from @${username}`,
-      html: adminNotifyHtml({
-        heading: "Someone applied for the marketing role",
-        rows: [
-          { label: "Handle", value: `@${username}` },
-          { label: "Team", value: profile?.team_number ? String(profile.team_number) : "not given" },
-          { label: "Team role", value: teamRoleLabel(profile?.role) },
-          { label: "Availability", value: availability || "not given" },
-        ],
-        bodyHtml: `
-          <p style="margin:14px 0 4px;font-weight:700">FRC experience</p>
-          <p style="margin:0 0 10px;white-space:pre-wrap">${esc(experience)}</p>
-          <p style="margin:14px 0 4px;font-weight:700">Why they want to help</p>
-          <p style="margin:0;white-space:pre-wrap">${esc(why)}</p>`,
-        ctaText: "Review it",
-        ctaUrl: `${SITE}/admin/team`,
-        note: "Accepting gives them a marketing tag and the welcome email (trailer, invite link, brand kit, rules). It never opens /admin.",
-      }),
-    });
-  }
-
-  revalidateTeamPages();
-  return { ok: true };
+  void input;
+  if ((await siteRoleFor(user)) !== "member") return fail("conflict", "You're already on the team.");
+  return fail("conflict", "Applications are closed for now. Check back later.");
 }
 
+/** DELETE /api/app/apply: a pending application from before can still be pulled back. */
 export async function withdrawApplication(user: AppUser): Promise<Result> {
   const { data, error } = await createAdminClient()
     .from("admin_applications")

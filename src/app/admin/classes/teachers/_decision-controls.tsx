@@ -12,9 +12,22 @@ const ARMED_MS = 5000;
  * Accept or reject one teacher application, with a note that rides along in
  * the email. The same two-click Reject as /admin/team's ReviewControls: it is
  * `type="button"` until armed. Accepting copies the name to the locked letter
- * name. decideTeacherApplication re-checks the role and the status.
+ * name, and needs the "I checked their seasons" tick (sent as
+ * `seasonsChecked=yes`). A first-form application (`canAccept` false) can
+ * only be turned down. decideTeacherApplication re-checks the role, the
+ * status, the form version and the tick.
  */
-export function DecisionControls({ id, handle, legalName }: { id: string; handle: string; legalName: string }) {
+export function DecisionControls({
+  id,
+  handle,
+  legalName,
+  canAccept,
+}: {
+  id: string;
+  handle: string;
+  legalName: string;
+  canAccept: boolean;
+}) {
   const [state, action, pending] = useActionState<TeachFormState, FormData>(
     decideTeacherApplicationAction,
     undefined
@@ -22,9 +35,11 @@ export function DecisionControls({ id, handle, legalName }: { id: string; handle
   const [choice, setChoice] = React.useState<"accept" | "reject" | null>(null);
   const [armed, setArmed] = React.useState(false);
   const [note, setNote] = React.useState("");
+  const [checked, setChecked] = React.useState(false);
   const decided = state?.success ? choice : null;
   const uid = React.useId();
   const noteError = state?.field === "note";
+  const checkedError = state?.field === "seasonsChecked";
 
   React.useEffect(() => {
     if (state?.error) toast.error(state.error);
@@ -66,27 +81,53 @@ export function DecisionControls({ id, handle, legalName }: { id: string; handle
           className="nb-input min-h-[4.5rem]"
         />
         <p className="nb-hint">
-          Accepting locks &ldquo;{legalName}&rdquo; as the name on their hours letters. Only a super admin can
-          change it after, with a note.
+          {canAccept ? (
+            <>
+              Accepting locks &ldquo;{legalName}&rdquo; as the name on their hours letters. Only a super admin can
+              change it after, with a note.
+            </>
+          ) : (
+            "This came in on the first form, which didn’t ask about FRC seasons. Turn it down with a note asking them to apply again."
+          )}
         </p>
       </div>
+      {canAccept ? (
+        <label className="mt-3 flex min-h-[2.75rem] cursor-pointer items-center gap-3 text-[0.95rem] font-semibold">
+          <input
+            type="checkbox"
+            name="seasonsChecked"
+            value="yes"
+            className="size-4 shrink-0"
+            checked={checked}
+            disabled={pending}
+            onChange={(e) => setChecked(e.target.checked)}
+            aria-invalid={checkedError || undefined}
+          />
+          <span>
+            I checked their seasons (The Blue Alliance, FRC Events or their reference).
+            <span className="sr-only"> {handle}</span>
+          </span>
+        </label>
+      ) : null}
       <div aria-live="polite">{state?.error ? <p className="nb-error mt-2">{state.error}</p> : null}</div>
       <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2">
-        <button
-          type="submit"
-          name="decision"
-          value="accept"
-          onClick={() => {
-            setChoice("accept");
-            setArmed(false);
-          }}
-          disabled={pending}
-          aria-busy={pending && choice === "accept"}
-          className="nb-btn nb-btn-sm"
-        >
-          {pending && choice === "accept" ? "Accepting" : "Accept"}
-          <span className="sr-only"> {handle}</span>
-        </button>
+        {canAccept ? (
+          <button
+            type="submit"
+            name="decision"
+            value="accept"
+            onClick={() => {
+              setChoice("accept");
+              setArmed(false);
+            }}
+            disabled={pending}
+            aria-busy={pending && choice === "accept"}
+            className="nb-btn nb-btn-sm"
+          >
+            {pending && choice === "accept" ? "Accepting" : "Accept"}
+            <span className="sr-only"> {handle}</span>
+          </button>
+        ) : null}
         <button
           type={armed ? "submit" : "button"}
           name="decision"

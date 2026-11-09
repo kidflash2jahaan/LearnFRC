@@ -28,16 +28,28 @@ import { findContactPatterns } from "@/lib/classes/contact-patterns";
 import { TEACHER_CODE_VERSION } from "@/lib/classes/notice";
 import {
   TEACHER_APPLY_LIMITS,
+  TEACHER_CODE_SENTENCE,
+  TEACH_ANSWER_KEYS,
+  applicationFlags,
   checkTeacherApplication,
+  frcRoleLabel,
   letterNameProblem,
   lettersBlockedFor,
   normalizeName,
   parentStepFor,
   parentStepFromRows,
+  seasonLinks,
   teachApplyMode,
+  teachOftenLabel,
+  wordCount,
+  type FieldProblem,
   type ParentStep,
+  type PreviousTeachAnswers,
+  type TeachAnswerKey,
   type TeachApplyMode,
+  type TeacherApplicationRaw,
   type TeacherApplicationStatus,
+  type TeacherSeason,
 } from "@/lib/classes/teacher-rules";
 import {
   letterNameChangedMail,
@@ -63,10 +75,14 @@ import type { AgeBand, ClassStatus, ClassTeacherRow, SystemActor } from "@/lib/c
  *
  * Who may do what:
  * - Applying: a signed-in account with a handle, an age answer of 13 to 17,
- *   not on an under-13 device, whose parent hasn't said no, that agrees to
- *   the current teacher code. The parent OK can come later; scheduling waits
- *   for it (teachingGate).
+ *   not on an under-13 device, whose parent hasn't said no, that has
+ *   finished at least one full FRC season (FULL_SEASON_SENTENCE in
+ *   teacher-rules.ts), answers the second form's questions properly and
+ *   agrees to the current teacher code. The parent OK can come later;
+ *   scheduling waits for it (teachingGate).
  * - Accept, reject and "Change letter name": super admins (Jahaan decides).
+ *   Accepting needs the reviewer's "I checked their seasons" tick, and an
+ *   application from the first form (no seasons) can only be turned down.
  * - Suspend and unsuspend: super admins and the safety lead, plus the system
  *   (the room's auto-end on two reports).
  *
@@ -98,14 +114,18 @@ export const TEACHER_SENTENCES = {
   signIn: "Sign in first, then apply.",
   noHandle: "Pick a username in Settings first, then apply.",
   needsAge: "Answer one quick question first, then apply.",
-  code: "Read the teacher code and tick the box to agree to it.",
+  code: TEACHER_CODE_SENTENCE,
   already: "You're already a teacher.",
   suspended: `Your teaching is paused, so there's nothing to apply for right now. If you have questions, write to ${PUBLIC_CONTACT_EMAIL}.`,
   pending: "You already have an application waiting. Sit tight.",
   noPending: "There's no open application to withdraw.",
   rate: "That's a lot of applications today. Try again tomorrow.",
   save: "Couldn't save that. Please try again.",
-  topics: "One of the picked topics isn't on LearnFRC.",
+  topics: "One of the picked modules isn’t on LearnFRC.",
+  sampleLesson: "Pick a lesson from one of the modules you picked.",
+  firstForm:
+    "This came in on the first form, which didn’t ask about FRC seasons. Turn it down with a note asking them to apply again.",
+  seasonsChecked: "Tick that you checked their seasons first.",
   profaneName: "That name won't work on a letter. Use the name your school knows you by.",
   notTeacher: "Apply to teach first.",
   teachSuspended: `Your teaching is paused. If you have questions, write to ${PUBLIC_CONTACT_EMAIL}.`,
@@ -174,9 +194,58 @@ async function topicTitles(ids: string[]): Promise<Map<string, { title: string; 
 }
 
 /**
+ * The second form's one catalog read: the picked modules (by id, unknown
+ * ids left out) and the sample lesson with its module.
+ */
+async function applicationCatalog(
+  moduleIds: string[],
+  lessonId: string
+): Promise<{ modules: Map<string, string>; lesson: { title: string; moduleId: string } | null }> {
+  const admin = createAdminClient();
+  const ids = [...new Set(moduleIds.filter(isUuid))];
+  const [{ data: modules }, { data: lesson }] = await Promise.all([
+    ids.length ? admin.from("modules").select("id, title").in("id", ids) : Promise.resolve({ data: [] }),
+    isUuid(lessonId)
+      ? admin.from("lessons").select("id, title, module_id").eq("id", lessonId).maybeSingle()
+      : Promise.resolve({ data: null }),
+  ]);
+  return {
+    modules: new Map(((modules ?? []) as { id: string; title: string }[]).map((m) => [m.id, m.title])),
+    lesson: lesson ? { title: lesson.title as string, moduleId: lesson.module_id as string } : null,
+  };
+}
+
+/** The answer columns of the second form, by TEACH_ANSWERS key. */
+const ANSWER_COLUMNS: Record<TeachAnswerKey, string> = {
+  experience: "experience",
+  teachingSample: "teaching_sample",
+  samplePlan: "sample_plan",
+  scenarioSafety: "scenario_safety",
+  scenarioTeaching: "scenario_teaching",
+  motivation: "motivation",
+};
+
+/** frc_seasons as stored, read defensively (a row is only ever written by submitTeacherApplication). */
+function seasonsFrom(v: unknown): TeacherSeason[] {
+  if (!Array.isArray(v)) return [];
+  return v
+    .map((s) => s as Record<string, unknown>)
+    .filter((s) => s && typeof s.year === "number" && typeof s.team === "number")
+    .map((s) => ({ year: s.year as number, team: s.team as number, events: typeof s.events === "string" ? s.events : "" }));
+}
+
+/**
  * A super admin, or the safety lead (requireClassReviewer, from the
  * safety-holds package). The super-admin check runs first, so the desk works
  * for Jahaan whatever state that check is in.
+ *
+ * The standing rule is that only Jahaan and the safety lead read
+ * applications (the privacy policy names those two), and that holds only
+ * while Jahaan is the only super admin. Checked read-only in production on
+ * Nov 9 (teacher-application-spec.md section 0, decision 2): one superadmin
+ * row in site_admins, an owner account. Giving anyone else superadmin lets
+ * them read every pending application, so narrow this to the owner email and
+ * the safety lead first.
  */
 async function requireTeacherStaff(
   user: AppUser
@@ -314,7 +383,51 @@ export type TeachApplyState = {
   bioHasContact: boolean;
   /** The teacher code version the form agrees to. */
   codeVersion: string;
+  /**
+   * In `again` mode: the answers from the last turned-down or withdrawn
+   * application, to fill the form. Never the name, the reference or the
+   * ticked boxes. Web only: no API sends it.
+   */
+  previousAnswers: PreviousTeachAnswers | null;
 };
+
+/** The latest closed application's answers, for `again` mode. Null when it holds nothing usable. */
+async function previousAnswersFor(applicationId: string): Promise<PreviousTeachAnswers | null> {
+  const { data, error } = await createAdminClient()
+    .from("teacher_applications")
+    .select(
+      "topic_ids, experience, sample_plan, availability, form_version, frc_seasons, frc_roles, other_programs, sample_lesson_id, teaching_sample, scenario_safety, scenario_teaching, motivation, teach_often, code_questions"
+    )
+    .eq("id", applicationId)
+    .maybeSingle();
+  if (error || !data) return null;
+  const r = data as Record<string, unknown>;
+  const text = (v: unknown) => (typeof v === "string" ? v : "");
+  const out: PreviousTeachAnswers = {
+    seasons: seasonsFrom(r.frc_seasons),
+    roles: Array.isArray(r.frc_roles) ? (r.frc_roles as string[]) : [],
+    experience: text(r.experience),
+    otherPrograms: text(r.other_programs),
+    topicIds: Array.isArray(r.topic_ids) ? (r.topic_ids as string[]) : [],
+    sampleLessonId: typeof r.sample_lesson_id === "string" ? r.sample_lesson_id : null,
+    teachingSample: text(r.teaching_sample),
+    samplePlan: text(r.sample_plan),
+    scenarioSafety: text(r.scenario_safety),
+    scenarioTeaching: text(r.scenario_teaching),
+    motivation: text(r.motivation),
+    teachOften: typeof r.teach_often === "string" ? r.teach_often : null,
+    availability: text(r.availability),
+    codeQuestions: text(r.code_questions),
+  };
+  const usable =
+    out.seasons.length ||
+    out.roles.length ||
+    out.topicIds.length ||
+    out.sampleLessonId ||
+    TEACH_ANSWER_KEYS.some((k) => out[k].trim()) ||
+    out.availability.trim();
+  return usable ? out : null;
+}
 
 export async function loadTeachApplyState(
   user: AppUser | null,
@@ -349,6 +462,9 @@ export async function loadTeachApplyState(
       : null,
     bioHasContact: findContactPatterns(f.profile?.bio ?? "").length > 0,
     codeVersion: TEACHER_CODE_VERSION,
+    // Only read when the form opens again: the answer columns aren't needed
+    // in any other mode.
+    previousAnswers: f.mode === "again" && latest ? await previousAnswersFor(latest.id) : null,
   };
 }
 
@@ -403,48 +519,60 @@ function modeRefusal(mode: TeachApplyMode): Failure | null {
   }
 }
 
-export type TeacherApplicationFields = {
-  legalName?: unknown;
-  topics?: unknown;
-  topicIds?: unknown;
-  experience?: unknown;
-  samplePlan?: unknown;
-  availability?: unknown;
-  referenceName?: unknown;
-  referenceEmail?: unknown;
-  /** The TEACHER_CODE_VERSION the form showed, sent only when the box is ticked. */
-  code?: unknown;
-};
+/**
+ * What the form sends (TeacherApplicationRaw in teacher-rules.ts): the
+ * season rows as three parallel lists, the ticked roles and modules as
+ * lists, the six written answers, the practical fields, the code version
+ * (sent only when its box is ticked) and `ownWords`.
+ */
+export type TeacherApplicationFields = TeacherApplicationRaw;
+
+/** A refusal that lists every problem with the form, for its summary. Website only. */
+export type TeacherApplicationRefusal = Failure & { problems?: FieldProblem[] };
+
+const validation = (problems: FieldProblem[]): TeacherApplicationRefusal => ({
+  ...fail("validation", problems[0].error),
+  field: problems[0].field,
+  problems,
+});
 
 /**
  * Files a teacher application: the account's state first (a handle, an age
  * answer of 13 to 17, no parent refusal, not already a teacher, one pending
- * at a time), then the teacher code, then the fields, then the rate limits.
- * Writes the application and a `teacher_code` consent row, emails the
- * applicant and the owner.
+ * at a time), then every field at once (checkTeacherApplication: the full
+ * season, the seasons, the written answers and their effort checks, the code
+ * and the "own words" box), then the name's profanity check, then the one
+ * catalog read (the picked ids are modules, the sample lesson is in one of
+ * them), then the rate limits, so a refusal never burns one. Writes the
+ * application and a `teacher_code` consent row, emails the applicant and the
+ * owner.
+ *
+ * Website only (/apply/teach): no /api/app route takes this form.
  */
 export async function submitTeacherApplication(
   user: AppUser,
   input: TeacherApplicationFields
-): Promise<Result> {
+): Promise<Result | TeacherApplicationRefusal> {
   const f = await teachFacts(user);
   const refusal = modeRefusal(f.mode);
   if (refusal) return refusal;
   const username = f.profile?.username?.trim();
   if (!username) return { ...fail("validation", TEACHER_SENTENCES.noHandle), field: "username" };
 
-  if (textField(input.code) !== TEACHER_CODE_VERSION)
-    return { ...fail("validation", TEACHER_SENTENCES.code), field: "code" };
-
-  const checked = checkTeacherApplication(input);
-  if (!checked.ok) return { ...fail("validation", checked.error), field: checked.field };
+  const checked = checkTeacherApplication(input, { codeVersion: TEACHER_CODE_VERSION });
+  if (!checked.ok) return validation(checked.problems);
   const v = checked.value;
   if (firstProfaneField({ legalName: v.legalName }))
-    return { ...fail("validation", TEACHER_SENTENCES.profaneName), field: "legalName" };
+    return validation([{ field: "legalName", error: TEACHER_SENTENCES.profaneName }]);
 
-  const titles = await topicTitles(v.topicIds);
-  if (titles.size !== v.topicIds.length)
-    return { ...fail("validation", TEACHER_SENTENCES.topics), field: "topicIds" };
+  const catalog = await applicationCatalog(v.topicIds, v.sampleLessonId);
+  const catalogProblems: FieldProblem[] = [];
+  if (catalog.modules.size !== v.topicIds.length)
+    catalogProblems.push({ field: "topicIds", error: TEACHER_SENTENCES.topics });
+  if (!catalog.lesson || !v.topicIds.includes(catalog.lesson.moduleId))
+    catalogProblems.push({ field: "sampleLessonId", error: TEACHER_SENTENCES.sampleLesson });
+  if (catalogProblems.length) return validation(catalogProblems);
+  const moduleTitles = v.topicIds.map((id) => catalog.modules.get(id)!);
 
   // Per account first (it follows them onto any network), then a looser one
   // per network against someone cycling throwaway accounts.
@@ -459,10 +587,13 @@ export async function submitTeacherApplication(
     .from("teacher_applications")
     .insert({
       user_id: user.id,
-      team_number: f.profile?.team_number ?? null,
+      // The team they applied with: their newest season's. The role is still
+      // the profile's snapshot.
+      team_number: v.seasons[0].team,
       team_role: f.profile?.role ?? null,
       legal_name: v.legalName,
-      topics: v.topics,
+      // NOT NULL from the first form, which asked for topics in words.
+      topics: moduleTitles.join(", ").slice(0, TEACHER_APPLY_LIMITS.topicsMax),
       topic_ids: v.topicIds,
       experience: v.experience,
       sample_plan: v.samplePlan,
@@ -470,6 +601,19 @@ export async function submitTeacherApplication(
       reference_name: v.referenceName,
       reference_email: v.referenceEmail,
       code_version: TEACHER_CODE_VERSION,
+      form_version: 2,
+      // Built here from the checked values, never from client JSON.
+      frc_seasons: v.seasons.map((s) => ({ year: s.year, team: s.team, events: s.events })),
+      frc_roles: v.roles,
+      other_programs: v.otherPrograms,
+      sample_lesson_id: v.sampleLessonId,
+      teaching_sample: v.teachingSample,
+      scenario_safety: v.scenarioSafety,
+      scenario_teaching: v.scenarioTeaching,
+      motivation: v.motivation,
+      teach_often: v.teachOften,
+      code_questions: v.codeQuestions,
+      own_words: true,
     })
     .select("id")
     .single();
@@ -503,7 +647,12 @@ export async function submitTeacherApplication(
   if (user.email) {
     await mailTeacher(
       "teacher application receipt",
-      teacherApplicationReceivedMail({ to: user.email, username, parentStep })
+      teacherApplicationReceivedMail({
+        to: user.email,
+        username,
+        parentStep,
+        hasReference: !!v.referenceEmail,
+      })
     );
   }
   const owner = ownerEmail();
@@ -516,10 +665,11 @@ export async function submitTeacherApplication(
         ageBand: f.detail.ageBand,
         parentStep,
         sameNetwork: f.detail.consent?.same_network === true,
-        teamNumber: f.profile?.team_number ?? null,
+        teamNumber: v.seasons[0].team,
+        seasonYears: v.seasons.map((s) => s.year).sort((a, b) => a - b),
         teamRoleLabel: teamRoleLabel(f.profile?.role),
-        topics: v.topics,
-        topicTitles: v.topicIds.map((id) => titles.get(id)?.title).filter((t): t is string => !!t),
+        topicTitles: moduleTitles,
+        sampleLessonTitle: catalog.lesson!.title,
       })
     );
   }
@@ -528,10 +678,16 @@ export async function submitTeacherApplication(
   return { ok: true };
 }
 
+/** Withdraws the pending application, and clears its reference (only needed for a decision). */
 export async function withdrawTeacherApplication(user: AppUser): Promise<Result> {
   const { data, error } = await createAdminClient()
     .from("teacher_applications")
-    .update({ status: "withdrawn", reviewed_at: new Date().toISOString() })
+    .update({
+      status: "withdrawn",
+      reviewed_at: new Date().toISOString(),
+      reference_name: null,
+      reference_email: null,
+    })
     .eq("user_id", user.id)
     .eq("status", "pending")
     .select("id");
@@ -615,6 +771,30 @@ export type DeskTeacherApplication = {
   /** Their bio has contact details (they'll be asked to remove them to schedule). */
   bioHasContact: boolean;
   createdAt: string;
+  /**
+   * 2 for the second form. Null for the first form, which didn't ask about
+   * FRC seasons: those can only be turned down.
+   */
+  formVersion: number | null;
+  /** Newest first, each with the pages to check it on. */
+  seasons: (TeacherSeason & { tbaUrl: string; frcEventsUrl: string })[];
+  /** What they worked on, as labels. */
+  roles: string[];
+  otherPrograms: string | null;
+  sampleLesson: { id: string; title: string; moduleTitle: string; url: string } | null;
+  teachingSample: string | null;
+  scenarioSafety: string | null;
+  scenarioTeaching: string | null;
+  motivation: string | null;
+  /** How often they could teach, as a label. */
+  teachOften: string | null;
+  codeQuestions: string | null;
+  ownWords: boolean | null;
+  /** The team number on their profile now, to compare with the seasons. */
+  profileTeamNumber: number | null;
+  wordCounts: Partial<Record<TeachAnswerKey, number>>;
+  /** Soft flags for the reviewer (applicationFlags). Never a refusal. */
+  flags: string[];
 };
 
 export type DeskTeacher = {
@@ -657,6 +837,63 @@ export type TeacherDesk = {
 
 const isoOr = (v: string) => toIso(v) ?? v;
 
+/** The second form's answers on a pending row, with the reviewer's links, word counts and flags. */
+function secondFormFields(
+  r: Record<string, unknown>,
+  ctx: {
+    profileTeam: number | null;
+    sample: Map<string, DeskTeacherApplication["sampleLesson"]>;
+    now: Date;
+  }
+): Pick<
+  DeskTeacherApplication,
+  | "formVersion"
+  | "seasons"
+  | "roles"
+  | "otherPrograms"
+  | "sampleLesson"
+  | "teachingSample"
+  | "scenarioSafety"
+  | "scenarioTeaching"
+  | "motivation"
+  | "teachOften"
+  | "codeQuestions"
+  | "ownWords"
+  | "profileTeamNumber"
+  | "wordCounts"
+  | "flags"
+> {
+  const text = (v: unknown) => (typeof v === "string" && v ? v : null);
+  const formVersion = (r.form_version as number | null) ?? null;
+  const seasons = seasonsFrom(r.frc_seasons);
+  const answers: Partial<Record<TeachAnswerKey, string | null>> = {};
+  const wordCounts: Partial<Record<TeachAnswerKey, number>> = {};
+  for (const k of TEACH_ANSWER_KEYS) {
+    const v = text(r[ANSWER_COLUMNS[k]]);
+    answers[k] = v;
+    if (v) wordCounts[k] = wordCount(v);
+  }
+  const sampleId = text(r.sample_lesson_id);
+  return {
+    formVersion,
+    seasons: seasons.map((s) => ({ ...s, ...seasonLinks(s) })),
+    roles: (Array.isArray(r.frc_roles) ? (r.frc_roles as string[]) : []).map(frcRoleLabel),
+    otherPrograms: text(r.other_programs),
+    sampleLesson: sampleId ? (ctx.sample.get(sampleId) ?? null) : null,
+    teachingSample: answers.teachingSample ?? null,
+    scenarioSafety: answers.scenarioSafety ?? null,
+    scenarioTeaching: answers.scenarioTeaching ?? null,
+    motivation: answers.motivation ?? null,
+    teachOften: teachOftenLabel(r.teach_often as string | null),
+    codeQuestions: text(r.code_questions),
+    ownWords: typeof r.own_words === "boolean" ? r.own_words : null,
+    profileTeamNumber: ctx.profileTeam,
+    wordCounts,
+    // The first form has no seasons to compare and no answers with floors.
+    flags: formVersion ? applicationFlags({ seasons, answers }, { profileTeam: ctx.profileTeam, now: ctx.now }) : [],
+  };
+}
+
 export async function loadTeacherDesk(user: AppUser): Promise<Result<TeacherDesk>> {
   const gate = await requireTeacherStaff(user);
   if (!gate.ok) return gate;
@@ -697,9 +934,17 @@ export async function loadTeacherDesk(user: AppUser): Promise<Result<TeacherDesk
   const applicantIds = [...new Set(pending.map((r) => r.user_id as string))];
   const ageIds = [...new Set([...applicantIds, ...teacherIds])];
 
-  const [profiles, ages, consents, classRows, titles] = await Promise.all([
+  const sampleIds = [
+    ...new Set(pending.map((r) => r.sample_lesson_id as string | null).filter((id): id is string => !!id)),
+  ];
+
+  const [profiles, ages, consents, classRows, titles, sampleRows] = await Promise.all([
     userIds.length
-      ? admin.from("profiles").select("id, username, bio").in("id", userIds).then((r) => r.data ?? [])
+      ? admin
+          .from("profiles")
+          .select("id, username, bio, team_number")
+          .in("id", userIds)
+          .then((r) => r.data ?? [])
       : Promise.resolve([]),
     ageIds.length
       ? admin
@@ -724,6 +969,13 @@ export async function loadTeacherDesk(user: AppUser): Promise<Result<TeacherDesk
           .then((r) => r.data ?? [])
       : Promise.resolve([]),
     topicTitles(pending.flatMap((r) => (r.topic_ids as string[] | null) ?? [])),
+    sampleIds.length
+      ? admin
+          .from("lessons")
+          .select("id, slug, title, modules(slug, title, departments(slug))")
+          .in("id", sampleIds)
+          .then((r) => r.data ?? [])
+      : Promise.resolve([]),
   ]);
 
   const profileById = new Map(profiles.map((p) => [p.id as string, p]));
@@ -752,6 +1004,23 @@ export async function loadTeacherDesk(user: AppUser): Promise<Result<TeacherDesk
     classStats.set(id, s);
   }
   const username = (id: string) => ((profileById.get(id)?.username as string | null) ?? null) || null;
+  type SampleRow = {
+    id: string;
+    slug: string;
+    title: string;
+    modules: { slug: string; title: string; departments: { slug: string } | null } | null;
+  };
+  const sampleById = new Map(
+    (sampleRows as unknown as SampleRow[]).map((l) => [
+      l.id,
+      {
+        id: l.id,
+        title: l.title,
+        moduleTitle: l.modules?.title ?? "",
+        url: `/guides/${l.modules?.departments?.slug ?? ""}/${l.modules?.slug ?? ""}/${l.slug}`,
+      },
+    ])
+  );
 
   return {
     ok: true,
@@ -784,6 +1053,11 @@ export async function loadTeacherDesk(user: AppUser): Promise<Result<TeacherDesk
         codeCurrent: codeVersion === TEACHER_CODE_VERSION,
         bioHasContact: findContactPatterns((profileById.get(uid)?.bio as string | null) ?? "").length > 0,
         createdAt: isoOr(r.created_at as string),
+        ...secondFormFields(r, {
+          profileTeam: (profileById.get(uid)?.team_number as number | null) ?? null,
+          sample: sampleById,
+          now,
+        }),
       };
     }),
     pendingTruncated: pending.length === DESK_PENDING_PAGE,
@@ -845,10 +1119,20 @@ async function lettersBlockedForUser(userId: string, email: string | null): Prom
  * agreed to, and sets letters_blocked for owner and staff accounts. The
  * status change is the gate (`.eq("status", "pending")`), so two clicks can't
  * both win.
+ *
+ * Accepting needs `seasonsChecked: "yes"` (the reviewer ticked that they
+ * checked the seasons on The Blue Alliance, FRC Events or with the
+ * reference), and only works on the second form (`form_version` set): the
+ * first form never asked about FRC seasons, so those rows can only be
+ * turned down.
+ *
+ * Either way it clears the adult reference's name and email: they're only
+ * there to confirm the seasons before the decision (the privacy policy says
+ * so). A grant that fails puts them back with the application.
  */
 export async function decideTeacherApplication(
   user: AppUser,
-  input: { id: unknown; decision: unknown; note?: unknown }
+  input: { id: unknown; decision: unknown; note?: unknown; seasonsChecked?: unknown }
 ): Promise<Result<{ status: "accepted" | "rejected" }>> {
   const gate = await requireSiteRole(user, "superadmin", NOT_SUPER_ADMIN);
   if (!gate.ok) return gate;
@@ -865,13 +1149,16 @@ export async function decideTeacherApplication(
   const admin = createAdminClient();
   const { data: app } = await admin
     .from("teacher_applications")
-    .select("id, user_id, status, legal_name, code_version")
+    .select("id, user_id, status, legal_name, code_version, form_version, reference_name, reference_email")
     .eq("id", id)
     .maybeSingle();
   if (!app) return fail("not_found", "That application no longer exists.");
   if (app.status !== "pending") return fail("conflict", "That one has already been decided.");
   const applicantId = app.user_id as string;
   const accepted = decision === "accept";
+  if (accepted && app.form_version == null) return fail("conflict", TEACHER_SENTENCES.firstForm);
+  if (accepted && textField(input.seasonsChecked) !== "yes")
+    return { ...fail("validation", TEACHER_SENTENCES.seasonsChecked), field: "seasonsChecked" };
 
   let band: AgeBand | null = null;
   let parentStep: ParentStep | null = null;
@@ -903,6 +1190,8 @@ export async function decideTeacherApplication(
       reviewed_at: now,
       reviewed_by: user.id,
       review_note: note || null,
+      reference_name: null,
+      reference_email: null,
     })
     .eq("id", id)
     .eq("status", "pending")
@@ -928,7 +1217,14 @@ export async function decideTeacherApplication(
       // teacher row would refuse every retry as already decided.
       await admin
         .from("teacher_applications")
-        .update({ status: "pending", reviewed_at: null, reviewed_by: null, review_note: null })
+        .update({
+          status: "pending",
+          reviewed_at: null,
+          reviewed_by: null,
+          review_note: null,
+          reference_name: (app.reference_name as string | null) ?? null,
+          reference_email: (app.reference_email as string | null) ?? null,
+        })
         .eq("id", id);
       console.error(`${LOG}: grant:`, insErr.message);
       return fail("server", "Couldn't make them a teacher, so nothing was decided. Try again.");
@@ -938,6 +1234,7 @@ export async function decideTeacherApplication(
   await logTeacherEvent(user.id, accepted ? "teacher_accepted" : "teacher_rejected", {
     teacherId: applicantId,
     applicationId: id,
+    ...(accepted ? { seasonsChecked: true } : {}),
   });
 
   if (to) {

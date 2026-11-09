@@ -24,14 +24,24 @@ import {
 export type TeachFormState =
   | {
       error?: string;
-      /** The field the error is about, so the form can mark it. */
+      /** The field the error is about, so the form can mark it (problems[0]). */
       field?: string;
+      /**
+       * Every problem with the application at once, in form order. Only the
+       * teacher application sends these; `error` and `field` are the first.
+       */
+      problems?: { field: string; error: string }[];
       success?: boolean;
     }
   | undefined;
 
 function field(formData: FormData, name: string): string {
   return String(formData.get(name) ?? "").trim();
+}
+
+/** A repeated field (checkboxes, the season rows), every value as a trimmed string. */
+function all(formData: FormData, name: string): string[] {
+  return formData.getAll(name).map((v) => String(v).trim());
 }
 
 /** The cookie session's verified user, or null. */
@@ -43,8 +53,18 @@ async function sessionUser() {
   return user;
 }
 
-const done = (r: { ok: true } | { ok: false; error: string; field?: string }): TeachFormState =>
-  r.ok ? { success: true } : { error: r.error, ...(r.field ? { field: r.field } : {}) };
+const done = (
+  r:
+    | { ok: true }
+    | { ok: false; error: string; field?: string; problems?: { field: string; error: string }[] }
+): TeachFormState =>
+  r.ok
+    ? { success: true }
+    : {
+        error: r.error,
+        ...(r.field ? { field: r.field } : {}),
+        ...(r.problems?.length ? { problems: r.problems } : {}),
+      };
 
 /* ── Applying ─────────────────────────────────────────────────────── */
 
@@ -53,15 +73,28 @@ export async function applyToTeach(_prev: TeachFormState, formData: FormData): P
   if (!user) return { error: TEACHER_SENTENCES.signIn };
   return done(
     await submitTeacherApplication(user, {
-      legalName: field(formData, "legalName"),
-      topics: field(formData, "topics"),
-      topicIds: formData.getAll("topicIds").map((v) => String(v)),
+      fullSeason: field(formData, "fullSeason"),
+      seasonYear: all(formData, "seasonYear"),
+      seasonTeam: all(formData, "seasonTeam"),
+      seasonEvents: all(formData, "seasonEvents"),
+      frcRoles: all(formData, "frcRoles"),
       experience: field(formData, "experience"),
+      otherPrograms: field(formData, "otherPrograms"),
+      topicIds: all(formData, "topicIds"),
+      sampleLessonId: field(formData, "sampleLessonId"),
+      teachingSample: field(formData, "teachingSample"),
       samplePlan: field(formData, "samplePlan"),
+      scenarioSafety: field(formData, "scenarioSafety"),
+      scenarioTeaching: field(formData, "scenarioTeaching"),
+      motivation: field(formData, "motivation"),
+      teachOften: field(formData, "teachOften"),
       availability: field(formData, "availability"),
       referenceName: field(formData, "referenceName"),
       referenceEmail: field(formData, "referenceEmail"),
+      legalName: field(formData, "legalName"),
+      codeQuestions: field(formData, "codeQuestions"),
       code: field(formData, "code"),
+      ownWords: field(formData, "ownWords"),
     })
   );
 }
@@ -92,6 +125,7 @@ export async function decideTeacherApplicationAction(
       id: field(formData, "id"),
       decision: field(formData, "decision"),
       note: field(formData, "note"),
+      seasonsChecked: field(formData, "seasonsChecked"),
     })
   );
 }

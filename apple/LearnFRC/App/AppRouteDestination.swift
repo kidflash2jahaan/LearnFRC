@@ -118,7 +118,7 @@ extension AppRoute {
         case .admin: "Admin"
         case .adminFeedback: "Feedback"
         case .adminTeam: "Admin team"
-        case .apply: "Help run it"
+        case .apply: AdminDestination.apply.title
         case .classes: "Live classes"
         }
     }

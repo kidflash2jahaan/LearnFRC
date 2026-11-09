@@ -12,9 +12,10 @@ import { PUBLIC_CONTACT_EMAIL } from "@/lib/email";
  * of the codebase owns the route. "the record" is the one worth naming: About,
  * Contributions and Corrections are where the site says who wrote it and what
  * it got wrong, and burying a corrections log in the fine print is the same as
- * not having one. "Help run it" closes that column because it is the same
- * subject from the other side: who is accountable, and how somebody else joins
- * the list.
+ * not having one. While live classes are visible, "Teach a class" closes that
+ * column because it is the same subject from the other side: how somebody
+ * else joins in. It's the only application LearnFRC takes (/apply/teach);
+ * while classes are hidden there's no apply link at all.
  */
 const LEARN = [
   { label: "Guides", href: "/guides" },
@@ -48,8 +49,14 @@ const RECORD = [
   { label: "Contributions", href: "/contributions" },
   { label: "Corrections", href: "/corrections" },
   { label: "Contact", href: "/contact" },
-  { label: "Help run it", href: "/apply" },
 ];
+
+/** Last in "the record" while classes are visible (classes-design.md section 11). */
+const TEACH = { label: "Teach a class", href: "/apply/teach" };
+
+function recordLinks(classesVisible: boolean) {
+  return classesVisible ? [...RECORD, TEACH] : RECORD;
+}
 
 const ELSEWHERE = [
   { label: "FIRST Inspires", href: "https://www.firstinspires.org/robotics/frc" },
@@ -174,7 +181,7 @@ export async function Footer({ classesVisible = false }: { classesVisible?: bool
           {[
             { title: "learn", links: learnLinks(classesVisible) },
             { title: "team", links: TEAM },
-            { title: "the record", links: RECORD },
+            { title: "the record", links: recordLinks(classesVisible) },
           ].map((col) => (
             <div key={col.title}>
               <h2 className="nb-slug font-bold">{col.title}</h2>

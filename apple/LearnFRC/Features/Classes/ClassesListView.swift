@@ -222,7 +222,7 @@ struct ClassesListView: View {
     private func teachSlip(_ url: URL) -> some View {
         NoteCallout {
             SlugText("teach / FRC students 13 to 17")
-            Text("Know a lesson well enough to teach it? Apply to teach a live class on learnfrc.com.")
+            Text("Finished a full FRC season and know a lesson well enough to teach it? Apply to teach a live class on learnfrc.com.")
                 .font(LF.Fonts.body(16))
                 .foregroundStyle(LF.Palette.ink)
                 .fixedSize(horizontal: false, vertical: true)

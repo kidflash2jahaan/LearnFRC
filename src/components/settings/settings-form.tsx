@@ -10,6 +10,7 @@ import {
 } from "@/app/actions/profile";
 import { Avatar } from "@/components/ui/avatar";
 import { isApplePrivateRelayEmail } from "@/lib/auth-providers";
+import { dropAllTeachDrafts } from "@/lib/classes/teach-draft";
 import type { Profile } from "@/lib/types";
 
 const ROLES = [
@@ -302,6 +303,9 @@ function DangerZone() {
 
   const onDelete = () => {
     startTransition(async () => {
+      // Before the call: on success it signs out and redirects, and nothing
+      // after it runs. An unsent teacher draft doesn't outlive the account.
+      dropAllTeachDrafts();
       const r = await deleteAccount();
       // On success the server action signs out and redirects; only errors return.
       if (r?.error) toast.error(r.error);

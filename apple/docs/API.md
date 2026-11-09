@@ -1028,9 +1028,9 @@ Errors: 401 (a token was sent and it's no longer valid), 500 `server`.
 
 ## Admin and applying (`/api/app/admin/*`, `/api/app/apply`)
 
-The website's three admin jobs (the numbers on `/admin`, the feedback inbox, and the super admin's desk on `/admin/team`), the reports desk on `/admin/reports` (report and block, above), and the members' `/apply` page. The verified mark on lessons is gone; its route is retired (below). Every route is a thin wrapper over a shared function in `src/lib/app/admin-*.ts`, and the website's `/admin`, `/admin/team` and `/apply` pages and their Server Actions call the very same functions, so the two doors check the same role, apply the same limits and print the same sentences.
+The website's three admin jobs (the numbers on `/admin`, the feedback inbox, and the super admin's desk on `/admin/team`), the reports desk on `/admin/reports` (report and block, above), and the closed `/api/app/apply`. The verified mark on lessons is gone; its route is retired (below). Every route is a thin wrapper over a shared function in `src/lib/app/admin-*.ts`, and the website's `/admin` and `/admin/team` pages and their Server Actions call the very same functions, so the two doors check the same role, apply the same limits and print the same sentences.
 
-**Applying is for the marketing role only** (since 2026-11-08). Accepting an application puts a marketing tag on the account: a row in the service-role-only `marketers` table, never a `site_admins` row, so it can't open `/admin` or change `siteRole`. Nobody joins the admin team through an application; super admins change roles on the desk. A marketer's signups are counted through their existing invite link (`profiles.referred_by`). Marketers' handles are never shown publicly.
+**Applying here is closed** (since 2026-11-09). The only role LearnFRC takes applications for is teaching a live class, on the website (learnfrc.com/apply/teach); `/apply` redirects there while classes are open and says there's nothing to apply for while they're hidden. The marketing role `/apply` used to take was removed before release (it may come back). `/api/app/apply` and the team desk keep every key for app copies already installed, with empty or closed values (below). The `marketers` and `admin_applications` tables stay; nothing grants a tag any more, and an application left from before can only be turned down. Nobody joins the admin team through an application; super admins change roles on the desk.
 
 **Roles.** Checked on the server on every call from the token's own user (`requireSiteRole` in `src/lib/app/admin-access.ts` over `getSiteRole`). Nothing from the request body, a header or the app's cached `siteRole` is trusted. Signed out gets 401 `unauthorized`; signed in without the role gets 403 `forbidden` with the site's sentence for that surface:
 
@@ -1038,7 +1038,7 @@ The website's three admin jobs (the numbers on `/admin`, the feedback inbox, and
 |---|---|---|
 | summary, dashboard, feedback list | admin | `/admin holds the raw numbers for the whole site, so it is open to administrators only. Nothing is wrong with your account.` (the locked card's heading on the site is "This drawer is locked.") |
 | feedback reply | admin | `Not authorized.` |
-| team desk, decision, role change, removal, marketer removal | superadmin | `Only a super admin can do that. Try reloading the page and signing in again.` (the site's locked card: "This one stays with the super admins.") |
+| team desk, decision, role change, removal | superadmin | `Only a super admin can do that. Try reloading the page and signing in again.` (the site's locked card: "This one stays with the super admins.") |
 | reports desk, resolve, remove | admin | The `/admin` sentence above (the site's /admin/reports locked card is "This drawer is locked.") |
 | report ban | superadmin | `Only a super admin can do that. Try reloading the page and signing in again.` |
 
@@ -1256,23 +1256,20 @@ Those copies read `not_found` with a sentence as a plain failure and print it af
 
 ### GET /api/app/admin/team
 
-Bearer, superadmin. The super admin's desk, the same data `/admin/team` renders from (`loadAdminTeamDesk`).
+Bearer, superadmin. The super admin's desk, the same data `/admin/team` renders from (`loadAdminTeamDesk`): the admin team, and any application left from before applying closed (reject only). Teacher applications aren't here; they're decided on the website's teacher desk.
 
 Response 200:
 
 ```json
 {
   "grants": [
-    { "label": "A marketing tag", "hint": "on their account, seen only on this page" },
-    { "label": "The welcome email", "hint": "the trailer, their invite link, the brand kit and the rules" },
-    { "label": "A signup count", "hint": "people who join through their invite link, shown here" },
-    { "label": "No admin access", "hint": "no /admin, no site numbers, no feedback inbox" }
+    { "label": "Nothing", "hint": "applying here is closed, so an old application can only be turned down" }
   ],
   "pending": [
     {
       "id": "9a139629-1c93-4c17-b2c6-92e238a102e6",
-      "username": "maya_254",
-      "teamNumber": 254,
+      "username": "maya_5835",
+      "teamNumber": 5835,
       "teamRole": "student",
       "teamRoleLabel": "student",
       "experience": "Two seasons on mechanical, ...",
@@ -1282,23 +1279,12 @@ Response 200:
     }
   ],
   "pendingTruncated": false,
-  "marketers": [
-    {
-      "userId": "0f6d2b8e-5a51-4c55-9d0b-3f1f6b7c2a10",
-      "username": "clipmaker_jo",
-      "teamNumber": 5835,
-      "grantedAt": "2026-11-09T18:02:11.000Z",
-      "note": "accepted application",
-      "signups": 14,
-      "signupsSinceAccepted": 9,
-      "inviteUrl": "https://learnfrc.com/signup?ref=clipmaker_jo&via=team-invite"
-    }
-  ],
+  "marketers": [],
   "team": [
     {
       "userId": "57c4f3f0-cc40-47d3-a602-bf9b78805207",
-      "username": "sam_1678",
-      "teamNumber": 1678,
+      "username": "sam_5835",
+      "teamNumber": 5835,
       "role": "admin",
       "roleWord": "admin",
       "grantedAt": "2026-10-17T02:57:59.693Z",
@@ -1325,10 +1311,10 @@ Response 200:
 
 | Field | Type | Notes |
 |---|---|---|
-| `grants` | [{ `label`, `hint` }] | The "what accepting hands over" card. |
-| `pending` | [object] | Newest first, up to 60. `username` null prints "no username yet"; team as "team / {n}" or "team / not given"; "role / {teamRoleLabel}"; "came in 3d ago"; "availability / {availability}" when present; answers under "what they’ve done in FRC" and "why they want to help". |
+| `grants` | [{ `label`, `hint` }] | Always the one "Nothing" line above, since applying is closed (`CLOSED_GRANTS` in `src/lib/applications.ts`). App copies already installed print it as their "what accepting hands over" card; the current app and the site don't show it. |
+| `pending` | [object] | Applications left from before applying closed, newest first, up to 60. They can only be turned down. The site shows the "Old applications" / "drawer / old applications" drawer only while one is waiting, with the hint "Applying here is closed. Turn these down with a short note." `username` null prints "no username yet"; team as "team / {n}" or "team / not given"; "role / {teamRoleLabel}"; "came in 3d ago"; "availability / {availability}" when present; answers under "what they’ve done in FRC" and "why they want to help". |
 | `pendingTruncated` | Bool | A full page (60). The site says: "60 shown, which is the page size. If there are more, they come up once you clear these." |
-| `marketers` | [object] | Added 2026-11-08 (older app copies ignore it). Everyone with the marketing tag, longest-standing first. `signups` is every account whose `referred_by` is them; `signupsSinceAccepted` only counts accounts created after `grantedAt`; `inviteUrl` is their invite link (null until they pick a handle). The site's drawer is "Marketers" / "drawer / marketers" with an "{n} people" badge; each row prints "@handle", "{n} signups through their link", "team / {n}", "since {Mon D, YYYY}", "{n} signups since then", "link / {inviteUrl}" (or "link / none until they pick a handle"), "note / {note}", and an armed Remove. Empty: "Nobody has the marketing tag yet. Accepting an application above adds them here, with a count of who signed up through their link." |
+| `marketers` | [] | Always empty. The marketing role was removed before release; the key stays so nothing reading the desk breaks. |
 | `team` | [object] | The admin team ("The admin team" / "drawer / the admin team" on the site). Owners first, then by `grantedAt`. `roleWord` is `owner`, `super admin` or `admin`; tag "you" when `isYou`; "since {Mon D, YYYY}" from `grantedAt` (UTC); "note / {note}". Show the role picker and Remove only when `canChange` (never for owners or your own row). |
 | `decided` | [object] | The 30 most recently decided, by `reviewedAt`. Date is `reviewedAt` or else `createdAt`. `statusWord` is `accepted`, `turned down` or `withdrawn`. |
 | `decidedTruncated` | Bool | A full page (30): "The 30 most recent. Older ones are still on file, they’re just not printed here." |
@@ -1337,23 +1323,23 @@ Errors: 401, 403 `forbidden` (`Only a super admin can do that. Try reloading the
 
 ### POST /api/app/admin/applications/{id}/decision
 
-Bearer, superadmin. Accepts or turns down an application (`decideApplication`, the function behind `/admin/team`'s Accept and Reject). The status change is the gate: of two decisions on one application exactly one wins and the other gets 409. Accepting puts the marketing tag on the applicant (a `marketers` row, never `site_admins`, so it never opens `/admin`), and puts the application back on the desk if that fails. Either way the applicant gets an email, with the note in it, sent with a reply-to so replies reach the owner. The acceptance email is the marketer's welcome pack: their invite link, the trailer (or "It isn't public yet" until `TRAILER_URL` in `src/lib/applications.ts` is set), clips, the brand kit, the rules, and "reply to this email" to send in what they make.
+Bearer, superadmin. Turns down an application left from before applying closed (`decideApplication`, the function behind `/admin/team`'s Reject). Accepting answers 409: the role it was for is gone. The status change is the gate: of two decisions on one application exactly one wins and the other gets 409. The applicant gets an email ("About your LearnFRC application"), with the note in it.
 
 Request:
 
 ```json
-{ "decision": "accept", "note": "Welcome aboard. Start with the feedback inbox." }
+{ "decision": "reject", "note": "Thanks for offering. Applications for that role are closed." }
 ```
 
-`note` is optional, up to 1000 characters. The site's label: "Note to them, optional; it goes in the email", hint "They see this whichever way you answer. Leave it blank and the email still goes." Reject is a two-step armed button ("Reject", then "Yes, reject" for 5 seconds, with "One more click turns down @x. You can't take it back here.").
+`decision` is still `accept` or `reject`; only `reject` can succeed. `note` is optional, up to 1000 characters. The site's label: "Note to them, optional; it goes in the email", hint "Leave it blank and the email still goes." Reject is a two-step armed button ("Reject", then "Yes, reject" for 5 seconds, with "One more click turns down @x. You can't take it back here.").
 
 Response 200:
 
 ```json
-{ "ok": true, "status": "accepted" }
+{ "ok": true, "status": "rejected" }
 ```
 
-Success toasts on the site: "Accepted. The welcome email is on its way." / "Turned down. The email is on its way."
+Success toast on the site: "Turned down. They'll get an email."
 
 Errors:
 
@@ -1363,8 +1349,9 @@ Errors:
 | 400 | `validation` | `Keep the note under 1000 characters.` with `"field": "note"` |
 | 403 | `forbidden` | `Only a super admin can do that. Try reloading the page and signing in again.` |
 | 404 | `not_found` | `That application no longer exists.` (also for an id that isn't a UUID) |
+| 409 | `conflict` | `This role is closed, so old applications can only be turned down.` (any `accept`) |
 | 409 | `conflict` | `That one has already been decided.` |
-| 500 | `server` | `Couldn't record the decision. Please try again.` / `Couldn't add them to the marketing team, so nothing was decided. Try again.` |
+| 500 | `server` | `Couldn't record the decision. Please try again.` |
 | 401 | | |
 
 ### PATCH /api/app/admin/team/{userId}
@@ -1401,21 +1388,9 @@ Response 200: `{ "ok": true }`
 
 Errors: the same own-row, owner and format refusals as PATCH, 403, 500 `server` (`Couldn't remove them. Please try again.`), 401.
 
-### DELETE /api/app/admin/marketers/{userId}
+### DELETE /api/app/admin/marketers/{userId} (retired)
 
-Bearer, superadmin. Added 2026-11-08. Takes the marketing tag off (`removeMarketerFor` in `src/lib/app/admin-apply-marketing.ts`, behind the Remove on a marketer's row on `/admin/team`). Their account, progress and the signups already credited to their link stay; `/apply` offers them the form again. No email is sent. The site arms it first ("Remove", then "Yes, remove" with "One more click takes the marketing tag off @x. They keep their account, their progress and the signups already counted."), toast "Tag removed. Their account and progress stay."
-
-Response 200: `{ "ok": true }`
-
-Errors:
-
-| Status | `code` | `error` |
-|---|---|---|
-| 400 | `validation` | `That request wasn't in the format we expected.` (the id isn't a UUID) |
-| 403 | `forbidden` | `Only a super admin can do that. Try reloading the page and signing in again.` |
-| 404 | `not_found` | `They aren't on the marketing team any more.` |
-| 500 | `server` | `Couldn't remove them. Please try again.` |
-| 401 | | |
+Retired before release, never shipped: the route is gone (404) along with the marketing role.
 
 ### GET /api/app/admin/reports
 
@@ -1495,72 +1470,55 @@ Errors: 400 `validation` (`That account is on the admin team. Take it off the te
 
 ### GET /api/app/apply
 
-Bearer, any signed-in account. Where the caller stands on "Help run it" (`/apply`, headed "Help spread LearnFRC." since it became the marketing role's page), from `loadApplyState`, which the website's `/apply` page renders from too.
+Bearer, any signed-in account. Closed: kept for app copies already installed, which read every key. The current app doesn't call it. From `loadApplyState` in `src/lib/app/admin-apply.ts`.
+
+The teacher application form is web only (learnfrc.com/apply/teach). Its fields aren't part of any /api/app route.
 
 Response 200:
 
 ```json
 {
-  "applicationsOpen": true,
+  "applicationsOpen": false,
   "mode": "new",
   "heading": { "title": "Apply", "slug": "three questions, nothing else" },
   "record": { "username": "maya_5835", "teamNumber": 5835, "teamRoleLabel": "student" },
   "application": null,
-  "jobs": [
-    { "slug": "your own team", "text": "Show LearnFRC to the team you’re on. ..." }
-  ],
+  "jobs": [],
   "limits": { "minChars": 40, "maxChars": 3000, "availabilityMax": 200 },
-  "posting": "Anything you make comes to me, and I may post it on LearnFRC’s official YouTube, Instagram and TikTok if I choose. Sending something in doesn’t mean it goes up.",
-  "rules": [
-    "Don’t present LearnFRC as official FIRST material, or as something FIRST runs or recommends. It’s an independent project.",
-    "Put the FIRST disclaimer on anything you post about it: “FIRST®, FIRST® Robotics Competition, and FRC® are registered trademarks of FIRST® ...”",
-    "Don’t name other teams without their permission."
-  ],
-  "marketer": null
-}
-```
-
-In `marketer` mode `record` is all nulls and `marketer` is filled:
-
-```json
-{
-  "mode": "marketer",
-  "heading": { "title": "You’re on the marketing team", "slug": "nothing to apply for" },
-  "record": { "username": null, "teamNumber": null, "teamRoleLabel": null },
-  "application": null,
-  "marketer": {
-    "inviteUrl": "https://learnfrc.com/signup?ref=maya_5835&via=team-invite",
-    "since": "2026-11-09T18:02:11.000Z",
-    "trailerUrl": null,
-    "brandKit": {
-      "logos": [{ "label": "Logo, SVG", "url": "https://learnfrc.com/icon.svg" }],
-      "colors": [{ "name": "Ink", "hex": "#16181B", "use": "type and borders" }],
-      "fonts": "Bricolage Grotesque for headings, Space Mono for labels, Caveat for handwritten notes.",
-      "clips": [{ "label": "The 60-second tour", "url": "https://www.youtube.com/watch?v=-QlRttoFw3g" }]
+  "posting": "",
+  "rules": [],
+  "marketer": null,
+  "roles": [
+    {
+      "id": "teacher",
+      "title": "Teach a live class",
+      "url": "https://learnfrc.com/apply/teach",
+      "open": true,
+      "status": "new"
     }
-  }
+  ]
 }
 ```
 
 | Field | Type | Notes |
 |---|---|---|
-| `applicationsOpen` | Bool | True from the release (`APPLICATIONS_OPEN` in `src/lib/applications.ts`). While false, the form's place shows "Applications are closed for now. Check back soon." |
-| `mode` | String | `on-the-team` (admins), `marketer` (added 2026-11-08: has the marketing tag), `pending`, `no-handle` (no username yet: send them to Settings), `again` (turned down or withdrawn before) or `new`. Older app copies decode an unknown mode as `new`; because `record.username` is null in `marketer` mode, they show the heading and no form. |
-| `heading` | { `title`, `slug` } | The site's heading and mono note over that block. |
-| `record` | object | What the reviewer would see: handle, team number, and the team role as a word (null when not set). All null in `marketer` mode, where there's nothing to review. |
-| `application` | object? | The latest pending, turned-down or withdrawn application: `status` (`pending`, `rejected`, `withdrawn`), `createdAt`, `reviewedAt`, `reviewNote` ("what the reviewer wrote back"). Null for admins and marketers, for accounts that never applied, and for an accepted application whose account has since lost the tag. |
-| `jobs` | [{ `slug`, `text` }] | "What a marketer does" / "four things, do as much as you like": four items in order (`your own team`, `other teams`, `places to post`, `your own videos`). Older app copies print them under their own "What an admin does" heading. |
-| `limits` | object | The form's limits; the server re-checks them. |
-| `posting` | String | Added 2026-11-08. Where what a marketer makes ends up; the site prints it in semibold under the jobs. |
-| `rules` | [String] | Added 2026-11-08. "the rules" under "Once you’re in". |
-| `roles` | [{ `id`, `title`, `url`, `open`, `status` }] | Added with live classes (2026-11). The roles someone can apply for, in the order `/apply` shows them: `marketing` (`title` "Spread LearnFRC", `url` `https://learnfrc.com/apply`) and `teacher` (`title` "Teach a live class", `url` `https://learnfrc.com/apply/teach`). The `teacher` entry is left out entirely while live classes are hidden. `open` says whether that role takes applications now (`applicationsOpen` for marketing, always true for teacher). `status` is a String saying where the caller stands for that role: the `mode` above for marketing; for teacher one of `signed-out`, `no-handle`, `device-blocked`, `needs-age`, `adult`, `parent-declined`, `suspended`, `code-outdated`, `teacher`, `pending`, `again`, `new` (`TeachApplyMode` in `src/lib/classes/teacher-rules.ts`). Built by `src/lib/app/admin-apply.ts` and `teacherApplyRole` in `src/lib/app/class-teachers.ts`. The app doesn't read it: its "Teach a live class" card follows `GET /api/app/classes` (`visible`, `teachUrl`). |
-| `marketer` | object? | Added 2026-11-08. Only in `marketer` mode: `inviteUrl` (null until they pick a handle), `since` (when the tag was granted), `trailerUrl` (null until the trailer is public: print "The trailer isn’t public yet. You’ll get the link the day it goes up."), and `brandKit` with `logos` and `clips` ([{ `label`, `url` }]), `colors` ([{ `name`, `hex`, `use` }]) and `fonts`. The site's card: "tagged {Mon D, YYYY} / your invite link", the link with a copy button, "the trailer and clips", "the brand kit", and "When you make something, reply to the email you got when you were accepted. It comes straight to me." |
+| `applicationsOpen` | Bool | Always false (`APPLICATIONS_OPEN` in `src/lib/applications.ts`). Installed copies show "Applications are closed for now. Check back soon." in the form's place. |
+| `mode` | String | `on-the-team` (admins), `pending` (an application from before is still waiting), `no-handle`, `again` (turned down or withdrawn before) or `new`. Never `marketer` now. |
+| `heading` | { `title`, `slug` } | The heading and mono note installed copies print over that block. |
+| `record` | object | Handle, team number, and the team role as a word (null when not set). |
+| `application` | object? | The latest pending, turned-down or withdrawn application: `status` (`pending`, `rejected`, `withdrawn`), `createdAt`, `reviewedAt`, `reviewNote`. Null for admins and for accounts that never applied. |
+| `jobs` | [] | Always empty. Installed copies then fall back to their own built-in list, which is what they showed before. |
+| `limits` | object | Kept for installed copies; nothing takes the form any more. |
+| `posting` | String | Always `""`. Kept for compatibility. |
+| `rules` | [] | Always empty. Kept for compatibility. |
+| `marketer` | null | Always null. Kept for compatibility. |
+| `roles` | [{ `id`, `title`, `url`, `open`, `status` }] | Added with live classes (2026-11). Only the teacher role, `{ "id": "teacher", "title": "Teach a live class", "url": "https://learnfrc.com/apply/teach", "open": true, "status": ... }`, while live classes are visible; `[]` while they're hidden. `status` is one of `signed-out`, `no-handle`, `device-blocked`, `needs-age`, `adult`, `parent-declined`, `suspended`, `code-outdated`, `teacher`, `pending`, `again`, `new` (`TeachApplyMode` in `src/lib/classes/teacher-rules.ts`), from `teacherApplyRole` in `src/lib/app/class-teachers.ts`. The `marketing` role was retired before release and never shipped. The app doesn't read `roles`: its "Teach a live class" card follows `GET /api/app/classes` (`visible`, `teachUrl`). |
 
 Errors: 401.
 
 ### POST /api/app/apply
 
-Bearer, a member who isn't on the admin team and doesn't have the marketing tag. Files a marketing application (`submitApplication`, the function behind `/apply`'s form; the fields are unchanged). The applicant gets a receipt email and the owner a notification. 201 on success.
+Bearer. Always refused: applying here is closed (`submitApplication`). The request is still accepted in its old shape so installed copies get a clear answer.
 
 Request:
 
@@ -1568,28 +1526,18 @@ Request:
 { "experience": "Two seasons on mechanical ...", "why": "I answer this stuff on Chief Delphi already ...", "availability": "weekends" }
 ```
 
-Response 201: `{ "ok": true }` (the site swaps the form for "Thank you. It's in.").
-
 Errors:
 
 | Status | `code` | `error` |
 |---|---|---|
-| 400 | `validation` | `Pick a handle on your settings page first, then apply.` |
-| 400 | `validation` | `Say a bit more about your FRC experience (a few sentences).` |
-| 400 | `validation` | `Say a bit more about why you want to help (a few sentences).` |
-| 400 | `validation` | `That's longer than it needs to be. Keep each answer under 3000 characters.` |
-| 400 | `validation` | `Keep availability to a line.` |
-| 409 | `conflict` | `You're already on the team.` |
-| 409 | `conflict` | `You're already on the marketing team.` |
 | 409 | `conflict` | `Applications are closed for now. Check back later.` |
-| 409 | `conflict` | `You already have an application waiting. Sit tight.` |
-| 429 | `rate_limited` | `That's a lot of applications today. Try again tomorrow.` (3 a day per account, 25 per network, `Retry-After` 86400) |
-| 500 | `server` | `Couldn't save that. Please try again.` |
+| 409 | `conflict` | `You're already on the team.` (an admin) |
+| 400 | `validation` | `That request wasn't in the format we expected.` (a body that isn't a JSON object) |
 | 401 | | |
 
 ### DELETE /api/app/apply
 
-Bearer. Withdraws the caller's pending application (`withdrawApplication`). The site confirms first: "Withdraw this application? It comes off the reviewer's desk straight away, and you can send a new one whenever you want." / "Yes, withdraw it" / "Leave it in".
+Bearer. Withdraws the caller's pending application from before applying closed (`withdrawApplication`). Kept for installed copies, which confirm first: "Withdraw this application? It comes off the reviewer's desk straight away, and you can send a new one whenever you want." / "Yes, withdraw it" / "Leave it in".
 
 Response 200: `{ "ok": true }`
 
