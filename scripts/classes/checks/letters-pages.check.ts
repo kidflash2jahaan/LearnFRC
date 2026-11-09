@@ -40,6 +40,9 @@ loadEnv();
 // process changes it.
 const SERVER_OWNER = (process.env.ADMIN_EMAILS ?? "").split(",")[0].trim().toLowerCase();
 const PACKAGE_OWNER = "lftest+letters-owner@example.com";
+// Mail sent in this process goes to this package's own outbox (removed at the
+// end), not to the outbox of whatever package .env.local was built for.
+process.env.EMAIL_DEV_OUTBOX = join(devDir(), "outbox", "letters");
 process.env.CLASSES_DEV_SWITCHES = "1";
 delete process.env.VERCEL_ENV;
 const DEV = (process.env.LETTERS_DEV_URL || process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3107").replace(/\/$/, "");
