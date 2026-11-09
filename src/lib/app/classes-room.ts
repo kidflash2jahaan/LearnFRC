@@ -238,6 +238,21 @@ async function usernameOf(userId: string): Promise<string | null> {
   return ((data?.username as string | null | undefined) ?? "").trim() || null;
 }
 
+/** Whether the viewer has a report about someone in this class that's still open. */
+async function reportedInClass(userId: string, classId: string): Promise<boolean> {
+  const { data, error } = await createAdminClient()
+    .from("user_reports")
+    .select("id")
+    .eq("reporter_id", userId)
+    .eq("content_kind", "class")
+    .eq("content_id", classId)
+    .eq("status", "open")
+    .limit(1)
+    .maybeSingle();
+  if (error) console.error("reportedInClass:", error.message);
+  return !!data;
+}
+
 /** HMAC of an IP with CLASSES_AUDIT_SALT (class_consents.ip_hash). Null without an IP. */
 export function ipHash(ip: string | null | undefined): string | null {
   const v = (ip ?? "").trim();
@@ -554,6 +569,8 @@ export type RoomView = {
   roster: ClassRosterEntry[];
   /** The viewer can report from this class (they were in it, or teach it, within 30 days). */
   canReport: boolean;
+  /** The viewer already reported someone in this class, and that report is still open. */
+  reported: boolean;
   /**
    * Accounts the viewer has blocked: the chat panel leaves their messages
    * out. One way, like blocks everywhere on the site (blocks.ts): it hides
@@ -582,11 +599,12 @@ export async function getRoomView(user: AppUser | null, classId: string): Promis
 
   const now = new Date();
   const staff = await isClassStaff(user);
-  const [check, m, teacherUsername, blocks] = await Promise.all([
+  const [check, m, teacherUsername, blocks, reported] = await Promise.all([
     checkJoin(user, cls, staff, now),
     membership(cls.id, user.id),
     cls.teacher_id ? usernameOf(cls.teacher_id) : Promise.resolve(null),
     blockedSetFor(user.id),
+    reportedInClass(user.id, cls.id),
   ]);
 
   let refusal: RoomView["refusal"] = null;
@@ -628,6 +646,7 @@ export async function getRoomView(user: AppUser | null, classId: string): Promis
       refusal,
       roster,
       canReport: (wasIn || staff) && withinReportWindow(cls.hard_end_at, now),
+      reported,
       hiddenSenderIds: [...blocks.ids],
     },
   };
@@ -648,16 +667,30 @@ export async function roomRoster(user: AppUser, classId: string): Promise<ClassR
   return classRoster(cls.id);
 }
 
+export type RoomStatus = {
+  status: ClassStatus | null;
+  endReason: ClassEndReason | null;
+  removed: boolean;
+  /** As RoomView's: the room page's own copy was read before this browser joined. */
+  canReport: boolean;
+  /** As RoomView's, so the "ended" screen can say they've reported it. */
+  reported: boolean;
+};
+
 /** Where a class stands now, for a browser that just left the meeting. */
-export async function roomStatus(
-  user: AppUser,
-  classId: string
-): Promise<{ status: ClassStatus | null; endReason: ClassEndReason | null; removed: boolean }> {
+export async function roomStatus(user: AppUser, classId: string): Promise<RoomStatus> {
   const cls = await loadClass(typeof classId === "string" ? classId.toLowerCase() : "");
-  if (!cls || cls.rtk_app !== rtkApp()) return { status: null, endReason: null, removed: false };
-  const m = await membership(cls.id, user.id);
-  const removed = cls.teacher_id !== user.id && (m.enrollment === "removed" || !!m.participant?.revoked_at);
-  return { status: cls.status, endReason: cls.end_reason, removed };
+  if (!cls || cls.rtk_app !== rtkApp())
+    return { status: null, endReason: null, removed: false, canReport: false, reported: false };
+  const [m, staff, reported] = await Promise.all([
+    membership(cls.id, user.id),
+    isClassStaff(user),
+    reportedInClass(user.id, cls.id),
+  ]);
+  const teacher = cls.teacher_id === user.id;
+  const removed = !teacher && (m.enrollment === "removed" || !!m.participant?.revoked_at);
+  const canReport = (!!m.participant || teacher || staff) && withinReportWindow(cls.hard_end_at, new Date());
+  return { status: cls.status, endReason: cls.end_reason, removed, canReport, reported };
 }
 
 /* ── Ending (section 6.6) ──────────────────────────────────────────── */

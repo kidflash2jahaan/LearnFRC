@@ -21,8 +21,17 @@ import { RoomControls } from "./_controls";
  * class uses are also taken out of the UI here, so none of them shows.
  */
 
-/** UI Kit elements nobody in a class gets: our chat panel replaces theirs. */
+/**
+ * UI Kit elements nobody in a class gets: our chat panel replaces theirs.
+ *
+ * The meeting title too. On Cloudflare's side it's "LearnFRC class <id>"
+ * (meetingConfigFor in src/lib/classes/realtimekit.ts), because Cloudflare
+ * keeps meeting records and the class's own title stays off them, so the UI
+ * Kit's header would show everyone a raw id. Our bar above the meeting
+ * already names the class.
+ */
 const HIDDEN_ELEMENTS = new Set([
+  "rtk-meeting-title",
   "rtk-chat-toggle",
   "rtk-polls-toggle",
   "rtk-plugins-toggle",

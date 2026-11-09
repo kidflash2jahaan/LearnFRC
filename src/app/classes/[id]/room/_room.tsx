@@ -28,7 +28,9 @@ import type { MeetingHandle } from "./_meeting";
  *   left     after Leave, or a drop: join again
  *   removed  "You were removed from this class." plus Report someone,
  *            because a removed student may need to report who removed them
- *   ended    why the class ended ("This class was ended for a safety check.")
+ *   ended    why the class ended ("This class was ended for a safety check."),
+ *            with Report someone for anyone who was in it, or, once they've
+ *            reported, "You've reported this class."
  *
  * Every browser also sets a timer for the hard end and ends the class then
  * ("Class time is up."); the server's sweep is what guarantees it.
@@ -88,6 +90,14 @@ export function Room(view: RoomView) {
   const [joining, setJoining] = React.useState(false);
   const [roster, setRoster] = React.useState(view.roster);
   const [controlsOpen, setControlsOpen] = React.useState(false);
+  // The page's copy of these was read before this browser joined: a student
+  // on their first visit wasn't a participant yet, so it said they couldn't
+  // report. Joining and leaving update them.
+  const [canReport, setCanReport] = React.useState(view.canReport);
+  const [reported, setReported] = React.useState(view.reported);
+  // Whether the class is on, for the report panel's line about where a
+  // report goes. The page's copy can be from before the class went live.
+  const [live, setLive] = React.useState(view.liveNow);
   const meetingRef = React.useRef<MeetingHandle | null>(null);
 
   const refreshRoster = React.useCallback(() => {
@@ -104,6 +114,9 @@ export function Room(view: RoomView) {
       const r = await joinClassAction(classId, accepted ? CLASS_NOTICE_VERSION : "");
       if (r.ok) {
         setRefusal(null);
+        // They're a participant now, so they can report from this class.
+        setCanReport(true);
+        setLive(true);
         setPhase({ kind: "in", grant: r });
         return;
       }
@@ -127,6 +140,11 @@ export function Room(view: RoomView) {
     (why: string) => {
       roomStatusAction(classId)
         .then((s) => {
+          if (s.status) {
+            setCanReport(s.canReport);
+            setReported(s.reported);
+            setLive(s.status === "live");
+          }
           if (s.removed) setPhase({ kind: "removed" });
           else if (s.status === "canceled") setPhase({ kind: "ended", reason: null, canceled: true });
           else if (s.status && !OPEN.includes(s.status)) setPhase({ kind: "ended", reason: s.endReason });
@@ -152,6 +170,20 @@ export function Room(view: RoomView) {
     return () => window.clearTimeout(t);
   }, [hardEndAt, classId]);
 
+  // Each phase is its own screen, and a new screen opens at its top. "Join
+  // class" sits at the bottom of the long pre-join page, and the browser kept
+  // that scroll offset when the room replaced it, so the room opened scrolled
+  // down, with our bar and the top of the video above the window (and the
+  // short "ended" screen could open the same way). Before the new screen
+  // paints, and only when the screen changes: scrolling within one is the
+  // person's, and nothing here moves it.
+  const shownKind = React.useRef(phase.kind);
+  React.useLayoutEffect(() => {
+    if (shownKind.current === phase.kind) return;
+    shownKind.current = phase.kind;
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  }, [phase.kind]);
+
   // New people show up in the report panel and the controls as they arrive.
   const inRoom = phase.kind === "in";
   React.useEffect(() => {
@@ -164,13 +196,13 @@ export function Room(view: RoomView) {
     };
   }, [inRoom, refreshRoster]);
 
-  const reportPanel = (surface: "room" | "removed", label?: string) => (
+  const reportPanel = (surface: "room" | "after" | "removed", liveNow: boolean, label?: string) => (
     <ClassReportPanel
       classId={classId}
       roster={roster}
       viewerId={view.viewerId}
       surface={surface}
-      liveNow={view.liveNow || surface === "room"}
+      liveNow={liveNow}
       label={label}
     />
   );
@@ -199,13 +231,19 @@ export function Room(view: RoomView) {
           : phase.why === "kicked"
             ? "You were disconnected from the class."
             : "You left the class.";
+    // The words and the report button have to agree: "report it here" only
+    // when the button is there, and someone who already reported is told so.
     const sub =
       phase.kind === "removed"
         ? "You can't rejoin it or read its chat. If something happened that LearnFRC should know about, report it here."
         : phase.kind === "ended"
-          ? phase.reason === "reports"
-            ? "LearnFRC is looking at what happened. If you saw something, you can report it here too."
-            : "Thanks for being part of it."
+          ? reported
+            ? "You've reported this class. LearnFRC is looking at it."
+            : phase.reason === "reports"
+              ? canReport
+                ? "LearnFRC is looking at what happened. If you saw something, you can report it here too."
+                : "LearnFRC is looking at what happened."
+              : "Thanks for being part of it."
           : phase.why === "kicked"
             ? "That happens when you join from another tab or device. Join again to come back here."
             : "You can join again while the class is on.";
@@ -224,8 +262,14 @@ export function Room(view: RoomView) {
             Back to the class page
           </Link>
         </div>
-        {phase.kind === "removed" || view.canReport ? (
-          <div className="mt-6">{reportPanel(phase.kind === "removed" ? "removed" : "room")}</div>
+        {phase.kind === "removed" || canReport ? (
+          <div className="mt-6">
+            {reportPanel(
+              phase.kind === "removed" ? "removed" : "after",
+              phase.kind !== "ended" && live,
+              reported && phase.kind === "ended" ? "Report someone else" : undefined
+            )}
+          </div>
         ) : null}
       </div>
     );
@@ -267,7 +311,7 @@ export function Room(view: RoomView) {
         </div>
       </div>
 
-      <div className="mt-3">{reportPanel("room")}</div>
+      <div className="mt-3">{reportPanel("room", true)}</div>
 
       <div className="mt-3 grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="min-w-0">

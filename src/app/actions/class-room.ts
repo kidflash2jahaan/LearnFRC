@@ -12,8 +12,9 @@ import {
   setJoinsPaused,
   type JoinGrant,
   type JoinRefusal,
+  type RoomStatus,
 } from "@/lib/app/classes-room";
-import type { ClassEndReason, ClassRosterEntry, ClassStatus } from "@/lib/classes/types";
+import type { ClassEndReason, ClassRosterEntry } from "@/lib/classes/types";
 
 /**
  * The website's door onto the class room (sections 6.4 to 6.6). Joining is a
@@ -91,11 +92,9 @@ export async function removeFromClassAction(
 }
 
 /** Where the class stands, for a browser that just left the meeting. */
-export async function roomStatusAction(
-  classId: string
-): Promise<{ status: ClassStatus | null; endReason: ClassEndReason | null; removed: boolean }> {
+export async function roomStatusAction(classId: string): Promise<RoomStatus> {
   const user = await sessionUser();
-  if (!user) return { status: null, endReason: null, removed: false };
+  if (!user) return { status: null, endReason: null, removed: false, canReport: false, reported: false };
   return roomStatus(user, classId);
 }
 
