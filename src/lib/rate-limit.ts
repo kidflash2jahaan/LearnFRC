@@ -3,6 +3,32 @@ import { headers } from "next/headers";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 /**
+ * Rate limit keyed on `key` alone (an account id, say), with no IP in the
+ * bucket, so the limit follows the account onto any network. `rateLimit`
+ * below keys on the IP plus an extra key, which is per account per network.
+ * Same Postgres function, same fail-open rule.
+ */
+export async function rateLimitKey(
+  action: string,
+  max: number,
+  windowSeconds: number,
+  key: string
+): Promise<boolean> {
+  try {
+    const supabase = createAdminClient();
+    const { data, error } = await supabase.rpc("check_rate_limit", {
+      p_bucket: `${action}:k:${key}`,
+      p_max: max,
+      p_window_seconds: windowSeconds,
+    });
+    if (error) return true;
+    return data !== false;
+  } catch {
+    return true;
+  }
+}
+
+/**
  * Per-IP rate limit backed by a SECURITY DEFINER Postgres function.
  * Returns true if the request is allowed, false if the limit is exceeded.
  * Fails open on infrastructure errors so legitimate users are never blocked.

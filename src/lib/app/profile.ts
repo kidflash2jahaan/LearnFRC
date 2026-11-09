@@ -9,6 +9,8 @@ import type { Profile } from "@/lib/types";
 import { levelForXp, tierFor } from "@/lib/app/levels";
 import { toIso } from "@/lib/app/format";
 import { readAppleRevocation, revokeAppleTokens } from "@/lib/app/apple-sign-in";
+import { beforeAccountDeleted } from "@/lib/app/classes";
+import type { AccountDeletionReason } from "@/lib/classes/types";
 import { fail, type AppClients, type AppUser, type Result } from "@/lib/app/result";
 
 /**
@@ -352,12 +354,22 @@ export async function setEmailChoice(
  * the auth user and its kept tokens still exist, and revoked after the
  * response, once the account is gone, so a slow Apple never holds up (or times
  * out) the deletion. Nothing is revoked if the deletion fails.
+ *
+ * Live classes come first (beforeAccountDeleted in src/lib/app/classes.ts):
+ * evidence holds when the account is banned or the subject of an open safety
+ * case, cancelling the person's upcoming classes as a teacher, deleting their
+ * RealtimeKit participants, and stamping their consent records, which outlive
+ * the account. `opts.reason` says why the account is going: the person's own
+ * choice (the default), a ban from the report desk, or an under-13 answer on
+ * the classes age screen. It never throws.
  */
 export async function deleteAccountData(
   user: AppUser,
-  { admin }: AppClients
+  { admin }: AppClients,
+  opts: { reason?: AccountDeletionReason } = {}
 ): Promise<Result> {
   const uid = user.id;
+  await beforeAccountDeleted(uid, opts.reason ?? "self");
   const apple = await readAppleRevocation(uid);
   await admin.from("lesson_progress").delete().eq("user_id", uid);
   await admin.from("bookmarks").delete().eq("user_id", uid);

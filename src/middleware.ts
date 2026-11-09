@@ -165,7 +165,10 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Every request path except static assets.
-    "/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff2?)$).*)",
+    // Every request path except static assets, and the two live-classes
+    // machine routes: RealtimeKit's webhook and the sweep (called by Supabase
+    // Cron). Neither has a session, so neither should wait on the sign-in
+    // check.
+    "/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|api/classes/webhook(?:/|$)|api/classes/sweep(?:/|$)|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff2?)$).*)",
   ],
 };
