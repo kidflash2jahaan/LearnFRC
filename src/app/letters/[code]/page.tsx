@@ -5,7 +5,7 @@ import { getSession } from "@/lib/auth";
 import { PrintButton } from "@/components/certificate/print-button";
 import { InviteQr } from "@/components/team/invite-qr";
 import { FIRST_DISCLAIMER } from "@/lib/applications";
-import { SITE_URL } from "@/lib/classes/config";
+import { SITE_URL, classesVisible } from "@/lib/classes/config";
 import { COORDINATOR } from "@/lib/classes/coordinator";
 import { getLetterForViewer } from "@/lib/classes/letters";
 import {
@@ -88,7 +88,12 @@ function Mark() {
 export default async function LetterPage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
   const { user } = await getSession();
-  if (!user) redirect("/login?next=/classes/teaching/letter");
+  if (!user) {
+    // While classes are hidden, a signed-out visitor gets a plain 404, so the
+    // login link doesn't name a classes page before launch.
+    if (!(await classesVisible())) notFound();
+    redirect("/login?next=/classes/teaching/letter");
+  }
 
   const found = await getLetterForViewer(user, code);
   if (!found) notFound();

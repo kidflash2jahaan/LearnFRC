@@ -16,7 +16,14 @@
 // those steps only pass with the stubs swapped for checks/fakes on the dev
 // server too (not committed). Everything is deleted at the end.
 //
+// With LETTERS_HIDDEN_URL instead, it checks a dev server started with both
+// switches off (CLASSES_DEV_SWITCHES=0 CLASSES_VISIBLE=0 next dev; Next
+// runs one dev server per folder, so this is a separate run): the teacher
+// page (signed out and in), a letter and a verify for an unknown code all 404.
+//
 //   LETTERS_DEV_URL=http://localhost:3107 \
+//   node --import ./scripts/classes/register.mjs scripts/classes/checks/letters-pages.check.ts
+//   LETTERS_HIDDEN_URL=http://localhost:3107 \
 //   node --import ./scripts/classes/register.mjs scripts/classes/checks/letters-pages.check.ts
 
 import assert from "node:assert/strict";
@@ -100,18 +107,40 @@ async function get(path: string, cookie?: string, headers: Record<string, string
   return { status: res.status, location: res.headers.get("location"), html: body, text: readable(body) };
 }
 
-async function waitForServer() {
+async function waitForServer(base = DEV) {
   const until = Date.now() + 8 * 60_000;
   while (Date.now() < until) {
     try {
-      const r = await fetch(`${DEV}/verify/LF-22222-22222`, { redirect: "manual" });
+      const r = await fetch(`${base}/verify/LF-22222-22222`, { redirect: "manual" });
       if (r.status === 200 || r.status === 404) return;
     } catch {
       // not up yet
     }
     await new Promise((r) => setTimeout(r, 3000));
   }
-  throw new Error(`no dev server at ${DEV}`);
+  throw new Error(`no dev server at ${base}`);
+}
+
+/** The hidden run: a dev server with both switches off answers 404 everywhere. */
+async function hiddenRun(base: string) {
+  await waitForServer(base);
+  await cleanup(PKG);
+  try {
+    await create(PKG, ["t1:age=16:parent=agreed:teacher"]);
+    const acc = readCredentials(PKG).accounts as Record<string, Account>;
+    const cookie = await cookieFor(acc.t1);
+    await step("hidden: with both switches off, the letters pages 404", async () => {
+      for (const path of ["/classes/teaching/letter", "/letters/LF-22222-22222", "/verify/LF-22222-22222", "/verify/nope"]) {
+        const r = await fetch(`${base}${path}`, { redirect: "manual" });
+        assert.equal(r.status, 404, path);
+        const signedIn = await fetch(`${base}${path}`, { redirect: "manual", headers: { cookie } });
+        assert.equal(signedIn.status, 404, `${path} signed in`);
+      }
+    });
+  } finally {
+    await cleanup(PKG);
+    await check(PKG);
+  }
 }
 
 /** Decodes the QR code in an <svg> from the page with Apple's Vision. Null when it can't run here. */
@@ -411,7 +440,15 @@ async function main() {
   if (failed.length) process.exitCode = 1;
 }
 
-main().catch((e) => {
+const hiddenUrl = process.env.LETTERS_HIDDEN_URL?.replace(/\/$/, "");
+(hiddenUrl
+  ? hiddenRun(hiddenUrl).then(() => {
+      const failed = results.filter((r) => !r.ok);
+      console.log(`\n${results.length - failed.length} of ${results.length} passed`);
+      if (failed.length) process.exitCode = 1;
+    })
+  : main()
+).catch((e) => {
   console.error(e);
   process.exitCode = 1;
 });
