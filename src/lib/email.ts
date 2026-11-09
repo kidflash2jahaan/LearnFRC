@@ -491,122 +491,23 @@ export function subscribeEmailHtml() {
   `);
 }
 
-/* ── Marketing applications ───────────────────────────────────────── */
-
-/** To the applicant, the moment they apply. */
-export function applicationReceivedHtml(username?: string | null) {
-  const greeting = username ? `Hey @${esc(username)},` : "Hey,";
-  return emailShell(`
-    <p style="margin:0 0 14px">${greeting}</p>
-    <!-- No clock on it. /apply says "You'll get an email either way" twice and
-         attaches no deadline, deliberately: the reviewer is one person who also
-         writes every lesson, and nothing has been decided yet, so "usually
-         within a week" would be a track record that does not exist. This is the
-         first thing an applicant reads from the site, and it should not be the
-         one promise it can be caught breaking. -->
-    <p style="margin:0 0 14px">Your application to help spread LearnFRC is in. It goes to one person, and you'll get a plain answer either way.</p>
-    <p style="margin:0 0 14px">There's nothing else to do for now. If your plans change, you can withdraw it from the same page you applied on.</p>
-    <p style="margin:0;color:#565C60;font-size:13px">Thanks for offering to help more teams find it.</p>
-  `);
-}
-
-/** A mono label over one block of the welcome email, like the site's slugs. */
-const emailSlug = (label: string) =>
-  `<p style="margin:22px 0 6px;color:#565C60;font-size:12px;font-family:ui-monospace,Menlo,Consolas,monospace">${esc(label)}</p>`;
-
-const emailLink = (url: string, text: string = url) =>
-  `<a href="${esc(url)}" style="color:#1B36C8;word-break:break-all">${esc(text)}</a>`;
-
-/** Items are already-escaped HTML. */
-const emailList = (items: string[]) =>
-  `<ul style="margin:0;padding-left:18px">${items.map((i) => `<li style="margin:0 0 6px">${i}</li>`).join("")}</ul>`;
+/* ── Old applications ─────────────────────────────────────────────── */
 
 /**
- * To the applicant, once a super admin has decided.
- *
- * Accepted, it is the marketer's whole welcome pack, because there is no panel
- * or dashboard behind the role: the trailer, their invite link, the brand kit,
- * the rules, and where to send what they make. The caller sends it with a
- * reply-to (APPLICATION_REPLY_TO in src/lib/app/admin-apply-marketing.ts), so
- * "reply to this email" reaches the owner, and hands in `welcome` built from
- * src/lib/applications.ts, the same strings /apply prints. Passed in rather
- * than imported so this file stays free of the role's copy.
+ * To someone whose application from before /apply closed is turned down on
+ * /admin/team. Applying there is closed (the marketing role was removed on
+ * 2026-11-09), so this is only ever the "no": accepting refuses on the
+ * server. Sent with the default reply-to.
  */
-export type MarketingWelcome = {
-  /** The marketer's invite link, null without a handle. */
-  inviteUrl: string | null;
-  /** Null until the trailer is public. */
-  trailerUrl: string | null;
-  brandKit: {
-    logos: readonly { label: string; url: string }[];
-    colors: readonly { name: string; hex: string; use: string }[];
-    fonts: string;
-    clips: readonly { label: string; url: string }[];
-  };
-  rules: readonly string[];
-  /** Where what they make ends up, said plainly. */
-  posting: string;
-};
-
-export function applicationDecisionHtml(
-  args: { note?: string | null; username?: string | null } & (
-    | { accepted: true; welcome: MarketingWelcome }
-    | { accepted: false }
-  )
-) {
-  const { note, username } = args;
+export function applicationDecisionHtml({ note, username }: { note?: string | null; username?: string | null }) {
   const greeting = username ? `Hey @${esc(username)},` : "Hey,";
   const noteHtml = note
     ? `<div style="margin:16px 0;padding:12px 16px;border-left:3px solid #C4A77D;background:#E6E8E3"><p style="margin:0;color:#565C60;font-size:12px;font-family:ui-monospace,Menlo,Consolas,monospace">note from the reviewer</p><p style="margin:6px 0 0;white-space:pre-wrap">${esc(note)}</p></div>`
     : "";
-  if (args.accepted) {
-    const { inviteUrl, trailerUrl, brandKit, rules: ruleList, posting } = args.welcome;
-    const site = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com";
-    const invite = inviteUrl
-      ? `<p style="margin:0 0 8px;padding:10px 12px;background:#E6E8E3;border:1px solid rgba(22,24,27,.30);font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px">${emailLink(inviteUrl)}</p>
-      <p style="margin:0">Everyone who signs up through it is counted on my side, and that count is how I see what's working. It's your account's own referral link, so it works anywhere you paste it.</p>`
-      : `<p style="margin:0">Your invite link is keyed on your handle, and your account doesn't have one yet. Pick one on your ${emailLink(`${site}/settings`, "settings page")} and the link shows up on ${emailLink(`${site}/apply`, "the apply page")}.</p>`;
-    const trailer = trailerUrl
-      ? `<p style="margin:0">${emailLink(trailerUrl)}</p>`
-      : `<p style="margin:0">It isn't public yet. You'll get the link the day it goes up.</p>`;
-    const clips = emailList(brandKit.clips.map((c) => `${esc(c.label)}: ${emailLink(c.url)}`));
-    const logos = emailList(brandKit.logos.map((l) => `${esc(l.label)}: ${emailLink(l.url)}`));
-    const colors = emailList(
-      brandKit.colors.map(
-        (c) =>
-          `<span style="display:inline-block;width:11px;height:11px;margin-right:6px;vertical-align:-1px;background:${c.hex};border:1px solid #16181B"></span>${esc(c.name)} <span style="font-family:ui-monospace,Menlo,Consolas,monospace">${c.hex}</span>, ${esc(c.use)}`
-      )
-    );
-    const rules = emailList(ruleList.map((r) => esc(r)));
-    return emailShell(`
-      <p style="margin:0 0 14px">${greeting}</p>
-      <p style="margin:0 0 14px;font-weight:700;font-size:17px">You're on the LearnFRC marketing team.</p>
-      <p style="margin:0 0 14px">Thanks for taking this on. Everything you need is in this email, and there's nothing to log into.</p>
-      ${noteHtml}
-      ${emailSlug("your invite link")}
-      ${invite}
-      ${emailSlug("the trailer")}
-      ${trailer}
-      ${emailSlug("clips you can share")}
-      ${clips}
-      ${emailSlug("the brand kit")}
-      ${logos}
-      <p style="margin:10px 0 6px">Colours:</p>
-      ${colors}
-      <p style="margin:10px 0 0">Fonts: ${esc(brandKit.fonts)}</p>
-      ${emailSlug("the rules")}
-      ${rules}
-      ${emailSlug("send in what you make")}
-      <p style="margin:0 0 10px">Reply to this email with anything you make: a video, a clip, a short explainer, a post, or a place you think LearnFRC should show up. Making things is optional. Sharing the link with your team already counts.</p>
-      <p style="margin:0">${esc(posting)}</p>
-      <p style="margin:22px 0 0;color:#565C60;font-size:13px">The tag doesn't come with admin access or site data, and marketers aren't listed anywhere on the site. Your account works exactly as it did.</p>
-    `);
-  }
   return emailShell(`
     <p style="margin:0 0 14px">${greeting}</p>
-    <p style="margin:0 0 14px">Thanks for applying to help spread LearnFRC. I'm not adding you to the marketing team right now.</p>
+    <p style="margin:0 0 14px">Thanks for applying to help with LearnFRC. I'm closing applications for that role, so I'm not taking yours forward. It isn't about you.</p>
     ${noteHtml}
-    <p style="margin:0 0 14px">That isn't a judgement on you or your team. You can apply again later, and you never need a tag to show LearnFRC to your own team.</p>
-    <p style="margin:0;color:#565C60;font-size:13px">Thanks again for offering.</p>
+    <p style="margin:0">The lessons are all still yours. Jahaan</p>
   `);
 }

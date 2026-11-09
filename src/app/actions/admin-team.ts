@@ -3,24 +3,20 @@
 import { createClient } from "@/lib/supabase/server";
 import { NOT_SUPER_ADMIN } from "@/lib/app/admin-access";
 import { decideApplication, setAdminRoleFor } from "@/lib/app/admin-team-desk";
-import { submitApplication, withdrawApplication } from "@/lib/app/admin-apply";
-import { removeMarketerFor } from "@/lib/app/admin-apply-marketing";
 
 /**
- * The website's door onto /apply and /admin/team: applying for the marketing
- * role, deciding applications, taking the marketing tag off, and running the
- * admin team.
+ * The website's door onto /admin/team: the admin team, and old applications
+ * from before /apply closed (reject only). Teacher applications have their
+ * own desk and actions (src/app/actions/class-teachers.ts).
  *
- * The rules themselves (role checks, limits, the status-gated decision, the
- * grant rollback, owner and self protection, the emails and revalidation) live
- * in src/lib/app/admin-team-desk.ts, src/lib/app/admin-apply.ts and
- * src/lib/app/admin-apply-marketing.ts, shared with the app's /api/app/admin/*
- * and /api/app/apply routes, so the two doors can't drift. Each shared
- * function re-checks the caller's site role itself: a "use server" function is
- * a public endpoint and the UI hiding a button is not authorisation.
+ * The rules themselves (role checks, the status-gated decision, owner and
+ * self protection, the email and revalidation) live in
+ * src/lib/app/admin-team-desk.ts, shared with the app's /api/app/admin/*
+ * routes, so the two doors can't drift. Each shared function re-checks the
+ * caller's site role itself: a "use server" function is a public endpoint and
+ * the UI hiding a button is not authorisation.
  */
 
-export type ApplyState = { error?: string; success?: boolean } | undefined;
 export type ReviewState =
   | {
       error?: string;
@@ -45,31 +41,7 @@ async function sessionUser() {
   return user;
 }
 
-/* ── Applying ─────────────────────────────────────────────────────── */
-
-export async function submitAdminApplication(
-  _prev: ApplyState,
-  formData: FormData
-): Promise<ApplyState> {
-  const user = await sessionUser();
-  if (!user) return { error: "Sign in first, then apply." };
-  const result = await submitApplication(user, {
-    experience: field(formData, "experience"),
-    why: field(formData, "why"),
-    availability: field(formData, "availability"),
-  });
-  return result.ok ? { success: true } : { error: result.error };
-}
-
-/** Used with useActionState, which passes (state, formData); neither is needed. */
-export async function withdrawAdminApplication(): Promise<ApplyState> {
-  const user = await sessionUser();
-  if (!user) return { error: "Sign in first." };
-  const result = await withdrawApplication(user);
-  return result.ok ? { success: true } : { error: result.error };
-}
-
-/* ── Reviewing (super admin only) ─────────────────────────────────── */
+/* ── Old applications (super admin only, reject only) ─────────────── */
 
 export async function reviewAdminApplication(
   _prev: ReviewState,
@@ -84,18 +56,6 @@ export async function reviewAdminApplication(
   });
   if (result.ok) return { success: true };
   return result.field === "note" ? { error: result.error, field: "note" } : { error: result.error };
-}
-
-/* ── Taking the marketing tag off (super admin only) ──────────────── */
-
-export async function removeMarketer(
-  _prev: ReviewState,
-  formData: FormData
-): Promise<ReviewState> {
-  const user = await sessionUser();
-  if (!user) return { error: NOT_SUPER_ADMIN };
-  const result = await removeMarketerFor(user, { userId: field(formData, "userId") });
-  return result.ok ? { success: true } : { error: result.error };
 }
 
 /* ── Managing the admin team (super admin only) ───────────────────── */

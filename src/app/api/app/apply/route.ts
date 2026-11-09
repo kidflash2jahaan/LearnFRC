@@ -16,12 +16,12 @@ import {
 export const dynamic = "force-dynamic";
 
 /**
- * GET /api/app/apply: where the caller stands on /apply (on the admin team, a
- * marketer already, pending, needs a handle, applying again, or new), with the
- * page's heading, what a marketer does, the record a reviewer would see,
- * whether applications are open, and for a marketer their invite link and
- * brand kit. loadApplyState in src/lib/app/admin-apply.ts, which /apply
- * renders from too.
+ * GET /api/app/apply: the closed apply state installed app copies read (on
+ * the admin team, pending, needs a handle, applying again, or new), with the
+ * heading and the record a reviewer would see. Applying here is closed:
+ * `applicationsOpen` is false, `jobs`, `posting`, `rules` and `marketer` are
+ * always empty, and `roles` lists only the teacher role (/apply/teach) while
+ * classes are visible. loadApplyState in src/lib/app/admin-apply.ts.
  */
 export async function GET(req: Request) {
   return guarded(async () => {
@@ -36,11 +36,9 @@ export async function GET(req: Request) {
 /**
  * POST /api/app/apply { experience, why, availability? }
  *
- * Files an application through submitApplication, the function /apply's form
- * calls: closed (409) while applications are closed, 409 for an admin or an
- * account that is already a marketer, a handle required, the
- * same lengths, rate limits (3 a day per account, 25 per network) and the
- * one-pending rule. 201 on success.
+ * Always 409 through submitApplication: "Applications are closed for now.
+ * Check back later." (an admin gets "You're already on the team."). Kept so
+ * installed copies get a clear answer. The teacher application is web only.
  */
 export async function POST(req: Request) {
   return guarded(async () => {
@@ -58,7 +56,7 @@ export async function POST(req: Request) {
   });
 }
 
-/** DELETE /api/app/apply: withdraws the caller's pending application. */
+/** DELETE /api/app/apply: withdraws the caller's pending application from before applying closed. */
 export async function DELETE(req: Request) {
   return guarded(async () => {
     const auth = await requireAppUser(req);

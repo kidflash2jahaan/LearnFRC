@@ -22,8 +22,8 @@ export async function emailFor(userId: string): Promise<string | null> {
  * frozen the moment the response is flushed, so a promise nobody is holding may
  * never finish, and `sendEmail` resolves to `{ ok: false }` rather than
  * throwing, so a rejected key or an unverified sender would be silent either
- * way. These are the emails the product promises out loud: /apply says "You'll
- * get an email either way" and the review desk says the same. `after` keeps the
+ * way. These are the emails the product promises out loud: the review desk
+ * says they get an email whichever way it's decided. `after` keeps the
  * instance alive for the send, and the log is the only place a failure can
  * surface, because the applicant by definition sees nothing.
  */

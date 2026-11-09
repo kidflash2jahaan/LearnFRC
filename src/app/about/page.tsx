@@ -375,16 +375,6 @@ export default async function AboutPage() {
               , without an account.
             </p>
             <p>
-              Getting it in front of teams doesn&rsquo;t have to be one
-              person&rsquo;s job. If you&rsquo;ve been on an FRC team, you
-              can{" "}
-              <Link className="nb-link" href="/apply">
-                apply to help spread it
-              </Link>
-              : showing it to your own team and other teams, posting the
-              trailer and clips, and making your own videos if you want.
-            </p>
-            <p>
               The code is public on{" "}
               <a
                 className="nb-link"
