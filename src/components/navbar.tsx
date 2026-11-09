@@ -19,7 +19,9 @@ import { createClient } from "@/lib/supabase/client";
 import type { Profile } from "@/lib/types";
 import { EmailChoicePrompt } from "@/components/settings/email-choice-prompt";
 
-const NAV = [
+type NavItem = { href: string; label: string; isNew?: boolean };
+
+const NAV: NavItem[] = [
   { href: "/guides", label: "Guides" },
   { href: "/videos", label: "Videos" },
   { href: "/blog", label: "Articles" },
@@ -30,6 +32,24 @@ const NAV = [
   { href: "/leaderboard", label: "Leaderboard" },
   { href: "/for-teams", label: "For teams" },
 ];
+
+/**
+ * Live classes, second after Guides at every width, only while classes are
+ * visible (the layout passes `classesVisible`, classes-design.md section 11).
+ * Tagged "new" until CLASSES_NEW_UNTIL; move the date if launch slips, and
+ * delete the tag once it's passed.
+ */
+const CLASSES_ITEM: NavItem = { href: "/classes", label: "Classes", isNew: true };
+const CLASSES_NEW_UNTIL = Date.parse("2027-01-15T08:00:00Z");
+
+/**
+ * Whether the "new" tag still shows. The server and the hydration pass both
+ * say yes (a cached page can't know when it'll be read), and the browser
+ * drops the tag right after hydration once the date has passed.
+ */
+const neverChanges = () => () => {};
+const tagStillNew = () => Date.now() < CLASSES_NEW_UNTIL;
+const tagOnServer = () => true;
 
 /**
  * The last slot is audience-dependent. Signed OUT, "For teams" is the pitch
@@ -45,9 +65,10 @@ const NAV = [
  * server HTML and the hydration pass agree, and the swap happens in the same
  * post-fetch update that draws the avatar.
  */
-function navFor(authed: boolean) {
-  if (!authed) return NAV;
-  return NAV.map((item) =>
+function navFor(authed: boolean, classesVisible: boolean): NavItem[] {
+  const items = classesVisible ? [NAV[0], CLASSES_ITEM, ...NAV.slice(1)] : NAV;
+  if (!authed) return items;
+  return items.map((item) =>
     item.href === "/for-teams" ? { href: "/teams", label: "My team" } : item
   );
 }
@@ -104,14 +125,19 @@ function Caret() {
  * a floating glass bar, and it does not change on scroll, because a header
  * that restyles itself as you read is a second visual language.
  *
- * There is no hamburger. Eight destinations exist at every width; below xl the
+ * There is no hamburger. Every destination exists at every width; below xl the
  * tab strip drops to its own row and flicks sideways like the divider tabs in
  * a real binder, with a fade on the right edge saying there is more. That is
- * strictly more navigable than hiding all eight behind a button, and it costs
+ * strictly more navigable than hiding them all behind a button, and it costs
  * no state, no portal and no animation library.
+ *
+ * `classesVisible` comes from the root layout (a cached server read of both
+ * classes switches), so the Classes tab is in the server HTML from the start
+ * rather than popping in after load.
  */
-export function Navbar() {
+export function Navbar({ classesVisible = false }: { classesVisible?: boolean } = {}) {
   const pathname = usePathname();
+  const classesTagNew = React.useSyncExternalStore(neverChanges, tagStillNew, tagOnServer);
   const [me, setMe] = React.useState<Me>({
     authed: false,
     profile: null,
@@ -168,7 +194,7 @@ export function Navbar() {
               "xl:order-none xl:mr-auto xl:w-auto xl:overflow-visible",
             ].join(" ")}
           >
-            {navFor(authed).map((item) => {
+            {navFor(authed, classesVisible).map((item) => {
               const active = pathname === item.href || pathname.startsWith(item.href + "/");
               return (
                 <Link
@@ -178,6 +204,14 @@ export function Navbar() {
                   className="nb-navlink"
                 >
                   {item.label}
+                  {/* Raised and small so the strip keeps its one-line width at
+                      xl. Inside the link, so it's blue like everything
+                      clickable, and read out as part of the link's name. */}
+                  {item.isNew && classesTagNew ? (
+                    <span className="ml-1 -translate-y-1.5 text-[0.62rem] font-bold leading-none text-[var(--blue)]">
+                      <span className="sr-only">, </span>new
+                    </span>
+                  ) : null}
                 </Link>
               );
             })}

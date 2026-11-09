@@ -5,6 +5,7 @@ import { getArticles } from "@/lib/queries";
 import { PATHS } from "@/lib/paths-data";
 import { correctionsLastUpdated } from "@/lib/corrections";
 import { GLOSSARY, glossarySlug, hasGlossaryDepth } from "@/lib/glossary-data";
+import { classesVisibleOnStaticPages } from "@/lib/classes/static-pages";
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com";
 
@@ -40,6 +41,8 @@ const PATHS_UPDATED = new Date("2026-08-03T00:00:00Z");
 const GLOSSARY_UPDATED = new Date("2026-08-03T00:00:00Z");
 /** The privacy policy and terms, rewritten for the 1.0 release. */
 const LEGAL_UPDATED = new Date("2026-11-08T00:00:00Z");
+/** /apply/teach, written for the live classes launch. */
+const TEACH_UPDATED = new Date("2026-11-09T00:00:00Z");
 
 /** A database timestamp, or the launch date if the row somehow has none. */
 function rowDate(ts?: string | null): Date {
@@ -112,6 +115,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     url: `${SITE}${r.path}`,
     lastModified: r.lastModified,
   }));
+
+  // Live classes, only while they're visible (classes-design.md section 11).
+  // /classes has no lastmod on purpose: it changes whenever a class is
+  // scheduled, so any fixed date would be the dishonest kind. Single class
+  // pages aren't listed; they're gone within days.
+  if (await classesVisibleOnStaticPages()) {
+    staticRoutes.push(
+      { url: `${SITE}/classes` },
+      { url: `${SITE}/apply/teach`, lastModified: TEACH_UPDATED }
+    );
+  }
 
   const blogRoutes: MetadataRoute.Sitemap = (await getArticles()).map((a) => ({
     url: `${SITE}/blog/${a.slug}`,

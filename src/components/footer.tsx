@@ -25,6 +25,16 @@ const LEARN = [
   { label: "Resources", href: "/resources" },
 ];
 
+/**
+ * Second in "learn" while classes are visible, matching its place in the nav
+ * (classes-design.md section 11).
+ */
+const LIVE_CLASSES = { label: "Live classes", href: "/classes" };
+
+function learnLinks(classesVisible: boolean) {
+  return classesVisible ? [LEARN[0], LIVE_CLASSES, ...LEARN.slice(1)] : LEARN;
+}
+
 const TEAM = [
   { label: "For teams", href: "/for-teams" },
   { label: "Dashboard", href: "/dashboard" },
@@ -130,7 +140,7 @@ export function FirstTrademarkNotice() {
 const COL_LINK =
   "inline-flex min-h-11 items-center text-[0.95rem] text-[var(--ink)] no-underline decoration-2 underline-offset-4 transition-[color] duration-[var(--nb-t-hover)] ease-[var(--nb-ease-out)] hover:text-[var(--blue)] hover:underline";
 
-export async function Footer() {
+export async function Footer({ classesVisible = false }: { classesVisible?: boolean } = {}) {
   // Read, never hardcode. The footer is on every page, so a stale figure here
   // is the most-seen wrong number on the site. Cached for a day and refreshed
   // by the "catalog" tag when content changes.
@@ -162,7 +172,7 @@ export async function Footer() {
           </div>
 
           {[
-            { title: "learn", links: LEARN },
+            { title: "learn", links: learnLinks(classesVisible) },
             { title: "team", links: TEAM },
             { title: "the record", links: RECORD },
           ].map((col) => (
