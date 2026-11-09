@@ -1,7 +1,8 @@
 "use client";
 
 import { ClassRow } from "@/components/classes/class-card";
-import { dayKey, dayLabel, useHydrated, zonedParts } from "@/components/classes/local-time";
+import { useClassTimeZone } from "@/components/classes/local-time";
+import { classTimeParts, dayKey, dayLabel } from "@/lib/classes/class-time";
 import type { ClassListing } from "@/lib/classes/types";
 
 /**
@@ -14,10 +15,10 @@ import type { ClassListing } from "@/lib/classes/types";
  * For most readers nothing moves.
  */
 export function ClassDayList({ classes, showTeacher }: { classes: ClassListing[]; showTeacher: boolean }) {
-  const local = useHydrated();
+  const timeZone = useClassTimeZone();
   const groups: { key: string; label: string; items: ClassListing[] }[] = [];
   for (const c of classes) {
-    const p = zonedParts(c.startsAt, local);
+    const p = classTimeParts(c.startsAt, timeZone);
     const key = p ? dayKey(p) : "unknown";
     let g = groups.find((x) => x.key === key);
     if (!g) {

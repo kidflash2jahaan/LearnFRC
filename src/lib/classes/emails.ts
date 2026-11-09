@@ -110,15 +110,9 @@ export function emailListHtml(items: string[]): string {
   return `<ul style="margin:8px 0;padding-left:18px">${items.map((i) => `<li style="margin:0 0 6px">${i}</li>`).join("")}</ul>`;
 }
 
-/** "Thu, Nov 20, 5:00 PM PT": class times in emails are always Pacific. */
-export function pacificTime(iso: string | Date): string {
-  const d = typeof iso === "string" ? new Date(iso) : iso;
-  return `${d.toLocaleString("en-US", {
-    timeZone: "America/Los_Angeles",
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  })} PT`;
-}
+/**
+ * "Thu, Nov 20, 5:00 PM PT": class times in emails are always Pacific. The
+ * same helper every class page uses (src/lib/classes/class-time.ts), so an
+ * email and the page it links to print a time the same way.
+ */
+export { pacificTime } from "@/lib/classes/class-time";

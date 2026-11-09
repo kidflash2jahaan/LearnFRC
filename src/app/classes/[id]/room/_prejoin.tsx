@@ -3,6 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { CLASS_NOTICE, CLASS_NOTICE_CHECKBOX } from "@/lib/classes/notice";
+import { LocalTime } from "@/components/classes/local-time";
 import type { ClassRole } from "@/lib/classes/types";
 
 /**
@@ -66,19 +67,6 @@ export type PrejoinProps = {
   refusal: { reason: string; message: string; opensAt?: string } | null;
   onJoin: (acceptedNotice: boolean) => void;
 };
-
-const noSubscribe = () => () => {};
-
-/**
- * A time in the reader's own zone. The server and the first client render
- * say "soon" (the server doesn't know the zone), then the browser's own clock
- * takes over, so there's no hydration mismatch.
- */
-function LocalClock({ iso }: { iso: string }) {
-  const inBrowser = React.useSyncExternalStore(noSubscribe, () => true, () => false);
-  const text = inBrowser ? new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "soon";
-  return <time dateTime={iso}>{text}</time>;
-}
 
 export function Prejoin({ title, teacherUsername, role, displayName, classId, joining, refusal, onJoin }: PrejoinProps) {
   const [accepted, setAccepted] = React.useState(false);
@@ -151,7 +139,8 @@ export function Prejoin({ title, teacherUsername, role, displayName, classId, jo
             <p className="text-[0.95rem] leading-snug">{refusal.message}</p>
             {refusal.reason === "early" && refusal.opensAt ? (
               <p className="nb-hint mt-1">
-                The room opens for you at <LocalClock iso={refusal.opensAt} />. This page will let you in then.
+                The room opens for you at <LocalTime iso={refusal.opensAt} style="time" />. This page will let you in
+                then.
               </p>
             ) : null}
             {refusal.reason === "eligibility" ? (
