@@ -123,6 +123,7 @@ async function waitForServer(base = DEV) {
 
 /** The hidden run: a dev server with both switches off answers 404 everywhere. */
 async function hiddenRun(base: string) {
+  const started = new Date().toISOString();
   await waitForServer(base);
   await cleanup(PKG);
   try {
@@ -138,6 +139,8 @@ async function hiddenRun(base: string) {
       }
     });
   } finally {
+    // A 404 for an unknown code still counted against the address's limit.
+    await admin.from("rate_limit_hits").delete().like("bucket", "verify-letter:%").gte("created_at", started);
     await cleanup(PKG);
     await check(PKG);
   }
