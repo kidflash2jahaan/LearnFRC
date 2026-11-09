@@ -135,7 +135,7 @@ async function main() {
         for (const word of ["class", "teach", "market", "spread"]) {
           assert.ok(!t.toLowerCase().includes(word), `no "${word}" on the closed page`);
         }
-        assert.ok(!t.includes("—"), "no em dash");
+        assert.ok(!t.includes("\u2014"), "no em dash");
         const footer = text(footerOf(out.html));
         assert.ok(!footer.includes("Teach a class"), "no apply link in the footer while hidden");
         assert.ok(!footer.includes("Help run it"));

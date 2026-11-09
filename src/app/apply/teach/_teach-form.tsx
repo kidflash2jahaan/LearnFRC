@@ -315,7 +315,9 @@ function jumpTo(e: React.MouseEvent, id: string) {
   e.preventDefault();
   const target = el.matches("input, select, textarea, button")
     ? el
-    : (el.querySelector<HTMLElement>("input:not([disabled]), select:not([disabled]), textarea:not([disabled])") ?? el);
+    : (el.querySelector<HTMLElement>(
+        "input:not([type=hidden]):not([disabled]), select:not([disabled]), textarea:not([disabled])"
+      ) ?? el);
   el.scrollIntoView({ block: "center" });
   target.focus({ preventScroll: true });
 }
@@ -516,8 +518,11 @@ export function TeachForm({
     touch(name);
   };
 
-  // The draft, read once after mount.
+  // The draft, read once after mount (once per account), never again on a re-render.
+  const restoredFor = React.useRef<string | null>(null);
   React.useEffect(() => {
+    if (restoredFor.current === draftKey) return;
+    restoredFor.current = draftKey;
     const restored = withDraft(initial(), store.get(draftKey), index);
     if (restored) {
       dispatch({ type: "replace", fields: restored.fields, nextKey: restored.nextKey, saved: true });
