@@ -2,12 +2,16 @@
 
 import * as React from "react";
 import { signOut } from "@/app/actions/auth";
+import { dropAllTeachDrafts } from "@/lib/classes/teach-draft";
 import { cn } from "@/lib/utils";
 
 /**
  * Signs out, then performs a FULL page load back to the homepage so every
  * layout and the navbar immediately reflect the cleared session. A soft client
  * transition would keep showing the avatar until a manual refresh.
+ *
+ * It also deletes any unsent teacher application draft in this browser
+ * (src/lib/classes/teach-draft.ts): family computers are shared.
  *
  * There is no red in this palette and inventing one would put a seventh colour
  * on the page to say something the label already says. Severity is carried the
@@ -25,6 +29,7 @@ export function SignOutButton({ className }: { className?: string }) {
       className={cn("nb-btn-ghost border-[3px]", className)}
       onClick={async () => {
         setBusy(true);
+        dropAllTeachDrafts();
         try {
           await signOut();
         } finally {

@@ -71,6 +71,11 @@ const CLASS_RETENTION: { what: string; where: string; kept: string }[] = [
     kept: "While your account exists",
   },
   {
+    what: "Teacher applications",
+    where: "Our database",
+    kept: "Turned down or withdrawn: 180 days after that. Accepted: while your account exists. An adult reference’s name and email: until the application is decided or withdrawn",
+  },
+  {
     what: "A parent’s email and answer, and the recording notices you accepted",
     where: "Our database",
     kept: "While your account exists, then until 1 year after it’s deleted or the end of the year you turn 19, whichever is later",
@@ -126,9 +131,11 @@ const CLASSES_BODY: ReactNode = (
         school knows you by, which goes on hours letters, and an adult
         reference&rsquo;s name and email if you add one. We only email a
         reference if we can&rsquo;t confirm your seasons from event results,
-        and only to ask whether you were on the team. While you write, the form
-        keeps a draft in that browser on that device; sending it or clearing it
-        deletes the draft.
+        and only to ask whether you were on the team, and we delete their name
+        and email once your application is decided or withdrawn. While you
+        write, the form keeps a draft in that browser on that device; sending
+        the application, clearing the draft or signing out there deletes
+        it.
       </li>
       <li>
         The classes you sign up for or teach, each time you accept the

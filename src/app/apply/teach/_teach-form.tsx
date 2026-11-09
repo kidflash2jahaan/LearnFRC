@@ -5,6 +5,7 @@ import { useActionState } from "react";
 import Link from "next/link";
 import { applyToTeach, type TeachFormState } from "@/app/actions/class-teachers";
 import { TEACHER_CODE } from "@/lib/classes/notice";
+import { TEACH_DRAFT_MAX_AGE_MS } from "@/lib/classes/teach-draft";
 import {
   EARLIEST_LISTED_YEAR,
   FIRST_FRC_YEAR,
@@ -31,16 +32,26 @@ import {
  * problem at once: they show in a summary at the top (focused, with links to
  * each field) and under each field.
  *
- * EVERY FIELD IS CONTROLLED: React resets a `<form action={fn}>` on every
- * dispatch, whichever way the action answers, so an uncontrolled field would
- * be emptied by a refusal. One reducer holds the whole form, season rows
- * included.
+ * EVERY FIELD IS CONTROLLED, and the form is SENT FROM onSubmit inside a
+ * transition, not by React's form action. React resets a `<form action={fn}>`
+ * after every action it runs, and a reset puts checkboxes, radios and selects
+ * back to how they were when they mounted (React keeps only text values in
+ * sync with the DOM's defaults), so a refusal would look like it wiped the
+ * ticks, the years and the lesson, and a second Send would post the reset
+ * DOM. onSubmit calls preventDefault, so React never runs or resets anything;
+ * the `action` prop stays only so the form never falls back to a plain GET
+ * with the answers in the URL before it hydrates. Enter in a one-line field
+ * doesn't send: only the Send button does. One reducer holds the whole form,
+ * season rows included.
  *
  * THE DRAFT stays on this device (localStorage, per account), saved 800 ms
  * after a change. Never the name, the reference or the two ticked boxes:
  * family computers are shared, and the boxes are ticked fresh each time. It's
  * read after mount, never during render, so the server's HTML and the first
- * client render match. Storage can be blocked; the form works the same.
+ * client render match. Storage can be blocked; the form works the same. It's
+ * deleted as soon as the server accepts the application (in the action
+ * itself: the same answer rebuilds the page without this form, so an effect
+ * might never run), and src/lib/classes/teach-draft.ts covers the rest.
  */
 
 const L = TEACHER_APPLY_LIMITS;
@@ -84,6 +95,8 @@ type Form = {
   rev: number;
   /** A draft is on this device (restored, or saved since). */
   saved: boolean;
+  /** The draft was just cleared; false again after the next edit. */
+  cleared: boolean;
 };
 
 type Action =
@@ -94,7 +107,7 @@ type Action =
   | { type: "season"; index: number; part: "year" | "earlier" | "team" | "events"; value: string }
   | { type: "addSeason" }
   | { type: "removeSeason"; index: number }
-  | { type: "replace"; fields: Fields; nextKey: number; saved: boolean }
+  | { type: "replace"; fields: Fields; nextKey: number; saved: boolean; cleared?: boolean }
   | { type: "saved" };
 
 /** The module each lesson belongs to, and every module id, from the catalog. */
@@ -117,6 +130,7 @@ function reducer(index: ReturnType<typeof catalogIndex>) {
       ...extra,
       fields,
       rev: state.rev + 1,
+      cleared: false,
     });
     switch (a.type) {
       case "text":
@@ -150,7 +164,7 @@ function reducer(index: ReturnType<typeof catalogIndex>) {
         return next({ ...f, seasons: f.seasons.filter((_, i) => i !== a.index) });
       case "replace":
         // A restore or a clear: not an edit, so it doesn't trigger a save.
-        return { fields: a.fields, nextKey: a.nextKey, rev: 0, saved: a.saved };
+        return { fields: a.fields, nextKey: a.nextKey, rev: 0, saved: a.saved, cleared: a.cleared ?? false };
       case "saved":
         return state.saved ? state : { ...state, saved: true };
     }
@@ -162,7 +176,12 @@ function yearParts(year: number): { year: string; earlier: string } {
   return year >= EARLIEST_LISTED_YEAR ? { year: String(year), earlier: "" } : { year: "earlier", earlier: String(year) };
 }
 
-/** What the form opens with: the last application's answers in `again` mode, else the profile's team in row 1. */
+/**
+ * What the form opens with: the last application's answers in `again` mode,
+ * else the profile's team in row 1. A last application with seasons already
+ * answered the full-season question, so its answers show straight away (the
+ * server still needs fullSeason=yes on send).
+ */
 function prefill(
   props: { teamNumber: number | null; previous: PreviousTeachAnswers | null },
   index: ReturnType<typeof catalogIndex>
@@ -177,8 +196,9 @@ function prefill(
     nextKey: seasons.length,
     rev: 0,
     saved: false,
+    cleared: false,
     fields: {
-      fullSeason: "",
+      fullSeason: p?.seasons.length ? "yes" : "",
       seasons,
       frcRoles: (p?.roles ?? []).filter((id) => FRC_ROLES.some((r) => r.id === id)),
       experience: p?.experience ?? "",
@@ -243,7 +263,14 @@ function withDraft(base: Form, raw: unknown, index: ReturnType<typeof catalogInd
   }
   const often = s("teachOften");
   if (often !== undefined && (often === "" || TEACH_OFTEN.some((t) => t.id === often))) f.teachOften = often;
-  return { fields: f, nextKey: f.seasons.length, rev: 0, saved: true };
+  return { fields: f, nextKey: f.seasons.length, rev: 0, saved: true, cleared: false };
+}
+
+/** A stored draft whose `savedAt` is older than TEACH_DRAFT_MAX_AGE_MS. */
+function staleDraft(raw: unknown, now: number): boolean {
+  if (!raw || typeof raw !== "object") return false;
+  const at = Date.parse(String((raw as { savedAt?: unknown }).savedAt));
+  return Number.isFinite(at) && now - at > TEACH_DRAFT_MAX_AGE_MS;
 }
 
 function draftOf(f: Fields) {
@@ -301,25 +328,51 @@ const SUMMARY_LABELS: Record<string, string> = {
   codeQuestions: "Questions about the code",
   code: "The teacher code",
   ownWords: "Your own words",
-  ...Object.fromEntries(Object.entries(TEACH_ANSWERS).map(([k, a]) => [k, a.label])),
+  // The written answers by the question the form prints, not the desk's label.
+  ...Object.fromEntries(Object.entries(TEACH_ANSWERS).map(([k, a]) => [k, a.question.replace(/\?$/, "")])),
 };
 
 /** "Season 2: pick the year." already says where it is. */
 const summaryLine = (p: { field: string; error: string }) =>
   p.field.startsWith("season-") || !SUMMARY_LABELS[p.field] ? p.error : `${SUMMARY_LABELS[p.field]}: ${p.error}`;
 
-/** Focuses a field from the summary: the control itself, or a group's first box. */
+/** What can take focus inside a group: the module picker's first department, or the first live control. */
+const FOCUSABLE_IN_GROUP =
+  "summary, input:not([type=hidden]):not([disabled]), select:not([disabled]), textarea:not([disabled])";
+
+/**
+ * Focuses a field from the summary: the control itself, or a group's first
+ * focusable part (for the module picker, its first department). The lesson
+ * select stays disabled until a module is picked, so its link goes to the
+ * module picker. A control in a closed drawer can't take focus, so the drawer
+ * opens first, and if focus still doesn't land, the group itself takes it.
+ */
 function jumpTo(e: React.MouseEvent, id: string) {
-  const el = document.getElementById(id);
+  let el = document.getElementById(id);
   if (!el) return;
   e.preventDefault();
-  const target = el.matches("input, select, textarea, button")
-    ? el
-    : (el.querySelector<HTMLElement>(
-        "input:not([type=hidden]):not([disabled]), select:not([disabled]), textarea:not([disabled])"
-      ) ?? el);
+  if (id === fieldId("sampleLessonId") && el.matches(":disabled")) el = document.getElementById(fieldId("topicIds")) ?? el;
+  const target =
+    el.matches("input, select, textarea, button") && !el.matches(":disabled")
+      ? el
+      : (el.querySelector<HTMLElement>(FOCUSABLE_IN_GROUP) ?? el);
+  const drawer = target.tagName === "SUMMARY" ? null : target.closest("details");
+  if (drawer && !drawer.open) drawer.open = true;
   el.scrollIntoView({ block: "center" });
   target.focus({ preventScroll: true });
+  if (document.activeElement !== target) el.focus({ preventScroll: true });
+}
+
+/** Enter in a one-line field would send a half-written form: only the Send button sends. */
+function noEnterSend(e: React.KeyboardEvent<HTMLFormElement>) {
+  const t = e.target;
+  if (
+    e.key === "Enter" &&
+    !e.nativeEvent.isComposing &&
+    t instanceof HTMLInputElement &&
+    !["submit", "button", "reset", "image"].includes(t.type)
+  )
+    e.preventDefault();
 }
 
 /* ── Pieces ────────────────────────────────────────────────────────── */
@@ -364,7 +417,11 @@ function LongAnswer({
   const id = fieldId(name);
   const n = wordCount(value);
   const under = n < a.minWords;
-  const error = serverError ?? (left && under ? `Write at least ${a.minWords} words. You’re at ${n}.` : null);
+  // Only once they've started: tabbing past an empty box to read ahead isn't
+  // a mistake. The counter shows the floor all along, and the server lists
+  // empty answers on send.
+  const error =
+    serverError ?? (left && under && value.trim() !== "" ? `Write at least ${a.minWords} words. You’re at ${n}.` : null);
   return (
     <div className="nb-field">
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
@@ -494,7 +551,30 @@ export function TeachForm({
   const [form, dispatch] = React.useReducer(reduce, undefined, initial);
   const f = form.fields;
 
-  const [state, formAction, isPending] = useActionState<TeachFormState, FormData>(applyToTeach, undefined);
+  // Set once the server accepts it, so a save timer still pending can't
+  // write the draft back.
+  const sent = React.useRef(false);
+  const submit = React.useCallback(
+    async (prev: TeachFormState, data: FormData): Promise<TeachFormState> => {
+      const r = await applyToTeach(prev, data);
+      // Here, not in an effect: the same answer rebuilds /apply/teach in its
+      // "pending" state, without this form, and an unmounted form runs no
+      // effects.
+      if (r?.success) {
+        sent.current = true;
+        store.remove(draftKey);
+      }
+      return r;
+    },
+    [draftKey]
+  );
+  const [state, formAction, isPending] = useActionState<TeachFormState, FormData>(submit, undefined);
+  /** Sends without React's form action, which would reset the boxes and selects (see the top). */
+  const send = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const data = new FormData(e.currentTarget);
+    React.startTransition(() => formAction(data));
+  };
   const [clearArmed, setClearArmed] = React.useState(false);
   const [left, setLeft] = React.useState<string[]>([]);
   // Fields typed in since the last answer from the server: their server
@@ -523,7 +603,12 @@ export function TeachForm({
   React.useEffect(() => {
     if (restoredFor.current === draftKey) return;
     restoredFor.current = draftKey;
-    const restored = withDraft(initial(), store.get(draftKey), index);
+    const raw = store.get(draftKey);
+    if (staleDraft(raw, Date.now())) {
+      store.remove(draftKey);
+      return;
+    }
+    const restored = withDraft(initial(), raw, index);
     if (restored) {
       dispatch({ type: "replace", fields: restored.fields, nextKey: restored.nextKey, saved: true });
     }
@@ -533,6 +618,7 @@ export function TeachForm({
   React.useEffect(() => {
     if (form.rev === 0 || f.fullSeason !== "yes" || state?.success) return;
     const t = window.setTimeout(() => {
+      if (sent.current) return;
       if (store.set(draftKey, { savedAt: new Date().toISOString(), fields: draftOf(f) })) dispatch({ type: "saved" });
     }, SAVE_MS);
     return () => window.clearTimeout(t);
@@ -546,7 +632,7 @@ export function TeachForm({
 
   React.useEffect(() => {
     if (state?.success) {
-      store.remove(draftKey);
+      store.remove(draftKey); // already gone (submit); kept as a fallback
       sentRef.current?.focus();
     } else if (state?.error) {
       summaryRef.current?.focus();
@@ -582,7 +668,15 @@ export function TeachForm({
     }
     store.remove(draftKey);
     const fresh = initial();
-    dispatch({ type: "replace", fields: fresh.fields, nextKey: fresh.nextKey, saved: false });
+    // The form stays open (they've already said yes), so this button, which
+    // has focus, stays on the page; "Draft cleared." is announced next to it.
+    dispatch({
+      type: "replace",
+      fields: { ...fresh.fields, fullSeason: "yes" },
+      nextKey: fresh.nextKey,
+      saved: false,
+      cleared: true,
+    });
     setClearArmed(false);
     setLeft([]);
   };
@@ -617,7 +711,7 @@ export function TeachForm({
         </p>
       </div>
 
-      <form action={formAction} className="mt-6" noValidate>
+      <form action={formAction} onSubmit={send} onKeyDown={noEnterSend} className="mt-6" noValidate>
         {state?.error ? (
           <div ref={summaryRef} tabIndex={-1} role="alert" className="nb-note mb-6 max-w-[70ch]">
             {generalError ? (
@@ -744,6 +838,9 @@ export function TeachForm({
                                       ["year", "team", "events"].map((p) => `season-${j + 1}-${p}`)
                                     )
                                   );
+                                  // This button goes with its row: focus the row above's year.
+                                  const above = fieldId(`season-${i}-year`);
+                                  window.requestAnimationFrame(() => document.getElementById(above)?.focus());
                                 }}
                               >
                                 Remove<span className="sr-only"> season {n}</span>
@@ -1236,6 +1333,9 @@ export function TeachForm({
                   <button type="button" className="nb-btn-ghost nb-btn-sm" onClick={clearDraft}>
                     {clearArmed ? "Press again to clear" : "Clear draft"}
                   </button>
+                  <span role="status" className="nb-slug">
+                    {form.cleared ? "Draft cleared." : ""}
+                  </span>
                 </div>
               </div>
             </>

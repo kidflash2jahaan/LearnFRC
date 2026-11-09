@@ -15,6 +15,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { signOut } from "@/app/actions/auth";
+import { dropAllTeachDrafts } from "@/lib/classes/teach-draft";
 import { createClient } from "@/lib/supabase/client";
 import type { Profile } from "@/lib/types";
 import { EmailChoicePrompt } from "@/components/settings/email-choice-prompt";
@@ -312,6 +313,9 @@ export function Navbar({ classesVisible = false }: { classesVisible?: boolean } 
                   <DropdownMenuItem
                     onSelect={async (e) => {
                       e.preventDefault();
+                      // An unsent teacher draft doesn't outlive the session
+                      // on a shared computer.
+                      dropAllTeachDrafts();
                       try {
                         await signOut();
                       } finally {

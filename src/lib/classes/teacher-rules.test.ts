@@ -144,14 +144,42 @@ test("each long answer: one word under its floor is refused, the floor passes, o
   }
 });
 
-test("effort: the same text twice refuses the later answer", () => {
+test("effort: the same text twice refuses the later answer, naming the other by the question on the form", () => {
   assert.deepEqual(problems({ scenarioTeaching: GOOD_ANSWERS.scenarioSafety }), [
-    `scenarioTeaching: ${EFFORT_SENTENCES.repeats(TEACH_ANSWERS.scenarioSafety.label)}`,
+    `scenarioTeaching: ${EFFORT_SENTENCES.repeats(TEACH_ANSWERS.scenarioSafety.question)}`,
   ]);
+  assert.equal(
+    EFFORT_SENTENCES.repeats(TEACH_ANSWERS.scenarioSafety.question),
+    "This repeats your answer to “A student asks to keep talking somewhere else”. Write this one fresh."
+  );
+  assert.equal(
+    EFFORT_SENTENCES.repeats("Why do you want to teach on LearnFRC?"),
+    "This repeats your answer to “Why do you want to teach on LearnFRC?” Write this one fresh.",
+    "no period after a question mark"
+  );
   // Mostly the same, with a sentence added, is still the same answer.
   assert.deepEqual(problems({ motivation: `${GOOD_ANSWERS.experience} I would like to teach.` }), [
-    `motivation: ${EFFORT_SENTENCES.repeats(TEACH_ANSWERS.experience.label)}`,
+    `motivation: ${EFFORT_SENTENCES.repeats(TEACH_ANSWERS.experience.question)}`,
   ]);
+});
+
+test("a line break counts once, the way the textarea counts it, and is stored as \\n", () => {
+  // A multipart post turns every \n into \r\n.
+  for (const key of TEACH_ANSWER_KEYS) {
+    const { maxChars } = TEACH_ANSWERS[key];
+    let lf = "";
+    for (let i = 0; lf.length < maxChars + 50; i++) lf += `${key}${i}${i % 10 === 9 ? "\n\n" : " "}`;
+    lf = lf.slice(0, maxChars).replace(/\s+$/, "");
+    lf = lf + "x".repeat(maxChars - lf.length);
+    assert.equal(lf.length, maxChars);
+    const crlf = lf.replace(/\n/g, "\r\n");
+    assert.ok(crlf.length > maxChars, `${key}: the CRLF copy is longer than the cap`);
+    const r = check({ [key]: crlf });
+    assert.equal(r.ok, true, r.ok ? "" : `${key}: ${r.problems.map((p) => p.error).join(" / ")}`);
+    assert.equal(r.ok && r.value[key], lf, `${key}: stored with \\n`);
+  }
+  const lone = check({ codeQuestions: "line one\rline two" });
+  assert.equal(lone.ok && lone.value.codeQuestions, "line one\nline two", "a lone \\r is a line break too");
 });
 
 test("effort: pasting the question back is refused", () => {
@@ -182,6 +210,15 @@ test("references: both or neither", () => {
   assert.deepEqual(problems({ referenceName: "Coach Rivera", referenceEmail: "coach at team" }), [
     "referenceEmail: That email address doesn't look right.",
   ]);
+  // Nothing that would add a recipient or a header to the desk's mailto link.
+  for (const bad of ["coach@team.org?bcc=x%40y.com&a=", "coach@team.org,x%40y.com", "coach@team.org&cc=x@y.com", "co%40ch@team.org"])
+    assert.deepEqual(
+      problems({ referenceName: "Coach Rivera", referenceEmail: bad }),
+      ["referenceEmail: That email address doesn't look right."],
+      bad
+    );
+  for (const ok of ["o'brien@team.org", "coach.rivera+frc@mail.team-5835.org"])
+    assert.equal(check({ referenceName: "Coach Rivera", referenceEmail: ok }).ok, true, ok);
   const r = check({ referenceName: " Coach   Rivera ", referenceEmail: "Coach@Example.com" });
   assert.equal(r.ok && r.value.referenceName, "Coach Rivera");
   assert.equal(r.ok && r.value.referenceEmail, "coach@example.com");

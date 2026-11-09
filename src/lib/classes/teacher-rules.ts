@@ -92,9 +92,11 @@ export const teachOftenLabel = (id: string | null | undefined): string | null =>
 
 /**
  * The six written answers. One table the form, the server and the desk all
- * read: `label` is the short name (the desk, the summary, the duplicate
- * refusal), `question` and `hint` are what the form prints, and `situation`
- * is the scenario printed above the box. The copied-prompt check compares an
+ * read: `label` is the desk's short name (the desk, its flags and the
+ * emails), `question` and `hint` are what the form prints, and `situation`
+ * is the scenario printed above the box. Anything the applicant reads (the
+ * form's summary, the duplicate refusal) names an answer by its `question`,
+ * since that's what's on the form. The copied-prompt check compares an
  * answer with its own question, hint and situation.
  *
  * The floors add up to 440 words. Writing a bit over them takes a serious
@@ -236,7 +238,9 @@ function padded(text: string): boolean {
 }
 
 export const EFFORT_SENTENCES = {
-  repeats: (otherLabel: string) => `This repeats your answer to “${otherLabel}”. Write this one fresh.`,
+  /** Takes the other answer's `question`, as the form prints it. */
+  repeats: (otherQuestion: string) =>
+    `This repeats your answer to “${otherQuestion}”${/[?!.]$/.test(otherQuestion) ? "" : "."} Write this one fresh.`,
   copiedPrompt: "This mostly repeats the question. Answer it in your own words.",
   padding: "This repeats the same few words. Write it out in sentences.",
 } as const;
@@ -256,7 +260,7 @@ export function effortProblems(answers: Partial<Record<TeachAnswerKey, string>>)
     const mine = sets.get(key)!;
     const earlier = keys.slice(0, i).find((other) => containment(mine, sets.get(other)!) >= 0.5);
     if (earlier) {
-      out.push({ field: key, error: EFFORT_SENTENCES.repeats(TEACH_ANSWERS[earlier].label) });
+      out.push({ field: key, error: EFFORT_SENTENCES.repeats(TEACH_ANSWERS[earlier].question) });
       continue;
     }
     if (copiedShare(mine, shingles(promptText(key))) >= 0.6) {
@@ -354,10 +358,24 @@ export type FieldCheck<T> =
   | { ok: false; field: string; error: string; problems: FieldProblem[] };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+/**
+ * A plain address, for the reference. No `?`, `&`, `,`, `%` or other URL
+ * characters: the desk puts it in a mailto link, where those would add a
+ * hidden recipient or header.
+ */
+const EMAIL = /^[a-z0-9._+'-]+@[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}$/i;
 
+/**
+ * A field as a trimmed string, with line breaks as plain \n. A form posted as
+ * multipart turns every line break into \r\n, which would count twice
+ * against a character cap the textarea counted once.
+ */
 function str(v: unknown): string {
-  return typeof v === "string" ? v.trim() : typeof v === "number" && Number.isFinite(v) ? String(v) : "";
+  return typeof v === "string"
+    ? v.replace(/\r\n?/g, "\n").trim()
+    : typeof v === "number" && Number.isFinite(v)
+      ? String(v)
+      : "";
 }
 
 /** A form's repeated field (getAll) or a single value, as trimmed strings. */

@@ -158,7 +158,9 @@ function ExperienceCheck({ app }: { app: DeskTeacherApplication }) {
               <>
                 {", "}
                 <a
-                  href={`mailto:${app.referenceEmail}?subject=${encodeURIComponent("Checking a LearnFRC teacher application")}`}
+                  // Encoded, so an address can't add a recipient or a header
+                  // (the server also refuses URL characters in it).
+                  href={`mailto:${encodeURIComponent(app.referenceEmail).replace(/%40/g, "@")}?subject=${encodeURIComponent("Checking a LearnFRC teacher application")}`}
                   className="nb-link break-all"
                 >
                   {app.referenceEmail}

@@ -238,6 +238,14 @@ function seasonsFrom(v: unknown): TeacherSeason[] {
  * A super admin, or the safety lead (requireClassReviewer, from the
  * safety-holds package). The super-admin check runs first, so the desk works
  * for Jahaan whatever state that check is in.
+ *
+ * The standing rule is that only Jahaan and the safety lead read
+ * applications (the privacy policy names those two), and that holds only
+ * while Jahaan is the only super admin. Checked read-only in production on
+ * Nov 9 (teacher-application-spec.md section 0, decision 2): one superadmin
+ * row in site_admins, an owner account. Giving anyone else superadmin lets
+ * them read every pending application, so narrow this to the owner email and
+ * the safety lead first.
  */
 async function requireTeacherStaff(
   user: AppUser
@@ -670,10 +678,16 @@ export async function submitTeacherApplication(
   return { ok: true };
 }
 
+/** Withdraws the pending application, and clears its reference (only needed for a decision). */
 export async function withdrawTeacherApplication(user: AppUser): Promise<Result> {
   const { data, error } = await createAdminClient()
     .from("teacher_applications")
-    .update({ status: "withdrawn", reviewed_at: new Date().toISOString() })
+    .update({
+      status: "withdrawn",
+      reviewed_at: new Date().toISOString(),
+      reference_name: null,
+      reference_email: null,
+    })
     .eq("user_id", user.id)
     .eq("status", "pending")
     .select("id");
@@ -1111,6 +1125,10 @@ async function lettersBlockedForUser(userId: string, email: string | null): Prom
  * reference), and only works on the second form (`form_version` set): the
  * first form never asked about FRC seasons, so those rows can only be
  * turned down.
+ *
+ * Either way it clears the adult reference's name and email: they're only
+ * there to confirm the seasons before the decision (the privacy policy says
+ * so). A grant that fails puts them back with the application.
  */
 export async function decideTeacherApplication(
   user: AppUser,
@@ -1131,7 +1149,7 @@ export async function decideTeacherApplication(
   const admin = createAdminClient();
   const { data: app } = await admin
     .from("teacher_applications")
-    .select("id, user_id, status, legal_name, code_version, form_version")
+    .select("id, user_id, status, legal_name, code_version, form_version, reference_name, reference_email")
     .eq("id", id)
     .maybeSingle();
   if (!app) return fail("not_found", "That application no longer exists.");
@@ -1172,6 +1190,8 @@ export async function decideTeacherApplication(
       reviewed_at: now,
       reviewed_by: user.id,
       review_note: note || null,
+      reference_name: null,
+      reference_email: null,
     })
     .eq("id", id)
     .eq("status", "pending")
@@ -1197,7 +1217,14 @@ export async function decideTeacherApplication(
       // teacher row would refuse every retry as already decided.
       await admin
         .from("teacher_applications")
-        .update({ status: "pending", reviewed_at: null, reviewed_by: null, review_note: null })
+        .update({
+          status: "pending",
+          reviewed_at: null,
+          reviewed_by: null,
+          review_note: null,
+          reference_name: (app.reference_name as string | null) ?? null,
+          reference_email: (app.reference_email as string | null) ?? null,
+        })
         .eq("id", id);
       console.error(`${LOG}: grant:`, insErr.message);
       return fail("server", "Couldn't make them a teacher, so nothing was decided. Try again.");

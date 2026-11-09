@@ -9,9 +9,11 @@ import { CLASS_LIMITS } from "@/lib/classes/constants";
 import { COORDINATOR } from "@/lib/classes/coordinator";
 import { TEACHER_CODE } from "@/lib/classes/notice";
 import { canApplyIn, type TeachApplyMode } from "@/lib/classes/teacher-rules";
+import { teachDraftKey } from "@/lib/classes/teach-draft";
 import { loadTeachApplyState, type TeachApplyState } from "@/lib/app/class-teachers";
 import { scheduleTopicOptions } from "@/lib/app/classes-teaching";
 import { TeachForm } from "./_teach-form";
+import { DropTeachDraft } from "./_drop-draft";
 import { WithdrawTeachForm } from "./_withdraw-form";
 import { CodeAgreeForm } from "./_code-form";
 
@@ -96,6 +98,13 @@ function StateCard({
 }
 
 const body = "mt-3 max-w-[58ch] text-[0.99rem] leading-relaxed";
+
+/**
+ * Modes where this account's draft has no use: sent (from this device or
+ * another), already teaching, or unable to apply. The page deletes the draft
+ * on this device when it shows one of them.
+ */
+const NO_DRAFT_MODES: TeachApplyMode[] = ["pending", "teacher", "code-outdated", "suspended", "adult", "parent-declined"];
 
 /** What still stands between an applicant or teacher and their first class. */
 function BeforeYouSchedule({ state }: { state: TeachApplyState }) {
@@ -445,13 +454,14 @@ export default async function TeachApplyPage() {
                 again={!!closed}
                 groups={groups}
                 codeVersion={state.codeVersion}
-                draftKey={`lf-teach-draft:v2:${user?.id ?? ""}`}
+                draftKey={teachDraftKey(user?.id ?? "")}
                 previous={state.previousAnswers}
                 thisYear={new Date().getUTCFullYear()}
               />
             </div>
           </>
         )}
+        {user && NO_DRAFT_MODES.includes(mode) ? <DropTeachDraft userId={user.id} /> : null}
       </section>
 
       {ageKnown && !canApplyIn(mode) && mode !== "code-outdated" ? (
