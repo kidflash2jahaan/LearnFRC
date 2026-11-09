@@ -9,6 +9,8 @@ import { getFunnelStats } from "@/lib/funnel";
 import { toIso } from "@/lib/app/format";
 import { NOT_ADMIN, requireSiteRole, type StaffRole } from "@/lib/app/admin-access";
 import { openReportCount } from "@/lib/app/admin-reports";
+import { pendingClassReviewCount } from "@/lib/app/admin-classes";
+import { classesVisible } from "@/lib/classes/config";
 import type { AppUser, Result } from "@/lib/app/result";
 
 /**
@@ -45,6 +47,12 @@ export type AdminSummary = {
   pendingSubmissions: number;
   /** Member reports waiting on a person (/admin/reports). Answered within 24 hours. */
   openReports: number;
+  /**
+   * Live classes waiting on a review decision (/admin/classes). Null unless
+   * the caller is a super admin, and while classes are hidden with nothing
+   * waiting (so the row never shows before launch).
+   */
+  pendingClassReviews: number | null;
 };
 
 export type AdminDashboard = {
@@ -60,6 +68,7 @@ export type AdminDashboard = {
     pendingEdits: number;
     pendingSubmissions: number;
     openReports: number;
+    pendingClassReviews: number | null;
   };
   stamps: { key: "visitors" | "pageViews" | "learners" | "completions"; value: number; label: string }[];
   notes: { traffic: { slug: string; text: string } | null; coverage: string | null };
@@ -166,8 +175,22 @@ async function pendingCount(table: "content_edits" | "content_submissions"): Pro
   return count ?? 0;
 }
 
+/**
+ * Classes waiting on a decision, for super admins only. Null while classes are
+ * hidden and nothing waits, so a release without classes shows no trace.
+ */
+async function pendingClassReviewsFor(role: StaffRole): Promise<number | null> {
+  if (role !== "superadmin") return null;
+  try {
+    const [count, visible] = await Promise.all([pendingClassReviewCount(), classesVisible()]);
+    return visible || count > 0 ? count : null;
+  } catch {
+    return null;
+  }
+}
+
 async function readNow(role: StaffRole) {
-  const [feedback, pendingEdits, pendingSubmissions, pendingApplications, openReports] = await Promise.all([
+  const [feedback, pendingEdits, pendingSubmissions, pendingApplications, openReports, pendingClassReviews] = await Promise.all([
     getFeedbackCounts(),
     pendingCount("content_edits"),
     pendingCount("content_submissions"),
@@ -175,6 +198,7 @@ async function readNow(role: StaffRole) {
     // pay for the query at all.
     role === "superadmin" ? getPendingApplicationCount() : Promise.resolve(null),
     openReportCount(),
+    pendingClassReviewsFor(role),
   ]);
   return {
     openFeedback: feedback.openCount,
@@ -183,6 +207,7 @@ async function readNow(role: StaffRole) {
     pendingEdits,
     pendingSubmissions,
     openReports,
+    pendingClassReviews,
   };
 }
 
