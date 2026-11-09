@@ -1089,6 +1089,7 @@ Response 200:
 | `pendingApplications` | Int? | Null unless the caller is a super admin (only they can answer applications; the query isn't even run otherwise). |
 | `pendingEdits`, `pendingSubmissions` | Int | Exact counts of suggested edits and lesson submissions waiting for the moderator. There's no human review queue on the site; these are counts only. |
 | `openReports` | Int | Member reports waiting on a person (`GET /api/app/admin/reports`), each to be answered within 24 hours. 0 when the reports table can't be read. Added for report and block; decode it as optional. |
+| `pendingClassReviews` | Int? | Added with live classes (2026-11); decode it as optional. Ended classes waiting for a decision on learnfrc.com/admin/classes. Null unless the caller is a super admin, and null while classes are hidden and nothing waits, so a release without classes shows no trace. The dashboard's `now` object carries the same field. |
 
 Errors: 401, 403.
 
@@ -1465,7 +1466,7 @@ Response 200 (one of each):
 | `status`, `statusWord` | String | `open`; `resolved` ("closed, nothing removed"); `removed` ("content removed"); `banned` ("account banned"). |
 | `reportedUsername` / `currentUsername` | String? | The handle when reported, and now (null once the account is gone). |
 | `reporterUsername` | String? | Shown only on this desk. |
-| `snapshot` | object | The public fields as they stood when it was reported: `username`, `avatarUrl`, `bio`, `teamNumber` for a profile; `target` (the lesson or article), `note`, `title`, `newModuleTitle` for an edit or proposal. |
+| `snapshot` | object | The public fields as they stood when it was reported: `username`, `avatarUrl`, `bio`, `teamNumber` for a profile; `target` (the lesson or article), `note`, `title`, `newModuleTitle` for an edit or proposal. For a live-class report (`contentKind` `class`, `contentKindLabel` "Live class"), `target` is one readable line about the class and the reported person's place in it, and these were added with live classes (2026-11; null on every other kind, so decode them as optional): `classId`, `classTitle`, `classStartsAt` (String?), `classRole` (`teacher`, `student` or `staff`), `liveNow` (Bool?, the class was on when it was reported). Remove on a class report is the class action (the student leaves the class for good; a teacher's teaching is suspended and the class ended) and needs a super admin or the safety lead. |
 | `answerBy` | String | `createdAt` plus 24 hours. |
 | `openAboutAccount` | Int | Open reports about the same account, this one included. |
 
@@ -1549,7 +1550,7 @@ In `marketer` mode `record` is all nulls and `marketer` is filled:
 | `limits` | object | The form's limits; the server re-checks them. |
 | `posting` | String | Added 2026-11-08. Where what a marketer makes ends up; the site prints it in semibold under the jobs. |
 | `rules` | [String] | Added 2026-11-08. "the rules" under "Once you’re in". |
-| `roles` | [{ `id`, `title`, `url`, `open`, `status` }] | Added with live classes (2026-11). The roles someone can apply for, in the order `/apply` shows them: `marketing` (this page) and `teacher` (`title` "Teach a live class", `url` `https://learnfrc.com/apply/teach`). `open` says whether that role takes applications now; `status` is where the caller stands for it, or null. Built by `src/lib/app/admin-apply.ts`. The app doesn't read it: its "Teach a live class" card follows `GET /api/app/classes` (`visible`, `teachUrl`). |
+| `roles` | [{ `id`, `title`, `url`, `open`, `status` }] | Added with live classes (2026-11). The roles someone can apply for, in the order `/apply` shows them: `marketing` (`title` "Spread LearnFRC", `url` `https://learnfrc.com/apply`) and `teacher` (`title` "Teach a live class", `url` `https://learnfrc.com/apply/teach`). The `teacher` entry is left out entirely while live classes are hidden. `open` says whether that role takes applications now (`applicationsOpen` for marketing, always true for teacher). `status` is a String saying where the caller stands for that role: the `mode` above for marketing; for teacher one of `signed-out`, `no-handle`, `device-blocked`, `needs-age`, `adult`, `parent-declined`, `suspended`, `code-outdated`, `teacher`, `pending`, `again`, `new` (`TeachApplyMode` in `src/lib/classes/teacher-rules.ts`). Built by `src/lib/app/admin-apply.ts` and `teacherApplyRole` in `src/lib/app/class-teachers.ts`. The app doesn't read it: its "Teach a live class" card follows `GET /api/app/classes` (`visible`, `teachUrl`). |
 | `marketer` | object? | Added 2026-11-08. Only in `marketer` mode: `inviteUrl` (null until they pick a handle), `since` (when the tag was granted), `trailerUrl` (null until the trailer is public: print "The trailer isn’t public yet. You’ll get the link the day it goes up."), and `brandKit` with `logos` and `clips` ([{ `label`, `url` }]), `colors` ([{ `name`, `hex`, `use` }]) and `fonts`. The site's card: "tagged {Mon D, YYYY} / your invite link", the link with a copy button, "the trailer and clips", "the brand kit", and "When you make something, reply to the email you got when you were accepted. It comes straight to me." |
 
 Errors: 401.

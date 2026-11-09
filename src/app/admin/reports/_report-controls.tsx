@@ -25,6 +25,7 @@ export function ReportControls({
   canBan,
   accountExists,
   suggestReplace,
+  classRole = null,
 }: {
   id: string;
   /** "@maya_254", or "this account". */
@@ -34,6 +35,12 @@ export function ReportControls({
   accountExists: boolean;
   /** Tick "replace the username" to start with (an offensive handle or an impersonation). */
   suggestReplace: boolean;
+  /**
+   * For a live-class report, the reported person's place in the class
+   * ("teacher", "student" or "staff"). Remove is then the class action: a
+   * student is taken out of the class, and a teacher's teaching is suspended.
+   */
+  classRole?: string | null;
 }) {
   const [state, dispatch, pending] = useActionState<DeskState, FormData>(answerReport, undefined);
   const [choice, setChoice] = React.useState<Action | null>(null);
@@ -153,8 +160,12 @@ export function ReportControls({
             {pending && choice === "remove"
               ? "Removing"
               : armed === "remove"
-                ? "Yes, remove it"
-                : "Remove the content"}
+                ? "Yes, do it"
+                : classRole === "teacher"
+                  ? "Suspend their teaching"
+                  : classRole
+                    ? "Remove from the class"
+                    : "Remove the content"}
             <span className="sr-only"> for {handle}</span>
           </button>
         ) : null}
@@ -181,9 +192,13 @@ export function ReportControls({
 
       <p id={armedId} role="status" className="nb-hint mt-2 max-w-[52ch] empty:mt-0">
         {armed === "remove"
-          ? isProfile
-            ? `One more click clears ${handle}'s bio and picture${replace ? " and replaces the username" : ""}, and closes every open report about it.`
-            : "One more click clears their words from the change log, turns it down if it's still waiting, and closes every open report about it."
+          ? classRole === "teacher"
+            ? `One more click suspends ${handle}'s teaching, cancels their upcoming classes, ends this class if it's still on, and closes every open report about them in it.`
+            : classRole
+              ? `One more click takes ${handle} out of the class for good and closes every open report about them in it.`
+              : isProfile
+                ? `One more click clears ${handle}'s bio and picture${replace ? " and replaces the username" : ""}, and closes every open report about it.`
+                : "One more click clears their words from the change log, turns it down if it's still waiting, and closes every open report about it."
           : armed === "ban"
             ? `One more click bans ${handle}'s email, deletes the account and everything in it, and closes every report about them. It can't be undone.`
             : null}

@@ -27,6 +27,7 @@ import {
   type ClassRef,
 } from "@/lib/classes/reconcile";
 import { runClassReview, sendClassMails } from "@/lib/classes/review";
+import { startHoldRecordingCopy } from "@/lib/classes/holds";
 import { unknownMeetingMail } from "@/lib/classes/safety-routing";
 import { SYSTEM_ACTOR } from "@/lib/classes/types";
 
@@ -358,8 +359,9 @@ async function onRecording(cls: ClassRef, sessionId: string | null, body: RtkWeb
     recording_url: r.downloadUrl,
     recording_expires_at: isoOf(r.downloadUrlExpiry) ?? new Date(Date.now() + 7 * 86_400_000).toISOString(),
   });
-  // A hold waiting on this recording copies it to R2: the safety-holds
-  // package's copyRecordingToR2 (holds.ts and r2.ts), wired at integration.
+  // A hold waiting on this recording copies it to R2 (holds.ts). It does
+  // nothing when the class has no live hold.
+  startHoldRecordingCopy(cls.id);
 }
 
 async function onTranscript(cls: ClassRef, sessionId: string | null, body: RtkWebhookBody, deps: ClassOpsDeps): Promise<void> {

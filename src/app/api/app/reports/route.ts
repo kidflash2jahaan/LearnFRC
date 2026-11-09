@@ -11,6 +11,10 @@ import {
   successBody,
 } from "@/lib/app/http";
 
+// A class report takes an evidence hold, whose recording copy runs after the
+// response (src/lib/classes/holds.ts).
+export const maxDuration = 300;
+
 /**
  * GET /api/app/reports: the reasons a report can give, in the order the
  * website's report form lists them, with the details limit. Public and the

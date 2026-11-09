@@ -2,8 +2,15 @@ import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isUuid } from "@/lib/app/http";
 import { fail, type AppUser, type Failure, type Result } from "@/lib/app/result";
-import { canSeeRestricted, requireClassReviewer, type ClassReviewerRole } from "@/lib/app/class-reviewers";
+import {
+  canSeeRestricted,
+  requireClassReviewer,
+  safetyLeadCandidateError,
+  type ClassReviewerRole,
+} from "@/lib/app/class-reviewers";
 import { endClass, setJoinsPaused } from "@/lib/app/classes-room";
+import { revokeParentConsentBy } from "@/lib/app/class-consent";
+import { refreshClassesOnStaticPages } from "@/lib/classes/static-pages";
 import {
   SITE_URL,
   adminClassUrl,
@@ -14,7 +21,7 @@ import {
   rtkApp,
 } from "@/lib/classes/config";
 import { classEmailHtml, sendClassEmail } from "@/lib/classes/emails";
-import { holdClass } from "@/lib/classes/holds";
+import { holdClass, releaseHold } from "@/lib/classes/holds";
 import { clock, type CodeFlag } from "@/lib/classes/code-flags";
 import { reconcileClass, type ReconcileReport } from "@/lib/classes/reconcile";
 import {
@@ -785,6 +792,27 @@ export async function releaseReviewAs(r: ClassReviewer, classId: string): Promis
   return { ok: true, message: "Released to reviewers." };
 }
 
+/**
+ * "Release to reviewers" on the review page: lifts the review's restriction
+ * and releases the class's unreleased holds with it (releaseHold), so the
+ * review and its holds never disagree about who may see the material.
+ */
+export async function releaseReview(user: AppUser, classId: string): Promise<Result<{ message: string }>> {
+  const g = await reviewerFor(user);
+  if (!g.ok) return g;
+  const res = await releaseReviewAs(g.reviewer, classId);
+  if (!res.ok) return res;
+  const { count } = await createAdminClient()
+    .from("class_safety_holds")
+    .select("id", { count: "exact", head: true })
+    .eq("class_id", classId)
+    .is("released_at", null);
+  if (!count) return res;
+  const held = await releaseHold(user, { classId });
+  if (!held.ok) return { ok: true, message: `Released the review, but not its holds: ${held.error}` };
+  return { ok: true, message: `Released to reviewers, with ${held.released === 1 ? "its hold" : `its ${held.released} holds`}.` };
+}
+
 /** "End" on a live class, as staff. */
 export async function endLiveClass(user: AppUser, classId: string): Promise<Result> {
   const g = await reviewerFor(user);
@@ -841,6 +869,14 @@ export async function setClassesVisibleAs(r: ClassReviewer, visible: boolean): P
     .update({ classes_visible: visible, updated_at: nowIso(), updated_by: r.userId })
     .eq("id", true);
   if (error) return fail("server", "Couldn't save that. Try again.");
+  // The cached pages (nav, footer, homepage, legal pages, sitemap) follow the
+  // switch on their next visit rather than at the daily refresh.
+  try {
+    refreshClassesOnStaticPages();
+  } catch (e) {
+    // Outside a request (a script) there's no cache to expire.
+    console.warn("setClassesVisible: page refresh skipped:", (e as Error).message);
+  }
   return {
     ok: true,
     message: visible
@@ -862,6 +898,8 @@ export async function setSafetyLeadAs(r: ClassReviewer, handle: string): Promise
     const { data } = await admin.from("profiles").select("id").ilike("username", clean).maybeSingle();
     if (!data) return { ...fail("not_found", `No account has the username @${clean}.`), field: "handle" };
     userId = data.id as string;
+    const refusal = await safetyLeadCandidateError(userId);
+    if (refusal) return { ...fail("validation", refusal), field: "handle" };
   }
   const { error } = await admin
     .from("class_settings")
@@ -919,16 +957,15 @@ export async function findParentConsentsAs(r: ClassReviewer, handle: string): Pr
 
 /** Revokes a parent OK, which blocks the student's future joins at once. */
 export async function revokeParentConsentAs(r: ClassReviewer, consentId: string): Promise<Result<{ message: string }>> {
-  if (!isUuid(consentId)) return fail("not_found", "That consent doesn't exist.");
-  const { data, error } = await createAdminClient()
-    .from("class_parent_consents")
-    .update({ status: "revoked", revoked_at: nowIso(), revoked_by: r.userId })
-    .eq("id", consentId)
-    .in("status", ["agreed", "sent"])
-    .select("student_handle");
-  if (error) return fail("server", "Couldn't save that. Try again.");
-  if (!data?.length) return fail("conflict", "That consent was already decided or revoked.");
-  return { ok: true, message: `Revoked. @${data[0].student_handle} can't join classes until a parent says OK again.` };
+  // The rule (and the student's email) is the consent package's.
+  const res = await revokeParentConsentBy(r.userId, consentId);
+  if (!res.ok) return res;
+  return {
+    ok: true,
+    message: res.studentHandle
+      ? `Revoked. @${res.studentHandle} can't join classes until a parent says OK again.`
+      : "Revoked. That student can't join classes until a parent says OK again.",
+  };
 }
 
 /** The review page's URL, for the actions' redirects and emails. */

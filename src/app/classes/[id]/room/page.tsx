@@ -28,6 +28,10 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
+// A class report from the room takes an evidence hold, whose recording copy
+// runs after the response (src/lib/classes/holds.ts).
+export const maxDuration = 300;
+
 async function viewer() {
   try {
     const supabase = await createClient();

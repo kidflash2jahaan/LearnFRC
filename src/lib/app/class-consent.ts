@@ -630,22 +630,35 @@ export async function listParentConsents(
 export async function revokeParentConsent(
   user: AppUser,
   input: { consentId: unknown }
-): Promise<Result> {
+): Promise<Result<{ studentHandle: string }>> {
   const access = await requireClassReviewer(user);
   if (!access.ok) return access;
-  if (!isUuid(input.consentId)) return fail("not_found", CONSENT_SENTENCES.notFound);
+  return revokeParentConsentBy(user.id, input.consentId);
+}
+
+/**
+ * The revoke itself, for a caller that has already checked the staff member
+ * is a class reviewer (/admin/classes' consent lookup, through
+ * admin-classes.ts's revokeParentConsentAs). Same rule and the same student
+ * email as revokeParentConsent.
+ */
+export async function revokeParentConsentBy(
+  actorId: string,
+  consentId: unknown
+): Promise<Result<{ studentHandle: string }>> {
+  if (!isUuid(consentId)) return fail("not_found", CONSENT_SENTENCES.notFound);
   const admin = createAdminClient();
   const { data: before } = await admin
     .from("class_parent_consents")
-    .select("id, status, student_id")
-    .eq("id", input.consentId)
+    .select("id, status, student_id, student_handle")
+    .eq("id", consentId)
     .maybeSingle();
   if (!before) return fail("not_found", CONSENT_SENTENCES.notFound);
   if (before.status !== "agreed" && before.status !== "sent") return fail("conflict", CONSENT_SENTENCES.closedConsent);
 
   const { data: updated, error } = await admin
     .from("class_parent_consents")
-    .update({ status: "revoked", revoked_at: new Date().toISOString(), revoked_by: user.id })
+    .update({ status: "revoked", revoked_at: new Date().toISOString(), revoked_by: actorId })
     .eq("id", before.id)
     .in("status", ["agreed", "sent"])
     .select("id")
@@ -665,7 +678,7 @@ export async function revokeParentConsent(
       console.error("revokeParentConsent: student email:", e);
     }
   }
-  return { ok: true };
+  return { ok: true, studentHandle: (before.student_handle as string | null) ?? "" };
 }
 
 /**

@@ -10,7 +10,7 @@ import {
   findParentConsentsAs,
   holdByHandAs,
   pullFromCloudflareAs,
-  releaseReviewAs,
+  releaseReview,
   revokeParentConsentAs,
   reviewerFor,
   setClassesVisibleAs,
@@ -119,7 +119,7 @@ export async function classAdminTool(_prev: ClassAdminState, formData: FormData)
       return asState(res, "Held.");
     }
     case "release": {
-      const res = await releaseReviewAs(r.reviewer, classId);
+      const res = await releaseReview(r.user, classId);
       if (res.ok) refresh();
       return asState(res, "Released.");
     }

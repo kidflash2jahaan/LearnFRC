@@ -38,6 +38,10 @@ import { EnrollButton, LeaveButton } from "./_enroll";
 
 type Params = { params: Promise<{ id: string }> };
 
+// A class report from this page takes an evidence hold, whose recording copy
+// runs after the response (src/lib/classes/holds.ts).
+export const maxDuration = 300;
+
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { id } = await params;
   const c = await getClassDetail(id, null);

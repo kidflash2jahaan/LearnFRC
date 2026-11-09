@@ -11,6 +11,10 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
+// A ban or a live-class Remove can take an evidence hold, whose recording
+// copy runs after the response (src/lib/classes/holds.ts).
+export const maxDuration = 300;
+
 /**
  * /admin/reports: what members reported about each other, and the three
  * answers to it. Everything here comes from loadReportsDesk
@@ -60,6 +64,8 @@ const SURFACE_WORD: Record<string, string> = {
   leaderboard: "a leaderboard",
   team: "the team sheet",
   contributions: "the change log",
+  class: "a live class",
+  classes_list: "the app's classes list",
 };
 
 const PLATFORM_WORD: Record<string, string> = {
@@ -152,6 +158,7 @@ function OpenReport({ r, canBan }: { r: DeskReport; canBan: boolean }) {
         canBan={canBan}
         accountExists={r.accountExists}
         suggestReplace={r.reason === "offensive" || r.reason === "impersonation"}
+        classRole={r.contentKind === "class" ? (s.classRole ?? "student") : null}
       />
     </li>
   );

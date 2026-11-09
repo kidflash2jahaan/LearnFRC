@@ -14,6 +14,8 @@ import {
   type RtkSessionParticipant,
 } from "@/lib/classes/realtimekit";
 import { runClassReview } from "@/lib/classes/review";
+import { deleteExpiredHolds, retryHoldWork, type HoldSweepSummary } from "@/lib/classes/holds";
+import { expireParentRequests } from "@/lib/app/class-consent";
 import { reviewDue, sweepDecision } from "@/lib/classes/sweep-rules";
 import { isoOf, parseTranscriptFile, wordCount } from "@/lib/classes/webhook-events";
 import {
@@ -474,6 +476,10 @@ export type SweepReport = {
   reviewed: { classId: string; status: ReviewStatus | null }[];
   cleanup: { deleted: number; failed: number };
   daily: boolean;
+  /** Step 6, the holds' retries (recording copies, peer reports, late transcripts). */
+  holds?: HoldSweepSummary;
+  /** The daily part's expired holds. */
+  holdsExpired?: { deleted: number; kept: number };
   errors: string[];
 };
 
@@ -558,7 +564,13 @@ export async function runSweep(opts: { classId?: string | null; deps?: ClassOpsD
     report.reviewed.push({ classId: c.id as string, status: res.ok ? res.status : null });
   }
 
-  // 6: held recordings are the safety-holds package's (holds.ts); not here.
+  // 6: evidence holds (holds.ts): recording copies still to make, peer
+  // reports to fetch again, transcripts and chat that came in after the hold.
+  try {
+    report.holds = await retryHoldWork(scoped ? { classId: scoped } : {});
+  } catch (e) {
+    report.errors.push(`holds: ${(e as Error).message}`);
+  }
   if (scoped) return report;
 
   // 7: RealtimeKit participants still to delete (account deletions).
@@ -593,6 +605,11 @@ export async function runSweep(opts: { classId?: string | null; deps?: ClassOpsD
       await dailyRetention(now);
     } catch (e) {
       report.errors.push(`daily: ${(e as Error).message}`);
+    }
+    try {
+      report.holdsExpired = await deleteExpiredHolds();
+    } catch (e) {
+      report.errors.push(`expired holds: ${(e as Error).message}`);
     }
     await admin.from("class_settings").update({ last_daily_sweep_at: now.toISOString() }).eq("id", true);
   }
@@ -639,7 +656,7 @@ async function dailyRetention(now: Date): Promise<void> {
     if (drop.length) await admin.from("class_chat_messages").delete().in("class_id", drop).lt("sent_at", yearAgo);
   }
 
-  await admin.from("class_parent_consents").update({ status: "expired" }).eq("status", "sent").lt("expires_at", now.toISOString());
+  await expireParentRequests(now);
 
   const halfYearAgo = new Date(now.getTime() - 180 * 86_400_000).toISOString();
   await admin
