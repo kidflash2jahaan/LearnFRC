@@ -232,6 +232,21 @@ export default async function AdminPage() {
                   hint="answer each within 24 hours"
                   href="/admin/reports"
                 />
+                {/* Super admins only, like applications. Null while live
+                    classes are hidden and nothing waits, so the row never
+                    shows before launch. */}
+                {isSuperAdmin && now.pendingClassReviews !== null ? (
+                  <NowRow
+                    value={now.pendingClassReviews}
+                    label={
+                      now.pendingClassReviews === 1
+                        ? "class waiting on your review"
+                        : "classes waiting on your review"
+                    }
+                    hint="urgent first, then teachers' first classes"
+                    href="/admin/classes"
+                  />
+                ) : null}
                 <NowRow
                   value={now.pendingEdits}
                   label="content edits to review"
