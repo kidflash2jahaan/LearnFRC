@@ -32,17 +32,20 @@ import { join } from "node:path";
 import { randomUUID } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import { MockLanguageModelV4 } from "ai/test";
-import { loadEnv } from "../env.mjs";
+import { devDir, loadEnv } from "../env.mjs";
 import { check, cleanup, create, readCredentials, usernameFor } from "../test-data.mjs";
 import { makeTestSigner } from "../fixtures/sign.mjs";
 import * as W from "../fixtures/webhooks.mjs";
 import { REVIEW_FIXTURES } from "../fixtures/review-classes.mjs";
 
+const PKG = "webhooks-and-review";
+// This package's own outbox (cleanup removes it), whatever package the
+// worktree's .env.local was built for: clearOutbox() empties the folder.
+process.env.EMAIL_DEV_OUTBOX = join(devDir(), "outbox", PKG);
 loadEnv();
 process.env.CLASSES_DEV_SWITCHES = "1";
 delete process.env.VERCEL_ENV;
 
-const PKG = "webhooks-and-review";
 const MIN = 60_000;
 const T0 = Date.now();
 const at = (min: number) => new Date(T0 + min * MIN).toISOString();
@@ -693,6 +696,47 @@ test("B a model failure is stored as failed, emails nobody, and the next run suc
   const retry = await mod.review.runClassReview(id, { model: mockModel(REVIEW_FIXTURES.clean.model, []) });
   assert.equal(retry.ok && retry.status, "ready");
   assert.equal(readOutbox().length, 1);
+});
+
+test("B a model failure still acts on an urgent code flag: the verdict, the hold and the urgent mail, once", async () => {
+  // The clean class plus a teacher chat line the filter stops: an urgent code flag.
+  const f = {
+    ...REVIEW_FIXTURES.clean,
+    chat: [...REVIEW_FIXTURES.clean.chat, { at: 600, who: "t", text: "add me on snap so we can talk after" }],
+  } as Fixture;
+  const id = await seedReviewClass("failurgent", f, { teacher: "t1", startsMin: -300, endedAgoMin: 230 });
+  clearOutbox();
+  const res = await mod.review.runClassReview(id, { model: mockModel("error", []) });
+  assert.equal(res.ok && res.status, "failed");
+  const { data: rev } = await admin.from("class_reviews").select("status, verdict, emailed_at, code_flags").eq("class_id", id).single();
+  assert.equal(rev.status, "failed");
+  assert.equal(rev.verdict, "urgent", "the code flags' verdict is stored");
+  assert.equal(rev.emailed_at, null, "the notes still go out when a retry writes them");
+  assert.ok((rev.code_flags as { kind: string; severity: string }[]).some((c) => c.kind === "chat_blocked" && c.severity === "urgent"));
+  const holds = await holdsFor(id);
+  assert.ok(holds.length >= 1 && holds.every((h) => h.detail.reason === "urgent_flag"), JSON.stringify(holds));
+  const first = readOutbox();
+  const safety = first.find((m) => m.to[0] === process.env.CLASSES_SAFETY_EMAIL);
+  assert.ok(safety, `the safety lead is mailed now (${first.length} mails)`);
+  assert.ok(safety!.subject.startsWith("[Check now]"), safety!.subject);
+  assert.ok(safety!.html.includes("AI notes failed"));
+  const { data: cls } = await admin.from("classes").select("status").eq("id", id).single();
+  assert.equal(cls.status, "ended", "no notes yet, so the class isn't in review");
+
+  // A second failure: no second hold and no second mail.
+  const again = await mod.review.runClassReview(id, { model: mockModel("error", []) });
+  assert.equal(again.ok && again.status, "failed");
+  assert.equal((await holdsFor(id)).length, holds.length);
+  assert.equal(readOutbox().length, first.length);
+
+  // The retry that works sends the notes once and takes no second hold.
+  const ok = await mod.review.runClassReview(id, { model: mockModel(REVIEW_FIXTURES.clean.model, []) });
+  assert.equal(ok.ok && ok.status, "ready");
+  const { data: done } = await admin.from("class_reviews").select("verdict, emailed_at").eq("class_id", id).single();
+  assert.equal(done.verdict, "urgent", "the model can't lower the code flags' verdict");
+  assert.ok(done.emailed_at);
+  assert.equal((await holdsFor(id)).length, holds.length);
+  assert.ok(readOutbox().length > first.length, "the notes went out");
 });
 
 test("B a class that ended minutes ago waits for its transcript; after 30 minutes with a report it's urgent", async () => {

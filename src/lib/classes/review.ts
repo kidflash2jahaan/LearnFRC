@@ -68,7 +68,12 @@ import type {
  *                                 /admin/classes/[id] renders from it too.
  *
  * Never throws: a failure is stored as `failed` and the sweep retries it, up
- * to 3 attempts, 30 minutes apart. A refusal is not a failure: it's stored as
+ * to 3 attempts, 30 minutes apart. Code flags don't wait for the model
+ * (sections 7.2 and 8.2): when the model call fails and the code flags are
+ * urgent, the run still stores that verdict, takes the hold and mails the
+ * urgent notice (from the code checks) before it returns `failed`.
+ *
+ * A refusal is not a failure: it's stored as
  * `refused`, restricted and urgent, a hold is taken, and the safety lead gets
  * it (section 7.5). Every model request asks the gateway for zero data
  * retention (review-prompt.ts).
@@ -500,7 +505,7 @@ function datePacific(iso: string): string {
 function mailsFor(
   f: ReviewFacts,
   r: {
-    status: "ready" | "refused" | "no_transcript";
+    status: "ready" | "refused" | "no_transcript" | "failed";
     verdict: ReviewVerdict;
     restricted: boolean;
     summary: string[];
@@ -551,6 +556,26 @@ const RUNNING = "running";
 const RUN_LEASE_MS = 6 * 60_000;
 const DONE: ReadonlySet<ReviewStatus> = new Set(["ready", "refused", "no_transcript"]);
 const NO_TRANSCRIPT_AFTER_MS = 30 * 60_000;
+
+/**
+ * Keeps the evidence for an urgent class (section 8.2): one hold per person
+ * an urgent flag names (up to 5), or one class-wide hold when none does.
+ */
+async function holdUrgentClass(
+  classId: string,
+  reason: "refusal" | "urgent_flag",
+  modelFlags: readonly StoredModelFlag[],
+  codeFlags: readonly CodeFlag[]
+): Promise<void> {
+  const subjects = new Set<string>();
+  for (const f of modelFlags) if (f.severity === "urgent" && f.speakerUserId) subjects.add(f.speakerUserId);
+  for (const f of codeFlags) if (f.severity === "urgent" && f.userId) subjects.add(f.userId);
+  const list = subjects.size ? [...subjects].slice(0, 5) : [null];
+  for (const subjectUserId of list) {
+    const held = await holdClass(classId, { reason, subjectUserId, createdBy: null });
+    if (!held.ok) console.error("runClassReview: hold failed", held.error);
+  }
+}
 
 export type RunReviewOptions = {
   /** Rerun even when notes exist ("Rerun notes"). */
@@ -646,6 +671,53 @@ async function run(classId: string, opts: RunReviewOptions): Promise<Result<{ st
     prompt_version: REVIEW_PROMPT_VERSION,
   };
 
+  /**
+   * The model call failed or its answer wasn't usable. The notes are retried
+   * by the sweep, but the code flags ran without the model and count now
+   * (sections 7.2 and 8.2): their verdict is stored (never lowering one a
+   * past run stored), and an urgent one takes the hold and mails the urgent
+   * notice at once, so a student's camera, an adult in the room or a teacher
+   * pushing contact details never waits on the gateway. Once per escalation,
+   * like a finished run. emailed_at stays empty, so the full notes still go
+   * out when a retry writes them.
+   */
+  const failedRun = async (error: string): Promise<Result<{ status: ReviewStatus }>> => {
+    const cv = codeVerdict(codeFlags);
+    const verdict: ReviewVerdict | null = previousVerdict
+      ? stricterVerdict(previousVerdict, cv)
+      : cv === "looks_fine"
+        ? null
+        : cv;
+    const restricted = reviewRestricted({ runRestricted: false, codeFlags, alreadyRestricted: fresh?.restricted === true });
+    const { error: saveError } = await admin
+      .from("class_reviews")
+      .update({
+        ...base,
+        status: "failed",
+        model: modelName(opts.model),
+        error,
+        verdict,
+        ...(restricted ? { restricted: true } : {}),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("class_id", classId);
+    if (saveError) throw new Error(`saving the failed review: ${saveError.message}`);
+    if (verdict === "urgent" && previousVerdict !== "urgent") {
+      await holdUrgentClass(classId, "urgent_flag", [], codeFlags);
+      const mails = mailsFor(facts, {
+        status: "failed",
+        verdict,
+        restricted,
+        summary: [],
+        oneLine: "",
+        codeFlags,
+        modelFlags: [],
+      });
+      await sendClassMails("urgent review", classId, mails);
+    }
+    return { ok: true, status: "failed" };
+  };
+
   let outcome: {
     status: "ready" | "refused" | "no_transcript";
     verdict: ReviewVerdict;
@@ -713,13 +785,7 @@ async function run(classId: string, opts: RunReviewOptions): Promise<Result<{ st
       chat: facts.chat,
     });
     const res = await callReviewModel({ model: opts.model ?? reviewModel(), prompt });
-    if (res.kind === "error") {
-      await admin
-        .from("class_reviews")
-        .update({ ...base, status: "failed", model: modelId, error: res.error, updated_at: new Date().toISOString() })
-        .eq("class_id", classId);
-      return { ok: true, status: "failed" };
-    }
+    if (res.kind === "error") return failedRun(res.error);
     if (res.kind === "refused") {
       outcome = {
         status: "refused",
@@ -736,13 +802,7 @@ async function run(classId: string, opts: RunReviewOptions): Promise<Result<{ st
       };
     } else {
       const parsed = parseModelReview(res.output, labels, facts.people);
-      if (!parsed) {
-        await admin
-          .from("class_reviews")
-          .update({ ...base, status: "failed", model: modelId, error: "The model's answer wasn't usable.", updated_at: new Date().toISOString() })
-          .eq("class_id", classId);
-        return { ok: true, status: "failed" };
-      }
+      if (!parsed) return failedRun("The model's answer wasn't usable.");
       outcome = {
         status: "ready",
         verdict: stricterVerdict(modelVerdict(parsed), codeVerdict(codeFlags)),
@@ -809,15 +869,7 @@ async function run(classId: string, opts: RunReviewOptions): Promise<Result<{ st
   // Urgent: keep the evidence (section 8.2), once per escalation.
   const escalated = outcome.verdict === "urgent" && previousVerdict !== "urgent";
   if (escalated) {
-    const subjects = new Set<string>();
-    for (const f of outcome.modelFlags) if (f.severity === "urgent" && f.speakerUserId) subjects.add(f.speakerUserId);
-    for (const f of codeFlags) if (f.severity === "urgent" && f.userId) subjects.add(f.userId);
-    const reason = outcome.status === "refused" ? "refusal" : "urgent_flag";
-    const list = subjects.size ? [...subjects].slice(0, 5) : [null];
-    for (const subjectUserId of list) {
-      const held = await holdClass(classId, { reason, subjectUserId, createdBy: null });
-      if (!held.ok) console.error("runClassReview: hold failed", held.error);
-    }
+    await holdUrgentClass(classId, outcome.status === "refused" ? "refusal" : "urgent_flag", outcome.modelFlags, codeFlags);
   }
 
   if (!neverStarted && (!previouslyEmailed || escalated)) {

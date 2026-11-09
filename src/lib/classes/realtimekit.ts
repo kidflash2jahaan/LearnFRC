@@ -134,6 +134,11 @@ export type RtkMeeting = {
 /**
  * The meeting config for a class (section 6.2). The title carries no class
  * title or handle, since Cloudflare keeps meeting records indefinitely.
+ *
+ * The transcription language is the base code "en": post-meeting
+ * transcription (transcribe_on_end, Whisper) refuses regional codes, and
+ * Create Meeting answers 400 "Invalid language 'en-US' for post-meeting
+ * transcription" to them. "en-US" is a real-time (Deepgram) code.
  */
 export function meetingConfigFor(input: {
   classId: string;
@@ -148,7 +153,7 @@ export function meetingConfigFor(input: {
     summarize_on_end: false,
     persist_chat: false,
     session_keep_alive_time_in_secs: 60,
-    ai_config: { transcription: { language: "en-US", keywords, profanity_filter: false } },
+    ai_config: { transcription: { language: "en", keywords, profanity_filter: false } },
     recording_config: {
       // Earliest join (teacher, 30 minutes early) to the hard end (15 after).
       max_seconds: (input.durationMinutes + 45) * 60,
@@ -290,8 +295,11 @@ export async function upsertPreset(p: RtkPreset, opts: RtkCallOptions = {}): Pro
     : rtkRequest("POST", "/presets", p, opts);
 }
 
-export function listWebhooks(opts: RtkCallOptions = {}): Promise<RtkResult<RtkWebhookRecord[]>> {
-  return rtkRequest("GET", "/webhooks", undefined, opts);
+/** GET /webhooks. Cloudflare answers 404 "Webhook not found" when the app has none: that's an empty list. */
+export async function listWebhooks(opts: RtkCallOptions = {}): Promise<RtkResult<RtkWebhookRecord[]>> {
+  const res = await rtkRequest<RtkWebhookRecord[]>("GET", "/webhooks", undefined, opts);
+  if (!res.ok && res.status === 404) return { ok: true, data: [] };
+  return res;
 }
 
 export function registerWebhook(

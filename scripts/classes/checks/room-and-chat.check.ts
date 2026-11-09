@@ -33,7 +33,7 @@ import { createHmac } from "node:crypto";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { loadEnv } from "../env.mjs";
+import { devDir, loadEnv } from "../env.mjs";
 import { create, cleanup, check, readCredentials } from "../test-data.mjs";
 
 loadEnv();
@@ -49,6 +49,9 @@ const FAKE_RTK = {
 Object.assign(process.env, FAKE_RTK);
 
 const PKG = "room-and-chat";
+// This package's own outbox (cleanup removes it), whatever package the
+// worktree's .env.local was built for.
+process.env.EMAIL_DEV_OUTBOX = join(devDir(), "outbox", PKG);
 const results: { name: string; ok: boolean; error?: string }[] = [];
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const admin = createClient(url, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
@@ -543,9 +546,14 @@ async function main() {
     assert.ok(!long.ok && long.error === chat.CHAT_SENTENCES.tooLong);
     const outsider = await send("out", "hello");
     assert.ok(!outsider.ok && outsider.error === chat.CHAT_SENTENCES.notMember);
+    // Texts with no digits: the filter reads a sender's last messages glued
+    // together, so "message number 1" then "message number 2" reads
+    // "...1message..." and "1" stands in for "i": "imessage", stopped.
+    const words = ["alpha", "bravo", "charlie", "delta", "echo", "foxtrot", "golf", "hotel", "india", "juliet", "kilo",
+      "lima", "mike", "november", "oscar", "papa", "quebec", "romeo", "sierra", "tango", "uniform"];
     const outcomes: string[] = [];
-    for (let i = 0; i < 21; i++) {
-      const r = await send("s4", `message number ${i + 1}`);
+    for (const w of words) {
+      const r = await send("s4", `quick question ${w}`);
       outcomes.push(r.ok ? r.status : r.code);
     }
     assert.equal(outcomes.filter((o) => o === "shown").length, 20, outcomes.join(","));
@@ -573,14 +581,27 @@ async function main() {
         });
     });
     assert.equal(status, "SUBSCRIBED");
-    await sleep(1500);
-    assert.ok((await send("t1", "before the removal")).ok);
+    // SUBSCRIBED can come a moment before Realtime delivers changes (a lone
+    // subscriber may have to wait for the project's change feed to start), and
+    // a row sent in that gap is never delivered. The panel's polling covers
+    // that gap in the room; here, send until one arrives, so the checks below
+    // run on a live stream.
+    const warm = ["alpha", "bravo", "charlie", "delta", "echo", "foxtrot"].map((w) => `realtime warm up ${w}`);
+    for (let n = 0; n < warm.length && !got.some((b) => warm.includes(b)); n++) {
+      const sent = await send("t1", warm[n]);
+      assert.ok(sent.ok && sent.status === "shown", JSON.stringify(sent));
+      for (let i = 0; i < 16 && !got.some((b) => warm.includes(b)); i++) await sleep(250);
+    }
+    assert.ok(got.some((b) => warm.includes(b)), `Realtime delivered nothing to s3 in 24 seconds: ${JSON.stringify(got)}`);
+    const before = await send("t1", "before the removal");
+    assert.ok(before.ok && before.status === "shown", JSON.stringify(before));
     for (let i = 0; i < 40 && !got.includes("before the removal"); i++) await sleep(250);
     assert.ok(got.includes("before the removal"), `s3 got ${JSON.stringify(got)}`);
 
     const removed = await room.removeFromClass(user("t1"), { classId: nowId, userId: acc.s3.id, reason: "lftest" });
     assert.ok(removed.ok, removed.ok ? "" : removed.error);
-    assert.ok((await send("t1", "after the removal")).ok);
+    const afterRemoval = await send("t1", "after the removal");
+    assert.ok(afterRemoval.ok && afterRemoval.status === "shown", JSON.stringify(afterRemoval));
     await sleep(4000);
     assert.ok(!got.includes("after the removal"), "a removed participant stops receiving rows");
     const polled = await c.from("class_chat_messages").select("body").eq("class_id", nowId);

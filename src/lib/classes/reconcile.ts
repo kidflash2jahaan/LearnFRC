@@ -17,7 +17,7 @@ import { runClassReview } from "@/lib/classes/review";
 import { deleteExpiredHolds, retryHoldWork, type HoldSweepSummary } from "@/lib/classes/holds";
 import { expireParentRequests } from "@/lib/app/class-consent";
 import { reviewDue, sweepDecision } from "@/lib/classes/sweep-rules";
-import { isoOf, parseTranscriptFile, wordCount } from "@/lib/classes/webhook-events";
+import { isEmptyTranscriptFile, isoOf, parseTranscriptFile, wordCount } from "@/lib/classes/webhook-events";
 import {
   SYSTEM_ACTOR,
   type ClassEndReason,
@@ -340,6 +340,8 @@ export type ReconcileReport = {
   attendanceAdded: number;
   attendanceClosed: number;
   transcriptsStored: number;
+  /** Sessions whose transcript link served an empty file: not ready yet, fetched again next time. */
+  transcriptsWaiting: number;
   minutes: number | null;
   review: ReviewStatus | null;
   errors: string[];
@@ -374,6 +376,7 @@ export async function reconcileClass(
     attendanceAdded: 0,
     attendanceClosed: 0,
     transcriptsStored: 0,
+    transcriptsWaiting: 0,
     minutes: null,
     review: null,
     errors: [],
@@ -428,23 +431,36 @@ export async function reconcileClass(
         }
       }
       if (s.transcript_status !== "stored") {
+        // Cloudflare keeps transcripts 7 days; after that it's gone.
+        const markMissingIfGone = async () => {
+          const ended = s.ended_at ? Date.parse(s.ended_at as string) : null;
+          if (ended && nowOf(deps).getTime() - ended > 7 * 86_400_000) {
+            await admin.from("class_sessions").update({ transcript_status: "missing" }).eq("id", s.id);
+          }
+        };
         const t = await transcript(s.id as string, app);
         const url = t.ok ? (t.data?.transcript_download_url as string | undefined) : undefined;
         if (url) {
           try {
-            await storeTranscript(cls, s.id as string, await download(url));
-            report.transcriptsStored++;
+            const text = await download(url);
+            if (isEmptyTranscriptFile(text)) {
+              // Cloudflare answers with a download link even before a session's
+              // transcript exists, and the link serves an empty file. That's
+              // "not yet", not an empty class: storing it would mark the
+              // session done and never fetch the real one.
+              report.transcriptsWaiting++;
+              await markMissingIfGone();
+            } else {
+              await storeTranscript(cls, s.id as string, text);
+              report.transcriptsStored++;
+            }
           } catch (e) {
             report.errors.push(`transcript ${s.id}: ${(e as Error).message}`);
             await admin.from("class_sessions").update({ transcript_status: "failed" }).eq("id", s.id);
           }
         } else if (!t.ok) {
           report.errors.push(`transcript ${s.id}: ${t.error}`);
-          // Cloudflare keeps transcripts 7 days; after that it's gone.
-          const ended = s.ended_at ? Date.parse(s.ended_at as string) : null;
-          if (ended && nowOf(deps).getTime() - ended > 7 * 86_400_000) {
-            await admin.from("class_sessions").update({ transcript_status: "missing" }).eq("id", s.id);
-          }
+          await markMissingIfGone();
         }
       }
     }

@@ -5,7 +5,8 @@
 //
 //   node scripts/classes/setup-realtimekit.mjs --app dev [--dev-url https://x.trycloudflare.com]
 //   node scripts/classes/setup-realtimekit.mjs --app prod          (release day)
-//   node scripts/classes/setup-realtimekit.mjs --app dev --check   (read only: presets match?)
+//   node scripts/classes/setup-realtimekit.mjs --app dev --check   (read only: presets match?
+//                                                                  exits 1 when one differs or is missing)
 //
 // Reads CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_REALTIMEKIT_API_TOKEN and
 // CLOUDFLARE_REALTIMEKIT_APP_ID_DEV or _PROD from the worktree's .env.local
@@ -44,7 +45,12 @@ try {
 }
 const BASE = `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/realtime/kit/${process.env[appIdName]}`;
 
-async function rtk(method, path, body) {
+/**
+ * One request. `emptyOn404` answers null instead of throwing on a 404: GET
+ * /webhooks says 404 "Webhook not found" when the app has none yet, which is
+ * an empty list, not an error.
+ */
+async function rtk(method, path, body, { emptyOn404 = false } = {}) {
   const res = await fetch(BASE + path, {
     method,
     headers: {
@@ -61,6 +67,7 @@ async function rtk(method, path, body) {
   } catch {
     // not JSON
   }
+  if (res.status === 404 && emptyOn404) return null;
   if (!res.ok || json?.success === false) {
     throw new Error(`${method} ${path}: ${res.status} ${json?.error?.message ?? json?.errors?.[0]?.message ?? text.slice(0, 200)}`);
   }
@@ -77,20 +84,26 @@ function diff(want, have, path = "") {
 
 const list = (d) => (Array.isArray(d) ? d : (d?.presets ?? d?.webhooks ?? d?.items ?? []));
 
+/** --check: something differs or is missing, so the run exits 1. */
+let drift = false;
+
 async function presets() {
   const existing = list(await rtk("GET", "/presets?per_page=100"));
   for (const p of PRESETS) {
     const found = existing.find((x) => x.name === p.name);
     if (checkOnly) {
       if (!found) {
+        drift = true;
         console.log(`preset ${p.name}: missing`);
         continue;
       }
       const full = await rtk("GET", `/presets/${found.id}`);
-      const problems = diff({ config: p.config, permissions: p.permissions }, full);
+      const problems = diff({ config: p.config, permissions: p.permissions, ui: p.ui }, full);
+      if (problems.length) drift = true;
       console.log(`preset ${p.name}: ${problems.length ? `differs\n  ${problems.join("\n  ")}` : "matches"}`);
       continue;
     }
+    // The whole preset, ui included: POST refuses one without its ui block.
     const saved = found ? await rtk("PATCH", `/presets/${found.id}`, p) : await rtk("POST", "/presets", p);
     console.log(`preset ${p.name}: ${found ? "updated" : "created"} ${saved?.id ?? found?.id ?? ""}`);
   }
@@ -108,10 +121,11 @@ async function webhook() {
     return null;
   }
   const name = `learnfrc-${app}`;
-  const hooks = list(await rtk("GET", "/webhooks"));
+  const hooks = list(await rtk("GET", "/webhooks", undefined, { emptyOn404: true }));
   const found = hooks.find((h) => h.name === name);
   const body = { name, url, events: [...WEBHOOK_EVENTS], enabled: true };
   if (checkOnly) {
+    if (!found || found.url !== url) drift = true;
     console.log(`webhook ${name}: ${found ? (found.url === url ? "matches" : `url is ${found.url}`) : "missing"}`);
     return found ?? null;
   }
@@ -145,3 +159,4 @@ try {
   console.error(e.message);
   process.exit(1);
 }
+if (checkOnly && drift) process.exit(1);

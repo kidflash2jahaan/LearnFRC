@@ -12,23 +12,42 @@
 //   - the sweep's retries, and expired holds are deleted.
 // With HOLDS_DEV_URL set (a `next dev` of this worktree), the same access
 // rules are checked over HTTP with real session cookies.
-// Everything it makes is deleted at the end (test-data.mjs cleanup).
+//
+// Keys change what the hold steps expect, and the check runs either way.
+// With RealtimeKit keys the made-up peer ids are asked about for real
+// (Cloudflare refuses them); with R2 keys a recording copy is attempted, and
+// a recording served from a local stand-in for RealtimeKit's download link
+// is copied into learnfrc-class-holds-dev (never another bucket), opened
+// through a 15-minute link and deleted when its hold expires. Peer reports
+// for a real peer need a live meeting: that's the flow test (6.10).
+// Everything it makes is deleted at the end (test-data.mjs cleanup, and the
+// class's prefix in the dev bucket).
 //
 //   node --import ./scripts/classes/register.mjs scripts/classes/checks/safety-holds.check.ts
 
 import assert from "node:assert/strict";
+import { createHash, randomBytes } from "node:crypto";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { createServer } from "node:http";
+import type { AddressInfo } from "node:net";
 import { join } from "node:path";
 import { createClient } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
 import { devDir, loadEnv } from "../env.mjs";
 import { create, cleanup, check, readCredentials } from "../test-data.mjs";
 
+const PKG = "safety-holds";
+// This package's own outbox (cleanup removes it), whatever package the
+// worktree's .env.local was built for.
+process.env.EMAIL_DEV_OUTBOX = join(devDir(), "outbox", PKG);
 loadEnv();
 process.env.CLASSES_DEV_SWITCHES = "1";
 delete process.env.VERCEL_ENV;
+const has = (...names: string[]) => names.every((n) => !!process.env[n]?.trim());
+const RTK_KEYS = has("CLOUDFLARE_ACCOUNT_ID", "CLOUDFLARE_REALTIMEKIT_API_TOKEN", "CLOUDFLARE_REALTIMEKIT_APP_ID_DEV");
+const R2_KEYS = has("CLOUDFLARE_ACCOUNT_ID", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY");
+console.log(`keys: RealtimeKit ${RTK_KEYS ? "yes" : "no"}, R2 ${R2_KEYS ? "yes" : "no"}`);
 
-const PKG = "safety-holds";
 const results: { name: string; ok: boolean; error?: string; needsKeys?: boolean }[] = [];
 async function step(name: string, fn: () => Promise<void>) {
   try {
@@ -40,9 +59,10 @@ async function step(name: string, fn: () => Promise<void>) {
     console.log(`FAIL ${name}: ${(e as Error).message}`);
   }
 }
-function needsKeys(name: string) {
+/** A check this run can't do: no keys yet, or (with keys) something only the flow test has. */
+function needsKeys(name: string, why = "needs keys") {
   results.push({ name, ok: true, needsKeys: true });
-  console.log(`keys ${name}: needs keys`);
+  console.log(`skip ${name}: ${why}`);
 }
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -121,6 +141,7 @@ async function main() {
   const handle = (k: string) => `lftest_safetyholds_${k}`;
 
   const holds = await import("../../../src/lib/classes/holds.ts");
+  const hr = await import("../../../src/lib/classes/hold-rules.ts");
   const reviewers = await import("../../../src/lib/app/class-reviewers.ts");
   const access = await import("../../../src/lib/app/admin-access.ts");
   const reportsDesk = await import("../../../src/lib/app/admin-reports.ts");
@@ -246,11 +267,25 @@ async function main() {
       [`lftest-peer-s1-${A.id.slice(0, 8)}`, `lftest-peer-t1-${A.id.slice(0, 8)}`].sort(),
       "the subject's peers plus the teacher's"
     );
-    assert.ok(peers.every((p) => !p.ok && p.error === "not_configured"), "no Cloudflare keys yet");
+    if (RTK_KEYS) {
+      // Asked for real: RealtimeKit has never seen these made-up peers.
+      assert.ok(
+        peers.every((p) => !p.ok && !!p.error && p.error !== "not_configured"),
+        `RealtimeKit was asked: ${JSON.stringify(peers.map((p) => p.error))}`
+      );
+    } else {
+      assert.ok(peers.every((p) => !p.ok && p.error === "not_configured"), "no Cloudflare keys yet");
+    }
     const days = (Date.parse(h.expires_at) - Date.now()) / DAY;
     assert.ok(days > 364 && days < 366, `expires in a year (${days})`);
-    assert.equal(h.recording_status, "failed", "no R2 keys: the copy waits");
-    assert.equal(h.recording_key, null, "nothing reached the bucket");
+    assert.equal(h.recording_status, "failed", R2_KEYS ? "the source can't be fetched" : "no R2 keys: the copy waits");
+    if (R2_KEYS) {
+      // The copy was tried (example.invalid never answers, so nothing reached
+      // the bucket), and the hold points at the class's prefix from then on.
+      assert.equal(h.recording_key, hr.holdRecordingPrefix(A.id));
+    } else {
+      assert.equal(h.recording_key, null, "nothing reached the bucket");
+    }
     const { data: c } = await admin.from("classes").select("keep_evidence").eq("id", A.id).single();
     assert.equal(c!.keep_evidence, true);
     const { data: ev } = await admin.from("class_events").select("kind, detail").eq("class_id", A.id).eq("kind", "hold_created");
@@ -276,17 +311,30 @@ async function main() {
     await holds.holdWorkSettled();
   });
 
-  await step("without R2 keys the recording ledger says so once, not on every retry", async () => {
-    await holds.copyHeldRecordings(A.id);
-    await holds.copyHeldRecordings(A.id, { force: true });
-    const { data: ev } = await admin
-      .from("class_events")
-      .select("detail")
-      .eq("class_id", A.id)
-      .eq("kind", "hold_recording");
-    const notConfigured = (ev ?? []).filter((e) => (e.detail as { error?: string }).error === "r2_not_configured");
-    assert.equal(notConfigured.length, 1, `ledger rows: ${JSON.stringify(ev)}`);
-  });
+  await step(
+    R2_KEYS
+      ? "with R2 keys the ledger logs each failed try with its key, never missing keys"
+      : "without R2 keys the recording ledger says so once, not on every retry",
+    async () => {
+      await holds.copyHeldRecordings(A.id);
+      await holds.copyHeldRecordings(A.id, { force: true });
+      const { data: ev } = await admin
+        .from("class_events")
+        .select("detail")
+        .eq("class_id", A.id)
+        .eq("kind", "hold_recording");
+      const rows = (ev ?? []).map((e) => e.detail as { status?: string; key?: string; error?: string });
+      const notConfigured = rows.filter((d) => d.error === "r2_not_configured");
+      if (R2_KEYS) {
+        assert.equal(notConfigured.length, 0, `ledger rows: ${JSON.stringify(rows)}`);
+        const failed = rows.filter((d) => d.status === "failed");
+        assert.ok(failed.length >= 2, `a failed row per try: ${JSON.stringify(rows)}`);
+        assert.ok(failed.every((d) => d.key === hr.holdRecordingKey(A.id, sessionA) && !!d.error), JSON.stringify(failed));
+      } else {
+        assert.equal(notConfigured.length, 1, `ledger rows: ${JSON.stringify(rows)}`);
+      }
+    }
+  );
 
   await step("a ban leaves a hold after the account is gone; consents keep their handles", async () => {
     const r = await profile.deleteAccountData(user("s2"), { supabase: admin, admin }, { reason: "ban" });
@@ -422,7 +470,7 @@ async function main() {
     assert.match(h!.notes!, /Spoke to the parent\./);
     assert.match(h!.notes!, /Kept until .*: Law enforcement asked\./);
     const links = await holds.heldRecordingLinks(user("lead"), A.id);
-    assert.ok(!links.ok, "nothing stored without R2 keys");
+    assert.ok(!links.ok, "nothing of class A is in the bucket (no keys, or a source that never answers)");
     const r = await holds.releaseHold(user("lead"), { holdId: holdS1, note: "fine for Jahaan to see" });
     assert.ok(r.ok && r.released === 1, JSON.stringify(r));
     const desk = await holds.loadHoldsDesk(user("boss"));
@@ -440,7 +488,14 @@ async function main() {
 
   await step("the sweep: peer reports and late chat are picked up", async () => {
     const { data: before } = await admin.from("class_safety_holds").select("peer_reports").eq("id", holdS1).single();
-    const aged = (before!.peer_reports as { fetchedAt: string }[]).map((p) => ({ ...p, fetchedAt: new Date(Date.now() - 7 * 3600_000).toISOString() }));
+    // Failed for a reason that can pass (a timeout) hours ago, so the sweep
+    // asks again, keys or not. (A 4xx for a made-up peer is never retried.)
+    const aged = (before!.peer_reports as { fetchedAt: string }[]).map((p) => ({
+      ...p,
+      ok: false,
+      error: "timeout",
+      fetchedAt: new Date(Date.now() - 7 * 3600_000).toISOString(),
+    }));
     must(await admin.from("class_safety_holds").update({ peer_reports: aged }).eq("id", holdS1), "age peer reports");
     must(
       await admin.from("class_chat_messages").insert({
@@ -534,6 +589,109 @@ async function main() {
     console.log("skip http checks (no HOLDS_DEV_URL)");
   }
 
+  const realCopy = "a recording copied to learnfrc-class-holds-dev, linked for 15 minutes and deleted when its hold expires";
+  if (R2_KEYS) {
+    await step(`${realCopy} (from a local stand-in for RealtimeKit's link)`, async () => {
+      const config = await import("../../../src/lib/classes/config.ts");
+      const r2 = await import("../../../src/lib/classes/r2.ts");
+      const bucket = config.r2HoldsBucket();
+      assert.equal(bucket, "learnfrc-class-holds-dev", "only ever the dev bucket");
+      const r2cfg = { accountId: config.cloudflareAccountId()!, bucket, ...config.r2Credentials()! };
+
+      // Two parts' worth (R2 parts are 10 MB), served like RealtimeKit's download link.
+      const size = hr.RECORDING_PART_BYTES + 1_234_567;
+      const payload = randomBytes(size);
+      const sha = createHash("sha256").update(payload).digest("hex");
+      const server = createServer((req, res) => {
+        if (req.url !== "/lftest-safetyholds-c.mp4") {
+          res.writeHead(404).end();
+          return;
+        }
+        res.writeHead(200, { "Content-Type": "video/mp4", "Content-Length": String(size) });
+        res.end(payload);
+      });
+      await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+      const port = (server.address() as AddressInfo).port;
+      const C = await newClass("lftest safety-holds recording class", acc.t1.id, { startedMinAgo: 90, status: "ended" });
+      const prefix = hr.holdRecordingPrefix(C.id);
+      const sessionC = `lftest-safetyholds-${C.id.slice(0, 8)}-s1`;
+      try {
+        must(
+          await admin.from("class_sessions").insert({
+            id: sessionC,
+            class_id: C.id,
+            started_at: C.starts_at,
+            ended_at: new Date(Date.parse(C.starts_at) + 32 * MIN).toISOString(),
+            recording_url: `http://127.0.0.1:${port}/lftest-safetyholds-c.mp4`,
+            recording_expires_at: new Date(Date.now() + 6 * DAY).toISOString(),
+            transcript_status: "missing",
+          }),
+          "session C"
+        );
+        const held = await holds.holdClass(C.id, { reason: "urgent_flag" });
+        assert.ok(held.ok, JSON.stringify(held));
+        if (!held.ok) return;
+        await holds.holdWorkSettled();
+        const { data: h } = await admin.from("class_safety_holds").select("recording_status, recording_key").eq("id", held.holdIds[0]).single();
+        assert.deepEqual(h, { recording_status: "stored", recording_key: prefix });
+        const { data: ev } = await admin.from("class_events").select("detail").eq("class_id", C.id).eq("kind", "hold_recording");
+        const stored = (ev ?? []).map((e) => e.detail as { status: string; bytes?: number; parts?: number; bucket?: string }).find((d) => d.status === "stored");
+        assert.deepEqual(
+          stored && { bytes: stored.bytes, parts: stored.parts, bucket: stored.bucket },
+          { bytes: size, parts: 2, bucket },
+          JSON.stringify(ev)
+        );
+        const head = await r2.headObject(r2cfg, hr.holdRecordingKey(C.id, sessionC));
+        assert.ok(head.ok, JSON.stringify(head));
+
+        // The safety lead's 15-minute link serves the same bytes, and is logged.
+        const links = await holds.heldRecordingLinks(user("lead"), C.id);
+        assert.ok(links.ok, JSON.stringify(links));
+        if (!links.ok) return;
+        const link = links.links[0];
+        assert.equal(new URL(link.url).searchParams.get("X-Amz-Expires"), String(hr.RECORDING_LINK_SECONDS));
+        const mins = (Date.parse(link.expiresAt) - Date.now()) / MIN;
+        assert.ok(mins > 14 && mins <= 15, `expires in 15 minutes (${mins})`);
+        const got = await fetch(link.url);
+        assert.equal(got.status, 200);
+        assert.equal(createHash("sha256").update(Buffer.from(await got.arrayBuffer())).digest("hex"), sha, "the same bytes");
+        const unsigned = await fetch(link.url.split("?")[0]);
+        assert.notEqual(unsigned.status, 200, "the bucket refuses an unsigned read");
+        await unsigned.arrayBuffer().catch(() => null);
+        const { count: opened } = await admin
+          .from("class_events")
+          .select("id", { count: "exact", head: true })
+          .eq("class_id", C.id)
+          .eq("kind", "hold_recording_opened");
+        assert.equal(opened, 1, "the link is logged");
+
+        // The hold expires: the daily sweep deletes the row and the recording.
+        must(
+          await admin.from("class_safety_holds").update({ expires_at: new Date(Date.now() - MIN).toISOString() }).eq("class_id", C.id),
+          "expire C"
+        );
+        const d = await holds.deleteExpiredHolds({ classId: C.id });
+        assert.deepEqual(d, { deleted: 1, kept: 0 });
+        const left = await r2.listKeys(r2cfg, prefix);
+        assert.ok(left.ok && left.keys.length === 0, JSON.stringify(left));
+        const after = await fetch(link.url);
+        assert.notEqual(after.status, 200, "the old link is dead");
+        await after.arrayBuffer().catch(() => null);
+      } finally {
+        server.close();
+        // Whatever happened above, nothing of this check stays in the bucket.
+        const gone = await r2.deletePrefix(r2cfg, prefix);
+        if (!gone.ok) console.log(`could not empty ${prefix}: ${gone.error}`);
+      }
+    });
+  } else {
+    needsKeys(realCopy);
+  }
+  needsKeys(
+    "peer reports fetched from RealtimeKit (a real peer)",
+    RTK_KEYS ? "needs a real peer in a live meeting (the flow test, 6.10)" : "needs keys"
+  );
+
   await step("with the safety lead set back, the lead account is out", async () => {
     await setLead(prevLead);
     leadSet = false;
@@ -541,8 +699,6 @@ async function main() {
     assert.ok(!g.ok && g.code === "forbidden");
   });
 
-  needsKeys("peer reports fetched from RealtimeKit (a real peer)");
-  needsKeys("a real dev recording copied to learnfrc-class-holds-dev, linked for 15 minutes and deleted when its hold expires");
 }
 
 try {
@@ -568,7 +724,7 @@ try {
   await check(PKG);
   const failed = results.filter((r) => !r.ok);
   const keys = results.filter((r) => r.needsKeys).length;
-  console.log(`\n${results.length - failed.length - keys}/${results.length - keys} passed, ${keys} need keys`);
+  console.log(`\n${results.length - failed.length - keys}/${results.length - keys} passed, ${keys} skipped`);
   console.log(`outbox: ${join(devDir(), "outbox", PKG)} (removed by cleanup)`);
   process.exit(failed.length ? 1 : (process.exitCode ?? 0));
 }

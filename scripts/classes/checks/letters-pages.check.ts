@@ -35,6 +35,11 @@ import { devDir, loadEnv } from "../env.mjs";
 import { create, cleanup, check, readCredentials } from "../test-data.mjs";
 
 loadEnv();
+// The dev server's owner: the ADMIN_EMAILS its .env.local names (this
+// worktree's, built by make-env.sh for whichever package), read before this
+// process changes it.
+const SERVER_OWNER = (process.env.ADMIN_EMAILS ?? "").split(",")[0].trim().toLowerCase();
+const PACKAGE_OWNER = "lftest+letters-owner@example.com";
 process.env.CLASSES_DEV_SWITCHES = "1";
 delete process.env.VERCEL_ENV;
 const DEV = (process.env.LETTERS_DEV_URL || process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3107").replace(/\/$/, "");
@@ -193,23 +198,37 @@ async function main() {
   let leadSetByUs: string | null = null;
 
   try {
-    await create(PKG, ["t1:age=16:parent=agreed:teacher", "t2:age=15:parent=agreed:teacher", "lead", "boss:superadmin", "nobody"]);
+    await create(PKG, [
+      "t1:age=16:parent=agreed:teacher",
+      "t2:age=15:parent=agreed:teacher",
+      "lead",
+      "boss:superadmin",
+      "nobody",
+      "blocked:teacher",
+    ]);
     const acc = readCredentials(PKG).accounts as Record<string, Account>;
+    // A teacher whose letters are switched off: the page shows the no-letters
+    // note, on any dev server.
+    await admin.from("class_teachers").update({ letters_blocked: true }).eq("user_id", acc.blocked.id);
 
-    // The dev server's owner is ADMIN_EMAILS = lftest+letters-owner@example.com
-    // (make-env.sh). Cleanup finds this account by its lftest+letters- prefix.
-    const ownerEmail = "lftest+letters-owner@example.com";
+    // The owner is the same note by another road (ADMIN_EMAILS), and only a
+    // dev server built for this package (make-env.sh letters) has this
+    // package's owner. Cleanup finds the account by its lftest+letters- prefix.
+    const ownerEmail = PACKAGE_OWNER;
     const ownerPassword = `Lf${Math.random().toString(36).slice(2)}${Date.now().toString(36)}!`;
-    const { data: ownerData, error: ownerErr } = await admin.auth.admin.createUser({
-      email: ownerEmail,
-      password: ownerPassword,
-      email_confirm: true,
-      user_metadata: { username: "lftest_letters_owner" },
-    });
-    if (ownerErr || !ownerData.user) throw new Error(`owner: ${ownerErr?.message}`);
-    const ownerId = ownerData.user.id;
-    await admin.from("profiles").update({ username: "lftest_letters_owner" }).eq("id", ownerId);
-    await admin.from("class_teachers").insert({ user_id: ownerId, letter_name: "Lftest Owner", note: "lftest" });
+    let ownerId: string | null = null;
+    if (SERVER_OWNER === PACKAGE_OWNER) {
+      const { data: ownerData, error: ownerErr } = await admin.auth.admin.createUser({
+        email: ownerEmail,
+        password: ownerPassword,
+        email_confirm: true,
+        user_metadata: { username: "lftest_letters_owner" },
+      });
+      if (ownerErr || !ownerData.user) throw new Error(`owner: ${ownerErr?.message}`);
+      ownerId = ownerData.user.id;
+      await admin.from("profiles").update({ username: "lftest_letters_owner" }).eq("id", ownerId);
+      await admin.from("class_teachers").insert({ user_id: ownerId, letter_name: "Lftest Owner", note: "lftest" });
+    }
     process.env.ADMIN_EMAILS = ownerEmail;
 
     const letters = await import("../../../src/lib/classes/letters.ts");
@@ -241,7 +260,8 @@ async function main() {
     const c1 = await mkClass("Wiring the CAN bus", acc.t1.id, 5, 45);
     await mkClass("Tuning a PID loop", acc.t1.id, 12, 60);
     await mkClass("Reading a schematic", acc.t1.id, 30, 30);
-    await mkClass("Owner class", ownerId, 4, 30);
+    if (ownerId) await mkClass("Owner class", ownerId, 4, 30);
+    await mkClass("Blocked class", acc.blocked.id, 4, 30);
 
     const cookies = {
       t1: await cookieFor(acc.t1),
@@ -249,7 +269,8 @@ async function main() {
       lead: await cookieFor(acc.lead),
       boss: await cookieFor(acc.boss),
       nobody: await cookieFor(acc.nobody),
-      owner: await cookieFor({ email: ownerEmail, password: ownerPassword }),
+      blocked: await cookieFor(acc.blocked),
+      owner: ownerId ? await cookieFor({ email: ownerEmail, password: ownerPassword }) : null,
     };
 
     await step("/classes/teaching/letter: signed out goes to sign in", async () => {
@@ -270,11 +291,19 @@ async function main() {
       assert.equal(r.html.includes("\u2014"), false, "no em dash");
     });
 
-    await step("/classes/teaching/letter: an owner account gets the no-letters note, a student the teachers-only card", async () => {
-      const o = await get("/classes/teaching/letter", cookies.owner);
-      assert.equal(o.status, 200);
-      assert.ok(o.text.includes(letters.LETTER_SENTENCES.noLetters));
-      assert.equal(o.text.includes("Request the letter"), false);
+    await step("/classes/teaching/letter: a blocked or owner account gets the no-letters note, a student the teachers-only card", async () => {
+      const b = await get("/classes/teaching/letter", cookies.blocked);
+      assert.equal(b.status, 200);
+      assert.ok(b.text.includes(letters.LETTER_SENTENCES.noLetters), "letters_blocked gets the note");
+      assert.equal(b.text.includes("Request the letter"), false);
+      if (cookies.owner) {
+        const o = await get("/classes/teaching/letter", cookies.owner);
+        assert.equal(o.status, 200);
+        assert.ok(o.text.includes(letters.LETTER_SENTENCES.noLetters), "the owner gets the note");
+        assert.equal(o.text.includes("Request the letter"), false);
+      } else {
+        console.log("     (owner variant skipped: the dev server's ADMIN_EMAILS isn't this package's owner; make-env.sh letters for it)");
+      }
       const n = await get("/classes/teaching/letter", cookies.nobody);
       assert.equal(n.status, 200);
       assert.ok(n.text.includes(letters.LETTER_SENTENCES.notTeacher));

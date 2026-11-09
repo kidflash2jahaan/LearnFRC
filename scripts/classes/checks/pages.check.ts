@@ -30,15 +30,18 @@ import { createServerClient } from "@supabase/ssr";
 import { devDir, loadEnv } from "../env.mjs";
 import { create, cleanup, check, readCredentials } from "../test-data.mjs";
 
+// This package's own outbox (outbox() below reads it, cleanup removes it),
+// whatever package the worktree's .env.local was built for.
+process.env.EMAIL_DEV_OUTBOX = join(devDir(), "outbox", "pages");
 loadEnv();
 process.env.CLASSES_DEV_SWITCHES = "1";
 delete process.env.VERCEL_ENV;
 delete process.env.CLASSES_ENROLL_EMAILS;
 const DEV_URL = (process.env.PAGES_DEV_URL || "").replace(/\/$/, "");
 
-// Cloudflare keys aren't in yet, so RealtimeKit is swapped for a recorded
-// double (scripts/classes/checks/doubles). getTeacher is the real one
-// (teachers) since integration.
+// RealtimeKit is swapped for a recorded double (scripts/classes/checks/doubles),
+// with or without real keys in .env.local, so no meeting is ever made here.
+// getTeacher is the real one (teachers) since integration.
 const HERE = fileURLToPath(new URL(".", import.meta.url));
 const DOUBLES: Record<string, string> = {
   "@/lib/classes/realtimekit": pathToFileURL(join(HERE, "doubles", "realtimekit.ts")).href,
@@ -80,18 +83,21 @@ type Account = { id: string; email: string; password: string; username: string |
 const MIN = 60_000;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-/** Pretend the Cloudflare keys are in (the double answers), or take them away. */
+/**
+ * Pretend the Cloudflare keys are in (the double answers), or take them away.
+ * Off means none at all, even when the worktree's .env.local has real ones:
+ * the double stands in for RealtimeKit either way, and "without keys" has to
+ * mean classesConfigured() is false.
+ */
 const FAKE_KEYS = {
   CLOUDFLARE_ACCOUNT_ID: "lftest-account",
   CLOUDFLARE_REALTIMEKIT_API_TOKEN: "lftest-token",
   CLOUDFLARE_REALTIMEKIT_APP_ID_DEV: "lftest-dev-app",
 };
-const realKeys = Object.fromEntries(Object.keys(FAKE_KEYS).map((k) => [k, process.env[k]]));
 function keys(on: boolean) {
   for (const [k, v] of Object.entries(FAKE_KEYS)) {
     if (on) process.env[k] = v;
-    else if (realKeys[k] === undefined) delete process.env[k];
-    else process.env[k] = realKeys[k];
+    else delete process.env[k];
   }
 }
 

@@ -180,6 +180,17 @@ const num = (v: unknown): number | null => {
 };
 
 /**
+ * True for a transcript download with nothing in it (only whitespace or a
+ * byte-order mark). RealtimeKit's GET /sessions/{id}/transcript answers with
+ * a download link even before a transcript exists, and that link serves an
+ * empty file, so reconcile reads this as "not ready yet". A file with a
+ * header and no lines is a real, empty transcript and isn't this.
+ */
+export function isEmptyTranscriptFile(text: string): boolean {
+  return text.replace(/^\uFEFF/, "").trim() === "";
+}
+
+/**
  * Parses a RealtimeKit transcript download. JSON (an array of
  * { startTime, endTime, sentence, peerData: { id, cpi, displayName } }, also
  * wrapped in an object or as JSON lines) or CSV (start ms, peer id, user id,

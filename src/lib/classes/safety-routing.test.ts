@@ -178,6 +178,25 @@ test("urgent and restricted: the owner gets one line, the safety lead the notes 
   assert.ok(text(safety).includes("Quotes and the transcript are only on the review page"));
 });
 
+test("a failed run with urgent code flags: the safety mail says the notes failed and lists the code flags", () => {
+  const urgentFlag: CodeFlag = { ...codeFlag, kind: "chat_blocked", severity: "urgent", detail: "the chat filter stopped 1 message from @maya_teaches" };
+  const mails = reviewMails(
+    facts({ status: "failed", verdict: "urgent", summary: [], oneLine: "", modelFlags: [], codeFlags: [urgentFlag] })
+  );
+  assert.deepEqual(
+    mails.map((m) => m.audience),
+    ["owner", "safety"]
+  );
+  const safety = mails.find((m) => m.audience === "safety")!;
+  assert.ok(safety.subject.startsWith("[Check now]"), safety.subject);
+  assert.equal(safety.heading, 'A class needs a safety check: "Wiring a CAN bus".');
+  assert.match(safety.intro ?? "", /AI notes failed/);
+  assert.ok(text(safety).includes("the chat filter stopped 1 message"));
+  // Restricted (a student's camera, say): the owner still gets one line only.
+  const restricted = reviewMails(facts({ status: "failed", verdict: "urgent", restricted: true, summary: [], oneLine: "", modelFlags: [] }));
+  assert.equal(restricted.find((m) => m.audience === "owner")!.heading, OWNER_RESTRICTED_LINE);
+});
+
 test("a refusal routes to the safety lead as urgent", () => {
   const mails = reviewMails(facts({ status: "refused", verdict: "urgent", restricted: true, summary: [], modelFlags: [], oneLine: "" }));
   assert.deepEqual(mails.map((m) => m.audience), ["owner", "safety"]);

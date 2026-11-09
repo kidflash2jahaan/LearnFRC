@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   eventTimeMs,
+  isEmptyTranscriptFile,
   isRecordingReady,
   isStale,
   meetingIdOf,
@@ -92,6 +93,14 @@ test("CSV transcripts, with quotes, commas and a header row", () => {
   assert.equal(lines.length, 2);
   assert.deepEqual(lines[1], { t0: 3, t1: 3, peerId: "peer-234", cpi: "s1", displayName: "@sam", text: 'Hi, I have a "question"' });
   assert.deepEqual(parseCsv('a,"b,c"\n"d""e",f'), [["a", "b,c"], ['d"e', "f"]]);
+});
+
+test("an empty download means the transcript isn't ready; a header-only file is a real one", () => {
+  assert.equal(isEmptyTranscriptFile(""), true);
+  assert.equal(isEmptyTranscriptFile("  \n\r\n "), true);
+  assert.equal(isEmptyTranscriptFile("\uFEFF\n"), true);
+  assert.equal(isEmptyTranscriptFile("start,peer,user,cpi,name,text\n"), false);
+  assert.equal(isEmptyTranscriptFile("[]"), false);
 });
 
 test("garbage and empty files give no lines", () => {

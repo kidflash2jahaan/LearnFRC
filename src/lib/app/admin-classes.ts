@@ -784,7 +784,7 @@ export async function pullFromCloudflareAs(r: ClassReviewer, classId: string): P
   const message =
     report.cloudflare === "not_configured"
       ? "Cloudflare isn't set up on this server, so only the minutes were recomputed."
-      : `Pulled ${report.sessions} ${report.sessions === 1 ? "session" : "sessions"}: ${report.attendanceAdded} joins added, ${report.attendanceClosed} closed, ${report.transcriptsStored} transcripts stored.${report.errors.length ? ` ${report.errors.length} problems: ${report.errors.slice(0, 2).join("; ")}` : ""}`;
+      : `Pulled ${report.sessions} ${report.sessions === 1 ? "session" : "sessions"}: ${report.attendanceAdded} joins added, ${report.attendanceClosed} closed, ${report.transcriptsStored} transcripts stored.${report.transcriptsWaiting ? ` ${report.transcriptsWaiting} not ready at Cloudflare yet.` : ""}${report.errors.length ? ` ${report.errors.length} problems: ${report.errors.slice(0, 2).join("; ")}` : ""}`;
   return { ok: true, report, message };
 }
 

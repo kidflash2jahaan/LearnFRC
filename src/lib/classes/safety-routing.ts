@@ -109,7 +109,12 @@ export type ReviewMailFacts = {
   camera: PersonMinutes[];
   screenshare: PersonMinutes[];
   chatBlockedCount: number;
-  status: "ready" | "refused" | "no_transcript";
+  /**
+   * `failed`: the AI notes didn't run (the gateway failed or its answer was
+   * unusable), but the code flags are urgent, so this mail goes out now from
+   * the code checks alone (review.ts). The notes follow when a retry works.
+   */
+  status: "ready" | "refused" | "no_transcript" | "failed";
   verdict: ReviewVerdict;
   restricted: boolean;
   summary: string[];
@@ -185,6 +190,10 @@ function fullMail(f: ReviewMailFacts, audience: ReviewAudience, routing: Routing
   } else if (f.status === "no_transcript") {
     heading = `No transcript came in for "${f.title}".`;
     intro = "The notes are from code checks only. Watch the recording or pull from Cloudflare on the review page.";
+  } else if (f.status === "failed") {
+    heading = urgent ? `A class needs a safety check: "${f.title}".` : `The AI notes didn't run for "${f.title}".`;
+    intro =
+      "The AI notes failed, so this is from the code checks only. They'll be tried again and sent when they're written.";
   } else {
     heading = urgent ? `A class needs a safety check: "${f.title}".` : `Notes for "${f.title}".`;
     intro = f.oneLine ? stripQuoted(f.oneLine) : null;

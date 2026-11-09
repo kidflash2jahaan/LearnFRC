@@ -30,11 +30,14 @@ import { createClient } from "@supabase/supabase-js";
 import { loadEnv, repoRoot } from "../env.mjs";
 import { create, cleanup, check, readCredentials } from "../test-data.mjs";
 
+const PKG = "letters";
+// This package's own outbox (cleanup removes it), whatever package the
+// worktree's .env.local was built for, so the outbox checks read only its mail.
+process.env.EMAIL_DEV_OUTBOX = join(repoRoot, ".claude-scratch/classes-dev/outbox", PKG);
 loadEnv();
 process.env.CLASSES_DEV_SWITCHES = "1";
 delete process.env.VERCEL_ENV;
 
-const PKG = "letters";
 const results: { name: string; ok: boolean; error?: string }[] = [];
 async function step(name: string, fn: () => Promise<void>) {
   try {
@@ -434,11 +437,13 @@ async function main() {
     });
 
     await step("decline needs a reason, any reviewer can decline, and the teacher is told why", async () => {
+      // A class's minutes go on one letter only: c1, c2 and c3 are on the
+      // signed letter, so a request from July 1 carries only the July class.
       const r = await letters.requestHoursLetter(user("t1"), { start: "2026-07-01", end: today });
       assert.equal(r.ok, true, r.ok ? "" : r.error);
       if (!r.ok) return;
-      assert.equal(r.classCount, 4);
-      assert.equal(r.totalMinutes, 175);
+      assert.equal(r.classCount, 1);
+      assert.equal(r.totalMinutes, 40);
       const short = await letters.declineHoursLetter(user("boss"), { id: r.id, reason: "no" });
       assert.equal(short.ok, false);
       if (!short.ok) assert.equal(short.field, "reason");
@@ -456,13 +461,21 @@ async function main() {
     });
 
     await step("at most 3 open requests, and 10 a day", async () => {
+      // Every request needs a class no other letter has (one letter per
+      // class), so each asks for one day with a fresh approved class on it.
+      const days: string[] = [];
+      for (let i = 0; i < 4; i++) {
+        const when = daysAgo(20 + i);
+        await approvedClass(`open ${i + 1}`, acc.t1.id, when, 20, { decidedBy: boss });
+        days.push(rules.pacificDate(when));
+      }
       const ids: string[] = [];
-      for (let i = 0; i < 3; i++) {
-        const r = await letters.requestHoursLetter(user("t1"), period);
+      for (const day of days.slice(0, 3)) {
+        const r = await letters.requestHoursLetter(user("t1"), { start: day, end: day });
         assert.equal(r.ok, true, r.ok ? "" : r.error);
         if (r.ok) ids.push(r.id);
       }
-      const fourth = await letters.requestHoursLetter(user("t1"), period);
+      const fourth = await letters.requestHoursLetter(user("t1"), { start: days[3], end: days[3] });
       assert.equal(fourth.ok, false);
       if (!fourth.ok) assert.equal(fourth.error, S.tooManyOpen);
       for (const id of ids) {
@@ -492,7 +505,7 @@ async function main() {
         const { error } = await admin.from("hours_letters").insert(filler);
         if (error) throw new Error(error.message);
       }
-      const eleventh = await letters.requestHoursLetter(user("t1"), period);
+      const eleventh = await letters.requestHoursLetter(user("t1"), { start: days[3], end: days[3] });
       assert.equal(eleventh.ok, false);
       if (!eleventh.ok) {
         assert.equal(eleventh.error, S.tooManyToday);

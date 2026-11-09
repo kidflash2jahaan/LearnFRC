@@ -25,8 +25,35 @@
 
 export type MediaPermission = "ALLOWED" | "NOT_ALLOWED" | "CAN_REQUEST";
 
+/**
+ * The UI Kit's look. Create Preset (POST /presets) refuses a preset without
+ * it ("ui is required"); an update (PATCH) doesn't need it, which is how the
+ * gap stayed hidden in an app whose presets already existed.
+ */
+export type RtkPresetUi = {
+  design_tokens: {
+    border_radius: "sharp" | "rounded" | "extra-rounded" | "circular";
+    border_width: "none" | "thin" | "fat";
+    colors: {
+      brand: Record<"300" | "400" | "500" | "600" | "700", string>;
+      background: Record<"600" | "700" | "800" | "900" | "1000", string>;
+      danger: string;
+      success: string;
+      text: string;
+      text_on_brand: string;
+      video_bg: string;
+      warning: string;
+    };
+    spacing_base: number;
+    theme: "dark" | "light";
+  };
+  /** UI Kit config overrides. Empty: the room page sets what it needs (6.10 check 3). */
+  config_diff: Record<string, never>;
+};
+
 export type RtkPreset = {
   name: string;
+  ui: RtkPresetUi;
   config: {
     view_type: "GROUP_CALL" | "WEBINAR" | "AUDIO_ROOM" | "LIVESTREAM";
     max_video_streams: { desktop: number; mobile: number };
@@ -98,6 +125,27 @@ const NO_CONNECTED_MEETINGS = {
 const NO_PLUGINS = { can_start: false, can_close: false, can_edit_config: false, config: {} };
 const NO_POLLS = { can_create: false, can_view: false, can_vote: false };
 
+/** Cloudflare's own dark theme, as its default group_call presets carry it. */
+const UI: RtkPresetUi = {
+  design_tokens: {
+    border_radius: "rounded",
+    border_width: "thin",
+    colors: {
+      brand: { "300": "#023dd0", "400": "#0248f5", "500": "#2160fd", "600": "#3e75fd", "700": "#5c8afe" },
+      background: { "600": "#222222", "700": "#1f1f1f", "800": "#1b1b1b", "900": "#181818", "1000": "#141414" },
+      danger: "#FF2D2D",
+      success: "#62A504",
+      text: "#EEEEEE",
+      text_on_brand: "#EEEEEE",
+      video_bg: "#191919",
+      warning: "#FFCD07",
+    },
+    spacing_base: 4,
+    theme: "dark",
+  },
+  config_diff: {},
+};
+
 const CONFIG: RtkPreset["config"] = {
   view_type: "GROUP_CALL",
   max_video_streams: { desktop: 9, mobile: 4 },
@@ -133,6 +181,7 @@ const LOCKED = {
 
 export const TEACHER_PRESET: RtkPreset = {
   name: "lfrc-teacher",
+  ui: UI,
   config: CONFIG,
   permissions: {
     ...LOCKED,
@@ -152,6 +201,7 @@ export const TEACHER_PRESET: RtkPreset = {
 
 export const STUDENT_PRESET: RtkPreset = {
   name: "lfrc-student",
+  ui: UI,
   config: CONFIG,
   permissions: {
     ...LOCKED,
@@ -172,6 +222,7 @@ export const STUDENT_PRESET: RtkPreset = {
 
 export const STAFF_PRESET: RtkPreset = {
   name: "lfrc-staff",
+  ui: UI,
   config: CONFIG,
   permissions: {
     ...LOCKED,

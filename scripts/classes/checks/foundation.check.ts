@@ -240,6 +240,14 @@ async function main() {
   });
 
   // ── The chat read policy (6.10 check 6) ─────────────────────────────
+  // is_class_member() counts a student only while they're enrolled and have
+  // a parent's OK (20261109121500_class_member_enrolled.sql), so both
+  // students are enrolled the way joinClass needs: the member reads, and the
+  // revoked one is shut out by the revocation alone.
+  for (const k of ["s2", "rev"]) {
+    const { data, error } = await admin.rpc("class_enroll", { p_class_id: chatId, p_user_id: acc[k].id });
+    if (error || (data !== "ok" && data !== "already")) throw new Error(`enroll ${k}: ${error?.message ?? data}`);
+  }
   await admin.from("class_participants").insert([
     { class_id: chatId, user_id: acc.t1.id, role: "teacher", preset_name: "lfrc-teacher" },
     { class_id: chatId, user_id: acc.s2.id, role: "student", preset_name: "lfrc-student" },
