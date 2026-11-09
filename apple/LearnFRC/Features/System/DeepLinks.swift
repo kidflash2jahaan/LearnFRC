@@ -214,6 +214,11 @@ extension DeepLink {
             }
         case "apply":
             return .route(.apply)
+        case "classes":
+            // The list has a screen; a class itself (/classes/<id>, and the parent and room
+            // pages under it) is joined on the website, so those go to the browser.
+            guard first == nil || !isWeb else { return unknown }
+            return .route(.classes)
 
         case "login", "signin", "sign-in", "signup", "sign-up":
             return .tab(.profile)

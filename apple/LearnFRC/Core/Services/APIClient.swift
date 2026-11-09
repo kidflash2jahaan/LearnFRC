@@ -47,6 +47,14 @@ final class APIClient: Sendable {
         try await send("GET", "/api/app/start-plan", query: ["goal": goal], auth: signedIn ? .bearerIfSignedIn : .anonymous)
     }
 
+    /// `GET /api/app/classes`: the live classes list (Live now, Upcoming). Signed in, the session
+    /// goes along, so rows carry the teacher's username and the account's seat, and classes by
+    /// anyone blocked either way are left off; signed out it's the public list with no handles.
+    /// `visible` is false until classes open on the site.
+    func classes(signedIn: Bool) async throws -> ClassesFeed {
+        try await send("GET", "/api/app/classes", auth: signedIn ? .bearerIfSignedIn : .anonymous)
+    }
+
     /// `GET /api/app/leaderboard?board=`
     func leaderboard(_ board: LeaderboardBoard) async throws -> LeaderboardPayload {
         try await send("GET", "/api/app/leaderboard", query: ["board": board.rawValue], auth: .anonymous)

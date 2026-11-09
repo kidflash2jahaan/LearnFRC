@@ -198,6 +198,24 @@ final class SafetyStore {
         return filed.message
     }
 
+    /// Files a report about a live class (its title and description, written by its teacher),
+    /// from the classes list. The same reasons and rules as a profile report; the site keeps the
+    /// class with it (`contentKind: "class"`). Returns the site's sentence for the reporter.
+    func report(class reported: ReportedClass, teacher: String, reason: ReportReason, details: String) async throws -> String {
+        guard let api else {
+            return "Thanks. Your report went to the LearnFRC team, and every report is read within 24 hours. @\(teacher) isn't told who sent it."
+        }
+        let trimmed = details.trimmingCharacters(in: .whitespacesAndNewlines)
+        let filed = try await api.report(ReportRequest(
+            reportedClass: reported,
+            teacher: teacher,
+            reason: reason.id,
+            details: trimmed.isEmpty ? nil : trimmed,
+            platform: AppConfig.platformID
+        ))
+        return filed.message
+    }
+
     // MARK: Storage
 
     private func apply(_ list: [BlockedAccount]) {

@@ -9,6 +9,7 @@ import SwiftUI
 ///   site's one question is answered, the five-lesson plan for that answer until it's done
 ///   (learnfrc.com/start, `HomeStartPlan.swift`),
 /// - the weekly goal from the server's `rhythm` and `rhythmCopy`, with the seven-day strip,
+/// - once the site has opened them, the live classes card (`HomeLiveClassesCard`),
 /// - the next badge, the tally, the team snippet, and the newest articles.
 ///
 /// Guests get the same page warmly: the loop, an on-device week, what an account adds, the
@@ -24,6 +25,8 @@ struct HomeView: View {
     @Environment(ReferenceStore.self) private var reference
     @Environment(Connectivity.self) private var connectivity
     @Environment(StartPlanStore.self) private var injectedStartPlan: StartPlanStore?
+    @Environment(ClassesStore.self) private var injectedClasses: ClassesStore?
+    @Environment(SafetyStore.self) private var injectedSafety: SafetyStore?
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.fold) private var windowFold
 
@@ -76,6 +79,7 @@ struct HomeView: View {
         .closesShareSheetsOnNavigation()
         .task(id: teamTaskKey) { await loadTeam(force: false) }
         .task(id: startPlanTaskKey) { await loadStartPlan() }
+        .task(id: classesTaskKey) { await loadClasses(force: false) }
         .onChange(of: account.userID) { old, new in
             emailPhase = .asking
             // The plan's ticks belonged to the account that was signed in.
@@ -175,6 +179,8 @@ struct HomeView: View {
             .homeColumn(.main)
         emailCard
             .homeColumn(.side)
+        liveClassesCard
+            .homeColumn(.side)
         guestAccountCard
             .homeColumn(.side)
         nextUnlockCard
@@ -199,6 +205,7 @@ struct HomeView: View {
         leadCard(large: width >= 600, wideSteps: width >= 640 && !layout.largeType, proxy: proxy)
             .id(HomeAnchor.lead)
         weekCard(wide: width >= 560 && !layout.largeType)
+        liveClassesCard
         bookmarks
         guestAccountCard
         if width >= 640, !layout.largeType, hasNextUnlock, isSignedIn {
@@ -300,6 +307,30 @@ struct HomeView: View {
 
     private var startPlanTaskKey: String {
         "\(startGoalID ?? "-")|\(connectivity.isOnline)|\(catalog.isLoaded)|\(account.isLoading)"
+    }
+
+    // MARK: Live classes
+
+    private var classes: ClassesStore { injectedClasses ?? .shared }
+    private var safety: SafetyStore { injectedSafety ?? .shared }
+
+    /// Read once the account is known (so a guest list isn't fetched and then dropped by the
+    /// sign-in being restored), again for another account, and when the connection returns.
+    private var classesTaskKey: String {
+        "\(account.userID?.uuidString ?? "guest")|\(account.isLoading)|\(connectivity.isOnline)"
+    }
+
+    private func loadClasses(force: Bool) async {
+        guard !account.isLoading else { return }
+        await classes.load(userID: account.userID, force: force)
+    }
+
+    /// Nothing at all until the site says classes are open (`visible`).
+    @ViewBuilder private var liveClassesCard: some View {
+        if classes.isVisible, let feed = classes.feed {
+            HomeLiveClassesCard(feed: feed, classes: classes.classes(hiding: safety.blockedHandles))
+                .transition(.opacity)
+        }
     }
 
     // MARK: Masthead
@@ -609,9 +640,11 @@ struct HomeView: View {
         // The plan's rows never reshuffle (finished lessons stay as ticked rows), so asking
         // again only brings the site's ticks and any change to the route.
         async let plan: Void = startPlan.retry(signedIn: signedIn)
+        async let liveClasses: Void = loadClasses(force: true)
         await loadTeam(force: true)
         await everything
         await plan
+        await liveClasses
     }
 
     private func loadTeam(force: Bool) async {
