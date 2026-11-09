@@ -1,14 +1,24 @@
 // The teachers package's checks against production with throwaway accounts
-// (classes-design.md 15.2, the teachers row):
-//   - applying needs a handle, an age answer of 13 to 17 and the code; one
-//     pending at a time; an 18+ account and a parent's refusal are turned away;
-//   - accept copies the name and locks it; the teacher can't change it; a
-//     super admin can, with a note;
+// (classes-design.md 15.2, the teachers row, and the second form decided Nov 9:
+// teacher-application-spec.md section 7):
+//   - applying needs a handle, an age answer of 13 to 17, a full FRC season
+//     and the code; the second form's answers are checked all at once (every
+//     problem listed), against the catalog (modules picked, the sample lesson
+//     inside one of them) and for effort (the same answer twice); one pending
+//     at a time; an 18+ account and a parent's refusal are turned away;
+//   - a good application stores every second-form column, form_version 2,
+//     `topics` from the module titles and team_number from the newest season;
+//   - accept needs the "I checked their seasons" tick and refuses a
+//     first-form row; it copies the name and locks it; the teacher can't
+//     change it; a super admin can, with a note;
 //   - owner and staff accounts get letters_blocked;
 //   - suspend sets suspended_at and calls cancelTeacherClasses; unsuspend works;
-//   - GET /api/app/apply's state keeps every old field and adds `roles`;
+//   - GET /api/app/apply's closed state keeps every old key, empty, and lists
+//     only the teacher role (none while hidden); POST is refused as closed;
 //   - the emails land in the dev outbox and promise no host at a first class.
 // Everything it makes is deleted at the end (test-data.mjs cleanup teachers).
+// Needs supabase/migrations/20261109121800_teacher_application_answers.sql
+// applied first.
 //
 //   node --import ./scripts/classes/register.mjs scripts/classes/checks/teachers.check.ts
 
@@ -94,19 +104,23 @@ async function main() {
   const teachers = await import("../../../src/lib/app/class-teachers.ts");
   const apply = await import("../../../src/lib/app/admin-apply.ts");
   const { TEACHER_CODE_VERSION } = await import("../../../src/lib/classes/notice.ts");
+  const { NOT_YET_SENTENCE } = await import("../../../src/lib/classes/teacher-rules.ts");
+  const { GOOD_ANSWERS, goodTeacherApplication } = await import(
+    "../../../src/lib/classes/teacher-application.fixture.ts"
+  );
 
-  const { data: mods } = await admin.from("modules").select("id, title").limit(2);
-  const moduleId = mods![0].id as string;
+  // A module with a lesson, and a second module (for "a lesson outside the
+  // picked modules").
+  const { data: lessons } = await admin.from("lessons").select("id, module_id").limit(50);
+  const lessonId = lessons![0].id as string;
+  const moduleId = lessons![0].module_id as string;
+  const otherModuleId = lessons!.find((l) => l.module_id !== moduleId)?.module_id as string;
+  assert.ok(otherModuleId, "the catalog has two modules with lessons");
+  const { data: mod } = await admin.from("modules").select("title").eq("id", moduleId).single();
+  const moduleTitle = mod!.title as string;
   const form = (patch: Record<string, unknown> = {}) => ({
+    ...goodTeacherApplication({ moduleId, lessonId, codeVersion: TEACHER_CODE_VERSION }),
     legalName: "Lftest Teacher Applicant",
-    topics: "CAN wiring and swerve basics",
-    topicIds: [moduleId],
-    experience: "Two seasons on electrical: wired the 2026 robot and trained four rookies on crimping.",
-    samplePlan: "Ten minutes on why CAN, twenty on wiring a loop on a demo board, then a quick quiz.",
-    availability: "weekends",
-    referenceName: "",
-    referenceEmail: "",
-    code: TEACHER_CODE_VERSION,
     ...patch,
   });
   const submit = (k: string, patch: Record<string, unknown> = {}) =>
@@ -146,6 +160,51 @@ async function main() {
     assert.equal(count, 0, "no refused application was stored");
   });
 
+  await step("the second form: a full season, the catalog, effort, and every problem at once", async () => {
+    const notYet = await submit("a1", { fullSeason: "no" });
+    assert.equal(!notYet.ok && notYet.field, "fullSeason");
+    assert.equal(!notYet.ok && notYet.error, NOT_YET_SENTENCE);
+
+    // A lesson id where a module should be.
+    const lessonAsModule = await submit("a1", { topicIds: [lessonId] });
+    assert.equal(!lessonAsModule.ok && lessonAsModule.field, "topicIds");
+    assert.equal(!lessonAsModule.ok && lessonAsModule.error, teachers.TEACHER_SENTENCES.topics);
+
+    // A real lesson, but not in the picked module.
+    const outside = await submit("a1", { topicIds: [otherModuleId] });
+    assert.equal(!outside.ok && outside.field, "sampleLessonId");
+    assert.equal(!outside.ok && outside.error, teachers.TEACHER_SENTENCES.sampleLesson);
+
+    const twice = await submit("a1", { scenarioTeaching: GOOD_ANSWERS.scenarioSafety });
+    assert.equal(!twice.ok && twice.field, "scenarioTeaching");
+    assert.ok(!twice.ok && /This repeats your answer to/.test(twice.error));
+
+    const everything = await submit("a1", {
+      seasonYear: [],
+      seasonTeam: [],
+      seasonEvents: [],
+      frcRoles: [],
+      experience: "too short",
+      teachingSample: "",
+      ownWords: "",
+      code: "",
+    });
+    assert.equal(everything.ok, false);
+    const problems = !everything.ok && "problems" in everything ? (everything.problems ?? []) : [];
+    assert.deepEqual(
+      problems.map((p) => p.field),
+      ["seasons", "frcRoles", "experience", "teachingSample", "code", "ownWords"],
+      "every problem, in form order"
+    );
+    assert.equal(!everything.ok && everything.field, "seasons", "field is the first problem");
+
+    const { count } = await admin
+      .from("teacher_applications")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", acc.a1.id);
+    assert.equal(count, 0, "no refused application was stored");
+  });
+
   await step("an 18+ account is refused", async () => {
     const r = await submit("adult");
     assert.equal(r.ok, false);
@@ -155,7 +214,13 @@ async function main() {
   });
 
   await step("a good application is stored with a teacher_code consent row and two emails", async () => {
-    const r = await submit("a1", { legalName: "  Lftest   Maya Chen " });
+    const r = await submit("a1", {
+      legalName: "  Lftest   Maya Chen ",
+      seasonYear: ["2025", "2026"],
+      seasonTeam: ["5835", "5835"],
+      seasonEvents: ["Orange County Regional", "Los Angeles Regional, Orange County Regional"],
+      frcRoles: ["programming", "electrical"],
+    });
     assert.equal(r.ok, true, !r.ok ? r.error : "");
     const { data: row } = await admin
       .from("teacher_applications")
@@ -166,6 +231,29 @@ async function main() {
     assert.equal(row!.legal_name, "Lftest Maya Chen");
     assert.deepEqual(row!.topic_ids, [moduleId]);
     assert.equal(row!.code_version, TEACHER_CODE_VERSION);
+    // The second form's columns.
+    assert.equal(row!.form_version, 2);
+    assert.deepEqual(row!.frc_seasons, [
+      { year: 2026, team: 5835, events: "Los Angeles Regional, Orange County Regional" },
+      { year: 2025, team: 5835, events: "Orange County Regional" },
+    ]);
+    assert.deepEqual(row!.frc_roles, ["electrical", "programming"]);
+    assert.equal(row!.team_number, 5835, "the newest season's team");
+    assert.equal(row!.topics, moduleTitle, "topics filled from the module titles");
+    assert.equal(row!.experience, GOOD_ANSWERS.experience);
+    assert.equal(row!.sample_plan, GOOD_ANSWERS.samplePlan);
+    assert.equal(row!.teaching_sample, GOOD_ANSWERS.teachingSample);
+    assert.equal(row!.scenario_safety, GOOD_ANSWERS.scenarioSafety);
+    assert.equal(row!.scenario_teaching, GOOD_ANSWERS.scenarioTeaching);
+    assert.equal(row!.motivation, GOOD_ANSWERS.motivation);
+    assert.equal(row!.sample_lesson_id, lessonId);
+    assert.equal(row!.teach_often, "weekly");
+    assert.equal(row!.other_programs, "Two years of FLL in middle school");
+    assert.equal(row!.code_questions, null);
+    assert.equal(row!.own_words, true);
+    const receipt = mailTo(acc.a1.email).find((m) => /application is in/.test(m.subject));
+    assert.ok(receipt?.html.includes("against official event results"), "the receipt mentions the season check");
+    assert.ok(!receipt?.html.includes("mentor or coach you named"), "no reference line without a reference");
     const { data: consent } = await admin
       .from("class_consents")
       .select("kind, version, user_handle, user_birth_year, class_id")
@@ -201,9 +289,19 @@ async function main() {
     const s = await teachers.loadTeachApplyState(user("a2"));
     assert.equal(s.mode, "new");
     assert.equal(s.parentStep, "not_asked");
-    assert.equal((await submit("a2", { legalName: "Lftest Sam Ortiz" })).ok, true);
+    assert.equal(
+      (
+        await submit("a2", {
+          legalName: "Lftest Sam Ortiz",
+          referenceName: "Lftest Coach",
+          referenceEmail: "lftest+teachers-coach@example.com",
+        })
+      ).ok,
+      true
+    );
     const receipt = mailTo(acc.a2.email).find((m) => /application is in/.test(m.subject));
     assert.ok(receipt?.html.includes("parent or guardian"), "the receipt mentions the parent step");
+    assert.ok(receipt?.html.includes("mentor or coach you named"), "the reference line, with a reference");
     assert.equal((await teachers.withdrawTeacherApplication(user("a2"))).ok, true);
     assert.equal((await teachers.loadTeachApplyState(user("a2"))).mode, "again");
     assert.equal((await teachers.withdrawTeacherApplication(user("a2"))).ok, false);
@@ -223,17 +321,74 @@ async function main() {
     assert.equal(a1!.parentStep, "agreed");
     assert.equal(a1!.legalName, "Lftest Maya Chen");
     assert.equal(a1!.pickedTopics[0]?.id, moduleId);
+    assert.equal(a1!.formVersion, 2);
+    assert.equal(a1!.seasons.length, 2);
+    assert.equal(a1!.seasons[0].tbaUrl, "https://www.thebluealliance.com/team/5835/2026");
+    assert.equal(a1!.seasons[0].frcEventsUrl, "https://frc-events.firstinspires.org/2026/team/5835");
+    assert.deepEqual(a1!.roles, ["Electrical", "Programming"]);
+    assert.equal(a1!.sampleLesson?.id, lessonId);
+    assert.ok(a1!.sampleLesson?.url.startsWith("/guides/"), "the sample lesson links to the guide");
+    assert.equal(a1!.teachOften, "Once a week or more");
+    assert.equal(a1!.ownWords, true);
+    assert.ok((a1!.wordCounts.teachingSample ?? 0) >= 150, "word counts");
+    assert.ok(Array.isArray(a1!.flags));
     const a2 = desk.pending.find((p) => p.userId === acc.a2.id);
     assert.equal(a2!.ageBand, "13-15");
     assert.equal(a2!.parentStep, "not_asked");
+  });
+
+  await step("a first-form application can only be turned down", async () => {
+    const { data: old, error } = await admin
+      .from("teacher_applications")
+      .insert({
+        user_id: acc.member.id,
+        legal_name: "Lftest First Form",
+        topics: "swerve",
+        experience: "A first-form answer.",
+        sample_plan: "A first-form plan.",
+        code_version: TEACHER_CODE_VERSION,
+      })
+      .select("id")
+      .single();
+    assert.ok(old, error?.message);
+    const accept = await teachers.decideTeacherApplication(user("sa"), {
+      id: old!.id,
+      decision: "accept",
+      seasonsChecked: "yes",
+    });
+    assert.equal(!accept.ok && accept.code, "conflict");
+    assert.equal(!accept.ok && accept.error, teachers.TEACHER_SENTENCES.firstForm);
+    const desk = await teachers.loadTeacherDesk(user("sa"));
+    const entry = desk.ok ? desk.pending.find((p) => p.id === old!.id) : null;
+    assert.equal(entry?.formVersion, null, "the desk marks it as the first form");
+    assert.deepEqual(entry?.flags, [], "no flags on a first-form row");
+    const reject = await teachers.decideTeacherApplication(user("sa"), { id: old!.id, decision: "reject" });
+    assert.equal(reject.ok, true, !reject.ok ? reject.error : "");
   });
 
   await step("accept copies the name to the locked letter name; a second decision is refused", async () => {
     const id = await pendingId("a1");
     const notAllowed = await teachers.decideTeacherApplication(user("member"), { id, decision: "accept" });
     assert.equal(!notAllowed.ok && notAllowed.code, "forbidden");
-    const r = await teachers.decideTeacherApplication(user("sa"), { id, decision: "accept", note: "Welcome aboard." });
+    const unchecked = await teachers.decideTeacherApplication(user("sa"), { id, decision: "accept" });
+    assert.equal(!unchecked.ok && unchecked.field, "seasonsChecked");
+    assert.equal(await teacherRow("a1"), null, "nothing was decided without the tick");
+    const r = await teachers.decideTeacherApplication(user("sa"), {
+      id,
+      decision: "accept",
+      note: "Welcome aboard.",
+      seasonsChecked: "yes",
+    });
     assert.equal(r.ok, true, !r.ok ? r.error : "");
+    const { data: event } = await admin
+      .from("class_events")
+      .select("detail")
+      .eq("actor_id", acc.sa.id)
+      .eq("kind", "teacher_accepted")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single();
+    assert.equal((event!.detail as { seasonsChecked?: boolean }).seasonsChecked, true, "the tick is logged");
     const t = await teacherRow("a1");
     assert.equal(t!.letter_name, "Lftest Maya Chen");
     assert.equal(t!.application_id, id);
@@ -312,7 +467,11 @@ async function main() {
     for (const k of ["owner", "staff", "nolet"]) {
       const r = await submit(k, { legalName: `Lftest ${k.charAt(0).toUpperCase()}${k.slice(1)} Person` });
       assert.equal(r.ok, true, `${k}: ${!r.ok ? r.error : ""}`);
-      const d = await teachers.decideTeacherApplication(user("sa"), { id: await pendingId(k), decision: "accept" });
+      const d = await teachers.decideTeacherApplication(user("sa"), {
+        id: await pendingId(k),
+        decision: "accept",
+        seasonsChecked: "yes",
+      });
       assert.equal(d.ok, true, `${k}: ${!d.ok ? d.error : ""}`);
       assert.equal((await teacherRow(k))!.letters_blocked, true, k);
     }
@@ -325,7 +484,7 @@ async function main() {
       .update({ birth_year: new Date().getUTCFullYear() - 20 })
       .eq("user_id", acc.aged.id);
     const id = await pendingId("aged");
-    const r = await teachers.decideTeacherApplication(user("sa"), { id, decision: "accept" });
+    const r = await teachers.decideTeacherApplication(user("sa"), { id, decision: "accept", seasonsChecked: "yes" });
     assert.equal(!r.ok && r.code, "conflict");
     assert.equal(await teacherRow("aged"), null);
     const { data } = await admin.from("teacher_applications").select("status").eq("id", id).single();
@@ -451,7 +610,7 @@ async function main() {
     assert.equal((await teachers.loadTeachApplyState(user("t2"))).mode, "teacher");
   });
 
-  await step("GET /api/app/apply's state keeps every old field and adds roles", async () => {
+  await step("GET /api/app/apply's closed state keeps every old key and lists only the teacher role", async () => {
     const s = await apply.loadApplyState(user("a1"));
     assert.equal(s.ok, true);
     if (!s.ok) return;
@@ -466,26 +625,39 @@ async function main() {
       "posting",
       "rules",
       "marketer",
+      "roles",
     ]) {
       assert.ok(k in s, `kept ${k}`);
     }
-    assert.equal(s.mode, "new", "a teacher can still apply for marketing");
-    assert.equal(s.roles[0].id, "marketing");
-    assert.equal(s.roles[0].status, s.mode);
-    assert.ok(s.roles[0].url.endsWith("/apply"));
+    assert.equal(s.applicationsOpen, false);
+    assert.equal(s.mode, "new");
+    assert.deepEqual(s.jobs, []);
+    assert.equal(s.posting, "");
+    assert.deepEqual(s.rules, []);
+    assert.equal(s.marketer, null);
+    assert.equal(s.roles.length, 1);
     assert.deepEqual(
-      { ...s.roles[1], url: s.roles[1].url.replace(/^https?:\/\/[^/]+/, "") },
+      { ...s.roles[0], url: s.roles[0].url.replace(/^https?:\/\/[^/]+/, "") },
       { id: "teacher", title: "Teach a live class", url: "/apply/teach", open: true, status: "teacher" }
     );
     const adult = await apply.loadApplyState(user("adult"));
-    assert.equal(adult.ok && adult.roles[1]?.status, "adult");
+    assert.equal(adult.ok && adult.roles[0]?.status, "adult");
+
+    const closed = await apply.submitApplication(user("member"), { experience: "x".repeat(60), why: "x".repeat(60) });
+    assert.equal(!closed.ok && closed.code, "conflict");
+    assert.equal(!closed.ok && closed.error, "Applications are closed for now. Check back later.");
+    const { count } = await admin
+      .from("admin_applications")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", acc.member.id);
+    assert.equal(count, 0, "nothing was filed");
 
     // Hidden: no teacher role at all, so nothing about classes reaches the app.
     process.env.CLASSES_DEV_SWITCHES = "0";
     process.env.CLASSES_VISIBLE = "";
     try {
       const hidden = await apply.loadApplyState(user("a1"));
-      assert.equal(hidden.ok && hidden.roles.length, 1);
+      assert.equal(hidden.ok && hidden.roles.length, 0);
       assert.equal(await teachers.teacherApplyRole(user("a1")), null);
       assert.equal((await teachers.loadTeachApplyState(user("a1"))).mode, "hidden");
       const refused = await submit("a2");

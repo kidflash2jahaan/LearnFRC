@@ -1,9 +1,12 @@
 // The teachers package's page checks against a running dev server
-// (classes-design.md 15.2): /apply still renders the marketing form, with the
-// two-role header only while classes are visible; /apply/teach for each
-// state; the desk for super admins only; GET /api/app/apply over Bearer
-// keeps every old field and adds `roles`. Signed-in requests carry a real
-// session cookie for a throwaway account, made the way @supabase/ssr makes it.
+// (classes-design.md 15.2, and teacher-application-spec.md section 7): /apply
+// is a 307 to /apply/teach while classes are visible and a closed page that
+// never mentions classes while hidden; the footer's "Teach a class" only while
+// visible; /apply/teach for each state, the second form's opening question
+// included; the desk for super admins only; GET /api/app/apply over Bearer
+// keeps every old key and lists only the teacher role; POST is closed.
+// Signed-in requests carry a real session cookie for a throwaway account,
+// made the way @supabase/ssr makes it.
 //
 //   BASE=http://localhost:3013 node --import ./scripts/classes/register.mjs \
 //     scripts/classes/checks/teachers-http.check.ts [--hidden]
@@ -66,6 +69,18 @@ async function page(path: string, cookie?: string): Promise<{ status: number; ht
   return { status: res.status, html: await res.text() };
 }
 
+/** Just the page's own content (the layout's <main>), without the nav and footer. */
+function mainOf(html: string): string {
+  const m = html.match(/<main\b[\s\S]*?<\/main>/);
+  return m ? m[0] : html;
+}
+
+/** The footer's markup. */
+function footerOf(html: string): string {
+  const m = html.match(/<footer\b[\s\S]*?<\/footer>/);
+  return m ? m[0] : "";
+}
+
 /** The page's visible text, roughly: tags out, entities for quotes back. */
 function text(html: string): string {
   return html
@@ -109,34 +124,53 @@ async function main() {
   if (error) throw new Error(`desk application: ${error.message}`);
 
   if (HIDDEN) {
-    await step("hidden: /apply/teach is a 404 and /apply has no role header", async () => {
+    await step("hidden: /apply/teach is a 404 and /apply says there's nothing to apply for", async () => {
       const teach = await page("/apply/teach", s.ready.cookie);
       assert.equal(teach.status, 404);
-      const applyPage = text((await page("/apply", s.member.cookie)).html);
-      assert.ok(applyPage.includes("Send the application"), "the marketing form renders");
-      assert.ok(!applyPage.includes("Teach a live class"), "no teaching role while hidden");
+      for (const cookie of [undefined, s.member.cookie]) {
+        const out = await page("/apply", cookie);
+        assert.equal(out.status, 200);
+        const t = text(mainOf(out.html));
+        assert.ok(t.includes("Nothing to apply for right now"), "the closed page");
+        for (const word of ["class", "teach", "market", "spread"]) {
+          assert.ok(!t.toLowerCase().includes(word), `no "${word}" on the closed page`);
+        }
+        assert.ok(!t.includes("—"), "no em dash");
+        const footer = text(footerOf(out.html));
+        assert.ok(!footer.includes("Teach a class"), "no apply link in the footer while hidden");
+        assert.ok(!footer.includes("Help run it"));
+        assert.ok(!footerOf(out.html).includes('href="/apply'), "the footer links nowhere under /apply");
+      }
     });
-    await step("hidden: GET /api/app/apply lists only marketing", async () => {
+    await step("hidden: GET /api/app/apply lists no roles; POST is closed", async () => {
       const res = await fetch(`${BASE}/api/app/apply`, { headers: { authorization: `Bearer ${s.ready.token}` } });
       const body = await res.json();
       assert.equal(res.status, 200);
-      assert.deepEqual(body.roles.map((r: { id: string }) => r.id), ["marketing"]);
+      assert.deepEqual(body.roles, []);
+      assert.equal(body.applicationsOpen, false);
       assert.ok(!JSON.stringify(body).includes("Teach a live class"));
+      const post = await fetch(`${BASE}/api/app/apply`, {
+        method: "POST",
+        headers: { authorization: `Bearer ${s.member.token}`, "content-type": "application/json" },
+        body: JSON.stringify({ experience: "x".repeat(60), why: "x".repeat(60) }),
+      });
+      assert.equal(post.status, 409);
     });
     return;
   }
 
-  await step("/apply still renders the marketing form, with the two-role header", async () => {
-    const out = await page("/apply");
-    assert.equal(out.status, 200);
-    const t = text(out.html);
-    assert.ok(t.includes("Help spread LearnFRC") || t.includes("Help spread LearnFRC."), "marketing heading");
-    assert.ok(t.includes("Applying needs an account"));
-    assert.ok(t.includes("Teach a live class"), "role header links to /apply/teach");
-    assert.ok(out.html.includes('href="/apply/teach"'));
-    const signedIn = text((await page("/apply", s.member.cookie)).html);
-    assert.ok(signedIn.includes("Your FRC experience"), "the marketing form's first question");
-    assert.ok(signedIn.includes("Send the application"));
+  await step("/apply is a temporary redirect to /apply/teach; the footer says Teach a class", async () => {
+    for (const cookie of [undefined, s.member.cookie]) {
+      const out = await page("/apply", cookie);
+      assert.equal(out.status, 307, `a 307, not a permanent redirect (${out.status})`);
+      const res = await fetch(`${BASE}/apply`, { headers: cookie ? { cookie } : {}, redirect: "manual" });
+      assert.equal(new URL(res.headers.get("location") ?? "", BASE).pathname, "/apply/teach");
+    }
+    const home = await page("/");
+    const footer = footerOf(home.html);
+    assert.ok(text(footer).includes("Teach a class"), "the footer's apply link");
+    assert.ok(footer.includes('href="/apply/teach"'));
+    assert.ok(!text(footer).includes("Help run it"));
   });
 
   await step("/apply/teach signed out: what it is, sign in, and no age range or code yet", async () => {
@@ -161,11 +195,15 @@ async function main() {
     assert.ok(adult.includes("Live classes are for students 13 to 17"));
     assert.ok(!adult.includes("Send the application"));
     const ready = text((await page("/apply/teach", s.ready.cookie)).html);
-    assert.ok(ready.includes("Name as your school knows it"));
-    assert.ok(ready.includes("can’t be changed later"));
-    assert.ok(ready.includes("I agree to the teacher code"));
-    assert.ok(ready.includes("Send the application"));
+    // The form opens on the full-season question; the rest renders after
+    // "Yes" in the browser, so the server's HTML has the question, the
+    // requirements and the before-you-start note.
+    assert.ok(ready.includes("Have you finished at least one full FRC season?"));
+    assert.ok(ready.includes("about 25 minutes") || ready.includes("About 25 minutes"));
+    assert.ok(ready.includes("At least one full FRC season"), "the requirement");
+    assert.ok(ready.includes("before you start"));
     assert.ok(ready.includes(`@${acc.ready.username}`));
+    assert.ok(!/Help run it|spread LearnFRC/i.test(ready), "no marketing role");
     const teach = text((await page("/apply/teach", s.teach.cookie)).html);
     assert.ok(teach.includes("You’re a teacher"));
     assert.ok(teach.includes("Lftest Teach"), "the locked letter name");
@@ -186,30 +224,41 @@ async function main() {
     assert.ok(sa.includes("Who teaches live classes."));
     assert.ok(sa.includes(`@${acc.member.username}`), "the pending application");
     assert.ok(sa.includes("Lftest Desk Applicant"), "the name for letters");
+    assert.ok(sa.includes("how to score one"), "the folded scoring guide");
+    assert.ok(sa.includes("first form: no season check"), "a first-form row is marked");
     // The Teachers drawer stays shut while applications wait (its rows mount
     // when it's opened, so they aren't in this HTML); its badge counts them.
     assert.ok(/\d+ teaching/.test(sa), "the teachers drawer's count");
   });
 
-  await step("GET /api/app/apply keeps every old field and adds roles", async () => {
+  await step("GET /api/app/apply keeps every old key, closed, with only the teacher role", async () => {
     const res = await fetch(`${BASE}/api/app/apply`, { headers: { authorization: `Bearer ${s.ready.token}` } });
     assert.equal(res.status, 200);
     const body = await res.json();
     for (const k of ["applicationsOpen", "mode", "heading", "record", "application", "jobs", "limits", "posting", "rules", "marketer"]) {
       assert.ok(k in body, `kept ${k}`);
     }
-    assert.equal(body.roles.length, 2);
-    assert.equal(body.roles[0].id, "marketing");
-    assert.equal(body.roles[0].status, body.mode);
-    assert.equal(body.roles[1].id, "teacher");
-    assert.equal(body.roles[1].title, "Teach a live class");
-    assert.ok(body.roles[1].url.endsWith("/apply/teach"));
-    assert.equal(body.roles[1].open, true);
-    assert.equal(body.roles[1].status, "new");
+    assert.equal(body.applicationsOpen, false);
+    assert.deepEqual(body.jobs, []);
+    assert.equal(body.posting, "");
+    assert.deepEqual(body.rules, []);
+    assert.equal(body.marketer, null);
+    assert.deepEqual(body.roles.map((r: { id: string }) => r.id), ["teacher"]);
+    assert.equal(body.roles[0].title, "Teach a live class");
+    assert.ok(body.roles[0].url.endsWith("/apply/teach"));
+    assert.equal(body.roles[0].open, true);
+    assert.equal(body.roles[0].status, "new");
     const teacher = await (
       await fetch(`${BASE}/api/app/apply`, { headers: { authorization: `Bearer ${s.teach.token}` } })
     ).json();
-    assert.equal(teacher.roles[1].status, "teacher");
+    assert.equal(teacher.roles[0].status, "teacher");
+    const post = await fetch(`${BASE}/api/app/apply`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${s.member.token}`, "content-type": "application/json" },
+      body: JSON.stringify({ experience: "x".repeat(60), why: "x".repeat(60) }),
+    });
+    assert.equal(post.status, 409);
+    assert.equal((await post.json()).error, "Applications are closed for now. Check back later.");
   });
 }
 
