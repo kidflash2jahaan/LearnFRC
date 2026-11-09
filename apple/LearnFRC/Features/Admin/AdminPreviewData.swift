@@ -84,7 +84,7 @@ enum AdminPreviewData {
                 departments: rows([("Programming", 3_120), ("Mechanical", 2_840), ("Electrical", 1_904)])
             ),
             teams: .init(
-                teams: rows([("#254", 120), ("#1678", 98), ("#4414", 61)], sub: ["14 members", "11 members", "6 members"]),
+                teams: rows([("#5835", 120)], sub: ["14 members"]),
                 recruiters: rows([("@pitcrewpat", 14), ("member a1b2c3", 6)]),
                 surfaces: rows([("Lesson milestone", 30), ("Certificate", 18), ("Dashboard", 9), ("Leaderboard", 2)]) + [AdminMiniRow(label: "Before tracking", sub: "surface unknown", value: 29)],
                 surfacesFootnote: nil
@@ -92,7 +92,7 @@ enum AdminPreviewData {
             articles: rows([("Why your robot browns out", 2_010), ("Swerve, explained without the hype", 1_402)]),
             achievements: rows([("First lesson", 1_180), ("Seven-day streak", 240), ("Department finished", 96)]),
             activity: .init(
-                newestMembers: [.init(username: "gearhead_ava", teamNumber: 4414, createdAt: ago(4)), .init(username: nil, teamNumber: nil, createdAt: ago(80)), .init(username: "drive_coach_m", teamNumber: 1678, createdAt: ago(60 * 26))],
+                newestMembers: [.init(username: "gearhead_ava", teamNumber: 5835, createdAt: ago(4)), .init(username: nil, teamNumber: nil, createdAt: ago(80)), .init(username: "drive_coach_m", teamNumber: 5835, createdAt: ago(60 * 26))],
                 recentCompletions: [.init(user: "@gearhead_ava", lesson: "What a PID loop actually does", at: ago(2)), .init(user: "a member", lesson: "Wiring the CAN bus", at: ago(41))]
             )
         )
@@ -111,71 +111,22 @@ enum AdminPreviewData {
     static let team = AdminTeamDesk(
         grants: AdminTeamDesk.siteGrants,
         pending: [
+            // An application left from before /apply closed: it can only be turned down.
             AdminTeamDesk.Application(
                 id: UUID(), username: "scout_lead_sam", teamNumber: 5835, teamRole: "student", teamRoleLabel: "Student",
-                experience: "Three seasons on our team, mostly scouting and running the team Instagram. I'm in two regional Discord servers.\n\nI also help at our outreach events.",
-                why: "Our rookies found LearnFRC late. I'd post it in the Discords first, and I'd like to cut short clips from the lesson videos.",
-                availability: "a few posts a month", createdAt: ago(60 * 52)
+                experience: "Three seasons on our team, mostly scouting and strategy. I've read most of the electrical and programming guides.\n\nI also help at our outreach events.",
+                why: "I'd like to help keep the lessons accurate and answer questions from newer teams.",
+                availability: "a few hours a month", createdAt: ago(60 * 52)
             ),
         ],
         pendingTruncated: false,
-        marketers: [
-            AdminTeamDesk.Marketer(userId: UUID(), username: "clipmaker_jo", teamNumber: 5835, grantedAt: ago(60 * 24 * 20), note: "accepted application",
-                                   signups: 14, signupsSinceAccepted: 9,
-                                   inviteUrl: URL(string: "https://learnfrc.com/signup?ref=clipmaker_jo&via=team-invite")),
-        ],
         team: [
             AdminTeamDesk.Member(userId: UUID(), username: "owner_desk", teamNumber: nil, role: .superadmin, roleWord: "owner", grantedAt: ago(60 * 24 * 90), note: nil, isOwner: true, isYou: true, canChange: false),
-            AdminTeamDesk.Member(userId: UUID(), username: "pitcrewpat", teamNumber: 254, role: .admin, roleWord: "admin", grantedAt: ago(60 * 24 * 30), note: "accepted application", isOwner: false, isYou: false, canChange: true),
+            AdminTeamDesk.Member(userId: UUID(), username: "pitcrewpat", teamNumber: 5835, role: .admin, roleWord: "admin", grantedAt: ago(60 * 24 * 30), note: "added by hand", isOwner: false, isYou: false, canChange: true),
         ],
         decided: [
             AdminTeamDesk.Decided(id: UUID(), username: "eager_rookie", status: "rejected", statusWord: "turned down", reviewedAt: ago(60 * 24 * 12), createdAt: ago(60 * 24 * 14), reviewNote: "Come back after a season on a team."),
         ],
         decidedTruncated: false
-    )
-
-    static func apply(mode: AdminApplyState.Mode, open: Bool) -> AdminApplyState {
-        AdminApplyState(
-            applicationsOpen: open,
-            mode: mode,
-            heading: AdminApplyState.heads[mode] ?? AdminApplyState.Heading(title: "Apply", slug: ""),
-            record: mode == .marketer
-                ? .empty
-                : .init(username: mode == .noHandle ? nil : "gearhead_ava", teamNumber: 4414, teamRoleLabel: "Student"),
-            application: {
-                switch mode {
-                case .pending: .init(status: "pending", createdAt: ago(60 * 24 * 2), reviewedAt: nil, reviewNote: nil)
-                case .again: .init(status: "rejected", createdAt: ago(60 * 24 * 40), reviewedAt: ago(60 * 24 * 38), reviewNote: "Come back after a season on a team.")
-                default: nil
-                }
-            }(),
-            jobs: AdminApplyState.siteJobs,
-            marketer: mode == .marketer ? marketerKit : nil
-        )
-    }
-
-    /// The `marketer` block /api/app/apply sends, as src/lib/applications.ts has it.
-    static let marketerKit = AdminApplyState.MarketerKit(
-        inviteUrl: URL(string: "https://learnfrc.com/signup?ref=gearhead_ava&via=team-invite"),
-        since: ago(60 * 24 * 6),
-        trailerUrl: nil,
-        logos: [
-            .init(label: "Logo, SVG", url: URL(string: "https://learnfrc.com/icon.svg")!),
-            .init(label: "Logo, 180px PNG", url: URL(string: "https://learnfrc.com/apple-icon.png")!),
-            .init(label: "Share card, 1200 by 630 PNG", url: URL(string: "https://learnfrc.com/opengraph-image")!),
-        ],
-        colors: [
-            .init(name: "Ink", hex: "#16181B", use: "type and borders"),
-            .init(name: "Ballpoint blue", hex: "#1B36C8", use: "the one accent"),
-            .init(name: "Card", hex: "#F5F6F2", use: "cards and raised surfaces"),
-            .init(name: "Paper", hex: "#E6E8E3", use: "the background"),
-            .init(name: "Graphite", hex: "#565C60", use: "secondary type"),
-            .init(name: "Tape", hex: "#C4A77D", use: "decoration only, never text"),
-        ],
-        fonts: "Bricolage Grotesque for headings, Space Mono for labels, Caveat for handwritten notes.",
-        clips: [
-            .init(label: "The 60-second tour", url: URL(string: "https://www.youtube.com/watch?v=-QlRttoFw3g")!),
-            .init(label: "Lesson videos", url: URL(string: "https://learnfrc.com/videos")!),
-        ]
     )
 }

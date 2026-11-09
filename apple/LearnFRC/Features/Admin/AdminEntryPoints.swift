@@ -1,9 +1,9 @@
 import SwiftUI
 
-// The small admin pieces other screens place: the You tab's admin box and "Help run it" row,
-// the Settings identity card's "admin" tag, and the Go menu's items. Each draws nothing unless
-// the server has said this account holds the role, and each keeps the role fresh for the
-// signed-in account on its own (`AdminStore.sync`).
+// The small admin pieces other screens place: the You tab's admin box and "Teach a live class"
+// row, the Settings identity card's "admin" tag, and the Go menu's items. Each draws nothing
+// unless the server has said this account holds the role (or, for the teach row, that classes
+// are open), and each keeps that fresh for the signed-in account on its own.
 
 // MARK: - You tab
 
@@ -107,32 +107,28 @@ struct AdminYouSection: View {
     }
 }
 
-/// "Help run it" (the site footer's words): a quiet row to /apply for anyone who isn't on the
-/// admin team, guests included (the page asks a guest to sign in first).
+/// "Teach a live class": a quiet row on the You tab to the Apply screen, the site footer's
+/// "Teach a class". Shown only while the site says classes are open, to anyone, guests included
+/// (the site asks a guest to sign in first); it takes no room otherwise. Teaching is the only
+/// application LearnFRC takes.
 struct ApplyLinkRow: View {
     var topPadding: CGFloat = 36
 
-    @Environment(AdminStore.self) private var injected: AdminStore?
+    @Environment(ClassesStore.self) private var injected: ClassesStore?
     @Environment(AccountStore.self) private var account
 
-    private var admin: AdminStore { injected ?? .shared }
-
-    /// Signed in, wait for the server's answer before offering it (an admin never sees it).
-    private var isShown: Bool {
-        if account.isGuest { return true }
-        return account.isSignedIn && admin.role == .member
-    }
+    private var classes: ClassesStore { injected ?? .shared }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            if isShown {
+            if classes.isVisible {
                 VStack(alignment: .leading, spacing: 0) {
                     DashedRule()
                     AdminLink(to: .apply) {
                         HStack(alignment: .center, spacing: 12) {
                             VStack(alignment: .leading, spacing: 3) {
-                                SlugText("apply / marketing")
-                                Text("Help run it")
+                                SlugText("apply / teach")
+                                Text("Teach a live class")
                                     .font(LF.Fonts.body(16.5, weight: .semibold))
                                     .foregroundStyle(LF.Palette.ink)
                             }
@@ -146,14 +142,15 @@ struct ApplyLinkRow: View {
                         .accessibilityElement(children: .combine)
                     }
                     .buttonStyle(.inkRow)
-                    .accessibilityHint("What helping spread LearnFRC involves, and how to apply")
+                    .accessibilityHint("What teaching a live class involves, and how to apply")
                     DashedRule()
                 }
                 .padding(.top, topPadding)
             }
         }
-        .task(id: account.userID) {
-            await admin.sync(userID: account.userID)
+        .task(id: account.isLoading ? nil : (account.userID?.uuidString ?? "guest")) {
+            guard !account.isLoading else { return }
+            await classes.load(userID: account.userID)
         }
     }
 }
@@ -217,6 +214,7 @@ struct AdminMenuItems: View {
         .padding(LF.Metrics.gutter)
     }
     .paperBackground()
+    .environment(ClassesStore.preview(.preview(signedIn: true)))
     .adminStore(.preview(role: .superadmin, summary: AdminPreviewData.dashboard.summary))
     .appEnvironment(.preview(signedIn: true))
 }

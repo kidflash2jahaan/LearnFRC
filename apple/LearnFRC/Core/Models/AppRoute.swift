@@ -35,7 +35,8 @@ enum AppRoute: Hashable, Codable, Sendable {
     case adminFeedback
     /// The admin team desk (learnfrc.com/admin/team). Super admins.
     case adminTeam
-    /// Help run it (learnfrc.com/apply).
+    /// Teach a class (learnfrc.com/apply, which sends people to /apply/teach while classes are
+    /// open). The `learnfrc://apply` and learnfrc.com/apply links keep landing here.
     case apply
     /// Live classes (learnfrc.com/classes): Live now and Upcoming. Each class opens on the
     /// website in Safari; there's no class screen in the app.
