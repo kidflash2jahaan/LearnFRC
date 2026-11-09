@@ -832,9 +832,9 @@ Errors: 401, 500.
 
 ## Report and block (`/api/app/reports`, `/api/app/blocks`)
 
-App Review guideline 1.2. What one member makes that another sees is a handle, an avatar, a bio and a team number (on public profiles, the leaderboards and the team sheet), plus the notes and titles on suggested edits and lesson proposals (learnfrc.com/contributions, which the app has no screen for). Any signed-in account can report any of it and block anyone. Every rule is in `src/lib/app/reports.ts` and `src/lib/app/blocks.ts`, which the website's report form, Block button and Settings list call too.
+App Review guideline 1.2. What one member makes that another sees is a handle, an avatar, a bio and a team number (on public profiles, the leaderboards and the team sheet), the title and description of a live class its teacher wrote (the classes list, "Live classes" below), plus the notes and titles on suggested edits and lesson proposals (learnfrc.com/contributions, which the app has no screen for). Any signed-in account can report any of it and block anyone. Every rule is in `src/lib/app/reports.ts` and `src/lib/app/blocks.ts`, which the website's report form, Block button and Settings list call too.
 
-**What a block does.** It hides the blocked account from the person who blocked it: their public profile, their rows on the leaderboards, their row on the team sheet, and their suggestions on /contributions. Nothing is sent to them and nothing changes for anyone else. `GET /api/app/team` leaves blocked teammates off on the server. The leaderboards and `/api/app/u/{username}` are public routes cached at the CDN, the same for everyone, so the app hides the handles from `GET /api/app/blocks` itself (ranks stay as earned), as the website does for its reader.
+**What a block does.** It hides the blocked account from the person who blocked it: their public profile, their rows on the leaderboards, their row on the team sheet, their suggestions on /contributions, and the live classes they teach. Classes go both ways: a class whose teacher blocked the caller is left off too, and neither can enroll in the other's class. Nothing is sent to them and nothing changes for anyone else. `GET /api/app/classes` leaves those classes off on the server for a signed-in caller. `GET /api/app/team` leaves blocked teammates off on the server. The leaderboards and `/api/app/u/{username}` are public routes cached at the CDN, the same for everyone, so the app hides the handles from `GET /api/app/blocks` itself (ranks stay as earned), as the website does for its reader.
 
 **What a report does.** It stores a row in `user_reports` (service role only: a reporter never reads it back, and the person reported can never find out who filed it) and emails the owner (`ADMIN_EMAILS`, first entry) so it's answered within 24 hours. The desk that answers it is `GET /api/app/admin/reports` below and learnfrc.com/admin/reports.
 
@@ -863,20 +863,26 @@ Response 200:
 
 Bearer. Files a report (`fileReport`). Rate limited: 10 an hour per account.
 
-Request (the app only reports profiles):
+Request, a profile (the leaderboards, the team sheet, a public profile):
 
 ```json
-{ "username": "kai_cad", "reason": "offensive", "details": "The bio.", "surface": "leaderboard", "platform": "ios" }
+{ "username": "kai_cad", "contentKind": "profile", "reason": "offensive", "details": "The bio.", "surface": "leaderboard", "platform": "ios" }
+```
+
+Request, a live class from the classes list (its title and description, filed against its teacher; `username` is the row's `teacher.username`, so only a signed-in reader, who sees it, can send one):
+
+```json
+{ "username": "maya", "contentKind": "class", "contentId": "4f1d2c3b-8a9e-4b7c-9d6e-1a2b3c4d5e6f", "reason": "offensive", "surface": "classes_list", "platform": "ios" }
 ```
 
 | Field | Type | Notes |
 |---|---|---|
-| `contentKind` | String? | `profile` (the default), `edit` or `submission`. |
-| `username` | String | The person reported. Required for `profile`; ignored for an edit or a proposal, whose author is read from the row. |
-| `contentId` | String? | The edit's or proposal's id (website only today). |
-| `reason` | String | A `reasons[].id`. |
+| `contentKind` | String? | `profile` (the default), `class`, `edit` or `submission`. The app sends `profile` and `class`. |
+| `username` | String | The person reported. Required for `profile` and `class` (for a class, its teacher, or on the website someone from the class); ignored for an edit or a proposal, whose author is read from the row. |
+| `contentId` | String? | For `class`, the class's id (`classes[].id` in `GET /api/app/classes`). For an edit or a proposal, its id (website only). Left out for a profile. |
+| `reason` | String | A `reasons[].id`. A class report also takes the class-only reasons the website's class report panel lists first (`private_contact`, `sexual`, `unsafe`); the app offers the six from `GET /api/app/reports` for every report. |
 | `details` | String? | Up to 1000 characters. Required (5 or more) when `reason` is `other`. |
-| `surface` | String? | Where the reporter was: `profile`, `leaderboard`, `team` (the website also sends `contributions`). Anything else is stored as null. |
+| `surface` | String? | Where the reporter was: `profile`, `leaderboard`, `team`, `classes_list` (a row in the app's classes list). The website also sends `contributions` and `class` (a class page or room). Anything else is stored as null. |
 | `platform` | String? | `ios`, `ipados` or `macos` (`AppConfig.platformID`). |
 
 Response 201 (200 when it was already reported):
@@ -890,6 +896,8 @@ Response 201 (200 when it was already reported):
 ```
 
 Show `message` as sent. A second report from the same account about the same thing, while the first is still open, is the same report: `alreadyReported` is true, `message` says so, and no second email goes out.
+
+A class report is handled by the class rules in `src/lib/app/reports.ts` (design section 10.2): anyone signed in can report a class's teacher, and the report goes to both the owner and LearnFRC's safety lead, with the class kept for review. It's answered on the same desk, as kind `class` ("Live class").
 
 Errors (the site's sentences):
 
@@ -939,6 +947,84 @@ Bearer. Undoes a block (`unblockUser`). Idempotent: unblocking someone who isn't
 Response 200: `{ "ok": true, "username": "kai_cad" }`
 
 Errors: 404 `not_found` (`There's no learner with that username.`), 500 `server`, 401.
+
+## Live classes (`/api/app/classes`)
+
+Live classes are taught on learnfrc.com by FRC students aged 13 to 17, in LearnFRC's own video rooms (Cloudflare RealtimeKit). The app lists them and opens each one in Safari. There's no video in the app, and it never asks for the camera or the microphone: signing up, the one-time age question, a parent's OK, the recording notice and the room all happen on the website, in the person's own browser session. The rules are in `src/lib/app/classes.ts` (`listUpcomingClasses`, `classEligibility`, `enrollInClass`), which learnfrc.com/classes uses too.
+
+Nothing about classes shows until the site opens them (both `CLASSES_VISIBLE` and `class_settings.classes_visible` on). Until then this route answers `{ "visible": false, "classes": [] }` and the app shows no Home card, no list rows and no "Teach a live class".
+
+### GET /api/app/classes
+
+Bearer optional, like `/api/app/start-plan`. The live and upcoming classes, soonest first: this deployment's classes only, `scheduled` or `live`, each listed until 15 minutes after its scheduled end (the hard end), at most 60. Past and canceled classes aren't listed. The same listing learnfrc.com/classes renders (`listUpcomingClasses`).
+
+- No `Authorization` header: `Cache-Control: public, max-age=0, s-maxage=60, stale-while-revalidate=300` and `Vary: Authorization`. The same for everyone: `teacher` and `enrolled` are null on every row, because signed-out visitors never see a handle. Print `teacherLabel` instead.
+- A valid token: `Cache-Control: no-store`. `teacher` carries the teacher's username, `enrolled` says whether the caller has a seat, and classes taught by anyone the caller blocked, or who blocked the caller, are left off (`blockedEitherWay` in `src/lib/app/classes.ts`).
+- A token that's sent but no longer valid gets a 401 (refresh and retry once), never the signed-out list.
+
+Response 200 (signed in):
+
+```json
+{
+  "visible": true,
+  "classes": [
+    {
+      "id": "4f1d2c3b-8a9e-4b7c-9d6e-1a2b3c4d5e6f",
+      "title": "Wiring a CAN bus",
+      "description": "We'll wire a CAN chain on a practice board and find the usual faults.",
+      "startsAt": "2026-11-20T01:00:00.000Z",
+      "endsAt": "2026-11-20T02:00:00.000Z",
+      "durationMinutes": 60,
+      "status": "scheduled",
+      "teacher": { "username": "maya" },
+      "teacherLabel": "Taught by an FRC student",
+      "topic": { "kind": "lesson", "id": "0b7f9a52-3c1e-4d8a-b2f6-7e5d4c3b2a19", "title": "CAN Bus Wiring", "url": "https://learnfrc.com/guides/electrical-wiring/can-and-communication/can-bus-wiring" },
+      "seats": { "capacity": 15, "taken": 6, "left": 9 },
+      "url": "https://learnfrc.com/classes/4f1d2c3b-8a9e-4b7c-9d6e-1a2b3c4d5e6f",
+      "enrolled": false
+    }
+  ],
+  "liveNow": 0,
+  "teachUrl": "https://learnfrc.com/apply/teach",
+  "version": "1"
+}
+```
+
+Signed out, the same row has `"teacher": null` and `"enrolled": null`. While classes are hidden the whole reply is `{ "visible": false, "classes": [] }`, with no other keys.
+
+| Field | Type | Notes |
+|---|---|---|
+| `visible` | Bool | False until classes open on the site, and whenever they're switched off. Show nothing about classes while it's false. |
+| `classes` | [LiveClass] | Soonest first. Empty when nothing is scheduled: the site's empty state is "The first classes are being scheduled. Want to teach one?" |
+| `liveNow` | Int | How many rows have `status: "live"`. |
+| `teachUrl` | String | `https://learnfrc.com/apply/teach`, where teachers apply. |
+| `version` | String | `1`. Changes only if a field changes meaning; fields are added, never renamed or removed. |
+
+LiveClass:
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | String | The class's UUID. `contentId` when reporting it. |
+| `title` | String | 4 to 80 characters, written by the teacher (checked for profanity and contact details when it was scheduled). Member content: report it. |
+| `description` | String? | Up to 600 characters, written by the teacher. Null when there's none. |
+| `startsAt` | String | Timestamp. Show it in the device's time zone. |
+| `endsAt` | String | The scheduled end, `startsAt` plus `durationMinutes`. The room closes 15 minutes later (the hard end), and the class stays listed until then. |
+| `durationMinutes` | Int | 15 to 90. |
+| `status` | String | `scheduled`, or `live` once the room has started. Decode anything else as `scheduled`. |
+| `teacher` | { `username` }? | The teacher's username, signed in only. Null signed out. Never a real name, an avatar or a team number. |
+| `teacherLabel` | String | `Taught by an FRC student`, printed where there's no `teacher`. |
+| `topic` | { `kind`, `id`, `title`, `url` }? | The LearnFRC lesson (`kind: "lesson"`) or module (`"module"`) the class is on, with its page on the site. Its `title` is LearnFRC's, not the teacher's. Null when the class has neither. |
+| `seats` | { `capacity`, `taken`, `left` } (all Int) | `capacity` is 2 to 15; `taken` counts enrolled students; `left` never goes below 0. |
+| `url` | String | The class page, `https://learnfrc.com/classes/{id}`. Open it in Safari, not an in-app browser: enrolling and joining need the person's signed-in browser session. |
+| `enrolled` | Bool? | Whether the caller has a seat. Null signed out. |
+
+No row ever carries a team number, a student list or anything about who else is enrolled.
+
+Report and block on a row use the routes above: `POST /api/app/reports` with `contentKind: "class"`, the class's `id` in `contentId`, the teacher's username and `surface: "classes_list"`; and `POST /api/app/blocks` with the teacher's username, after which the next read leaves their classes off. A guest is offered "Sign in to report or block", as elsewhere.
+
+In a Debug build pointed at `next dev` (`-LFAPIBase`), `url`, `teachUrl` and `topic.url` name that server (`NEXT_PUBLIC_SITE_URL`). The app opens only learnfrc.com links and that host; anything else falls back to `https://learnfrc.com/classes/{id}`.
+
+Errors: 401 (a token was sent and it's no longer valid), 500 `server`.
 
 ## Admin and applying (`/api/app/admin/*`, `/api/app/apply`)
 
@@ -1463,6 +1549,7 @@ In `marketer` mode `record` is all nulls and `marketer` is filled:
 | `limits` | object | The form's limits; the server re-checks them. |
 | `posting` | String | Added 2026-11-08. Where what a marketer makes ends up; the site prints it in semibold under the jobs. |
 | `rules` | [String] | Added 2026-11-08. "the rules" under "Once you’re in". |
+| `roles` | [{ `id`, `title`, `url`, `open`, `status` }] | Added with live classes (2026-11). The roles someone can apply for, in the order `/apply` shows them: `marketing` (this page) and `teacher` (`title` "Teach a live class", `url` `https://learnfrc.com/apply/teach`). `open` says whether that role takes applications now; `status` is where the caller stands for it, or null. Built by `src/lib/app/admin-apply.ts`. The app doesn't read it: its "Teach a live class" card follows `GET /api/app/classes` (`visible`, `teachUrl`). |
 | `marketer` | object? | Added 2026-11-08. Only in `marketer` mode: `inviteUrl` (null until they pick a handle), `since` (when the tag was granted), `trailerUrl` (null until the trailer is public: print "The trailer isn’t public yet. You’ll get the link the day it goes up."), and `brandKit` with `logos` and `clips` ([{ `label`, `url` }]), `colors` ([{ `name`, `hex`, `use` }]) and `fonts`. The site's card: "tagged {Mon D, YYYY} / your invite link", the link with a copy button, "the trailer and clips", "the brand kit", and "When you make something, reply to the email you got when you were accepted. It comes straight to me." |
 
 Errors: 401.
@@ -1508,4 +1595,4 @@ Errors: 404 `not_found` (`There's no open application to withdraw.`), 500 `serve
 
 Not covered here, read with the publishable key: `departments`, `modules`, `lessons` (including `quiz`), `articles`, `achievements`; the signed-in user's own `bookmarks` (read, insert, delete under RLS).
 
-`lessons.verified_at`, `verified_by`, `verified_note` and `verified_sources` are no longer shown anywhere and the current app doesn't select them. App copies built before the verified mark came off still put all four in their lesson-body select (`SupabaseQueries.lessonBodySelect`), and PostgREST fails the whole request if a named column is missing, so keep the columns in place and readable with the publishable key. Those copies show their old badge on any lesson where `verified_at` isn't null. The app never writes `lesson_progress` or `user_achievements` directly, and never reads `profiles`. Admin data (`site_admins`, `admin_applications`, `marketers`, `feedback`, the admin views) is RLS-locked to the service role, so it only ever comes through the routes above. So are `user_reports` (service role only) and `user_blocks` (an account may read its own rows under RLS, but the app uses the routes, which also resolve handles).
+`lessons.verified_at`, `verified_by`, `verified_note` and `verified_sources` are no longer shown anywhere and the current app doesn't select them. App copies built before the verified mark came off still put all four in their lesson-body select (`SupabaseQueries.lessonBodySelect`), and PostgREST fails the whole request if a named column is missing, so keep the columns in place and readable with the publishable key. Those copies show their old badge on any lesson where `verified_at` isn't null. The app never writes `lesson_progress` or `user_achievements` directly, and never reads `profiles`. Admin data (`site_admins`, `admin_applications`, `marketers`, `feedback`, the admin views) is RLS-locked to the service role, so it only ever comes through the routes above. So are `user_reports` (service role only) and `user_blocks` (an account may read its own rows under RLS, but the app uses the routes, which also resolve handles). Every live classes table is locked to the service role too (the one exception, `class_chat_messages`, is read by class members inside the website's room), so the app only sees classes through `GET /api/app/classes`.
