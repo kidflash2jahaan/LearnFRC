@@ -3,8 +3,10 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { loadApplyState, type ApplyState } from "@/lib/app/admin-apply";
 import { CopyLink } from "@/components/team/copy-link";
+import { classesVisible } from "@/lib/classes/config";
 import { ApplyForm } from "./_apply-form";
 import { WithdrawForm } from "./_withdraw-form";
+import { RoleHeader } from "./_role-header";
 import {
   APPLICATIONS_OPEN,
   HEADS,
@@ -103,6 +105,9 @@ export default async function ApplyPage() {
     const result = await loadApplyState(user);
     if (result.ok) state = result;
   }
+  // Live classes add a second role (/apply/teach). While they're hidden
+  // (classes-design.md section 1), this page has one role and no header.
+  const showRoles = await classesVisible();
   const mode: ApplyMode = state ? state.mode : "signed-out";
   const application = state?.application ?? null;
   const open = application?.status === "pending" ? application : null;
@@ -116,6 +121,7 @@ export default async function ApplyPage() {
 
   return (
     <div className="nb-wrap max-w-[52rem] py-[clamp(2.2rem,5vw,3.8rem)]">
+      {showRoles && <RoleHeader active="marketing" />}
       <header>
         <p className="nb-marker">apply / marketing</p>
         <h1 className="text-[clamp(2.2rem,1.2rem+3.4vw,3.4rem)]">
