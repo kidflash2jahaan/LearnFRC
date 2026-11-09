@@ -11,6 +11,7 @@ import {
   saveHoldNote,
   type HoldFormState,
 } from "./actions";
+import { useArmed } from "@/components/use-armed";
 
 /**
  * The answers on one hold. Every check is made again on the server
@@ -135,18 +136,16 @@ export function ExtendHoldForm({ holdId }: { holdId: string }) {
   );
 }
 
-/** The safety lead releases a restricted hold to the super admins. Arms first. */
+/**
+ * The safety lead releases a restricted hold to the super admins. Arms
+ * first, and stays armed until a click elsewhere, Escape or 10 seconds.
+ */
 export function ReleaseHoldForm({ holdId }: { holdId: string }) {
   const [state, dispatch, pending] = useActionState<HoldFormState, FormData>(releaseHoldAction, undefined);
-  const [armed, setArmed] = React.useState(false);
+  const [armed, setArmed, armScope] = useArmed(false);
   const [note, setNote] = React.useState("");
   const uid = React.useId();
   useToasts(state);
-  React.useEffect(() => {
-    if (!armed) return;
-    const t = window.setTimeout(() => setArmed(false), 5000);
-    return () => window.clearTimeout(t);
-  }, [armed]);
   if (state?.message) return <p className="nb-slug">{state.message}</p>;
   return (
     <form action={dispatch} className="max-w-2xl">
@@ -178,11 +177,12 @@ export function ReleaseHoldForm({ holdId }: { holdId: string }) {
           }
         }}
         className="nb-btn-ghost nb-btn-sm mt-3"
+        {...armScope}
       >
         {pending ? "Releasing" : armed ? "Release it" : "Release to reviewers"}
       </button>
       {armed ? (
-        <p id={`${uid}-armed`} className="nb-hint mt-2">
+        <p id={`${uid}-armed`} className="nb-hint mt-2" {...armScope}>
           Super admins will see this hold&rsquo;s transcript, chat and recording. Press again to release.
         </p>
       ) : null}

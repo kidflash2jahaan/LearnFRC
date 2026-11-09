@@ -4,17 +4,16 @@ import * as React from "react";
 import { useActionState } from "react";
 import { toast } from "sonner";
 import { answerReport, type DeskState } from "@/app/actions/safety";
+import { useArmed } from "@/components/use-armed";
 
 type Action = "resolve" | "remove" | "ban";
-
-/** The review desk's armed-control timeout. */
-const ARMED_MS = 5000;
 
 /**
  * The three answers under a report, with the note that rides along into the
  * log. Close is one click, because it changes nothing anyone can see. Remove
  * and Ban arm first, like the review desk's Reject: the first click says what
- * is about to happen, the second does it. Ban only appears for a super admin,
+ * is about to happen, the second does it, and the warning stays until a click
+ * elsewhere, Escape or 10 seconds (useArmed). Ban only appears for a super admin,
  * and only while the account still exists. Every check is made again on the
  * server (src/lib/app/admin-reports.ts); these controls are not authorisation.
  */
@@ -44,7 +43,7 @@ export function ReportControls({
 }) {
   const [state, dispatch, pending] = useActionState<DeskState, FormData>(answerReport, undefined);
   const [choice, setChoice] = React.useState<Action | null>(null);
-  const [armed, setArmed] = React.useState<Action | null>(null);
+  const [armed, setArmed, armScope] = useArmed<Action | null>(null);
   // Controlled, so a refusal never wipes it (see the review desk's note).
   const [note, setNote] = React.useState("");
   const [replace, setReplace] = React.useState(suggestReplace);
@@ -59,12 +58,6 @@ export function ReportControls({
     if (state?.error) toast.error(state.error);
     if (state?.message) toast.success(state.message);
   }, [state]);
-
-  React.useEffect(() => {
-    if (!armed) return;
-    const t = window.setTimeout(() => setArmed(null), ARMED_MS);
-    return () => window.clearTimeout(t);
-  }, [armed]);
 
   if (state?.message) {
     return <p className="nb-slug mt-4">{state.message}</p>;
@@ -156,6 +149,7 @@ export function ReportControls({
             aria-busy={pending && choice === "remove"}
             aria-describedby={armed === "remove" ? armedId : undefined}
             className="nb-btn nb-btn-sm"
+            {...armScope}
           >
             {pending && choice === "remove"
               ? "Removing"
@@ -180,6 +174,7 @@ export function ReportControls({
             aria-busy={pending && choice === "ban"}
             aria-describedby={armed === "ban" ? armedId : undefined}
             className="nb-btn-ghost nb-btn-sm"
+            {...armScope}
           >
             {pending && choice === "ban"
               ? "Banning"
@@ -190,7 +185,7 @@ export function ReportControls({
         ) : null}
       </div>
 
-      <p id={armedId} role="status" className="nb-hint mt-2 max-w-[52ch] empty:mt-0">
+      <p id={armedId} role="status" className="nb-hint mt-2 max-w-[52ch] empty:mt-0" {...armScope}>
         {armed === "remove"
           ? classRole === "teacher"
             ? `One more click suspends ${handle}'s teaching, cancels their upcoming classes, ends this class if it's still on, and closes every open report about them in it.`

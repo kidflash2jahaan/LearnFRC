@@ -3,17 +3,16 @@
 import * as React from "react";
 import { useActionState } from "react";
 import { toast } from "sonner";
+import { useArmed } from "@/components/use-armed";
 import { answerLetterAction, type LetterDeskState } from "./_actions";
 
 type Action = "approve" | "decline" | "revoke";
 
-/** How long an armed control stays armed (the review desk's timeout). */
-const ARMED_MS = 5000;
-
 /**
  * The answers under a letter. A request gets "Approve and sign" and
  * "Decline"; a signed letter gets "Withdraw". Signing and withdrawing arm
- * first: the first click says what's about to happen, the second does it.
+ * first: the first click says what's about to happen, the second does it,
+ * and it stays armed until a click elsewhere, Escape or 10 seconds (useArmed).
  * Decline and withdraw need a reason, which the teacher reads in their
  * email. Every check is made again on the server (src/lib/classes/letters.ts);
  * the shape of these controls isn't authorisation.
@@ -33,7 +32,7 @@ export function LetterControls({
 }) {
   const [state, dispatch, pending] = useActionState<LetterDeskState, FormData>(answerLetterAction, undefined);
   const [choice, setChoice] = React.useState<Action | null>(null);
-  const [armed, setArmed] = React.useState<Action | null>(null);
+  const [armed, setArmed, armScope] = useArmed<Action | null>(null);
   // Controlled, so a refusal doesn't wipe it.
   const [reason, setReason] = React.useState("");
 
@@ -46,12 +45,6 @@ export function LetterControls({
     if (state?.error) toast.error(state.error);
     if (state?.message) toast.success(state.message);
   }, [state]);
-
-  React.useEffect(() => {
-    if (!armed) return;
-    const t = window.setTimeout(() => setArmed(null), ARMED_MS);
-    return () => window.clearTimeout(t);
-  }, [armed]);
 
   if (state?.message) {
     return <p className="nb-slug mt-4 max-w-[60ch]">{state.message}</p>;
@@ -112,6 +105,7 @@ export function LetterControls({
               aria-busy={pending && choice === "approve"}
               aria-describedby={armed === "approve" ? armedId : undefined}
               className="nb-btn nb-btn-sm"
+              {...armScope}
             >
               {pending && choice === "approve" ? "Signing" : armed === "approve" ? "Yes, sign it" : "Approve and sign"}
               <span className="sr-only"> {label}</span>
@@ -142,6 +136,7 @@ export function LetterControls({
             aria-busy={pending && choice === "revoke"}
             aria-describedby={armed === "revoke" ? armedId : undefined}
             className="nb-btn-ghost nb-btn-sm"
+            {...armScope}
           >
             {pending && choice === "revoke" ? "Withdrawing" : armed === "revoke" ? "Yes, withdraw it" : "Withdraw"}
             <span className="sr-only"> {label}</span>
@@ -149,7 +144,7 @@ export function LetterControls({
         )}
       </div>
 
-      <p id={armedId} role="status" className="nb-hint mt-2 max-w-[52ch] empty:mt-0">
+      <p id={armedId} role="status" className="nb-hint mt-2 max-w-[52ch] empty:mt-0" {...armScope}>
         {armed === "approve"
           ? `One more click signs ${label} in your name and emails the teacher.`
           : armed === "revoke"

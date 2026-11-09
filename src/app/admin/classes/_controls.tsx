@@ -10,32 +10,22 @@ import {
   safetyLeadAction,
   type ClassAdminState,
 } from "@/app/actions/class-admin";
+import { useArmed } from "@/components/use-armed";
 
 /**
  * The controls on /admin/classes and /admin/classes/[id]. Every check is made
  * again on the server (src/lib/app/admin-classes.ts); hiding a control here is
  * never the gate. Anything that changes a class for other people (End, Hold,
  * Revoke, Pause) arms on the first click and acts on the second, like the
- * reports desk.
+ * reports desk, and stays armed until a click elsewhere, Escape or 10
+ * seconds (useArmed, src/components/use-armed.ts).
  */
-
-const ARMED_MS = 5000;
 
 function useToast(state: ClassAdminState) {
   React.useEffect(() => {
     if (state?.error) toast.error(state.error);
     if (state?.message) toast.success(state.message);
   }, [state]);
-}
-
-function useArmed() {
-  const [armed, setArmed] = React.useState(false);
-  React.useEffect(() => {
-    if (!armed) return;
-    const t = window.setTimeout(() => setArmed(false), ARMED_MS);
-    return () => window.clearTimeout(t);
-  }, [armed]);
-  return [armed, setArmed] as const;
 }
 
 /** One button that posts `tool` (and `extra` fields) to classAdminTool. */
@@ -58,7 +48,7 @@ export function ToolButton({
   ghost?: boolean;
 }) {
   const [state, action, pending] = useActionState<ClassAdminState, FormData>(classAdminTool, undefined);
-  const [armed, setArmed] = useArmed();
+  const [armed, setArmed, armScope] = useArmed(false);
   const uid = React.useId();
   useToast(state);
   const needsArm = !!armedText;
@@ -78,10 +68,11 @@ export function ToolButton({
         aria-busy={pending}
         aria-describedby={armed ? `${uid}-armed` : undefined}
         className={ghost ? "nb-btn-ghost nb-btn-sm" : "nb-btn nb-btn-sm"}
+        {...armScope}
       >
         {pending ? pendingLabel : armed ? `Yes, ${label.toLowerCase()}` : label}
       </button>
-      <p id={`${uid}-armed`} role="status" className="nb-hint mt-1.5 max-w-[46ch] empty:mt-0">
+      <p id={`${uid}-armed`} role="status" className="nb-hint mt-1.5 max-w-[46ch] empty:mt-0" {...armScope}>
         {armed ? armedText : null}
       </p>
       {state?.error ? <p className="nb-error mt-1.5 max-w-[46ch]">{state.error}</p> : null}
@@ -92,7 +83,7 @@ export function ToolButton({
 /** "Hold this class", with an optional note for the hold. */
 export function HoldForm({ classId, held }: { classId: string; held: number }) {
   const [state, action, pending] = useActionState<ClassAdminState, FormData>(classAdminTool, undefined);
-  const [armed, setArmed] = useArmed();
+  const [armed, setArmed, armScope] = useArmed(false);
   const [note, setNote] = React.useState("");
   const uid = React.useId();
   useToast(state);
@@ -125,10 +116,11 @@ export function HoldForm({ classId, held }: { classId: string; held: number }) {
         disabled={pending}
         aria-busy={pending}
         className="nb-btn-ghost nb-btn-sm mt-2"
+        {...armScope}
       >
         {pending ? "Holding" : armed ? "Yes, hold this class" : "Hold this class"}
       </button>
-      <p role="status" className="nb-hint mt-1.5 empty:mt-0">
+      <p role="status" className="nb-hint mt-1.5 empty:mt-0" {...armScope}>
         {armed ? "One more click keeps this class's evidence for a year." : null}
       </p>
       {state?.error ? <p className="nb-error mt-1.5">{state.error}</p> : null}
@@ -139,7 +131,7 @@ export function HoldForm({ classId, held }: { classId: string; held: number }) {
 /** The emergency stop and its reason. Pausing ends every live class. */
 export function PauseForm({ paused, reason }: { paused: boolean; reason: string | null }) {
   const [state, action, pending] = useActionState<ClassAdminState, FormData>(classAdminTool, undefined);
-  const [armed, setArmed] = useArmed();
+  const [armed, setArmed, armScope] = useArmed(false);
   const [why, setWhy] = React.useState("");
   const uid = React.useId();
   useToast(state);
@@ -174,10 +166,11 @@ export function PauseForm({ paused, reason }: { paused: boolean; reason: string 
         disabled={pending}
         aria-busy={pending}
         className={paused ? "nb-btn nb-btn-sm mt-2" : "nb-btn-ghost nb-btn-sm mt-2"}
+        {...armScope}
       >
         {pending ? "Saving" : paused ? "Open joins" : armed ? "Yes, pause and end live classes" : "Pause all classes"}
       </button>
-      <p role="status" className="nb-hint mt-1.5 empty:mt-0">
+      <p role="status" className="nb-hint mt-1.5 empty:mt-0" {...armScope}>
         {armed ? "One more click stops every join and ends every live class right now." : null}
       </p>
       {state?.error ? <p className="nb-error mt-1.5">{state.error}</p> : null}

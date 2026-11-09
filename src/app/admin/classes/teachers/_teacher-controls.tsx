@@ -9,11 +9,11 @@ import {
   unsuspendTeacherAction,
   type TeachFormState,
 } from "@/app/actions/class-teachers";
-
-const ARMED_MS = 5000;
+import { useArmed } from "@/components/use-armed";
 
 /**
- * Suspend (with a staff-only reason, two clicks) or unsuspend one teacher.
+ * Suspend (with a staff-only reason, two clicks: armed until a click
+ * elsewhere, Escape or 10 seconds) or unsuspend one teacher.
  * Super admins and the safety lead. Suspending cancels their upcoming
  * classes, and students are told only that the teacher can't teach it.
  */
@@ -55,7 +55,7 @@ function UnsuspendForm({ userId, handle }: { userId: string; handle: string }) {
 
 function SuspendForm({ userId, handle }: { userId: string; handle: string }) {
   const [state, action, pending] = useActionState<TeachFormState, FormData>(suspendTeacherAction, undefined);
-  const [armed, setArmed] = React.useState(false);
+  const [armed, setArmed, armScope] = useArmed(false);
   const [reason, setReason] = React.useState("");
   const uid = React.useId();
 
@@ -63,12 +63,6 @@ function SuspendForm({ userId, handle }: { userId: string; handle: string }) {
     if (state?.error) toast.error(state.error);
     if (state?.success) toast.success("Suspended. Their upcoming classes are canceled.");
   }, [state]);
-
-  React.useEffect(() => {
-    if (!armed) return;
-    const t = window.setTimeout(() => setArmed(false), ARMED_MS);
-    return () => window.clearTimeout(t);
-  }, [armed]);
 
   return (
     <form action={action} className="min-w-0 max-w-md">
@@ -99,11 +93,12 @@ function SuspendForm({ userId, handle }: { userId: string; handle: string }) {
         aria-busy={pending}
         aria-describedby={armed ? `${uid}-armed` : undefined}
         className="nb-btn-ghost nb-btn-sm mt-2"
+        {...armScope}
       >
         {pending ? "Suspending" : armed ? "Yes, suspend" : "Suspend"}
         <span className="sr-only"> {handle}</span>
       </button>
-      <p id={`${uid}-armed`} role="status" className="nb-hint mt-2 max-w-[48ch] empty:mt-0">
+      <p id={`${uid}-armed`} role="status" className="nb-hint mt-2 max-w-[48ch] empty:mt-0" {...armScope}>
         {armed
           ? `One more click stops ${handle} teaching and cancels their upcoming classes. Students are emailed; the reason isn’t shared.`
           : null}
