@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/privacy" },
 };
 
-const UPDATED = "November 8, 2026";
+const UPDATED = "November 9, 2026";
 // The contact form. It needs no account and no email address, so it stays the
 // first way to reach us. The address is the second, for anyone who would
 // rather write an email: PUBLIC_CONTACT_EMAIL, the one public contact address
@@ -121,9 +121,14 @@ const CLASSES_BODY: ReactNode = (
         code made from their network address.
       </li>
       <li>
-        If you apply to teach: your answers on the application, including the
-        name your school knows you by, which goes on hours letters, and an
-        adult reference&rsquo;s name and email if you add one.
+        If you apply to teach: your answers on the application, including your
+        FRC seasons, team numbers and the events you went to, the name your
+        school knows you by, which goes on hours letters, and an adult
+        reference&rsquo;s name and email if you add one. We only email a
+        reference if we can&rsquo;t confirm your seasons from event results,
+        and only to ask whether you were on the team. While you write, the form
+        keeps a draft in that browser on that device; sending it or clearing it
+        deletes the draft.
       </li>
       <li>
         The classes you sign up for or teach, each time you accept the
@@ -312,8 +317,7 @@ function sectionsFor(classes: boolean): Section[] {
           <p>
             <strong>What you send us.</strong>{" "}Messages through the contact
             form (with an email address only if you leave one), edits you suggest,
-            lessons you submit, and applications to help spread the word about
-            LearnFRC.
+            and lessons you submit.
           </p>
           <p>
             <strong>Reports and blocks.</strong>{" "}When you report someone, we
@@ -364,8 +368,8 @@ function sectionsFor(classes: boolean): Section[] {
             <li>Run your account and save your progress on the site and in the app.</li>
             <li>
               Send account email: confirming your address, password resets, a
-              welcome note, answers to messages you send, and decisions on helper
-              applications.
+              welcome note, answers to messages you send, and decisions on
+              applications you send.
             </li>
             <li>
               Send learning reminders, only if you turn them on with the box at
@@ -421,11 +425,6 @@ function sectionsFor(classes: boolean): Section[] {
             <strong>Suggested edits</strong>{" "}are public on the{" "}
             <Link href="/contributions">contributions page</Link>, under your
             username.
-          </p>
-          <p>
-            <strong>Helpers.</strong>{" "}If you&rsquo;re accepted as a marketing
-            helper, your account gets a marketing tag. Helpers&rsquo; names are
-            never shown publicly.
           </p>
           {classes ? (
             <p>
@@ -606,7 +605,7 @@ function sectionsFor(classes: boolean): Section[] {
             account&rdquo;, or in the app under Settings, &ldquo;Delete my
             account&rdquo;. It happens straight away and takes your profile,
             progress, badges, bookmarks, suggested edits, submitted lessons and
-            any helper application with it
+            any application you sent with it
             {classes ? ", and your live classes data apart from what’s listed below" : ""}.
             If you signed in with Apple, deleting
             your account also disconnects LearnFRC from your Apple Account.
