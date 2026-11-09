@@ -349,6 +349,25 @@ async function cleanup(pkg) {
     await del(db, "class_events", (q) => q.in("actor_id", acc.ids), "actors");
     await del(db, "hours_letters", (q) => q.in("teacher_id", acc.ids), "letters");
   }
+  // Account holds (a ban or a self-delete with no class) log events with no
+  // class and no actor, about an account that may be gone already: find them
+  // by the subject's id, from the accounts that exist and the credentials file.
+  const everId = [
+    ...new Set([
+      ...acc.ids,
+      ...Object.values(readCredentials(pkg).accounts ?? {})
+        .map((a) => a?.id)
+        .filter(Boolean),
+    ]),
+  ];
+  if (everId.length) {
+    await del(
+      db,
+      "class_events",
+      (q) => q.is("class_id", null).like("kind", "hold_%").in("detail->>subjectUserId", everId),
+      "account hold events"
+    );
+  }
   if (classIds.length) await del(db, "classes", (q) => q.in("id", classIds), "classes and their rows");
 
   if (acc.emails.length) await del(db, "banned_emails", (q) => q.in("email", acc.emails), "accounts");

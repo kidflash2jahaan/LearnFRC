@@ -831,7 +831,20 @@ async function main() {
         .map((c) => `PATCH /meetings/${c.rtk_meeting_id} {"status":"INACTIVE"}`)
         .sort()
     );
-    assert.ok((await holdReasons(nowId, acc.t1.id)).includes("auto_end"), "an auto_end hold about the teacher");
+    // holdClass keeps one hold per person per class: the earlier class_report
+    // hold about the teacher is refreshed with the auto-end, not duplicated.
+    assert.deepEqual(await holdReasons(nowId, acc.t1.id), ["class_report"], "one hold about the teacher");
+    const { data: refreshed } = await admin
+      .from("class_events")
+      .select("detail")
+      .eq("class_id", nowId)
+      .eq("kind", "hold_refreshed");
+    assert.ok(
+      ((refreshed ?? []) as { detail: { reason?: string; subjectUserId?: string } }[]).some(
+        (e) => e.detail.reason === "auto_end" && e.detail.subjectUserId === acc.t1.id
+      ),
+      "the hold was refreshed for the auto-end"
+    );
     const { count } = await admin
       .from("class_events")
       .select("id", { count: "exact", head: true })
