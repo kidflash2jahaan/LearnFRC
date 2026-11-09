@@ -112,6 +112,13 @@ export default async function TeacherLetterPage() {
   if (!user) redirect("/login?next=/classes/teaching/letter");
 
   const result = await loadTeacherLetterDesk(user);
+  if (!result.ok && result.code === "server") {
+    return (
+      <Frame>
+        <p className="nb-error mt-6">{result.error}</p>
+      </Frame>
+    );
+  }
   if (!result.ok) {
     return (
       <Frame>

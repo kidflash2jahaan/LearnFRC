@@ -89,6 +89,7 @@ export const LETTER_SENTENCES = {
   reason: "Write a short reason. The teacher sees it.",
   reasonLong: "Keep the reason under 500 characters.",
   save: "Couldn't save that. Try again.",
+  load: "Couldn't load the letters just now. Reload the page to try again.",
   rate: "Too many letter checks from here. Try again in an hour.",
 } as const;
 
@@ -248,17 +249,28 @@ export async function loadTeacherLetterDesk(
   const teacher = await getTeacher(user.id);
   if (!teacher) return fail("forbidden", LETTER_SENTENCES.notTeacher);
   const now = opts.now ?? new Date();
-  const [blocked, source, letters] = await Promise.all([
-    lettersBlockedFor(user.id, user.email, teacher),
-    countableClasses(user.id),
-    createAdminClient()
-      .from("hours_letters")
-      .select(TEACHER_LETTER_SELECT)
-      .eq("teacher_id", user.id)
-      .order("requested_at", { ascending: false })
-      .limit(50),
-  ]);
-  const own = (letters.data ?? []) as TeacherLetter[];
+  let blocked: boolean;
+  let source: LetterSourceClass[];
+  let own: TeacherLetter[];
+  try {
+    const [b, s, letters] = await Promise.all([
+      lettersBlockedFor(user.id, user.email, teacher),
+      countableClasses(user.id),
+      createAdminClient()
+        .from("hours_letters")
+        .select(TEACHER_LETTER_SELECT)
+        .eq("teacher_id", user.id)
+        .order("requested_at", { ascending: false })
+        .limit(50),
+    ]);
+    if (letters.error) throw new Error(letters.error.message);
+    blocked = b;
+    source = s;
+    own = (letters.data ?? []) as TeacherLetter[];
+  } catch (e) {
+    console.error("loadTeacherLetterDesk:", (e as Error).message);
+    return fail("server", LETTER_SENTENCES.load);
+  }
   return {
     ok: true,
     desk: {
@@ -315,7 +327,14 @@ export async function requestHoursLetter(
   if ((today.count ?? 0) >= LETTER_LIMITS.requestsPerDay)
     return fail("rate_limited", LETTER_SENTENCES.tooManyToday, 86_400);
 
-  const classes = classesForLetter(await countableClasses(user.id), {
+  let source: LetterSourceClass[];
+  try {
+    source = await countableClasses(user.id);
+  } catch (e) {
+    console.error("requestHoursLetter:", (e as Error).message);
+    return fail("server", LETTER_SENTENCES.save);
+  }
+  const classes = classesForLetter(source, {
     teacherId: user.id,
     app: rtkApp(),
     start: period.start,
@@ -514,35 +533,43 @@ export async function loadLettersDesk(user: AppUser): Promise<Result<{ desk: Let
   const allRows = [...reqRows, ...((issued.data ?? []) as DeskRow[]), ...((closed.data ?? []) as DeskRow[])];
 
   const teacherIds = [...new Set(allRows.map((r) => r.teacher_id))];
-  const classIds = reqRows.flatMap((r) => (r.classes ?? []).map((c) => c.classId));
-  const [handles, teacherRows, current, reviews, reports, seeRestricted, blockedIds, canSign] = await Promise.all([
-    handlesFor([...teacherIds, ...allRows.map((r) => r.approved_by)]),
-    teacherIds.length
-      ? admin
-          .from("class_teachers")
-          .select("user_id, letter_name, letters_blocked, suspended_at, suspended_reason")
-          .in("user_id", teacherIds)
-      : Promise.resolve({ data: [] as Record<string, unknown>[] }),
-    currentClasses(classIds),
-    classIds.length
-      ? admin
-          .from("class_reviews")
-          .select("class_id, verdict, flags, code_flags, restricted, chat_blocked_count")
-          .in("class_id", [...new Set(classIds)])
-      : Promise.resolve({ data: [] as Record<string, unknown>[] }),
-    classIds.length
-      ? admin.from("user_reports").select("content_id").eq("content_kind", "class").in("content_id", [...new Set(classIds)])
-      : Promise.resolve({ data: [] as Record<string, unknown>[] }),
-    canSeeRestricted(user),
-    // Only requests can still be signed, so only their teachers need the check.
-    Promise.all(
-      [...new Set(reqRows.map((r) => r.teacher_id))].map(async (id) => {
-        const t = await getTeacher(id);
-        return (await lettersBlockedFor(id, await emailOf(id), t)) ? id : null;
-      })
-    ),
-    isLetterSigner(user.id),
-  ]);
+  const classIds = [...new Set(reqRows.flatMap((r) => (r.classes ?? []).map((c) => c.classId)).filter(isUuid))];
+  const none = Promise.resolve({ data: [] as Record<string, unknown>[] });
+  let enriched;
+  try {
+    enriched = await Promise.all([
+      handlesFor([...teacherIds, ...allRows.map((r) => r.approved_by)]),
+      teacherIds.length
+        ? admin
+            .from("class_teachers")
+            .select("user_id, letter_name, letters_blocked, suspended_at, suspended_reason")
+            .in("user_id", teacherIds)
+        : none,
+      currentClasses(classIds),
+      classIds.length
+        ? admin
+            .from("class_reviews")
+            .select("class_id, verdict, flags, code_flags, restricted, chat_blocked_count")
+            .in("class_id", classIds)
+        : none,
+      classIds.length
+        ? admin.from("user_reports").select("content_id").eq("content_kind", "class").in("content_id", classIds)
+        : none,
+      canSeeRestricted(user),
+      // Only requests can still be signed, so only their teachers need the check.
+      Promise.all(
+        [...new Set(reqRows.map((r) => r.teacher_id))].map(async (id) => {
+          const t = await getTeacher(id);
+          return (await lettersBlockedFor(id, await emailOf(id), t)) ? id : null;
+        })
+      ),
+      isLetterSigner(user.id),
+    ]);
+  } catch (e) {
+    console.error("loadLettersDesk:", (e as Error).message);
+    return fail("server", LETTER_SENTENCES.load);
+  }
+  const [handles, teacherRows, current, reviews, reports, seeRestricted, blockedIds, canSign] = enriched;
 
   const teachers = new Map<string, Record<string, unknown>>();
   for (const t of teacherRows.data ?? []) teachers.set(t.user_id as string, t);
