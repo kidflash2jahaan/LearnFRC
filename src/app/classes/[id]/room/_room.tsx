@@ -227,7 +227,9 @@ export function Room(view: RoomView) {
       phase.kind === "removed"
         ? "You were removed from this class."
         : phase.kind === "ended"
-          ? endedMessage(phase.reason, phase.canceled)
+          ? phase.reason === "teacher" && view.role === "teacher"
+            ? "You ended the class."
+            : endedMessage(phase.reason, phase.canceled)
           : phase.why === "kicked"
             ? "You were disconnected from the class."
             : "You left the class.";
@@ -243,7 +245,9 @@ export function Room(view: RoomView) {
               ? canReport
                 ? "LearnFRC is looking at what happened. If you saw something, you can report it here too."
                 : "LearnFRC is looking at what happened."
-              : "Thanks for being part of it."
+              : view.role === "teacher"
+                ? "Thanks for teaching it. LearnFRC reviews every class, and your teaching page shows when it's approved."
+                : "Thanks for being part of it."
           : phase.why === "kicked"
             ? "That happens when you join from another tab or device. Join again to come back here."
             : "You can join again while the class is on.";
