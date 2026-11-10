@@ -74,8 +74,8 @@ const HEADS: Record<TeachApplyMode, { title: string; slug: string }> = {
   "code-outdated": { title: "The teacher code changed", slug: "agree again to keep teaching" },
   teacher: { title: "You’re a teacher", slug: "nothing to apply for" },
   pending: { title: "Your application", slug: "waiting on a decision" },
-  again: { title: "Apply again", slug: "about 25 minutes, saves as you go" },
-  new: { title: "Apply", slug: "about 25 minutes, saves as you go" },
+  again: { title: "Apply again", slug: "about 30 to 45 minutes, saves as you go" },
+  new: { title: "Apply", slug: "about 30 to 45 minutes, saves as you go" },
 };
 
 /** One state card: tape, slug, a sentence or two, and its controls. */
@@ -264,7 +264,7 @@ export default async function TeachApplyPage() {
               schedule a class until they say OK.
             </li>
             <li>To agree to the teacher code{ageKnown ? ", below" : ""}.</li>
-            <li>About 25 minutes for the application. It saves on this device as you go.</li>
+            <li>About 30 to 45 minutes for the application. It saves on this device as you go.</li>
           </ul>
         </div>
       </section>
@@ -314,7 +314,7 @@ export default async function TeachApplyPage() {
         )}
 
         {mode === "needs-age" && (
-          <StateCard slug="asked once">
+          <StateCard slug="why we ask">
             <p className={body}>
               Before you apply, answer one quick question. We ask once, so we know whether a parent or
               guardian needs to say OK.

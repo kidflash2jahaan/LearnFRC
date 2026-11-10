@@ -681,8 +681,11 @@ export function TeachForm({
       <div className="nb-note max-w-[70ch]">
         <p className="nb-slug">before you start</p>
         <p className="mt-2 text-[0.97rem] leading-relaxed">
-          This takes about 25 minutes. Most of it is writing, and that&rsquo;s on purpose: it&rsquo;s how we see
-          how you&rsquo;d teach. Your answers save on this device as you go, so you can stop and come back.
+          This takes about 30 to 45 minutes. Most of it is writing, and that&rsquo;s on purpose: it&rsquo;s how we
+          see how you&rsquo;d teach. Your answers save on this device as you go, so you can stop and come back.
+        </p>
+        <p className="mt-2 text-[0.97rem] leading-relaxed">
+          Nothing you write here is shown to students or on your profile. Only LearnFRC&rsquo;s reviewers read it.
         </p>
         <p className="mt-3 text-[0.97rem] font-semibold">Have these ready:</p>
         <div className="nb-prose mt-1.5">
@@ -701,8 +704,9 @@ export function TeachForm({
           <span className="nb-slug ml-2 font-normal">{record}</span>
         </p>
         <p className="mt-2 max-w-[56ch] text-[0.93rem] leading-relaxed text-graphite">
-          That line, your answers below and your age group. Your seasons, your name and your reference are seen
-          only by LearnFRC&rsquo;s reviewers, never by students.
+          That line, your answers below and your age group. Your seasons and your reference are seen only by
+          LearnFRC&rsquo;s reviewers. Your name goes on your hours letters, which a school can check with the
+          letter&rsquo;s code.
         </p>
       </div>
 
@@ -913,7 +917,7 @@ export function TeachForm({
                                 name="seasonEvents"
                                 type="text"
                                 maxLength={L.seasonEventsMax}
-                                placeholder="the regionals or district events, by name"
+                                placeholder="regionals, districts, championships, by name"
                                 value={s.events}
                                 onChange={(e) => set("events", `season-${n}-events`)(e.target.value)}
                                 aria-invalid={eErr ? true : undefined}
@@ -1282,7 +1286,7 @@ export function TeachForm({
                       aria-invalid={serverError("code") ? true : undefined}
                       aria-describedby={describedBy(serverError("code") && `${fieldId("code")}-error`)}
                     />
-                    I agree to the teacher code.
+                    I&rsquo;ve read the teacher code and agree to it.
                   </label>
                   <FieldError id={fieldId("code")} text={serverError("code")} />
                 </div>
@@ -1323,6 +1327,10 @@ export function TeachForm({
                   </button>
                   <span className="nb-hint">You&rsquo;ll get an email when it&rsquo;s decided.</span>
                 </div>
+                <p className="nb-hint max-w-[62ch]">
+                  We keep it 180 days if it&rsquo;s turned down or withdrawn, and for as long as you teach if it&rsquo;s
+                  accepted. A reference&rsquo;s name and email are deleted once it&rsquo;s decided.
+                </p>
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                   {form.saved ? <span className="nb-slug">Saved on this device.</span> : null}
                   <button type="button" className="nb-btn-ghost nb-btn-sm" onClick={clearDraft} {...clearScope}>

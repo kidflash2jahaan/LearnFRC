@@ -133,9 +133,11 @@ const CLASSES_BODY: ReactNode = (
         reference if we can&rsquo;t confirm your seasons from event results,
         and only to ask whether you were on the team, and we delete their name
         and email once your application is decided or withdrawn. While you
-        write, the form keeps a draft in that browser on that device; sending
-        the application, clearing the draft or signing out there deletes
-        it.
+        write, the form keeps a draft in that browser on that device. It never
+        holds your name, your reference or the boxes you tick. Sending the
+        application, clearing the draft or signing out there deletes it, and
+        it&rsquo;s dropped if it sits unsent for 60 days or your account is
+        deleted.
       </li>
       <li>
         The classes you sign up for or teach, each time you accept the

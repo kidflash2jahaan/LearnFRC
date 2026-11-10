@@ -40,7 +40,7 @@ export function WithdrawTeachForm() {
         <form action={formAction}>
           <p id={questionId} className="max-w-[52ch] text-[0.95rem] leading-relaxed">
             Withdraw this application? It comes off the desk straight away, and you can send a new one
-            whenever you want.
+            whenever you want. We keep the stored copy for 180 days, then delete it.
           </p>
           <div className="mt-3 flex flex-wrap items-center gap-3">
             <button

@@ -34,7 +34,7 @@ export function CodeAgreeForm({ codeVersion }: { codeVersion: string }) {
           onChange={(e) => setAgreed(e.target.checked)}
           aria-invalid={state?.field === "code" || undefined}
         />
-        I agree to the teacher code.
+        I&rsquo;ve read the teacher code and agree to it.
       </label>
       {state?.error && (
         <p className="nb-error mt-2" role="alert" aria-live="assertive">

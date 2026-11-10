@@ -132,7 +132,7 @@ The caller's own profile. The only place anyone's `fullName` is ever sent, and o
   "username": "maya_254",
   "fullName": "Maya Chen",
   "avatarUrl": "https://lh3.googleusercontent.com/a/example",
-  "teamNumber": 254,
+  "teamNumber": 5835,
   "bio": "Programming lead.",
   "role": "student",
   "xp": 1240,
@@ -447,7 +447,7 @@ Bearer. Settings, through `updateProfileFields`, the same function as the websit
 Request (every field optional; a field left out keeps its current value, `null` clears it):
 
 ```json
-{ "fullName": "Maya Chen", "bio": "Programming lead.", "avatarUrl": "https://example.com/me.png", "username": "maya_254", "teamNumber": 254, "role": "student" }
+{ "fullName": "Maya Chen", "bio": "Programming lead.", "avatarUrl": "https://example.com/me.png", "username": "maya_254", "teamNumber": 5835, "role": "student" }
 ```
 
 | Field | Type | Rule |
@@ -480,10 +480,10 @@ Bearer. The profile setup step (`saveProfileSetupFields`, the website's dashboar
 Request:
 
 ```json
-{ "username": "maya_254", "teamNumber": 254 }
+{ "username": "maya_254", "teamNumber": 5835 }
 ```
 
-`teamNumber` is optional (Int or null). `username` is ignored for an account whose handle is its own, so the app's team-only ask (`AccountStore.setupTeamNumber(_:)`) leaves it out and sends `{ "teamNumber": 254 }`.
+`teamNumber` is optional (Int or null). `username` is ignored for an account whose handle is its own, so the app's team-only ask (`AccountStore.setupTeamNumber(_:)`) leaves it out and sends `{ "teamNumber": 5835 }`.
 
 Response 200: the updated MeProfile.
 
@@ -522,7 +522,7 @@ Response 200 with a team:
 ```json
 {
   "team": {
-    "number": 254,
+    "number": 5835,
     "memberCount": 2,
     "totalLessons": 394,
     "totalCompleted": 57,
@@ -602,7 +602,7 @@ Response 200, `weekly` (XP and lessons from the last 7 days; level from all-time
 {
   "board": "weekly",
   "entries": [
-    { "rank": 1, "username": "maya_254", "avatarUrl": null, "teamNumber": 254, "role": "student", "xp": 164, "level": 13, "lessons": 11 }
+    { "rank": 1, "username": "maya_254", "avatarUrl": null, "teamNumber": 5835, "role": "student", "xp": 164, "level": 13, "lessons": 11 }
   ],
   "totals": { "learners": 312, "totalXp": 48210 }
 }
@@ -618,10 +618,10 @@ Response 200, `teams`:
 {
   "board": "teams",
   "entries": [
-    { "rank": 1, "teamNumber": 447, "members": 15, "xp": 9120, "avgXp": 608 }
+    { "rank": 1, "teamNumber": 5835, "members": 15, "xp": 9120, "avgXp": 608 }
   ],
   "perMember": [
-    { "rank": 1, "teamNumber": 447, "members": 15, "xp": 9120, "avgXp": 608 }
+    { "rank": 1, "teamNumber": 5835, "members": 15, "xp": 9120, "avgXp": 608 }
   ],
   "minMembers": 3,
   "totals": { "learners": 312, "totalXp": 48210 }
@@ -642,7 +642,7 @@ Response 200:
 {
   "username": "maya_254",
   "avatarUrl": null,
-  "teamNumber": 254,
+  "teamNumber": 5835,
   "bio": "Programming lead.",
   "role": "student",
   "xp": 1240,
@@ -712,7 +712,7 @@ Request:
   "password": "correct horse battery",
   "username": "maya_254",
   "fullName": "Maya Chen",
-  "teamNumber": 254,
+  "teamNumber": 5835,
   "emailOptIn": false,
   "ref": "jordan_frc",
   "via": "team-invite",
@@ -1053,7 +1053,7 @@ The website's three admin jobs (the numbers on `/admin`, the feedback inbox, and
 One line of a tally inside a drawer: a name, a figure and, where comparing is the point, a gauge.
 
 ```json
-{ "label": "#254", "sub": "22 members", "value": 1925, "valueSuffix": null, "pct": 100 }
+{ "label": "#5835", "sub": "22 members", "value": 1925, "valueSuffix": null, "pct": 100 }
 ```
 
 | Field | Type | Notes |
@@ -1147,7 +1147,7 @@ Response 200 (arrays trimmed):
   "articles": [ "MiniRow" ],
   "achievements": [ "MiniRow" ],
   "activity": {
-    "newestMembers": [ { "username": "maya_254", "teamNumber": 254, "createdAt": "2026-10-17T03:01:49.198Z" } ],
+    "newestMembers": [ { "username": "maya_254", "teamNumber": 5835, "createdAt": "2026-10-17T03:01:49.198Z" } ],
     "recentCompletions": [ { "user": "@maya_254", "lesson": "What Is FIRST?", "at": "2026-10-17T02:40:00.000Z" } ]
   }
 }
@@ -1168,7 +1168,7 @@ Response 200 (arrays trimmed):
 | `funnel` | object | `rows` (each step's share of the first step as `pct`), `badge` (the worst drop, for the drawer header, or null), `note` (which rows are a floor), `anonymousRows` (shown with `anonymousNote` only when not empty), `empty` (show when `rows` is empty). |
 | `sources` | object | Users from the database, visitors from Vercel's referrers. `weekTotal` and `allTimeTotal` are measured headcounts for the visitor donut; never sum the slices. `footnote` always shows. |
 | `engagement`, `teams`, `articles`, `achievements` | MiniRow lists | Top 8 lessons and departments, 8 teams, 8 recruiters, the referral surfaces, 10 articles, 12 achievements. `surfacesFootnote` shows under the surfaces when present. |
-| `activity` | object | 8 newest members (`username` null prints "New member"; team number as "#254") and 8 latest completions (`user` is a handle or "a member"). Times are ISO timestamps; print them relative ("5m", "3h", "2d"). |
+| `activity` | object | 8 newest members (`username` null prints "New member"; team number as "#5835") and 8 latest completions (`user` is a handle or "a member"). Times are ISO timestamps; print them relative ("5m", "3h", "2d"). |
 
 The site's drawer titles, slugs and empty lines, for matching: "Growth" (`drawer / growth`, badge "last 30 days"); "Activation funnel" (`drawer / funnel`), anonymous block slug "before signup / anonymous readers"; "Where they come from" (`drawer / sources`); "What gets read" (`drawer / engagement`): "most-completed lessons" and "top departments", empty "No completions yet."; "Teams and referrals" (`drawer / teams`): "top teams" (empty "No teams yet."), "top recruiters" (empty "No referrals yet."), "referral signups / by surface" (empty "No referrals yet."); "Top articles" (`drawer / articles`, empty "No article views yet."); "Achievements" (`drawer / achievements`, empty "No achievements earned yet."); "Recent activity" (`drawer / activity`): "newest members" (empty "No signups yet."), "recent completions" (empty "No completions yet."); "Feedback" (`drawer / feedback`, badge "{n} open").
 
@@ -1418,7 +1418,7 @@ Response 200 (one of each):
       "currentUsername": "kai_cad",
       "accountExists": true,
       "reporterUsername": "maya_254",
-      "snapshot": { "username": "kai_cad", "avatarUrl": null, "bio": "…", "teamNumber": 254, "title": null, "note": null, "target": null, "newModuleTitle": null },
+      "snapshot": { "username": "kai_cad", "avatarUrl": null, "bio": "…", "teamNumber": 5835, "title": null, "note": null, "target": null, "newModuleTitle": null },
       "details": "The bio.",
       "detailsWithheld": false,
       "surface": "leaderboard",

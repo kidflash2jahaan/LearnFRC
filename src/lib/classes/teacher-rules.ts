@@ -55,7 +55,7 @@ export const FULL_SEASON_SENTENCE =
 
 /** The refusal for anyone who says they haven't finished a full season yet. */
 export const NOT_YET_SENTENCE =
-  "Teaching opens after your first full FRC season: a build season and at least one official event. Come back after your first event.";
+  "Teaching opens after your first full FRC season: a build season and at least one official event. Come back after your first official event.";
 
 /** The first FRC season. */
 export const FIRST_FRC_YEAR = 1992;
@@ -100,7 +100,7 @@ export const teachOftenLabel = (id: string | null | undefined): string | null =>
  * answer with its own question, hint and situation.
  *
  * The floors add up to 440 words. Writing a bit over them takes a serious
- * applicant about 25 minutes (spec section 3.9).
+ * applicant about 30 to 45 minutes (spec section 3.9).
  */
 export const TEACH_ANSWERS = {
   experience: {
@@ -242,7 +242,7 @@ export const EFFORT_SENTENCES = {
   repeats: (otherQuestion: string) =>
     `This repeats your answer to “${otherQuestion}”${/[?!.]$/.test(otherQuestion) ? "" : "."} Write this one fresh.`,
   copiedPrompt: "This mostly repeats the question. Answer it in your own words.",
-  padding: "This repeats the same few words. Write it out in sentences.",
+  padding: "This looks like a few words repeated. Try full sentences.",
 } as const;
 
 /**
