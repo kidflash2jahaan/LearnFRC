@@ -27,7 +27,7 @@ export function ReportControls({
   classRole = null,
 }: {
   id: string;
-  /** "@maya_254", or "this account". */
+  /** "@maya_5835", or "this account". */
   handle: string;
   isProfile: boolean;
   canBan: boolean;

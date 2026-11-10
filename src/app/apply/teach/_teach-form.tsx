@@ -1328,8 +1328,9 @@ export function TeachForm({
                   <span className="nb-hint">You&rsquo;ll get an email when it&rsquo;s decided.</span>
                 </div>
                 <p className="nb-hint max-w-[62ch]">
-                  We keep it 180 days if it&rsquo;s turned down or withdrawn, and for as long as you teach if it&rsquo;s
-                  accepted. A reference&rsquo;s name and email are deleted once it&rsquo;s decided.
+                  We keep it 180 days if it&rsquo;s turned down or withdrawn, and while your account exists if
+                  it&rsquo;s accepted. A reference&rsquo;s name and email are deleted once it&rsquo;s decided or
+                  withdrawn.
                 </p>
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                   {form.saved ? <span className="nb-slug">Saved on this device.</span> : null}

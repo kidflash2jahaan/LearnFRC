@@ -129,7 +129,7 @@ The caller's own profile. The only place anyone's `fullName` is ever sent, and o
 ```json
 {
   "id": "6f1c2b9e-0d7a-4c55-9a51-2f7f0c1d9a11",
-  "username": "maya_254",
+  "username": "maya_5835",
   "fullName": "Maya Chen",
   "avatarUrl": "https://lh3.googleusercontent.com/a/example",
   "teamNumber": 5835,
@@ -447,7 +447,7 @@ Bearer. Settings, through `updateProfileFields`, the same function as the websit
 Request (every field optional; a field left out keeps its current value, `null` clears it):
 
 ```json
-{ "fullName": "Maya Chen", "bio": "Programming lead.", "avatarUrl": "https://example.com/me.png", "username": "maya_254", "teamNumber": 5835, "role": "student" }
+{ "fullName": "Maya Chen", "bio": "Programming lead.", "avatarUrl": "https://example.com/me.png", "username": "maya_5835", "teamNumber": 5835, "role": "student" }
 ```
 
 | Field | Type | Rule |
@@ -480,7 +480,7 @@ Bearer. The profile setup step (`saveProfileSetupFields`, the website's dashboar
 Request:
 
 ```json
-{ "username": "maya_254", "teamNumber": 5835 }
+{ "username": "maya_5835", "teamNumber": 5835 }
 ```
 
 `teamNumber` is optional (Int or null). `username` is ignored for an account whose handle is its own, so the app's team-only ask (`AccountStore.setupTeamNumber(_:)`) leaves it out and sends `{ "teamNumber": 5835 }`.
@@ -532,11 +532,11 @@ Response 200 with a team:
     "lessonsCovered": 51,
     "hiddenMembers": 0,
     "referralCount": 1,
-    "inviteURL": "https://learnfrc.com/signup?ref=maya_254&via=team-invite",
+    "inviteURL": "https://learnfrc.com/signup?ref=maya_5835&via=team-invite",
     "members": [
       {
-        "username": "maya_254",
-        "name": "maya_254",
+        "username": "maya_5835",
+        "name": "maya_5835",
         "avatarUrl": null,
         "role": "student",
         "xp": 1240,
@@ -570,7 +570,7 @@ Response 200 with a team:
         "lessonCount": 51,
         "teamCompleted": 14,
         "members": [
-          { "username": "maya_254", "name": "maya_254", "avatarUrl": null, "completed": 12, "isYou": true }
+          { "username": "maya_5835", "name": "maya_5835", "avatarUrl": null, "completed": 12, "isYou": true }
         ]
       }
     ]
@@ -602,7 +602,7 @@ Response 200, `weekly` (XP and lessons from the last 7 days; level from all-time
 {
   "board": "weekly",
   "entries": [
-    { "rank": 1, "username": "maya_254", "avatarUrl": null, "teamNumber": 5835, "role": "student", "xp": 164, "level": 13, "lessons": 11 }
+    { "rank": 1, "username": "maya_5835", "avatarUrl": null, "teamNumber": 5835, "role": "student", "xp": 164, "level": 13, "lessons": 11 }
   ],
   "totals": { "learners": 312, "totalXp": 48210 }
 }
@@ -640,7 +640,7 @@ Response 200:
 
 ```json
 {
-  "username": "maya_254",
+  "username": "maya_5835",
   "avatarUrl": null,
   "teamNumber": 5835,
   "bio": "Programming lead.",
@@ -669,7 +669,7 @@ Public, rate limited (30 tries per 5 minutes per network, 10 per 5 minutes per a
 Request:
 
 ```json
-{ "identifier": "maya_254", "password": "correct horse battery" }
+{ "identifier": "maya_5835", "password": "correct horse battery" }
 ```
 
 Response 200:
@@ -710,7 +710,7 @@ Request:
 {
   "email": "maya@example.com",
   "password": "correct horse battery",
-  "username": "maya_254",
+  "username": "maya_5835",
   "fullName": "Maya Chen",
   "teamNumber": 5835,
   "emailOptIn": false,
@@ -1147,8 +1147,8 @@ Response 200 (arrays trimmed):
   "articles": [ "MiniRow" ],
   "achievements": [ "MiniRow" ],
   "activity": {
-    "newestMembers": [ { "username": "maya_254", "teamNumber": 5835, "createdAt": "2026-10-17T03:01:49.198Z" } ],
-    "recentCompletions": [ { "user": "@maya_254", "lesson": "What Is FIRST?", "at": "2026-10-17T02:40:00.000Z" } ]
+    "newestMembers": [ { "username": "maya_5835", "teamNumber": 5835, "createdAt": "2026-10-17T03:01:49.198Z" } ],
+    "recentCompletions": [ { "user": "@maya_5835", "lesson": "What Is FIRST?", "at": "2026-10-17T02:40:00.000Z" } ]
   }
 }
 ```
@@ -1417,7 +1417,7 @@ Response 200 (one of each):
       "reportedUsername": "kai_cad",
       "currentUsername": "kai_cad",
       "accountExists": true,
-      "reporterUsername": "maya_254",
+      "reporterUsername": "maya_5835",
       "snapshot": { "username": "kai_cad", "avatarUrl": null, "bio": "…", "teamNumber": 5835, "title": null, "note": null, "target": null, "newModuleTitle": null },
       "details": "The bio.",
       "detailsWithheld": false,

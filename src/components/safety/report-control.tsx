@@ -40,7 +40,7 @@ export function ReportControl({
   /** The edit's or proposal's id, or the class's. */
   contentId?: string;
   surface: "profile" | "contributions" | "team" | "leaderboard" | "class";
-  /** The closed button's words, e.g. "Report @maya_254". */
+  /** The closed button's words, e.g. "Report @maya_5835". */
   label: string;
   /** What is being reported, for the heading: "this profile", "this suggestion". */
   what: string;
