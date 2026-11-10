@@ -29,6 +29,7 @@ import {
   NCMEC_ID_PATTERN,
   PEERS_PER_PERSON,
   RECORDING_LINK_SECONDS,
+  accountHoldClassIds,
   aggregateRecordingStatus,
   appendHoldNote,
   holdExpiry,
@@ -489,9 +490,32 @@ export async function holdClass(
 }
 
 /**
+ * Which of these classes anyone was ever in: a participant row (joining makes
+ * one, the teacher's included), a session or a chat message (a deleted
+ * account's participant rows go with it; those stay). A read that fails
+ * counts as someone, so an error never skips evidence.
+ */
+async function classesSomeoneWasIn(admin: Admin, classIds: string[]): Promise<string[]> {
+  const found = await Promise.all(
+    classIds.map(async (id) => {
+      for (const table of ["class_participants", "class_sessions", "class_chat_messages"]) {
+        const { count, error } = await admin
+          .from(table)
+          .select("class_id", { count: "exact", head: true })
+          .eq("class_id", id);
+        if (error || (count ?? 0) > 0) return id;
+      }
+      return null;
+    })
+  );
+  return found.filter((id): id is string => id !== null);
+}
+
+/**
  * Holds an account before it's deleted (a ban, or a self-delete with an open
- * case): the account plus every class it was in during the last 90 days.
- * Never throws.
+ * case): the account plus every class it was in during the last 90 days
+ * (accountHoldClassIds: one hold per class, none for a class it taught that
+ * nobody ever joined). Never throws.
  */
 export async function holdAccount(
   userId: string,
@@ -510,9 +534,13 @@ export async function holdAccount(
       admin.from("class_participants").select("class_id").eq("user_id", userId),
       admin.from("classes").select("id").eq("teacher_id", userId).gte("starts_at", since),
     ]);
-    const ids = [
-      ...new Set([...(parts ?? []).map((p) => p.class_id as string), ...(taught ?? []).map((c) => c.id as string)]),
-    ];
+    const joined = (parts ?? []).map((p) => p.class_id as string);
+    const taughtIds = (taught ?? []).map((c) => c.id as string);
+    const ids = accountHoldClassIds({
+      joined,
+      taught: taughtIds,
+      occupied: await classesSomeoneWasIn(admin, taughtIds.filter((id) => !joined.includes(id))),
+    });
     let classes: ClassInfo[] = [];
     if (ids.length) {
       const { data } = await admin

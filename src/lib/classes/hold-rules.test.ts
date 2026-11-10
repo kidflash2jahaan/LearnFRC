@@ -5,6 +5,7 @@ import {
   COPY_STALE_MS,
   HOLD_NOTES_TOTAL_MAX,
   PEER_RETRY_MS,
+  accountHoldClassIds,
   aggregateRecordingStatus,
   appendHoldNote,
   holdExpiry,
@@ -31,6 +32,23 @@ test("a hold lasts a year, and a new event never shortens one", () => {
   assert.equal(laterOf("2028-06-01T00:00:00.000Z", later).toISOString(), "2028-06-01T00:00:00.000Z");
   assert.equal(laterOf("2027-01-01T00:00:00.000Z", later).toISOString(), later.toISOString());
   assert.equal(laterOf(null, later), later);
+});
+
+test("a ban holds each class the account was in once, and no class nobody joined (Nov 9 flow test)", () => {
+  // The flow test's banned teacher: class two (reported, already held for
+  // the report), class one (a session and chat) and class three (scheduled,
+  // ended by time, nobody ever in it). Two "ban" holds came out, one of them
+  // empty; class three gets none now.
+  const one = "class-one";
+  const two = "class-two";
+  const three = "class-three";
+  assert.deepEqual(accountHoldClassIds({ joined: [two, one], taught: [three, one, two], occupied: [one, two] }), [two, one]);
+  // Taught but never joined by the teacher: held once a student was in it.
+  assert.deepEqual(accountHoldClassIds({ joined: [], taught: [one, three], occupied: [one] }), [one]);
+  // Nothing anyone was in: no class holds (holdAccount takes the account-only hold).
+  assert.deepEqual(accountHoldClassIds({ joined: [], taught: [three], occupied: [] }), []);
+  // A class in both lists is held once.
+  assert.deepEqual(accountHoldClassIds({ joined: [one, one], taught: [one], occupied: [one] }), [one]);
 });
 
 test("restricted: a restricted review or a refusal, until released", () => {

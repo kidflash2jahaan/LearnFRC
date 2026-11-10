@@ -72,6 +72,31 @@ export function laterOf(a: string | Date | null | undefined, b: Date): Date {
   return Number.isFinite(t) && t > b.getTime() ? new Date(t) : b;
 }
 
+/* ── Which classes an account hold takes ───────────────────────────── */
+
+/**
+ * The classes a ban or a self-delete holds (section 8.2: the account, plus
+ * every class it was in during the last 90 days), one hold each: the classes
+ * it joined, and the ones it taught that anyone was in. A class it taught
+ * that nobody ever joined has nothing to keep (no chat, transcript,
+ * recording or connection details), so it gets no hold of its own; one would
+ * only sit empty on the holds desk for a year beside the real ones. Each id
+ * once, joined ones first.
+ */
+export function accountHoldClassIds(input: {
+  /** Classes the account has a class_participants row in. */
+  joined: Iterable<string>;
+  /** Classes the account is the teacher of. */
+  taught: Iterable<string>;
+  /** Of those, the ones anyone was ever in. */
+  occupied: Iterable<string>;
+}): string[] {
+  const occupied = new Set(input.occupied);
+  const out = new Set(input.joined);
+  for (const id of input.taught) if (occupied.has(id)) out.add(id);
+  return [...out];
+}
+
 /* ── Who sees what ─────────────────────────────────────────────────── */
 
 /**
