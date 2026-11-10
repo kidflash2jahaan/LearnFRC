@@ -26,10 +26,10 @@
  *
  * One message at a time can't see a detail split across several; the chat
  * filter (./chat-filter.ts, checkChatSequence) runs this on the sender's last
- * few messages joined together too, and findGluedContactPatterns on them
- * glued with nothing between them. Glued, a symbol only stands in for a
- * letter when it touches one in its own message, so "step 1" then "message"
- * never reads "imessage".
+ * few shown messages joined together too, and findGluedContactPatterns on
+ * them glued with nothing between them, and counts only what the newest
+ * message adds. Glued, a symbol only stands in for a letter when it touches
+ * one in its own message, so "step 1" then "message" never reads "imessage".
  *
  * Pure, no imports, unit tested. Tested modules import nothing from `@/`, so
  * the link allowlists live here too.

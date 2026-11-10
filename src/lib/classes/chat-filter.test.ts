@@ -8,6 +8,7 @@ import {
   checkChatMessage,
   checkChatSequence,
   cleanChatText,
+  type ChatSequenceMessage,
 } from "./chat-filter.ts";
 
 function blockedAs(text: string, kind: string) {
@@ -155,7 +156,7 @@ test("the sequence check leaves ordinary chat and already-stopped messages alone
 });
 
 /** What sendClassChat decides: the message on its own, then with the sender's last few. */
-function sends(previous: string[], text: string, opts: { allowHandles?: string[] } = {}): boolean {
+function sends(previous: ChatSequenceMessage[], text: string, opts: { allowHandles?: string[] } = {}): boolean {
   return checkChatMessage(text, opts).ok && checkChatSequence(previous, text, opts).ok;
 }
 
@@ -212,6 +213,83 @@ test("contact details split over 2 to 4 messages are still stopped", () => {
   // A classmate's handle split the same way still sends.
   assert.ok(sends(["@"], "maya same question", { allowHandles: ["maya"] }));
   assert.ok(sends(["@"], "5835 is our team"));
+});
+
+/** A message the filter stopped, as class_chat_messages stores it. */
+const blocked = (body: string) => ({ body, status: "blocked" as const });
+const shown = (body: string) => ({ body, status: "shown" as const });
+
+test("a stopped message doesn't stop the innocent ones after it (Nov 9 flow test)", () => {
+  const email = "email me at maya.robotics@gmail.com";
+  const phone = "text me 714 555 0134";
+  const thanks = "thanks, that makes sense now";
+  // The production rows: the first two stopped (rightly), the third wasn't
+  // anything but was stopped as an email, the earlier email glued to it.
+  assert.equal(checkChatMessage(email).ok, false);
+  assert.equal(checkChatMessage(phone).ok, false);
+  assert.deepEqual(checkChatSequence([blocked(email), blocked(phone)], thanks), { ok: true });
+  // Read as if they'd been shown, the third still isn't blamed for details
+  // that sit wholly inside the earlier two.
+  assert.deepEqual(checkChatSequence([email, phone], thanks), { ok: true });
+
+  for (const [previous, text] of [
+    // An email, then anything.
+    [[blocked(email)], thanks],
+    [[blocked("sam@gmail.com")], "ok"],
+    [[blocked("my email is maya at gmail dot com")], "got it"],
+    // A phone number, then anything, numbers included.
+    [[blocked(phone)], thanks],
+    [[blocked("call me 202-555-0143")], "2 more questions about PID"],
+    [[blocked("202 555 0143")], "5835 is our team"],
+    [[shown("202"), blocked("555 0143")], "thanks"],
+    // Snap, Discord, Insta and a handle, then anything.
+    [[blocked("add me on snap")], "chat about it later?"],
+    [[blocked("my snap is maya_42")], "ok cool"],
+    [[blocked("snap: maya_42")], "me too"],
+    [[blocked("add me on insta")], "gram is a unit of mass btw"],
+    [[blocked("join my discord")], "app inventor is fun"],
+    [[blocked("follow @maya_42")], "thanks"],
+    [[blocked("@maya_42")], "thanks"],
+    // Several stopped in a row.
+    [[blocked(email), blocked(phone), blocked("add me on snap")], thanks],
+  ] as [ChatSequenceMessage[], string][]) {
+    assert.deepEqual(checkChatSequence(previous, text), { ok: true }, `${JSON.stringify(previous)} then ${JSON.stringify(text)}`);
+    assert.ok(sends(previous, text), `${JSON.stringify(previous)} then ${JSON.stringify(text)}`);
+  }
+});
+
+test("splits are still stopped around a stopped message", () => {
+  for (const [previous, text] of [
+    // Shown first pieces still count.
+    [[shown("maya.robotics@")], "gmail"],
+    [[shown("maya.robotics@")], "gmail.com"],
+    [[shown("maya"), shown("@")], "gmail.com"],
+    [[shown("202"), shown("555")], "0143"],
+    [[shown("disc")], "ord maya_42"],
+    [[shown("sn")], "ap me"],
+    // A stopped message between the pieces: the shown ones still meet.
+    [[shown("202"), blocked("lol add me on snap"), shown("555")], "0143"],
+    [[shown("maya.robotics@"), blocked("call me 202-555-0143")], "gmail"],
+    [[shown("disc"), blocked("sam@gmail.com")], "ord"],
+    // After a stopped full number, sending it again in pieces.
+    [[blocked("my number is 714 555 0134"), shown("714"), shown("555")], "0134"],
+    [[blocked("202 5550"), shown("202")], "5550"],
+    // Four pieces.
+    [[shown("2"), shown("02"), shown("555")], "0143"],
+    [[shown("d"), shown("is"), shown("co")], "rd"],
+  ] as [ChatSequenceMessage[], string][]) {
+    assert.equal(sends(previous, text), false, `expected ${JSON.stringify(previous)} then ${JSON.stringify(text)} to be blocked`);
+  }
+});
+
+test("a detail the earlier messages already make isn't blamed on the next one", () => {
+  // Joined, "202" + "555 0143" is a number; "thanks" adds nothing to it.
+  assert.deepEqual(checkChatSequence(["202", "555 0143"], "thanks"), { ok: true });
+  // Glued, "my dis" + "cord is maya" is Discord; "ok" adds nothing to it.
+  assert.deepEqual(checkChatSequence(["my dis", "cord is maya"], "ok"), { ok: true });
+  // A new detail in the same window still counts.
+  assert.equal(checkChatSequence(["my dis", "cord is maya.", "sn"], "ap me").ok, false);
+  assert.equal(checkChatSequence(["202", "555 0143", "ok so", "714", "555"], "0134").ok, false);
 });
 
 test("length rules", () => {

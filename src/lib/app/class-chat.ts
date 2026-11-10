@@ -32,10 +32,10 @@ import type { ChatBlockedKind, ChatMessage, ClassRole } from "@/lib/classes/type
  * and cleared for classes, so leaving the class or a parent withdrawing their
  * OK closes the chat), rate-limits, runs the chat filter (links outside
  * LearnFRC and the docs, @handles, emails, phone numbers, other apps' contact
- * names, on this message and on it with the sender's last few, so a detail
- * split across messages is caught) and the site's profanity check, and stores
- * the message as `shown` or `blocked`. Shown rows reach the class through
- * Supabase Realtime and the panel's polling fallback, both under the
+ * names, on this message and on it with the sender's last few shown ones, so
+ * a detail split across messages is caught) and the site's profanity check,
+ * and stores the message as `shown` or `blocked`. Shown rows reach the class
+ * through Supabase Realtime and the panel's polling fallback, both under the
  * members-only read policy; blocked rows are never readable by members and
  * go to the review and holds. The sender of a blocked message sees the note,
  * and nobody else sees anything.
@@ -137,13 +137,16 @@ export async function sendClassChat(
   const [handles, { data: prof }, { data: recent }] = await Promise.all([
     rosterHandles(classId, (cls.teacher_id as string | null) ?? null),
     admin.from("profiles").select("username").eq("id", user.id).maybeSingle(),
-    // The sender's last few messages, whatever happened to them, for a
-    // detail split across messages ("202", "555", "0143").
+    // The sender's last few shown messages, for a detail split across
+    // messages ("202", "555", "0143"). A blocked one never reached anyone,
+    // so it isn't one of the few (checkChatSequence leaves out any it's
+    // given, too).
     admin
       .from("class_chat_messages")
-      .select("body")
+      .select("body, status")
       .eq("class_id", classId)
       .eq("sender_id", user.id)
+      .eq("status", "shown")
       .gte("sent_at", since)
       .order("id", { ascending: false })
       .limit(CHAT_SEQUENCE.messages),
@@ -151,7 +154,7 @@ export async function sendClassChat(
   const check = checkChatMessage(text, { allowHandles: handles });
   const kinds: ChatBlockedKind[] = check.ok ? [] : [...check.kinds];
   if (check.ok) {
-    const previous = ((recent ?? []) as { body: string }[]).map((r) => r.body).reverse();
+    const previous = ((recent ?? []) as { body: string; status: "shown" | "blocked" }[]).slice().reverse();
     const sequence = checkChatSequence(previous, text, { allowHandles: handles });
     if (!sequence.ok) kinds.push(...sequence.kinds);
   }
