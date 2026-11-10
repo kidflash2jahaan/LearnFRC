@@ -3,9 +3,7 @@
 import * as React from "react";
 import { toast } from "sonner";
 import { blockAccount, unblockAccount } from "@/app/actions/safety";
-
-/** How long an armed Block stays armed (the review desk's rule). */
-const ARMED_MS = 5000;
+import { useArmed } from "@/components/use-armed";
 
 /**
  * Block, as a two-click control: the first click says what is about to
@@ -15,16 +13,10 @@ const ARMED_MS = 5000;
  * rate limit) is blockUser on the server; the page refreshes from it.
  */
 export function BlockButton({ username }: { username: string }) {
-  const [armed, setArmed] = React.useState(false);
+  const [armed, setArmed, armScope] = useArmed(false);
   const [pending, startTransition] = React.useTransition();
   const uid = React.useId();
   const armedId = `${uid}-armed`;
-
-  React.useEffect(() => {
-    if (!armed) return;
-    const t = window.setTimeout(() => setArmed(false), ARMED_MS);
-    return () => window.clearTimeout(t);
-  }, [armed]);
 
   const click = () => {
     if (!armed) {
@@ -53,10 +45,11 @@ export function BlockButton({ username }: { username: string }) {
         aria-busy={pending}
         aria-describedby={armed ? armedId : undefined}
         className="nb-btn-ghost nb-btn-sm"
+        {...armScope}
       >
         {pending ? "Blocking" : armed ? `Yes, block @${username}` : `Block @${username}`}
       </button>
-      <span id={armedId} role="status" className="nb-hint max-w-[44ch] empty:hidden">
+      <span id={armedId} role="status" className="nb-hint max-w-[44ch] empty:hidden" {...armScope}>
         {armed
           ? `You won't see their profile, their rows on the leaderboards or their row on your team sheet. They aren't told. You can undo it in Settings.`
           : null}

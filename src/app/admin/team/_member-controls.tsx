@@ -4,11 +4,9 @@ import * as React from "react";
 import { useActionState } from "react";
 import { toast } from "sonner";
 import { setAdminRole, type ReviewState } from "@/app/actions/admin-team";
+import { useArmed } from "@/components/use-armed";
 
 type Role = "admin" | "superadmin";
-
-/** Matches the Reject control on an application. Same rule, same clock. */
-const ARMED_MS = 5000;
 
 /**
  * The controls on one row of the team: what they are, and the way out.
@@ -47,7 +45,7 @@ export function MemberControls({
     undefined
   );
   const [role, setRole] = React.useState<Role>(current);
-  const [armed, setArmed] = React.useState(false);
+  const [armed, setArmed, armScope] = useArmed(false);
   // Which of the two forms is in flight, for the wording and the toast.
   const [intent, setIntent] = React.useState<"role" | "remove" | null>(null);
 
@@ -57,7 +55,7 @@ export function MemberControls({
 
   // Hands the result to an external system and nothing else, which is what an
   // effect is for. It does not disarm on an error: a failed send is worth
-  // retrying with the control still armed, and the timer below clears it
+  // retrying with the control still armed, and the timer in useArmed clears it
   // either way.
   React.useEffect(() => {
     if (state?.error) toast.error(state.error);
@@ -69,12 +67,6 @@ export function MemberControls({
       );
     }
   }, [state, intent]);
-
-  React.useEffect(() => {
-    if (!armed) return;
-    const t = window.setTimeout(() => setArmed(false), ARMED_MS);
-    return () => window.clearTimeout(t);
-  }, [armed]);
 
   return (
     <div className="min-w-0">
@@ -129,6 +121,7 @@ export function MemberControls({
             aria-busy={pending && intent === "remove"}
             aria-describedby={armed ? armedId : undefined}
             className="nb-btn-ghost nb-btn-sm"
+            {...armScope}
           >
             {pending && intent === "remove"
               ? "Removing"
@@ -143,7 +136,7 @@ export function MemberControls({
       {/* Always in the document, empty until it has something to say. A live
           region inserted at the same moment as its text is announced
           unreliably, and `empty:` takes the margin back when it is silent. */}
-      <p id={armedId} role="status" className="nb-hint mt-2 max-w-[48ch] empty:mt-0">
+      <p id={armedId} role="status" className="nb-hint mt-2 max-w-[48ch] empty:mt-0" {...armScope}>
         {armed
           ? `One more click takes ${handle} off the team. They keep their account and their progress, they just lose /admin.`
           : null}

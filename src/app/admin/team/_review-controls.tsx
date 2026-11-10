@@ -4,13 +4,7 @@ import * as React from "react";
 import { useActionState } from "react";
 import { toast } from "sonner";
 import { reviewAdminApplication, type ReviewState } from "@/app/actions/admin-team";
-
-/**
- * How long the armed Reject stays armed. Long enough to read the line under it
- * and click again, short enough that a control left armed and forgotten is back
- * to being safe before anyone comes back to the tab.
- */
-const ARMED_MS = 5000;
+import { useArmed } from "@/components/use-armed";
 
 /**
  * The one answer an old application can get, plus the note that rides along
@@ -31,7 +25,8 @@ export function ReviewControls({ id, handle }: { id: string; handle: string }) {
     reviewAdminApplication,
     undefined
   );
-  const [armed, setArmed] = React.useState(false);
+  // Stays armed until a click elsewhere, Escape or 10 seconds (useArmed).
+  const [armed, setArmed, armScope] = useArmed(false);
   // CONTROLLED, and that is load-bearing. React calls `requestFormReset` on
   // every `<form action={fn}>` dispatch, before the action runs, and commits it
   // whichever way the action answers. An uncontrolled textarea would therefore
@@ -53,12 +48,6 @@ export function ReviewControls({ id, handle }: { id: string; handle: string }) {
     if (state?.error) toast.error(state.error);
     if (state?.success) toast.success("Turned down. They’ll get an email.");
   }, [state]);
-
-  React.useEffect(() => {
-    if (!armed) return;
-    const t = window.setTimeout(() => setArmed(false), ARMED_MS);
-    return () => window.clearTimeout(t);
-  }, [armed]);
 
   // The server revalidates this route on success, so the whole entry is about
   // to disappear from the list. This is the bridge until it does. No
@@ -120,13 +109,14 @@ export function ReviewControls({ id, handle }: { id: string; handle: string }) {
           aria-busy={pending}
           aria-describedby={armed ? armedId : undefined}
           className="nb-btn-ghost nb-btn-sm"
+          {...armScope}
         >
           {pending ? "Rejecting" : armed ? "Yes, reject" : "Reject"}
           <span className="sr-only"> {handle}</span>
         </button>
       </div>
 
-      <p id={armedId} role="status" className="nb-hint mt-2 max-w-[48ch] empty:mt-0">
+      <p id={armedId} role="status" className="nb-hint mt-2 max-w-[48ch] empty:mt-0" {...armScope}>
         {armed ? `One more click turns down ${handle}. You can’t take it back here.` : null}
       </p>
     </form>
