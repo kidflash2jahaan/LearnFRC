@@ -84,7 +84,7 @@ export function r2Credentials(): { accessKeyId: string; secretAccessKey: string 
 
 /** The AI Gateway model id for the review notes (section 7.3). */
 export function reviewModel(): string {
-  return process.env.CLASSES_REVIEW_MODEL?.trim() || "anthropic/claude-opus-5.5";
+  return process.env.CLASSES_REVIEW_MODEL?.trim() || "anthropic/claude-sonnet-5.5";
 }
 
 /**

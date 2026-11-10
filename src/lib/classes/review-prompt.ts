@@ -2,7 +2,7 @@
  * The AI notes' prompt, schema and model call (classes-design.md 7.3, 7.4).
  *
  * Claude reads a class's transcript and chat through Vercel's AI Gateway with
- * the AI SDK. A plain model id like "anthropic/claude-opus-5.5" routes through
+ * the AI SDK. A plain model id like "anthropic/claude-sonnet-5.5" routes through
  * the gateway; on Vercel the project's OIDC token authenticates it, and a dev
  * server uses AI_GATEWAY_API_KEY. Every request asks the gateway for zero data
  * retention, and a request it can't serve that way fails rather than dropping
@@ -41,7 +41,7 @@ import type { LessonMatch, ReviewVerdict } from "./types.ts";
 export const REVIEW_PROMPT_VERSION = "2026-11-09";
 
 /** The gateway's id (section 7.3). CLASSES_REVIEW_MODEL overrides it (config.ts). */
-export const DEFAULT_REVIEW_MODEL = "anthropic/claude-opus-5.5";
+export const DEFAULT_REVIEW_MODEL = "anthropic/claude-sonnet-5.5";
 
 export const REVIEW_REQUEST = {
   maxOutputTokens: 16_000,
