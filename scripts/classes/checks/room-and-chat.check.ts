@@ -494,8 +494,11 @@ async function main() {
     assert.equal(v.room.displayName, `@${handle("s1")}`);
     assert.equal(v.room.teacherUsername, handle("t1"));
     assert.ok(v.room.roster.some((r) => r.username === handle("t1") && r.role === "teacher"));
+    assert.equal(v.room.canReport, true, "s1 has joined, so can report");
+    assert.equal(v.room.reported, false, "and hasn't yet");
     const other = await room.getRoomView(user("notenr"), nowId);
     assert.ok(other.kind === "ok" && other.room.refusal?.reason === "not_enrolled");
+    assert.equal(other.room.canReport, false);
     assert.deepEqual(
       other.room.roster.map((r) => r.role),
       ["teacher"],
@@ -920,7 +923,9 @@ async function main() {
     assert.ok(urgent!.html.includes("/admin/classes/playbook"));
 
     const status = await room.roomStatus(user("s1"), nowId);
-    assert.deepEqual(status, { status: "ended", endReason: "reports", removed: false });
+    // s1 reported the teacher above, and that report is still open: the
+    // "ended" screen says so instead of offering a report it already has.
+    assert.deepEqual(status, { status: "ended", endReason: "reports", removed: false, canReport: true, reported: true });
     const closed = await send("s1", "is it over?");
     assert.ok(!closed.ok && closed.error === chat.CHAT_SENTENCES.closed);
     // Put the teacher and their other classes back for the steps below.

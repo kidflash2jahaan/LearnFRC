@@ -14,6 +14,7 @@ import {
   safetyEmail,
 } from "@/lib/classes/config";
 import { classEmailHtml, emailListHtml, escapeHtml, pacificTime, sendClassEmail } from "@/lib/classes/emails";
+import { formatClassTime } from "@/lib/classes/class-time";
 import { ageBandOn } from "@/lib/classes/age";
 import { creditedMinutes, toMs, type AttendanceSpan } from "@/lib/classes/minutes";
 import {
@@ -493,13 +494,9 @@ function coverage(f: ReviewFacts): string {
   return `${f.transcriptSessions} of ${s} ${s === 1 ? "session" : "sessions"}, ${f.wordCount.toLocaleString("en-US")} words`;
 }
 
+/** "Thu, Nov 20", in Pacific time like every class time in the emails. */
 function datePacific(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-US", {
-    timeZone: "America/Los_Angeles",
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  });
+  return formatClassTime(iso, "day");
 }
 
 function mailsFor(

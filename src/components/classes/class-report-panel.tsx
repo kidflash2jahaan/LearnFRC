@@ -22,9 +22,12 @@ export type ClassReportPanelProps = {
   roster: ClassRosterEntry[];
   /** The signed-in viewer's id, so they aren't listed to report themselves. */
   viewerId: string | null;
-  /** Where the panel is: the room, the removed screen, or the class page. */
-  surface: "room" | "removed" | "class_page";
-  /** The class is live now (reports say LIVE CLASS). */
+  /**
+   * Where the panel is: the room while in the meeting, the room page after
+   * leaving it or after the class ended, the removed screen, or the class page.
+   */
+  surface: "room" | "after" | "removed" | "class_page";
+  /** The class is live now (reports say LIVE CLASS and reach the safety lead at once). */
   liveNow?: boolean;
   /** The button text. Default "Report someone". */
   label?: string;
@@ -87,9 +90,11 @@ export function ClassReportPanel({
             ))}
           </select>
           <p className="nb-hint">
-            {liveNow || surface === "room"
-              ? "A report from a class that's on goes to LearnFRC's safety lead straight away. You can also leave the class at any time."
-              : "Reports from a class go to LearnFRC's safety lead and are read within 24 hours."}
+            {!liveNow
+              ? "Reports from a class go to LearnFRC's safety lead and are read within 24 hours."
+              : surface === "room"
+                ? "A report from a class that's on goes to LearnFRC's safety lead straight away. You can also leave the class at any time."
+                : "A report from a class that's on goes to LearnFRC's safety lead straight away."}
           </p>
         </div>
       )}

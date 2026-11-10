@@ -4,14 +4,13 @@ import * as React from "react";
 import { useActionState } from "react";
 import { toast } from "sonner";
 import { decideTeacherApplicationAction, type TeachFormState } from "@/app/actions/class-teachers";
-
-/** How long the armed Reject stays armed, as on /admin/team. */
-const ARMED_MS = 5000;
+import { useArmed } from "@/components/use-armed";
 
 /**
  * Accept or reject one teacher application, with a note that rides along in
  * the email. The same two-click Reject as /admin/team's ReviewControls: it is
- * `type="button"` until armed. Accepting copies the name to the locked letter
+ * `type="button"` until armed, and stays armed until a click elsewhere,
+ * Escape or 10 seconds (useArmed). Accepting copies the name to the locked letter
  * name, and needs the "I checked their seasons" tick (sent as
  * `seasonsChecked=yes`). A first-form application (`canAccept` false) can
  * only be turned down. decideTeacherApplication re-checks the role, the
@@ -33,7 +32,7 @@ export function DecisionControls({
     undefined
   );
   const [choice, setChoice] = React.useState<"accept" | "reject" | null>(null);
-  const [armed, setArmed] = React.useState(false);
+  const [armed, setArmed, armScope] = useArmed(false);
   const [note, setNote] = React.useState("");
   const [checked, setChecked] = React.useState(false);
   const decided = state?.success ? choice : null;
@@ -46,12 +45,6 @@ export function DecisionControls({
     if (state?.success)
       toast.success(choice === "reject" ? "Turned down. The email is on its way." : "Accepted. The email is on its way.");
   }, [state, choice]);
-
-  React.useEffect(() => {
-    if (!armed) return;
-    const t = window.setTimeout(() => setArmed(false), ARMED_MS);
-    return () => window.clearTimeout(t);
-  }, [armed]);
 
   if (decided) {
     return (
@@ -143,12 +136,13 @@ export function DecisionControls({
           aria-busy={pending && choice === "reject"}
           aria-describedby={armed ? `${uid}-armed` : undefined}
           className="nb-btn-ghost nb-btn-sm"
+          {...armScope}
         >
           {pending && choice === "reject" ? "Rejecting" : armed ? "Yes, reject" : "Reject"}
           <span className="sr-only"> {handle}</span>
         </button>
       </div>
-      <p id={`${uid}-armed`} role="status" className="nb-hint mt-2 max-w-[48ch] empty:mt-0">
+      <p id={`${uid}-armed`} role="status" className="nb-hint mt-2 max-w-[48ch] empty:mt-0" {...armScope}>
         {armed ? `One more click turns down ${handle}. You can’t take it back here.` : null}
       </p>
     </form>

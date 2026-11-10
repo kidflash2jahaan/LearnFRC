@@ -6,6 +6,7 @@ import Link from "next/link";
 import { applyToTeach, type TeachFormState } from "@/app/actions/class-teachers";
 import { TEACHER_CODE } from "@/lib/classes/notice";
 import { TEACH_DRAFT_MAX_AGE_MS } from "@/lib/classes/teach-draft";
+import { useArmed } from "@/components/use-armed";
 import {
   EARLIEST_LISTED_YEAR,
   FIRST_FRC_YEAR,
@@ -56,7 +57,6 @@ import {
 
 const L = TEACHER_APPLY_LIMITS;
 const SAVE_MS = 800;
-const CLEAR_ARMED_MS = 5000;
 
 type SeasonRow = { key: number; year: string; earlier: string; team: string; events: string };
 
@@ -575,7 +575,8 @@ export function TeachForm({
     const data = new FormData(e.currentTarget);
     React.startTransition(() => formAction(data));
   };
-  const [clearArmed, setClearArmed] = React.useState(false);
+  // "Clear draft" asks twice: armed until a click elsewhere, Escape or 10 seconds.
+  const [clearArmed, setClearArmed, clearScope] = useArmed(false);
   const [left, setLeft] = React.useState<string[]>([]);
   // Fields typed in since the last answer from the server: their server
   // error is cleared. Keyed on that answer, so a new one starts fresh.
@@ -623,12 +624,6 @@ export function TeachForm({
     }, SAVE_MS);
     return () => window.clearTimeout(t);
   }, [form.rev, f, draftKey, state?.success]);
-
-  React.useEffect(() => {
-    if (!clearArmed) return;
-    const t = window.setTimeout(() => setClearArmed(false), CLEAR_ARMED_MS);
-    return () => window.clearTimeout(t);
-  }, [clearArmed]);
 
   React.useEffect(() => {
     if (state?.success) {
@@ -1330,7 +1325,7 @@ export function TeachForm({
                 </div>
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                   {form.saved ? <span className="nb-slug">Saved on this device.</span> : null}
-                  <button type="button" className="nb-btn-ghost nb-btn-sm" onClick={clearDraft}>
+                  <button type="button" className="nb-btn-ghost nb-btn-sm" onClick={clearDraft} {...clearScope}>
                     {clearArmed ? "Press again to clear" : "Clear draft"}
                   </button>
                   <span role="status" className="nb-slug">

@@ -4,6 +4,7 @@ import * as React from "react";
 import { useRealtimeKitMeeting, useRealtimeKitSelector } from "@cloudflare/realtimekit-react";
 import { endClassAction, removeFromClassAction } from "@/app/actions/class-room";
 import { ReportControl } from "@/components/safety/report-control";
+import { useArmed } from "@/components/use-armed";
 import { CLASS_REPORT_REASONS } from "@/lib/report-reasons";
 import type { ClassRole, ClassRosterEntry } from "@/lib/classes/types";
 
@@ -17,7 +18,8 @@ import type { ClassRole, ClassRosterEntry } from "@/lib/classes/types";
  * and endClass in src/lib/app/classes-room.ts), so they stick: a removed
  * student's participant is deleted, their chat stops, and they can't rejoin.
  * Remove and End arm first, like the reports desk: the first press says what
- * will happen, the second does it.
+ * will happen, the second does it. They stay armed until a click elsewhere,
+ * Escape or 10 seconds (useArmed, src/components/use-armed.ts).
  */
 
 type Person = {
@@ -27,8 +29,6 @@ type Person = {
   audioEnabled?: boolean;
   disableAudio?: () => Promise<void>;
 };
-
-const ARMED_MS = 5000;
 
 export function RoomControls({
   classId,
@@ -44,15 +44,9 @@ export function RoomControls({
   const waitingMap = useRealtimeKitSelector((m) => m.participants.waitlisted);
   const joined = (joinedMap?.toArray() ?? []) as unknown as Person[];
   const waiting = (waitingMap?.toArray() ?? []) as unknown as Person[];
-  const [armed, setArmed] = React.useState<string | null>(null);
+  const [armed, setArmed, armScope] = useArmed<string | null>(null);
   const [busy, setBusy] = React.useState<string | null>(null);
   const [message, setMessage] = React.useState<string | null>(null);
-
-  React.useEffect(() => {
-    if (!armed) return;
-    const t = window.setTimeout(() => setArmed(null), ARMED_MS);
-    return () => window.clearTimeout(t);
-  }, [armed]);
 
   const roleOf = (userId?: string) => roster.find((r) => r.userId === userId)?.role ?? "student";
   const usernameOf = (userId?: string) => roster.find((r) => r.userId === userId)?.username ?? null;
@@ -116,6 +110,7 @@ export function RoomControls({
                     className="nb-btn-ghost nb-btn-sm"
                     disabled={busy === `remove:${p.id}` || !p.customParticipantId}
                     onClick={() => void remove(p)}
+                    {...armScope}
                   >
                     {armed === `remove:${p.id}` ? "Yes, remove" : "Remove"}
                   </button>
@@ -167,6 +162,7 @@ export function RoomControls({
                         disabled={busy === `remove:${p.id}` || !p.customParticipantId}
                         aria-busy={busy === `remove:${p.id}`}
                         onClick={() => void remove(p)}
+                        {...armScope}
                       >
                         {busy === `remove:${p.id}` ? "Removing" : armed === `remove:${p.id}` ? "Yes, remove" : "Remove"}
                       </button>
@@ -186,12 +182,13 @@ export function RoomControls({
           disabled={busy === "end"}
           aria-busy={busy === "end"}
           onClick={() => void endForEveryone()}
+          {...armScope}
         >
           {busy === "end" ? "Ending" : armed === "end" ? "Yes, end it for everyone" : "End class for everyone"}
         </button>
       </div>
 
-      <p role="status" className="nb-hint mt-2 empty:mt-0">
+      <p role="status" className="nb-hint mt-2 empty:mt-0" {...armScope}>
         {armed?.startsWith("remove:")
           ? "One more press removes them for good: they leave the room, lose the chat and can't rejoin this class."
           : armed === "end"
