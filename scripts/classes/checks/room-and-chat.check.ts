@@ -27,6 +27,15 @@
 // use them.
 //
 //   node --import ./scripts/classes/register.mjs scripts/classes/checks/room-and-chat.check.ts
+//
+// Its test data is package "room-and-chat". LFTEST_PACKAGE=<package> runs it
+// under another package's name (accounts, class titles, outbox), so two
+// worktrees can run it at once without one's cleanup deleting the other's.
+//
+// It never ends another package's class: pausing joins ends every class live
+// in the dev app, so that part runs only when every class live now (or in
+// the next few minutes) is this run's own. Otherwise the pause is checked by
+// setting the settings row directly, which is all the join refusal reads.
 
 import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";
@@ -48,7 +57,8 @@ const FAKE_RTK = {
 };
 Object.assign(process.env, FAKE_RTK);
 
-const PKG = "room-and-chat";
+const PKG = process.env.LFTEST_PACKAGE?.trim() || "room-and-chat";
+if (!/^[a-z0-9-]+$/.test(PKG)) throw new Error("LFTEST_PACKAGE must be a-z, 0-9 and -");
 // This package's own outbox (cleanup removes it), whatever package the
 // worktree's .env.local was built for.
 process.env.EMAIL_DEV_OUTBOX = join(devDir(), "outbox", PKG);
@@ -205,6 +215,9 @@ function outbox(since: number): Mail[] {
 
 type Account = { id: string; email: string; password: string; username: string | null };
 
+/** Every class this run made, so the pause step can tell them from anyone else's. */
+const ownClassIds = new Set<string>();
+
 async function newClass(
   slug: string,
   teacherId: string,
@@ -216,7 +229,7 @@ async function newClass(
     .from("classes")
     .insert({
       teacher_id: teacherId,
-      title: `lftest room-and-chat ${slug}`,
+      title: `lftest ${PKG} ${slug}`,
       starts_at: starts.toISOString(),
       duration_minutes: duration,
       hard_end_at: new Date(starts.getTime() + (duration + 15) * 60_000).toISOString(),
@@ -228,6 +241,7 @@ async function newClass(
     .single();
   if (error) throw new Error(`class ${slug}: ${error.message}`);
   const id = data.id as string;
+  ownClassIds.add(id);
   if (opts.meeting !== false) await admin.from("classes").update({ rtk_meeting_id: `lftest-meeting-${id}` }).eq("id", id);
   return id;
 }
@@ -539,6 +553,24 @@ async function main() {
     }
   });
 
+  await step("chat: a stopped message doesn't stop the ones after it; a split is still stopped", async () => {
+    // The Nov 9 flow test's rows: the third message was stopped as an email,
+    // the stopped email glued to it.
+    for (const [text, status, kind] of [
+      ["email me at maya.robotics@gmail.com", "blocked", "email"],
+      ["text me 714 555 0134", "blocked", "phone"],
+      ["thanks, that makes sense now", "shown", null],
+      ["202", "shown", null],
+      ["555", "shown", null],
+      ["0143", "blocked", "phone"],
+    ] as const) {
+      const r = await send("s3", text);
+      assert.ok(r.ok, `"${text}": ${r.ok ? "" : r.error}`);
+      assert.equal(r.status, status, `"${text}"${r.status === "blocked" ? `: ${r.kinds.join(",")}` : ""}`);
+      if (r.status === "blocked" && kind) assert.ok(r.kinds.includes(kind), `"${text}": ${r.kinds.join(",")}`);
+    }
+  });
+
   await step("chat: length, non-members and the rate limit", async () => {
     const empty = await send("s1", "   ");
     assert.ok(!empty.ok && empty.error === chat.CHAT_SENTENCES.empty);
@@ -565,7 +597,7 @@ async function main() {
     let status = "";
     await new Promise<void>((resolve) => {
       const timer = setTimeout(resolve, 8000);
-      c.channel("room-and-chat-s3")
+      c.channel(`${PKG}-s3`)
         .on(
           "postgres_changes",
           { event: "INSERT", schema: "public", table: "class_chat_messages", filter: `class_id=eq.${nowId}` },
@@ -744,7 +776,7 @@ async function main() {
     assert.equal(snap.classId, nowId);
     assert.equal(snap.role, "teacher");
     assert.equal(snap.liveNow, true);
-    assert.equal(snap.classTitle, "lftest room-and-chat now");
+    assert.equal(snap.classTitle, `lftest ${PKG} now`);
 
     const { data: cls } = await admin.from("classes").select("keep_evidence").eq("id", nowId).single();
     assert.equal(cls!.keep_evidence, true);
@@ -779,7 +811,7 @@ async function main() {
     assert.equal(onDesk!.reportedUsername, handle("t1"));
     assert.equal(onDesk!.snapshot.classRole, "teacher");
     assert.equal(onDesk!.snapshot.liveNow, true);
-    assert.ok(onDesk!.snapshot.target?.startsWith("lftest room-and-chat now, "), onDesk!.snapshot.target ?? "");
+    assert.ok(onDesk!.snapshot.target?.startsWith(`lftest ${PKG} now, `), onDesk!.snapshot.target ?? "");
 
     const again = await fileClassReport("s1", handle("t1"), "unsafe");
     assert.ok(again.ok && again.alreadyReported, "one open report per person per thing");
@@ -957,22 +989,35 @@ async function main() {
   });
 
   await step("desk: a ban passes reason ban, so live classes take their hold first", async () => {
+    // A class out was in, and one out taught that nobody ever joined (the
+    // Nov 9 flow test's second "ban" hold was an empty one like it).
+    const joinedId = await newClass("out-joined", acc.t1.id, { startsInMin: -60, status: "ended", meeting: false });
+    const { error: partError } = await admin.from("class_participants").insert({
+      class_id: joinedId,
+      user_id: acc.out.id,
+      role: "student",
+      preset_name: "lfrc-student",
+    });
+    assert.ifError(partError);
+    const emptyId = await newClass("out-taught-empty", acc.out.id, { startsInMin: -50, status: "ended", meeting: false });
     const d = await desk.loadReportsDesk(user("staff"));
     assert.ok(d.ok);
     const report = d.open.find((x) => x.contentKind === "profile" && x.reportedUsername === handle("out"));
     assert.ok(report, "the profile report about out");
     const r = await desk.banReportedAccount(user("staff"), { id: report!.id, note: "lftest" });
     assert.ok(r.ok, r.ok ? "" : r.error);
-    // The real holdAccount (safety-holds): a ban hold that outlives the account.
+    // The real holdAccount (safety-holds): a ban hold that outlives the account,
+    // one per class out was in, none for the class nobody joined.
     const { data: held } = await admin
       .from("class_safety_holds")
-      .select("reason, subject_handle, subject_user_id")
+      .select("reason, subject_handle, subject_user_id, class_id")
       .eq("subject_handle", handle("out"));
     assert.deepEqual(
-      ((held ?? []) as { reason: string }[]).map((h) => h.reason),
-      ["ban"],
-      "a ban hold with the handle kept"
+      ((held ?? []) as { reason: string; class_id: string | null }[]).map((h) => [h.reason, h.class_id]),
+      [["ban", joinedId]],
+      "one ban hold, on the class out was in, with the handle kept"
     );
+    assert.deepEqual(await holdReasons(emptyId), [], "no hold on the class nobody joined");
     const { data: gone } = await admin.auth.admin.getUserById(acc.out.id);
     assert.equal(gone?.user ?? null, null, "the account is deleted");
   });
@@ -1032,27 +1077,36 @@ async function main() {
       assert.deepEqual(s, { joins_paused: false, paused_reason: null });
       await expectRefusal("s1", laterId, "early", S.earlyStudent);
 
-      // Pausing ends every class live now in this app. Run it only when every
-      // such class is this check's own, so another package's test class is
-      // never ended from here.
-      const { data: live } = await admin
-        .from("classes")
-        .select("id, title, status, starts_at, hard_end_at")
-        .in("status", ["scheduled", "live"])
-        .eq("rtk_app", "dev")
-        .gt("hard_end_at", new Date().toISOString());
+      // Pausing ends every class live now in this app, whoever's it is (a
+      // flow test's class too). So it runs only when every class live now, or
+      // live within the next few minutes, is this run's own, checked again
+      // just before the call. Otherwise the settings row is set directly:
+      // the join refusal reads only that, and nothing is ended.
       const rules = await import("../../../src/lib/classes/room-rules.ts");
-      const liveNow = (live ?? []).filter((c) => rules.isLiveNow(c));
-      if (liveNow.every((c) => String(c.title).startsWith("lftest room-and-chat"))) {
+      const othersLive = async () => {
+        const { data: live, error } = await admin
+          .from("classes")
+          .select("id, status, starts_at, hard_end_at")
+          .in("status", ["scheduled", "live"])
+          .eq("rtk_app", "dev")
+          .gt("hard_end_at", new Date().toISOString());
+        if (error) throw new Error(`live classes: ${error.message}`);
+        const soon = new Date(Date.now() + 5 * 60_000);
+        return (live ?? []).filter(
+          (c) => !ownClassIds.has(c.id as string) && (rules.isLiveNow(c) || rules.isLiveNow(c, soon))
+        ).length;
+      };
+      if ((await othersLive()) === 0) {
         const pauseId = await newClass("pause", acc.t1.id, { startsInMin: 1 });
+        const others = await othersLive();
+        if (others > 0) throw new Error(`another package's class went live (${others}); not pausing`);
         const p = await room.setJoinsPaused(user("staff"), { paused: true, reason: "lftest" });
         assert.ok(p.ok && p.ended >= 1, p.ok ? `ended ${p.ended}` : p.error);
         const { data: c } = await admin.from("classes").select("status, end_reason").eq("id", pauseId).single();
         assert.deepEqual(c, { status: "ended", end_reason: "paused" });
       } else {
-        console.log("     (pausing with other packages' live classes present: the end-all part is left for integration)");
-        const p = await room.setJoinsPaused(user("staff"), { paused: true, reason: "lftest" });
-        assert.ok(p.ok);
+        console.log("     (other packages' classes are live: joins paused in the settings row, nothing ended; the end-all part is left for integration)");
+        await setSettings({ joins_paused: true, paused_reason: "lftest" });
       }
       await expectRefusal("s1", laterId, "paused", S.paused);
     } finally {

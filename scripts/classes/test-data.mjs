@@ -27,9 +27,11 @@
 //
 // cleanup: deletes the package's test classes (titles starting
 //   "lftest <package>" or taught by its accounts) and every row tied to them
-//   or to its accounts in the classes tables, its reports and their
-//   moderation_log rows, banned_emails rows for its emails, rate-limit rows,
-//   then the accounts, the credentials file and the package's outbox.
+//   or to its accounts in the classes tables (but a class_events row one of
+//   its accounts caused in another package's class stays with that class),
+//   its reports and their moderation_log rows, banned_emails rows for its
+//   emails, rate-limit rows, then the accounts, the credentials file and the
+//   package's outbox.
 //
 // check: read-only. With a package, nothing of that package is left. Without
 //   one, every classes table is empty, class_settings is at its defaults, and
@@ -346,7 +348,12 @@ async function cleanup(pkg) {
     await del(db, "class_attendance", (q) => q.in("user_id", acc.ids), "attended");
     await del(db, "class_media_events", (q) => q.in("subject_user_id", acc.ids), "subjects");
     await del(db, "class_media_events", (q) => q.in("reported_by", acc.ids), "reporters");
-    await del(db, "class_events", (q) => q.in("actor_id", acc.ids), "actors");
+    // Events with no class only (a pause, an unpause). An event in a class
+    // goes with its class: this package's classes are deleted below, and an
+    // event this package's account caused in another package's class (a
+    // pause ending it, say) is that class's history, so it stays and loses
+    // its actor when the account goes (on delete set null).
+    await del(db, "class_events", (q) => q.in("actor_id", acc.ids).is("class_id", null), "actors, no class");
     await del(db, "hours_letters", (q) => q.in("teacher_id", acc.ids), "letters");
   }
   // Account holds (a ban or a self-delete with no class) log events with no
