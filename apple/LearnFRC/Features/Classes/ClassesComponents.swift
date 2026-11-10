@@ -15,7 +15,7 @@ enum ClassesCopy {
     /// The site's empty state (homepage and /classes).
     static let empty = "The first classes are being scheduled. Want to teach one?"
     /// What classes are, in the site's words on /classes.
-    static let lede = "Free live classes on LearnFRC lessons, taught by FRC students aged 13 to 17. Classes run 15 to 90 minutes, and every one is recorded on video and reviewed. Student cameras stay off, the class chat is filtered, and everyone in a class sees each other's usernames."
+    static let lede = "Free live classes on LearnFRC lessons, taught by students on FRC teams. Classes run 15 to 90 minutes, and every one is recorded on video and reviewed. Student cameras stay off, the class chat is filtered, and everyone in a class sees each other's usernames."
     /// Where a class actually happens.
     static let onTheWeb = "Signing up and joining happen on learnfrc.com: tap a class to open it in Safari. There's no video in the app."
     static let hidden = "Live classes aren't open yet."

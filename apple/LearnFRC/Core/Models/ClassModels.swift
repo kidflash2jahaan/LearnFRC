@@ -1,7 +1,7 @@
 import Foundation
 
 // Live classes (`GET /api/app/classes`, docs/API.md "Live classes"). Classes are taught on
-// learnfrc.com by FRC students aged 13 to 17; the app only lists them and opens each one in
+// learnfrc.com by FRC students; the app only lists them and opens each one in
 // Safari. There's no video in the app. The list is the site's (`listUpcomingClasses` in
 // src/lib/app/classes.ts, the same function learnfrc.com/classes renders from).
 //
