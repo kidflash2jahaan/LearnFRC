@@ -68,6 +68,12 @@ export interface Profile {
   email_opt_in?: boolean | null;
   /** When the member said yes or no to reminders; null means not asked yet. */
   email_choice_at?: string | null;
+  /**
+   * The username was made by the database, not chosen (Google or Apple
+   * sign-in, or a moderation rename). Cleared when the person keeps it or
+   * picks their own on /account/username. See src/lib/usernames.ts.
+   */
+  username_generated?: boolean;
 }
 
 export interface Achievement {

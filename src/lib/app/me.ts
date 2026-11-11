@@ -1,8 +1,7 @@
 import "server-only";
 import { getProfile, getReferralCount } from "@/lib/queries";
 import { getSiteRole, type SiteRole } from "@/lib/auth";
-import { isPlaceholderUsername } from "@/lib/onboarding";
-import { needsUsernameSetup } from "@/lib/onboarding-server";
+import { needsUsernameStep } from "@/lib/usernames";
 import { describeRhythm, rhythmMicrocopy, type Rhythm, type RhythmCopy } from "@/lib/streaks";
 import { levelForXp } from "@/lib/app/levels";
 import { toIso } from "@/lib/app/format";
@@ -28,7 +27,17 @@ export type MePayload = {
   user: { id: string; email: string | null };
   /** Null only if the account has no profile row (the signup trigger failed). */
   profile: MeProfile | null;
+  /**
+   * The username isn't chosen or kept yet (`needsUsernameStep`: a generated
+   * handle, `profile.usernameGenerated`). Installed copies show their required
+   * UsernameSetupView for it, prefilled with the current handle, and sending
+   * that handle back unchanged to POST /api/app/profile/setup keeps it.
+   */
   needsUsernameSetup: boolean;
+  /**
+   * Always false since 2026-11-11. Kept so installed copies still decode /me;
+   * generated handles now go through `needsUsernameSetup` instead.
+   */
   isPlaceholderUsername: boolean;
   emailPrompt: boolean;
   referralCount: number;
@@ -49,8 +58,8 @@ export async function loadMe(user: AppUser): Promise<MePayload> {
   return {
     user: { id: user.id, email: user.email ?? null },
     profile: profile ? toMeProfile(profile) : null,
-    needsUsernameSetup: needsUsernameSetup(profile),
-    isPlaceholderUsername: isPlaceholderUsername(profile?.username),
+    needsUsernameSetup: needsUsernameStep(profile),
+    isPlaceholderUsername: false,
     emailPrompt: shouldAskAboutEmail(profile),
     referralCount,
     siteRole,

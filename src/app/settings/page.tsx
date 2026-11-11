@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { needsUsernameSetup } from "@/lib/onboarding-server";
 import { getSession } from "@/lib/auth";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import { SettingsForm } from "@/components/settings/settings-form";
@@ -46,8 +45,10 @@ const ROLE_LABELS: Record<string, string> = {
 export default async function SettingsPage() {
   const { user, profile, isAdmin } = await getSession();
   if (!user) redirect("/login?next=/settings");
-  // Required handle: hold them on the setup step (see onboarding-server.ts).
-  if (needsUsernameSetup(profile)) redirect("/dashboard");
+  // No username step here, even for a generated username: Settings is where
+  // someone deletes their account or changes their email choice, and they
+  // shouldn't have to accept a handle first. Renaming here clears the step
+  // (updateProfileFields); saving the same name leaves it for later.
 
   // The reminder switch's starting state. Read on its own, service-role and
   // scoped to the caller's id, rather than widening getProfile's column list,

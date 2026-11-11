@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { readSourceCookie } from "@/lib/signup-attribution";
 import { postAuthDestination } from "@/lib/first-run";
 import { BANNED_SIGNUP, completeOAuthSignIn } from "@/lib/app/accounts";
+import { usernameStepHref } from "@/lib/usernames";
 
 /**
  * THE OAUTH DOOR, where Google puts people down.
@@ -53,6 +54,14 @@ import { BANNED_SIGNUP, completeOAuthSignIn } from "@/lib/app/accounts";
  * destination choice never touches either of them. Referrals through this file
  * were silently dead for 24 days once already, so the invite path is a hard
  * constraint here, not a preference.
+ *
+ * THE USERNAME STEP. Google and Apple never show the sign-up form, so the
+ * database gives a new Google or Apple account a generated username
+ * (src/lib/usernames.ts). An
+ * account still carrying one goes to /account/username first, with the
+ * destination above as its `next`, so the person keeps that handle or picks
+ * their own before the lesson, invite or /start they came for. The step sends
+ * them on to `next` afterwards, so nothing about the destination is lost.
  */
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
@@ -69,6 +78,8 @@ export async function GET(request: Request) {
   // Set only once a brand-new account is confirmed, and read once at the very
   // bottom to choose between /start and the resolved destination.
   let isNew = false;
+  // The account still has to choose or keep its username.
+  let usernameStep = false;
 
   if (code) {
     const supabase = await createClient();
@@ -107,13 +118,15 @@ export async function GET(request: Request) {
       return NextResponse.redirect(new URL("/login?notice=banned", origin));
     }
     isNew = outcome.isNewAccount;
+    usernameStep = outcome.needsUsernameStep;
   } else if (searchParams.get("error_description") === BANNED_SIGNUP) {
     // The ban-list hook in the database refused to make the account, and
     // Supabase sent its sentence back here instead of a code.
     return NextResponse.redirect(new URL("/login?notice=banned", origin));
   }
 
+  const destination = postAuthDestination(next, isNew);
   return NextResponse.redirect(
-    new URL(postAuthDestination(next, isNew), origin)
+    new URL(usernameStep ? usernameStepHref(destination) : destination, origin)
   );
 }

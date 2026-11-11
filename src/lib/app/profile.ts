@@ -2,9 +2,13 @@ import "server-only";
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { rateLimit } from "@/lib/rate-limit";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { firstProfaneField } from "@/lib/profanity";
-import { isPlaceholderUsername } from "@/lib/onboarding";
-import { needsUsernameSetup } from "@/lib/onboarding-server";
+import {
+  chosenUsernameShapeError,
+  needsUsernameStep,
+  normalizeUsername,
+} from "@/lib/usernames";
 import type { Profile } from "@/lib/types";
 import { levelForXp, tierFor } from "@/lib/app/levels";
 import { toIso } from "@/lib/app/format";
@@ -25,9 +29,47 @@ import { fail, type AppClients, type AppUser, type Result } from "@/lib/app/resu
 
 const ROLES = ["student", "mentor", "alum", "coach", "other"];
 
-/** Username rule shared by signup, settings and setup: a–z, 0–9 and _ only. */
-export function normalizeUsername(raw: string): string {
-  return raw.toLowerCase().replace(/[^a-z0-9_]/g, "");
+// The rule itself lives in src/lib/usernames.ts (client-safe); re-exported
+// here because the sign-in lookup and older imports read it from this file.
+export { normalizeUsername };
+
+/* ------------------------------------------------------------------ */
+/*  A username someone chooses for their own account                   */
+/* ------------------------------------------------------------------ */
+
+/**
+ * The one server check for a username a person submits: sign-up
+ * (registerAccount), Settings (updateProfileFields) and the username step
+ * (saveProfileSetupFields). Normalizes it, then the shape rules
+ * (chosenUsernameShapeError: blank, 3 to 20 characters, not reserved), the
+ * profanity filter, and whether someone else has it.
+ *
+ * Keeping the name you already have always passes the shape rules, so the few
+ * older names over 20 characters, or on today's reserved list, can still save
+ * their other Settings fields. `changed` says whether it differs from
+ * `currentUsername`.
+ */
+export async function validateChosenUsername(
+  admin: SupabaseClient,
+  raw: string,
+  opts: { currentUsername: string | null; userId?: string }
+): Promise<Result<{ username: string; changed: boolean }>> {
+  const username = normalizeUsername(raw.trim());
+  const shape = chosenUsernameShapeError(username, opts.currentUsername);
+  if (shape) return fail("validation", shape);
+  if (firstProfaneField({ username }))
+    return fail("validation", "That username isn't allowed. Please choose another.");
+
+  const changed = username !== opts.currentUsername;
+  if (changed) {
+    // Exact match on one handle, `id` only: a taken/not-taken answer, not a
+    // listing.
+    let q = admin.from("profiles").select("id").eq("username", username);
+    if (opts.userId) q = q.neq("id", opts.userId);
+    const { data: taken } = await q.maybeSingle();
+    if (taken) return fail("conflict", "That username is already taken.");
+  }
+  return { ok: true, username, changed };
 }
 
 /* ------------------------------------------------------------------ */
@@ -36,7 +78,13 @@ export function normalizeUsername(raw: string): string {
 
 export type MeProfile = {
   id: string;
+  /** Always set since 2026-11-11 (the database fills one in). */
   username: string | null;
+  /**
+   * The username was generated, not chosen. True until the person keeps it or
+   * picks their own (the username step; `needsUsernameSetup` on /me).
+   */
+  usernameGenerated: boolean;
   /** The caller's OWN name. Never sent for anyone else. */
   fullName: string | null;
   avatarUrl: string | null;
@@ -57,6 +105,7 @@ export function toMeProfile(p: Profile): MeProfile {
   return {
     id: p.id,
     username: p.username,
+    usernameGenerated: p.username_generated === true,
     fullName: p.full_name,
     avatarUrl: p.avatar_url,
     teamNumber: p.team_number,
@@ -77,7 +126,7 @@ export function toMeProfile(p: Profile): MeProfile {
  * the username step, which has the screen to itself.
  */
 export function shouldAskAboutEmail(profile: Profile | null): boolean {
-  return !!profile && !profile.email_choice_at && !needsUsernameSetup(profile);
+  return !!profile && !profile.email_choice_at && !needsUsernameStep(profile);
 }
 
 /* ------------------------------------------------------------------ */
@@ -113,7 +162,6 @@ export async function updateProfileFields(
   const avatar_url = fields.avatarUrl.trim() || null;
   if (avatar_url && !/^https?:\/\//i.test(avatar_url))
     return fail("validation", "Avatar URL must start with http:// or https://");
-  const usernameRaw = fields.username.trim();
   const teamStr = fields.teamNumber.trim();
   const roleRaw = fields.role || "student";
 
@@ -136,13 +184,13 @@ export async function updateProfileFields(
   // rateLimit() FAILS OPEN on infrastructure error (see src/lib/rate-limit.ts),
   // which is the right trade here: this is anti-abuse friction on a legitimate
   // settings field, not an authorization boundary.
-  const { data: currentTeam } = await admin
+  const { data: currentRow } = await admin
     .from("profiles")
-    .select("team_number")
+    .select("team_number, username")
     .eq("id", user.id)
     .maybeSingle();
-  const priorTeam =
-    (currentTeam as { team_number: number | null } | null)?.team_number ?? null;
+  const current = currentRow as { team_number: number | null; username: string | null } | null;
+  const priorTeam = current?.team_number ?? null;
   if (
     team_number !== priorTeam &&
     !(await rateLimit("profile-team-number", 3, 86400, user.id))
@@ -153,43 +201,43 @@ export async function updateProfileFields(
       86400
     );
 
-  let username: string | null = null;
-  if (usernameRaw) {
-    username = normalizeUsername(usernameRaw);
-    if (username.length < 3)
-      return fail("validation", "Username must be at least 3 characters (a–z, 0–9, _).");
-    // Exact match on one handle, `id` only: a taken/not-taken answer, not a
-    // listing.
-    const { data: taken } = await admin
-      .from("profiles")
-      .select("id")
-      .eq("username", username)
-      .neq("id", user.id)
-      .maybeSingle();
-    if (taken) return fail("conflict", "That username is already taken.");
-  }
+  // A username can't be cleared: blank is refused here (and the database
+  // keeps the old one if anything else ever tries).
+  const checked = await validateChosenUsername(admin, fields.username, {
+    currentUsername: current?.username ?? null,
+    userId: user.id,
+  });
+  if (!checked.ok) return checked;
+  const username = checked.username;
 
   const role = ROLES.includes(roleRaw) ? roleRaw : "student";
 
-  // Block offensive username / name / bio on edit (local, no AI).
+  // Block offensive name / bio on edit (local, no AI). The username was
+  // checked above.
   const badField = firstProfaneField({
-    username: username ?? "",
     full_name: full_name ?? "",
     bio: bio ?? "",
   });
   if (badField)
     return fail(
       "validation",
-      badField === "username"
-        ? "That username isn't allowed. Please choose another."
-        : badField === "full_name"
-          ? "That name isn't allowed. Please use a different one."
-          : "Please remove the inappropriate language from your bio."
+      badField === "full_name"
+        ? "That name isn't allowed. Please use a different one."
+        : "Please remove the inappropriate language from your bio."
     );
 
+  // A new name is the person's own, so it's no longer a generated one.
   const { error } = await admin
     .from("profiles")
-    .update({ full_name, bio, username, team_number, role, avatar_url })
+    .update({
+      full_name,
+      bio,
+      username,
+      team_number,
+      role,
+      avatar_url,
+      ...(checked.changed ? { username_generated: false } : {}),
+    })
     .eq("id", user.id);
   if (error) {
     // Unique-index race: someone took the username between the check and here.
@@ -205,32 +253,38 @@ export async function updateProfileFields(
 }
 
 /* ------------------------------------------------------------------ */
-/*  The username step (accounts that never saw the signup form)        */
+/*  The username step, and the dashboard's team-number card            */
 /* ------------------------------------------------------------------ */
 
 /**
- * Finish the profile of an account that never saw the signup form (Google
- * sign-in, and later Sign in with Apple).
+ * The username step (/account/username, and the app's UsernameSetupView) and
+ * the dashboard's team-number card.
  *
- * Writes the username only when the account has none or is still carrying a
- * machine-minted placeholder; a handle the user actually chose is left alone,
- * so this is not a back door around Settings for renames. Validation is
- * identical to signup.
+ * For an account whose username was generated (`needsUsernameStep`), the
+ * username is required: submitting the same handle keeps it (`keep`, or the
+ * app sending it back unchanged), a different one replaces it, and either way
+ * the flag clears. Validation is the same as sign-up and Settings
+ * (validateChosenUsername).
+ *
+ * For an account whose username is its own, `username` is ignored, so this is
+ * not a back door around Settings for renames; only the team number saves.
+ * Keeping (or sending the current name) once the step is already done answers
+ * ok with nothing written.
  */
 export async function saveProfileSetupFields(
   user: AppUser,
   { admin }: AppClients,
-  fields: { username: string; teamNumber: string }
+  fields: { username: string; teamNumber: string; keep?: boolean }
 ): Promise<Result> {
   const { data: current } = await admin
     .from("profiles")
-    .select("username, team_number")
+    .select("username, username_generated, team_number")
     .eq("id", user.id)
     .maybeSingle();
 
   const currentUsername: string | null = current?.username ?? null;
   const currentTeam: number | null = current?.team_number ?? null;
-  const wantsUsername = !currentUsername || isPlaceholderUsername(currentUsername);
+  const wantsUsername = needsUsernameStep(current);
 
   const teamStr = fields.teamNumber.trim();
   let team_number: number | null = null;
@@ -240,25 +294,19 @@ export async function saveProfileSetupFields(
       return fail("validation", "Enter a valid FRC team number.");
   }
 
-  const payload: { username?: string; team_number?: number } = {};
+  const payload: { username?: string; username_generated?: boolean; team_number?: number } =
+    {};
 
   if (wantsUsername) {
-    const username = normalizeUsername(fields.username.trim());
-    if (username.length < 3)
-      return fail("validation", "Username must be at least 3 characters (a–z, 0–9, _).");
-    if (firstProfaneField({ username }))
-      return fail("validation", "That username isn't allowed. Please choose another.");
-
-    if (username !== currentUsername) {
-      const { data: taken } = await admin
-        .from("profiles")
-        .select("id")
-        .eq("username", username)
-        .neq("id", user.id)
-        .maybeSingle();
-      if (taken) return fail("conflict", "That username is already taken.");
-      payload.username = username;
-    }
+    const checked = await validateChosenUsername(
+      admin,
+      fields.keep ? (currentUsername ?? "") : fields.username,
+      { currentUsername, userId: user.id }
+    );
+    if (!checked.ok) return checked;
+    // Keeping the handle writes only the flag; a new one writes both.
+    if (checked.changed) payload.username = checked.username;
+    payload.username_generated = false;
   }
 
   if (team_number !== null && team_number !== currentTeam) {
@@ -273,26 +321,27 @@ export async function saveProfileSetupFields(
     payload.team_number = team_number;
   }
 
-  // Nothing to write: either a team-only ask left blank, or a placeholder
-  // handle resubmitted unchanged. Say so rather than reporting a silent
-  // success that leaves the same card sitting there.
-  if (Object.keys(payload).length === 0)
-    return fail(
-      "validation",
-      wantsUsername
-        ? "Nothing to save. Choose a different username, add your team number, or Skip for now."
-        : "Enter your team number, or choose Skip for now."
-    );
+  if (Object.keys(payload).length === 0) {
+    // The username step is already done (Keep pressed in another tab, or on the
+    // website while the app still shows its cached gate): keeping again, or
+    // sending the same name back, has nothing left to do, so the step moves on.
+    const sameName =
+      currentUsername !== null && normalizeUsername(fields.username.trim()) === currentUsername;
+    if (!wantsUsername && (fields.keep || sameName)) return { ok: true };
+    // Nothing to write: a team-only ask left blank. Say so rather than
+    // reporting a silent success that leaves the same card sitting there.
+    return fail("validation", "Enter your team number, or choose Skip for now.");
+  }
 
-  // Guard the username write against a race: only overwrite the exact value we
-  // decided was fair game (null, or the placeholder we just read). The
-  // `.eq("id", user.id)` is the only thing scoping this service-role write to
-  // the caller; never widen it.
+  // Guard the username write against a race: only touch the exact handle we
+  // decided was still generated (or the missing one). The `.eq("id", user.id)`
+  // is the only thing scoping this service-role write to the caller; never
+  // widen it.
   let q = admin.from("profiles").update(payload).eq("id", user.id);
-  if (payload.username !== undefined)
+  if (wantsUsername)
     q = currentUsername === null
       ? q.is("username", null)
-      : q.eq("username", currentUsername);
+      : q.eq("username", currentUsername).eq("username_generated", true);
 
   const { data: updated, error } = await q.select("id").maybeSingle();
   if (error) {

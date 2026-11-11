@@ -49,21 +49,16 @@ type Change = {
 };
 
 /**
- * A free "memberNNNNNN" handle. It checks each candidate against the table
- * rather than trusting randomness, and after 20 misses falls back to a
- * timestamp tail, which cannot collide with a live row in practice.
+ * A free generated handle like `gearbox_4821`, from the database's
+ * `generate_username` (the same one that names accounts that arrive without a
+ * username; see src/lib/usernames.ts). It checks the table itself. Throws when
+ * there isn't one, so that change is skipped rather than half made.
  */
-async function uniqueUsername(admin: ReturnType<typeof createAdminClient>): Promise<string> {
-  for (let i = 0; i < 20; i++) {
-    const candidate = "member" + Math.floor(100000 + Math.random() * 899999).toString();
-    const { data } = await admin
-      .from("profiles")
-      .select("id")
-      .eq("username", candidate)
-      .maybeSingle();
-    if (!data) return candidate;
-  }
-  return "member" + Date.now().toString().slice(-8);
+async function generatedUsername(admin: ReturnType<typeof createAdminClient>): Promise<string> {
+  const { data, error } = await admin.rpc("generate_username");
+  if (error || typeof data !== "string" || !data)
+    throw new Error(`generate_username: ${error?.message ?? "no handle"}`);
+  return data;
 }
 
 export async function POST(req: Request) {
@@ -100,7 +95,7 @@ export async function POST(req: Request) {
       const update: { username?: string; full_name?: string | null } = {};
       let newUsername: string | null = null;
       if (c.username_offensive) {
-        newUsername = await uniqueUsername(admin);
+        newUsername = await generatedUsername(admin);
         update.username = newUsername;
       }
       if (c.full_name_offensive) {
@@ -108,7 +103,21 @@ export async function POST(req: Request) {
       }
       if (!Object.keys(update).length) continue;
 
-      await admin.from("profiles").update(update).eq("id", c.id);
+      const { error: writeError } = await admin.from("profiles").update(update).eq("id", c.id);
+      if (writeError) throw new Error(writeError.message);
+      if (newUsername) {
+        // Flagged, so the username step asks them to pick a name of their own
+        // (or keep this one) the next time they're signed in. A write of its
+        // own, after the rename: the database's username guard clears the flag
+        // on a rename that leaves it as it was, and it can't tell "set it to
+        // true" from "didn't mention it" on a row that's already flagged. This
+        // write doesn't touch username, so the guard doesn't run.
+        const { error: flagError } = await admin
+          .from("profiles")
+          .update({ username_generated: true })
+          .eq("id", c.id);
+        if (flagError) console.error("name-scan: flagging the new username failed:", flagError.message);
+      }
       await admin.from("name_moderation_log").insert({
         user_id: c.id,
         old_username: prof.username,

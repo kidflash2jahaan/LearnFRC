@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { needsUsernameSetup } from "@/lib/onboarding-server";
+import { needsUsernameStep, usernameStepHref } from "@/lib/usernames";
 import { getSession } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { getCompletedLessonIds, getReferralCount } from "@/lib/queries";
@@ -49,8 +49,8 @@ function formatJoined(iso: string | null): string {
 export default async function ProfilePage() {
   const { user, profile } = await getSession();
   if (!user) redirect("/login?next=/profile");
-  // Required handle: hold them on the setup step (see onboarding-server.ts).
-  if (needsUsernameSetup(profile)) redirect("/dashboard");
+  // A generated username: choose or keep it first (src/lib/usernames.ts).
+  if (needsUsernameStep(profile)) redirect(usernameStepHref("/profile"));
 
   const supabase = await createClient();
 
@@ -281,7 +281,7 @@ export default async function ProfilePage() {
         {achievements.length === 0 ? (
           <p className="nb-sub mt-[clamp(1.2rem,2.6vw,1.8rem)]">
             The badge list is empty right now. It fills back in when the next
-            season's set is published.
+            season&rsquo;s set is published.
           </p>
         ) : (
           <ul className="nb-list mt-[clamp(1.2rem,2.6vw,1.8rem)]">

@@ -92,11 +92,13 @@ struct Profile: Codable, Hashable, Sendable, Identifiable {
     var roleKind: ProfileRole { ProfileRole(raw: role) }
     /// http(s) avatars only.
     var avatarURL: URL? { avatarUrl.flatMap(URL.init(string:)).flatMap { ["http", "https"].contains($0.scheme?.lowercased()) ? $0 : nil } }
-    /// The name printed on certificates: full name, else username, else "FRC Learner" (the site's rule).
+    /// The name printed on certificates: full name, else username, else nothing (the site's
+    /// rule, `full_name || username || ""`). Every account has a username since 2026-11-11;
+    /// only a profile the app hasn't read yet (`Me.provisional`, a failed decode) has
+    /// neither, and its certificate leaves the name line empty rather than print a stand-in.
     var certificateName: String {
         if let fullName, !fullName.trimmingCharacters(in: .whitespaces).isEmpty { return fullName }
-        if let username, !username.isEmpty { return username }
-        return "FRC Learner"
+        return username ?? ""
     }
     /// "@username", or nil while the username isn't set.
     var handle: String? { username.map { "@\($0)" } }

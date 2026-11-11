@@ -12,6 +12,7 @@ import {
   updateProfileFields,
 } from "@/lib/app/profile";
 import { clientsFor } from "@/lib/app/result";
+import { safeNextPath } from "@/lib/safe-next";
 
 /*
  * The website's doors onto profile changes. The rules (rate limits, username
@@ -21,7 +22,14 @@ import { clientsFor } from "@/lib/app/result";
  * can't drift. These functions only read the form and the cookie session.
  */
 
-export type ProfileState = { error?: string; success?: boolean } | undefined;
+export type ProfileState =
+  | {
+      error?: string;
+      success?: boolean;
+      /** Where the username step goes after saving: a same-site path. */
+      next?: string;
+    }
+  | undefined;
 
 export async function updateProfile(
   _prev: ProfileState,
@@ -46,17 +54,17 @@ export async function updateProfile(
 }
 
 /**
- * Finish the profile of an account that never saw the signup form.
+ * The username step (/account/username) and the dashboard's team-number card.
  *
- * Google sign-in collects only name/email/avatar, so those profiles land with
- * no username (rendering as "Learner" everywhere) and, for 70% of them, no
- * team number, which keeps them out of team clustering entirely.
+ * Google sign-in collects only name/email/avatar, so those accounts arrive
+ * with a generated username and, for 70% of them, no team number, which keeps
+ * them out of team clustering entirely.
  *
- * Writes the username only when the account has none or is still carrying a
- * machine-minted placeholder; a handle the user actually chose is left alone,
- * so this is not a back door around Settings for renames. Validation is
- * identical to signup: lowercased to a–z/0–9/_, ≥3 chars, the same profanity
- * filter, and a uniqueness check backed by the unique index.
+ * For a generated username, "Keep @handle" (`keep`) keeps it and a new name
+ * replaces it; both clear the flag. A handle the person chose is left alone,
+ * so this is not a back door around Settings for renames. The rules are
+ * saveProfileSetupFields (src/lib/app/profile.ts), shared with the app. `next`
+ * comes back on success, only as a same-site path, for the step to go to.
  */
 export async function saveProfileSetup(
   _prev: ProfileState,
@@ -71,9 +79,10 @@ export async function saveProfileSetup(
   const result = await saveProfileSetupFields(user, clientsFor(supabase), {
     username: String(formData.get("username") || ""),
     teamNumber: String(formData.get("team_number") || ""),
+    keep: formData.get("keep") === "1",
   });
   if (!result.ok) return { error: result.error };
-  return { success: true };
+  return { success: true, next: safeNextPath(String(formData.get("next") || "")) };
 }
 
 /**

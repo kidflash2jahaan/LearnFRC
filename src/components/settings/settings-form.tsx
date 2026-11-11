@@ -12,6 +12,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { isApplePrivateRelayEmail } from "@/lib/auth-providers";
 import { dropAllTeachDrafts } from "@/lib/classes/teach-draft";
 import type { Profile } from "@/lib/types";
+import { USERNAME_MAX, USERNAME_MIN } from "@/lib/usernames";
 
 const ROLES = [
   { value: "student", label: "Student" },
@@ -164,8 +165,17 @@ export function SettingsForm({
               id="username"
               name="username"
               type="text"
-              autoComplete="username"
+              // "nickname" (not "username") so browsers don't autofill the
+              // saved login email here. This is a public handle, never an email.
+              autoComplete="nickname"
               placeholder="janebuilds"
+              // A username can't be cleared (src/lib/usernames.ts). The 20
+              // cap only stops typing: a longer name someone already has
+              // still saves.
+              required
+              minLength={USERNAME_MIN}
+              maxLength={USERNAME_MAX}
+              pattern="[A-Za-z0-9_]+"
               defaultValue={profile?.username ?? ""}
               onChange={(e) =>
                 setUsername(

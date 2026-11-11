@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { needsUsernameSetup } from "@/lib/onboarding-server";
+import { needsUsernameStep, usernameStepHref } from "@/lib/usernames";
 import {
   BookmarkCard,
   type BookmarkCardData,
@@ -51,8 +51,8 @@ type BookmarkRow = {
 export default async function BookmarksPage() {
   const { user, profile } = await getSession();
   if (!user) redirect("/login?next=/bookmarks");
-  // Required handle: hold them on the setup step (see onboarding-server.ts).
-  if (needsUsernameSetup(profile)) redirect("/dashboard");
+  // A generated username: choose or keep it first (src/lib/usernames.ts).
+  if (needsUsernameStep(profile)) redirect(usernameStepHref("/bookmarks"));
 
   const supabase = await createClient();
   const { data } = await supabase

@@ -67,7 +67,8 @@ export default async function CertificatePage({
   const completed = await getCompletedLessonIds(user.id);
   const done = flat.filter((l) => completed.has(l.id)).length;
   const earned = total > 0 && done === total;
-  const name = profile?.full_name || profile?.username || "FRC Learner";
+  // The person's own name, else their username (every account has one).
+  const name = profile?.full_name || profile?.username || "";
   const moduleCount = dept.modules?.length ?? 0;
 
   /* ================================================================

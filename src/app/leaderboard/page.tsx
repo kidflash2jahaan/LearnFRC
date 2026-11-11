@@ -36,8 +36,10 @@ export const metadata: Metadata = {
 
 // Public surfaces never show real names: learners are identified by username
 // only. Real names live in private views (dashboard, settings, certificate).
+// Every account has a username (the database fills one in), so there is no
+// stand-in name to print.
 function displayName(p: Profile): string {
-  return p.username?.trim() || "Learner";
+  return p.username ?? "";
 }
 
 function toEntry(
@@ -53,7 +55,7 @@ function toEntry(
     username: p.username,
     avatarUrl: p.avatar_url,
     teamNumber: p.team_number,
-    role: p.role || "Learner",
+    role: p.role || "student",
     xp,
     level: Math.floor(xp / 100) + 1,
     lessons: p.lessons,
@@ -73,7 +75,7 @@ function toWeeklyEntry(
     username: p.username,
     avatarUrl: p.avatar_url,
     teamNumber: p.team_number,
-    role: p.role || "Learner",
+    role: p.role || "student",
     xp: p.weeklyXp,
     level: Math.floor((p.xp ?? 0) / 100) + 1,
     lessons: p.weeklyLessons,

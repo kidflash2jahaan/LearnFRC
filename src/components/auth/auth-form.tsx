@@ -8,6 +8,7 @@ import { AppleSignInButton } from "@/components/auth/apple-button";
 import { GoogleSignInButton } from "@/components/auth/google-button";
 import { APPLE_SIGN_IN_ENABLED } from "@/lib/auth-providers";
 import { safeNextPath } from "@/lib/safe-next";
+import { USERNAME_MAX, USERNAME_MIN } from "@/lib/usernames";
 
 type Mode = "login" | "signup";
 
@@ -187,7 +188,8 @@ export function AuthForm({
               // saved login email here. This is a public handle, never an email.
               autoComplete="nickname"
               required
-              minLength={3}
+              minLength={USERNAME_MIN}
+              maxLength={USERNAME_MAX}
               pattern="[A-Za-z0-9_]+"
               disabled={busy}
               className="nb-input"

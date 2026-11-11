@@ -16,9 +16,11 @@ export const dynamic = "force-dynamic";
 /**
  * POST /api/app/profile/setup { username, teamNumber? }
  *
- * The username step for an account with no username (or a machine-made
- * placeholder), through saveProfileSetupFields, the function the website's
- * dashboard setup card calls. Responds with the updated /me profile object.
+ * The username step for an account whose username was generated
+ * (`needsUsernameSetup` on /me), and the team-number card, through
+ * saveProfileSetupFields, the function the website's /account/username page
+ * and dashboard card call. Sending the current username back unchanged keeps
+ * it. Responds with the updated /me profile object.
  */
 export async function POST(req: Request) {
   return guarded(async () => {
