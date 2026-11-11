@@ -130,6 +130,7 @@ The caller's own profile. The only place anyone's `fullName` is ever sent, and o
 {
   "id": "6f1c2b9e-0d7a-4c55-9a51-2f7f0c1d9a11",
   "username": "maya_254",
+  "usernameGenerated": false,
   "fullName": "Maya Chen",
   "avatarUrl": "https://lh3.googleusercontent.com/a/example",
   "teamNumber": 254,
@@ -146,7 +147,8 @@ The caller's own profile. The only place anyone's `fullName` is ever sent, and o
 
 | Field | Type | Notes |
 |---|---|---|
-| `username` | String? | Null until the username step is done. |
+| `username` | String? | Always set since 2026-11-11: an account that arrives without one (Google sign-in) gets a generated handle like `gearbox_4821`. Still decoded as optional for older servers. |
+| `usernameGenerated` | Bool | Added 2026-11-11. True while `username` is a generated handle the person hasn't kept or replaced yet (the username step, `needsUsernameSetup` on `/me`). Treat a missing key (an older server) as `false`. |
 | `fullName`, `avatarUrl`, `bio` | String? | |
 | `teamNumber` | Int? | 1 to 99999. |
 | `role` | String | `student`, `mentor`, `alum`, `coach`, `other`. |
@@ -322,13 +324,13 @@ Response 200:
 |---|---|---|
 | `user.email` | String? | The caller's own email. |
 | `profile` | MeProfile? | Null only if the account has no profile row (should not happen). |
-| `needsUsernameSetup` | Bool | True when `username` is null. Show `UsernameSetupView` before anything else (the site's hard gate). |
-| `isPlaceholderUsername` | Bool | A machine-made handle like `neon_roboteer_85`. The site asks, never blocks; skipping hides the ask for 14 days. |
-| `emailPrompt` | Bool | Ask the one-time "Want reminder emails?" question. True when the member has never answered and has a username. |
+| `needsUsernameSetup` | Bool | True while the username isn't chosen or kept yet: a generated handle (`profile.usernameGenerated`), or none at all from an older server. Show `UsernameSetupView` before anything else (the site's `/account/username` step). Prefill the current username, never anything from the email; sending it back unchanged to `POST /api/app/profile/setup` keeps it. |
+| `isPlaceholderUsername` | Bool | Always `false` since 2026-11-11, kept so installed copies still decode `/me`. The old machine-made handles (like `neon_roboteer_85`) are flagged as generated, so they come through `needsUsernameSetup` instead. |
+| `emailPrompt` | Bool | Ask the one-time "Want reminder emails?" question. True when the member has never answered and isn't on the username step. |
 | `referralCount` | Int | People who signed up with this member's invite link. |
 | `siteRole` | String | `member`, `admin` or `superadmin`, from `getSiteRole` (an owner email in `ADMIN_EMAILS`, otherwise the `site_admins` row). Show the admin rows when it isn't `member`, and the Admin team row only for `superadmin`. Display only: every admin route checks the role again on the server, so a stale value just gets a 403. Treat a missing key (an older server) as `member`. |
 
-The site's soft "finish your profile" ask shows when `isPlaceholderUsername` is true or `teamNumber` is null; the app keeps its own 14-day skip timer.
+The site's soft "finish your profile" ask is now the team number only: it shows when `teamNumber` is null and the username step is done; the app keeps its own 14-day skip timer.
 
 Errors: 401.
 
@@ -444,7 +446,7 @@ Errors: 400 `validation` (`That lesson id isn't valid.`), 401, 500.
 
 Bearer. Settings, through `updateProfileFields`, the same function as the website's settings form.
 
-Request (every field optional; a field left out keeps its current value, `null` clears it):
+Request (every field optional; a field left out keeps its current value, `null` clears it, except `username`, which can't be cleared):
 
 ```json
 { "fullName": "Maya Chen", "bio": "Programming lead.", "avatarUrl": "https://example.com/me.png", "username": "maya_254", "teamNumber": 254, "role": "student" }
@@ -454,7 +456,7 @@ Request (every field optional; a field left out keeps its current value, `null` 
 |---|---|---|
 | `fullName`, `bio` | String? | Trimmed; blank means none. Profanity filtered. |
 | `avatarUrl` | String? | Must start with `http://` or `https://`. |
-| `username` | String? | Lowercased and reduced to `a-z`, `0-9`, `_`; at least 3 characters; unique; profanity filtered. |
+| `username` | String? | Lowercased and reduced to `a-z`, `0-9`, `_`; 3 to 20 characters; not a reserved name (like `admin`, `support`, or anything starting `learner` or `learnfrc`); unique; profanity filtered. The length and reserved rules apply only to a new name, so a longer name someone already has still saves unchanged. `null` or `""` is refused (400). A new name clears `usernameGenerated`. |
 | `teamNumber` | Int? | 1 to 99999. Changing it is limited to 3 changes a day. |
 | `role` | String? | `student`, `mentor`, `alum`, `coach`, `other`; anything else saves as `student`. |
 
@@ -466,7 +468,8 @@ Errors (the site's messages):
 |---|---|---|
 | 400 | `validation` | `Avatar URL must start with http:// or https://` |
 | 400 | `validation` | `Enter a valid FRC team number.` |
-| 400 | `validation` | `Username must be at least 3 characters (a–z, 0–9, _).` |
+| 400 | `validation` | `Choose a username: at least 3 characters (letters, numbers, _).` (blank or `null`) |
+| 400 | `validation` | `Username must be at least 3 characters (a–z, 0–9, _).` / `Usernames can be up to 20 characters.` / `That username isn't available. Please choose another.` (reserved) |
 | 400 | `validation` | `That username isn't allowed. Please choose another.` / `That name isn't allowed. Please use a different one.` / `Please remove the inappropriate language from your bio.` |
 | 409 | `conflict` | `That username is already taken.` |
 | 429 | `rate_limited` | `Too many profile updates. Try again in a bit.` (20 an hour) |
@@ -475,7 +478,7 @@ Errors (the site's messages):
 
 ### POST /api/app/profile/setup
 
-Bearer. The profile setup step (`saveProfileSetupFields`, the website's dashboard setup card): the username for an account with no username or a placeholder one, and the team number for an account whose handle is its own but has no team number (the card's team mode). A username the person chose themselves is never overwritten here; renames go through `PATCH /api/app/profile`.
+Bearer. The profile setup step (`saveProfileSetupFields`, the website's `/account/username` step and its dashboard team card): the username for an account still on the username step (`needsUsernameSetup`, a generated handle), and the team number for an account whose handle is its own but has no team number (the card's team mode). A username the person chose themselves is never overwritten here; renames go through `PATCH /api/app/profile`.
 
 Request:
 
@@ -485,9 +488,11 @@ Request:
 
 `teamNumber` is optional (Int or null). `username` is ignored for an account whose handle is its own, so the app's team-only ask (`AccountStore.setupTeamNumber(_:)`) leaves it out and sends `{ "teamNumber": 254 }`.
 
+On the username step, sending the current (generated) username back unchanged keeps it, the site's "Keep @handle": 200, and `usernameGenerated` and `needsUsernameSetup` turn false. A different username replaces it, with the same rules as `PATCH /api/app/profile`.
+
 Response 200: the updated MeProfile.
 
-Errors: 400 `validation` (`Username must be at least 3 characters (a–z, 0–9, _).`, `That username isn't allowed. Please choose another.`, `Enter a valid FRC team number.`, `Nothing to save. Choose a different username, add your team number, or Skip for now.`, `Enter your team number, or choose Skip for now.`), 409 `conflict` (`That username is already taken.`, `Your profile changed in another tab. Reload and retry.`), 429 `rate_limited` (`You've changed your team number a few times today. Try again tomorrow.`, the same 3-a-day budget as `PATCH /api/app/profile`, counted only when the team number changes), 401, 500 `server` (`Couldn't save that. Try again.`).
+Errors: 400 `validation` (`Choose a username: at least 3 characters (letters, numbers, _).`, `Username must be at least 3 characters (a–z, 0–9, _).`, `Usernames can be up to 20 characters.`, `That username isn't available. Please choose another.`, `That username isn't allowed. Please choose another.`, `Enter a valid FRC team number.`, `Enter your team number, or choose Skip for now.`), 409 `conflict` (`That username is already taken.`, `Your profile changed in another tab. Reload and retry.`), 429 `rate_limited` (`You've changed your team number a few times today. Try again tomorrow.`, the same 3-a-day budget as `PATCH /api/app/profile`, counted only when the team number changes), 401, 500 `server` (`Couldn't save that. Try again.`).
 
 ### POST /api/app/email-opt-in
 
@@ -606,7 +611,7 @@ Response 200, `weekly` (XP and lessons from the last 7 days; level from all-time
 }
 ```
 
-`username` can be null (show `Learner`). `teamNumber` can be null. `totals` covers every learner with XP, not just the top 50.
+`username` is always set since 2026-11-11 (every account has one; it's still decoded as optional for older servers). `teamNumber` can be null. `totals` covers every learner with XP, not just the top 50.
 
 Response 200, `teams`:
 
@@ -716,7 +721,7 @@ Request:
 
 | Field | Type | Notes |
 |---|---|---|
-| `email`, `password`, `username` | String | Required. Password at least 8 characters. |
+| `email`, `password`, `username` | String | Required. Password at least 8 characters. Username 3 to 20 characters, the same rules as `PATCH /api/app/profile`. |
 | `fullName` | String? | Optional. Only ever shown back to the person themselves. |
 | `teamNumber` | Int? | Optional, 1 to 99999. |
 | `emailOptIn` | Bool | Required. The unticked "email me reminders" box; `true` only if they ticked it. |
@@ -737,7 +742,8 @@ Errors (the site's messages):
 |---|---|---|
 | 400 | `validation` | `Email and password are required.` |
 | 400 | `validation` | `Password must be at least 8 characters.` |
-| 400 | `validation` | `Choose a username: at least 3 characters (letters, numbers, _).` |
+| 400 | `validation` | `Choose a username: at least 3 characters (letters, numbers, _).` (blank) |
+| 400 | `validation` | `Username must be at least 3 characters (a–z, 0–9, _).` / `Usernames can be up to 20 characters.` / `That username isn't available. Please choose another.` (reserved) |
 | 400 | `validation` | `That username isn't allowed. Please choose another.` / `That name isn't allowed. Please use a different one.` |
 | 400 | `validation` | `Enter a valid FRC team number.` |
 | 400 | `validation` | `This account can't be created. If you believe this is a mistake, contact support.` |
@@ -759,7 +765,7 @@ Request (every field optional; no body at all is the same as `{}`):
 
 | Field | Type | Notes |
 |---|---|---|
-| `ref`, `via` | String? | From the invite link the app was opened with (`?ref=` and `?via=`), exactly as for `POST /api/app/auth/sign-up`. Unknown `via` values are ignored; a `ref` that isn't another member's username credits nobody. |
+| `ref`, `via` | String? | From the invite link the app was opened with (`?ref=` and `?via=`), exactly as for `POST /api/app/auth/sign-up`. Unknown `via` values are ignored; a `ref` that isn't another member's username credits nobody, and a lesson or article hook token (`lesson-hook`, `article-hook`) is recorded as that hook's source. |
 | `platform` | String? | `ios`, `ipados` or `macos`. Recorded as the signup source (`iOS app`, `iPad app`, `Mac app`; anything else, or nothing, is `LearnFRC app`), the same rule as `POST /api/app/auth/sign-up`. A `ref` wins over it and records `Referral`. |
 
 Response 200:
@@ -768,7 +774,7 @@ Response 200:
 { "isNewAccount": true }
 ```
 
-`isNewAccount` is true only for an account created moments ago. The site sends such a person to `/start` (the one-question first-run plan, see `GET /api/app/start-plan`) instead of the dashboard, unless they were heading somewhere specific like an invite. A new Google account usually has no username yet, so the username step (`needsUsernameSetup` from `GET /api/app/me`) still comes first, as on the site.
+`isNewAccount` is true only for an account created moments ago. The site sends such a person to `/start` (the one-question first-run plan, see `GET /api/app/start-plan`) instead of the dashboard, unless they were heading somewhere specific like an invite. A new Google account gets a generated username and `needsUsernameSetup: true` on `GET /api/app/me`, so the username step (keep it or pick your own) still comes first, as on the site.
 
 Attribution trouble never fails the call (it's logged on the server), because analytics must never block a sign-in.
 
