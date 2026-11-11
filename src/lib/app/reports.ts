@@ -34,11 +34,13 @@ import {
  *     teacher (anyone signed in can report them, from the class's listing,
  *     page or room, on the site or in the app), or anyone else who was in it
  *     (only by someone who was in the class too, within 30 days). contentId
- *     is the class, username the person. Class reports take three more
- *     reasons, keep the class's evidence (keep_evidence and a hold), go to the
- *     safety lead as well as the owner, say LIVE CLASS when the class is on
- *     now, and two different people from a live class reporting its teacher
- *     end the class.
+ *     is the class; the person is `userId` when it's sent (the website's
+ *     class report panel and room controls send it), else `username` (the
+ *     app). By id, a report still finds the right person after they're
+ *     renamed mid-class. Class reports take three more reasons, keep the
+ *     class's evidence (keep_evidence and a hold), go to the safety lead as
+ *     well as the owner, say LIVE CLASS when the class is on now, and two
+ *     different people from a live class reporting its teacher end the class.
  *
  * A report is a row in `user_reports` (service role only: a reporter never
  * reads it back, and the person reported can never find out who filed it)
@@ -100,6 +102,13 @@ export type ReportInput = {
   /** The person reported. Required for a profile; ignored for an edit or a
       proposal, whose author is read from the row itself. */
   username?: unknown;
+  /**
+   * A class report only: the person's account id (from the class roster).
+   * Takes the place of `username` when sent, so a rename between the roster
+   * being read and the report being sent can't miss them, or name someone
+   * who took the old name. Ignored for every other kind.
+   */
+  userId?: unknown;
   /** `profile` (default), `edit`, `submission` or `class`. */
   contentKind?: unknown;
   /** The edit's or proposal's id, or the class's. */
@@ -139,17 +148,18 @@ type ClassRefusal = "noClass" | "noPerson" | "notInClass" | "needsClass" | "clas
 
 /**
  * The person reported from a class (section 10.2), resolved from the class
- * id and their username: its teacher, whom anyone signed in may report while
- * the class is scheduled or on, and anyone who was in it within 30 days
- * after; or someone with a class_participants row in it, whom only someone
- * who was in the class too (or teaches it) may report, within 30 days of it.
+ * id and their account id (or their username, when no id is sent): its
+ * teacher, whom anyone signed in may report while the class is scheduled or
+ * on, and anyone who was in it within 30 days after; or someone with a
+ * class_participants row in it, whom only someone who was in the class too
+ * (or teaches it) may report, within 30 days of it.
  * Every class report keeps the class's evidence and alerts the safety lead,
  * so nobody outside a class can keep reporting it once it's over.
  */
 async function classTarget(
   reporterId: string,
   classId: string,
-  rawUsername: string
+  who: { userId: string | null; username: string }
 ): Promise<Target | { refusal: ClassRefusal }> {
   const admin = createAdminClient();
   const { data: cls } = await admin
@@ -158,9 +168,14 @@ async function classTarget(
     .eq("id", classId)
     .maybeSingle();
   if (!cls) return { refusal: "noClass" };
-  const username = normalizeUsername(rawUsername);
-  if (!username) return { refusal: "noPerson" };
-  const { data: prof } = await admin.from("profiles").select("id, username").eq("username", username).maybeSingle();
+  let prof: { id: unknown; username: unknown } | null = null;
+  if (who.userId) {
+    ({ data: prof } = await admin.from("profiles").select("id, username").eq("id", who.userId).maybeSingle());
+  } else {
+    const username = normalizeUsername(who.username);
+    if (!username) return { refusal: "noPerson" };
+    ({ data: prof } = await admin.from("profiles").select("id, username").eq("username", username).maybeSingle());
+  }
   if (!prof) return { refusal: "noPerson" };
   const userId = prof.id as string;
 
@@ -327,6 +342,7 @@ export async function fileReport(user: AppUser, input: ReportInput): Promise<Res
   const reasonRaw = textField(input.reason);
   const details = textField(input.details);
   const usernameRaw = textField(input.username);
+  const userIdRaw = textField(input.userId);
   const contentIdRaw = textField(input.contentId);
   const surfaceRaw = textField(input.surface);
   const platformRaw = textField(input.platform);
@@ -335,6 +351,7 @@ export async function fileReport(user: AppUser, input: ReportInput): Promise<Res
     reasonRaw === null ||
     details === null ||
     usernameRaw === null ||
+    userIdRaw === null ||
     contentIdRaw === null ||
     surfaceRaw === null ||
     platformRaw === null
@@ -359,8 +376,12 @@ export async function fileReport(user: AppUser, input: ReportInput): Promise<Res
     if (!target) return fail("not_found", REPORT_SENTENCES.noPerson);
   } else if (kind === "class") {
     if (!isUuid(contentIdRaw)) return fail("not_found", REPORT_SENTENCES.noClass);
-    if (!usernameRaw) return fail("validation", REPORT_SENTENCES.noPerson);
-    const found = await classTarget(user.id, contentIdRaw.toLowerCase(), usernameRaw);
+    if (userIdRaw && !isUuid(userIdRaw)) return fail("not_found", REPORT_SENTENCES.noPerson);
+    if (!userIdRaw && !usernameRaw) return fail("validation", REPORT_SENTENCES.noPerson);
+    const found = await classTarget(user.id, contentIdRaw.toLowerCase(), {
+      userId: userIdRaw ? userIdRaw.toLowerCase() : null,
+      username: usernameRaw,
+    });
     if ("refusal" in found) {
       const code =
         found.refusal === "needsClass" || found.refusal === "classWindow" || found.refusal === "classOver"

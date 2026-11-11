@@ -25,6 +25,7 @@ export type ReasonOption = { id: string; label: string };
 export function ReportControl({
   reasons,
   username,
+  userId,
   contentKind = "profile",
   contentId,
   surface,
@@ -36,6 +37,12 @@ export function ReportControl({
   reasons: readonly ReasonOption[];
   /** The person reported (a profile or a class report). */
   username?: string;
+  /**
+   * A class report: the person's account id, from the class roster. The
+   * server finds them by it before the username, so a rename can't misdirect
+   * the report.
+   */
+  userId?: string;
   contentKind?: "profile" | "edit" | "submission" | "class";
   /** The edit's or proposal's id, or the class's. */
   contentId?: string;
@@ -91,6 +98,7 @@ export function ReportControl({
       <input type="hidden" name="contentKind" value={contentKind} />
       <input type="hidden" name="surface" value={surface} />
       {username ? <input type="hidden" name="username" value={username} /> : null}
+      {userId ? <input type="hidden" name="userId" value={userId} /> : null}
       {contentId ? <input type="hidden" name="contentId" value={contentId} /> : null}
 
       <div className="nb-field mt-3">

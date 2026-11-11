@@ -57,6 +57,7 @@ export async function reportContent(_prev: ReportState, formData: FormData): Pro
   if (!user) return { error: "Sign in first, then report it." };
   const result = await fileReport(user, {
     username: field(formData, "username"),
+    userId: field(formData, "userId"),
     contentKind: field(formData, "contentKind"),
     contentId: field(formData, "contentId"),
     reason: field(formData, "reason"),

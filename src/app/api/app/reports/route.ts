@@ -51,6 +51,7 @@ export async function POST(req: Request) {
     if (!body) return badJson();
     const result = await fileReport(auth.user, {
       username: body.username,
+      userId: body.userId,
       contentKind: body.contentKind,
       contentId: body.contentId,
       reason: body.reason,

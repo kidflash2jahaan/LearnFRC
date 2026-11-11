@@ -48,10 +48,13 @@ export function ClassReportPanel({
   label = "Report someone",
 }: ClassReportPanelProps) {
   const [open, setOpen] = React.useState(false);
+  // The picked person's account id: the report finds them by it, so a rename
+  // between this list being read and Send can't send it to the wrong person.
   const [who, setWho] = React.useState("");
   const uid = React.useId();
   const pickId = `${uid}-who`;
   const people = roster.filter((r) => r.userId !== viewerId && !!r.username);
+  const picked = people.find((p) => p.userId === who) ?? null;
 
   if (!open) {
     return (
@@ -83,7 +86,7 @@ export function ClassReportPanel({
               Pick a person
             </option>
             {people.map((p) => (
-              <option key={p.userId} value={p.username!}>
+              <option key={p.userId} value={p.userId}>
                 @{p.username}
                 {ROLE_WORD[p.role]}
               </option>
@@ -99,17 +102,18 @@ export function ClassReportPanel({
         </div>
       )}
 
-      {who ? (
+      {picked ? (
         <div className="mt-3">
           <ReportControl
-            key={who}
+            key={picked.userId}
             reasons={CLASS_REPORT_REASONS}
-            username={who}
+            username={picked.username!}
+            userId={picked.userId}
             contentKind="class"
             contentId={classId}
             surface="class"
-            label={`Report @${who}`}
-            what={`@${who} in this class`}
+            label={`Report @${picked.username}`}
+            what={`@${picked.username} in this class`}
             defaultOpen
           />
         </div>

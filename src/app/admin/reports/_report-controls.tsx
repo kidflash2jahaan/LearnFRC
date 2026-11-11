@@ -110,7 +110,10 @@ export function ReportControls({
             disabled={pending}
             className="mt-0.5 size-4 shrink-0"
           />
-          <span>When removing, also replace the username with a member number</span>
+          <span>
+            When removing, also replace the username with a generated one, which they&rsquo;re asked to
+            keep or change
+          </span>
         </label>
       ) : null}
 

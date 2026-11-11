@@ -32,8 +32,9 @@ import { fail, type AppUser, type Result } from "@/lib/app/result";
  * Three answers to a report, each closing it and logging to moderation_log:
  *   - resolve: looked at, nothing to take down (admins);
  *   - remove the content: a profile's bio and picture are cleared, and the
- *     handle replaced with a `memberNNNNNN` one when it was the problem (the
- *     old handle goes to name_moderation_log, as the name scan does); an
+ *     handle replaced with a generated one (`gearbox_4821`, flagged so they're
+ *     asked to keep it or pick their own) when it was the problem (the old
+ *     handle goes to name_moderation_log, as the name scan does); an
  *     edit's note, or a proposal's title and note, are cleared and a pending
  *     one is turned down (admins);
  *   - ban the account: the site's existing ban (the email on banned_emails
@@ -462,21 +463,26 @@ export async function resolveReport(
   return { ok: true, status: "resolved" };
 }
 
-/** A free `memberNNNNNN` handle (the same shape the name scan uses). */
-async function placeholderHandle(): Promise<string> {
-  const admin = createAdminClient();
-  for (let i = 0; i < 20; i++) {
-    const candidate = "member" + Math.floor(100000 + Math.random() * 899999).toString();
-    const { data } = await admin.from("profiles").select("id").eq("username", candidate).maybeSingle();
-    if (!data) return candidate;
+/**
+ * A free generated handle like `gearbox_4821`, from the database's
+ * `generate_username`: the same one the name scan and sign-ups without a
+ * username get (src/lib/usernames.ts). Null when there isn't one.
+ */
+async function generatedHandle(): Promise<string | null> {
+  const { data, error } = await createAdminClient().rpc("generate_username");
+  if (error || typeof data !== "string" || !data) {
+    console.error("removeReportedContent: generate_username:", error?.message ?? "no handle");
+    return null;
   }
-  return "member" + Date.now().toString().slice(-8);
+  return data;
 }
 
 /**
  * Takes the reported content down and closes every open report about it.
- * For a profile, `replaceUsername` also swaps the handle for a placeholder
- * (reversible from name_moderation_log); the bio and picture always go.
+ * For a profile, `replaceUsername` also swaps the handle for a generated one
+ * (reversible from name_moderation_log), flagged like any generated username,
+ * so the person is asked to keep it or pick their own and live classes refuse
+ * it until they do; the bio and picture always go.
  */
 export async function removeReportedContent(
   user: AppUser,
@@ -536,12 +542,22 @@ export async function removeReportedContent(
   if (prof) {
     const update: { bio: null; avatar_url: null; username?: string } = { bio: null, avatar_url: null };
     if (replaceUsername) {
-      newUsername = await placeholderHandle();
+      newUsername = await generatedHandle();
+      if (!newUsername) return failed("profile");
       update.username = newUsername;
     }
     const { error } = await admin.from("profiles").update(update).eq("id", prof.id);
     if (error) return failed("profile", error.message);
     if (newUsername) {
+      // A write of its own, after the rename: the database's username guard
+      // clears the flag on a rename, and can't tell "set it to true" from
+      // "didn't mention it" on a row that's already flagged (the name scan in
+      // src/app/api/name-scan/route.ts does the same).
+      const { error: flagError } = await admin
+        .from("profiles")
+        .update({ username_generated: true })
+        .eq("id", prof.id);
+      if (flagError) console.error("removeReportedContent: flagging the new username failed:", flagError.message);
       // Same record the name scan keeps, so a rename can be reversed.
       await admin.from("name_moderation_log").insert({
         user_id: prof.id,

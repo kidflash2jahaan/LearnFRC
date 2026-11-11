@@ -140,6 +140,7 @@ export function RoomControls({
                         key={username}
                         reasons={CLASS_REPORT_REASONS}
                         username={username}
+                        userId={p.customParticipantId}
                         contentKind="class"
                         contentId={classId}
                         surface="class"
