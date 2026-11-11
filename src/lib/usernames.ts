@@ -67,6 +67,8 @@ export const RESERVED_USERNAME_PREFIXES: readonly string[] = ["learner", "learnf
  * refused, while `admins_fan`, `modular` and `stafford` are fine. A word at
  * the start counts when it's followed by `_`, a digit or nothing; at the end,
  * when `_` comes before it. Mirrored in the migration's `username_is_reserved`.
+ * `safety` and `security` are reserved only as whole names: "safety captain"
+ * is a normal FRC student role, so `safety_captain_254` is fine.
  */
 export const RESERVED_STAFF_WORDS: readonly string[] = [
   "admin",
@@ -76,8 +78,6 @@ export const RESERVED_STAFF_WORDS: readonly string[] = [
   "staff",
   "official",
   "support",
-  "safety",
-  "security",
 ];
 
 const RESERVED = new Set(RESERVED_USERNAMES);
