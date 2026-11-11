@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getOverviewStats } from "@/lib/queries";
-import { needsUsernameSetup } from "@/lib/onboarding-server";
+import { needsUsernameStep, usernameStepHref } from "@/lib/usernames";
 import { getSession } from "@/lib/auth";
 import { FirstRunGoalPicker } from "@/components/onboarding/first-run-goal-picker";
 import { FirstRunPlan } from "@/components/onboarding/first-run-plan";
@@ -76,9 +76,9 @@ export default async function StartPage({
   }));
   const { user, profile } = await getSession();
   if (!user) redirect("/login?next=/start");
-  // Required handle first: OAuth lands here, and the setup step lives on the
-  // dashboard, so send them there until they have one.
-  if (needsUsernameSetup(profile)) redirect("/dashboard");
+  // A generated username first: OAuth already sends a new account through the
+  // step, and this catches anyone who arrives here another way.
+  if (needsUsernameStep(profile)) redirect(usernameStepHref("/start"));
 
   const { change } = await searchParams;
   const goalId = await readStartGoalId();

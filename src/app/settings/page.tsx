@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { needsUsernameSetup } from "@/lib/onboarding-server";
+import { needsUsernameStep, usernameStepHref } from "@/lib/usernames";
 import { getSession } from "@/lib/auth";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import { SettingsForm } from "@/components/settings/settings-form";
@@ -44,8 +44,8 @@ const ROLE_LABELS: Record<string, string> = {
 export default async function SettingsPage() {
   const { user, profile, isAdmin } = await getSession();
   if (!user) redirect("/login?next=/settings");
-  // Required handle: hold them on the setup step (see onboarding-server.ts).
-  if (needsUsernameSetup(profile)) redirect("/dashboard");
+  // A generated username: choose or keep it first (src/lib/usernames.ts).
+  if (needsUsernameStep(profile)) redirect(usernameStepHref("/settings"));
 
   // The reminder switch's starting state. Read on its own, service-role and
   // scoped to the caller's id, rather than widening getProfile's column list,

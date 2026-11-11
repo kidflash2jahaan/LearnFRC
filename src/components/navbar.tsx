@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Logo } from "@/components/logo";
 import { Avatar } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -17,7 +17,28 @@ import {
 import { signOut } from "@/app/actions/auth";
 import { createClient } from "@/lib/supabase/client";
 import type { Profile } from "@/lib/types";
+import { usernameStepHref } from "@/lib/usernames";
 import { EmailChoicePrompt } from "@/components/settings/email-choice-prompt";
+
+/**
+ * Pages the username step never interrupts: the step itself and the rest of
+ * /account, the sign-in pages around it, and the pages someone may need to
+ * read first (privacy, terms) or that act on a link from an email.
+ */
+const USERNAME_STEP_EXEMPT = [
+  "/account",
+  "/auth",
+  "/login",
+  "/signup",
+  "/forgot-password",
+  "/privacy",
+  "/terms",
+  "/unsubscribe",
+];
+
+function usernameStepExempt(pathname: string): boolean {
+  return USERNAME_STEP_EXEMPT.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+}
 
 const NAV = [
   { href: "/guides", label: "Guides" },
@@ -112,6 +133,7 @@ function Caret() {
  */
 export function Navbar() {
   const pathname = usePathname();
+  const router = useRouter();
   const [me, setMe] = React.useState<Me>({
     authed: false,
     profile: null,
@@ -119,6 +141,11 @@ export function Navbar() {
     isSuperAdmin: false,
   });
   const [loaded, setLoaded] = React.useState(false);
+  // The page `me` was last read from the server on, until the username-step
+  // check below has looked at it once. The header outlives client
+  // navigations, so after that the answer may be from before the person kept
+  // or chose a name.
+  const meReadOn = React.useRef<string | null>(null);
 
   // Auth is fetched client-side so the root layout can stay static/cacheable.
   React.useEffect(() => {
@@ -128,6 +155,7 @@ export function Navbar() {
         .then((r) => r.json())
         .then((d) => {
           if (active) {
+            meReadOn.current = window.location.pathname;
             setMe(d);
             setLoaded(true);
           }
@@ -142,9 +170,40 @@ export function Navbar() {
     };
   }, []);
 
+  // THE USERNAME STEP, on pages that don't ask for it themselves (lessons,
+  // articles, tools: most of them are static). An account still carrying a
+  // generated username goes to /account/username once, and comes back here
+  // after. The signed-in pages that need a settled name (dashboard, settings,
+  // start, bookmarks, profile) redirect on the server instead.
+  const usernameGenerated = me.authed && me.profile?.username_generated === true;
+  React.useEffect(() => {
+    if (!loaded || !usernameGenerated) return;
+    const fresh = meReadOn.current === pathname;
+    meReadOn.current = null;
+    if (usernameStepExempt(pathname)) return;
+    const here = () => usernameStepHref(window.location.pathname + window.location.search);
+    if (fresh) {
+      router.replace(here());
+      return;
+    }
+    // Stale: ask the server again before sending anyone anywhere.
+    let active = true;
+    fetch("/api/me", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d: Me) => {
+        if (!active) return;
+        if (d.authed && d.profile?.username_generated === true) router.replace(here());
+        else setMe(d);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [loaded, usernameGenerated, pathname, router]);
+
   const { authed, profile, email, isAdmin, isSuperAdmin } = me;
   const openSearch = () => window.dispatchEvent(new Event("open-search"));
-  const who = profile?.full_name || profile?.username || "Learner";
+  const who = profile?.full_name || profile?.username || "Your account";
 
   return (
     <>

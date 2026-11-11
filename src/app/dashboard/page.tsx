@@ -23,8 +23,8 @@ import {
   getReferralCount,
   getTeamMemberCount,
 } from "@/lib/queries";
-import { suggestUsername } from "@/lib/onboarding";
-import { getProfileSetupState, needsUsernameSetup } from "@/lib/onboarding-server";
+import { getProfileSetupState } from "@/lib/onboarding-server";
+import { needsUsernameStep, usernameStepHref } from "@/lib/usernames";
 import { createClient } from "@/lib/supabase/server";
 import { clampPct, pluralize } from "@/lib/utils";
 import type { Achievement } from "@/lib/types";
@@ -102,38 +102,14 @@ export default async function DashboardPage() {
   const { user, profile } = await getSession();
   if (!user) redirect("/login?next=/dashboard");
 
-  // Google sign-ins never see the signup form, so they arrive with no handle
-  // and (70% of them) no team number. Ask once, here, where OAuth lands them.
-  const setup = await getProfileSetupState(profile);
+  // A generated username (Google sign-in never shows the signup form): choose
+  // or keep it first, on its own page. Redirecting before the dashboard's
+  // queries also means we do not spend them.
+  if (needsUsernameStep(profile)) redirect(usernameStepHref("/dashboard"));
 
-  // A handle is required, so this is a hard stop rather than a banner they can
-  // scroll past. Email signup cannot mint an account without one; Google
-  // sign-in skips that form, and letting the ask be dismissed left 26 accounts
-  // with no handle, no profile URL, and a bare "Learner" on the leaderboard.
-  // Returning before the dashboard's queries also means we do not spend them.
-  if (needsUsernameSetup(profile)) {
-    return (
-      <section className="nb-wrap pb-[clamp(3rem,6vw,5rem)] pt-[clamp(2.2rem,5vw,4rem)]">
-        <div className="max-w-[38rem]">
-          <p className="nb-marker">one thing first</p>
-          <h1 className="text-[clamp(1.9rem,1.3rem+2vw,2.9rem)]">
-            Pick the handle your team will see.
-          </h1>
-          <p className="nb-lede mt-[clamp(0.9rem,2vw,1.3rem)]">
-            It becomes your profile address and the name on the leaderboard.
-            Nothing else on the account works until it is set.
-          </p>
-          <div className="mt-[clamp(1.4rem,2.6vw,2rem)]">
-            <ProfileSetupForm
-              mode="username"
-              suggested={suggestUsername(user.email)}
-              required
-            />
-          </div>
-        </div>
-      </section>
-    );
-  }
+  // Google sign-ins never see the signup form, so 70% of them arrive with no
+  // team number. Ask once, here, skippable.
+  const setup = await getProfileSetupState(profile);
 
   const supabase = await createClient();
 
@@ -394,15 +370,9 @@ export default async function DashboardPage() {
       {(setup.show || completedCount === 0) && (
         <section className="nb-wrap pt-[clamp(2.2rem,5vw,3.6rem)]">
           <div className="grid gap-[clamp(1rem,2.4vw,1.6rem)]">
-            {/* Google sign-ins have no handle and usually no team. Ask once,
-                here, skippable, before anything else on the page. */}
-            {setup.show && (
-              <ProfileSetupForm
-                mode={setup.mode}
-                suggested={suggestUsername(user.email)}
-                required={setup.required}
-              />
-            )}
+            {/* Google sign-ins usually have no team. Ask once, here,
+                skippable, before anything else on the page. */}
+            {setup.show && <ProfileSetupForm mode={setup.mode} />}
 
             {/* FIRST RUN. `FirstRunLaunch` renders the goal-aware five-lesson
                 plan when the learner already answered the one question on
