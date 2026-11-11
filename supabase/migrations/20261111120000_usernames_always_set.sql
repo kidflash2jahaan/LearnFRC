@@ -47,7 +47,7 @@ returns boolean language sql immutable set search_path = '' as $$
     'member','someone','nobody','unknown','anonymous','deleted','null','undefined',
     'teacher','student','parent','guardian'])
     or exists (select 1 from unnest(array[
-      'admin','administrator','mod','moderator','staff','official','support','safety','security']) w
+      'admin','administrator','mod','moderator','staff','official','support']) w
       where u ~ ('^' || w || '([_0-9]|$)') or u ~ ('_' || w || '$'));
 $$;
 

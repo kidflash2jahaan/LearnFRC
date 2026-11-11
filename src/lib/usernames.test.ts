@@ -76,13 +76,20 @@ test("a staff word at the start or end of a name is refused", () => {
     "support_team",
     "official_mod",
     "staff_42",
-    "safety_first",
-    "team_security",
   ]) {
     assert.equal(isReservedUsername(u), true, u);
     assert.equal(usernameShapeError(u), USERNAME_SENTENCES.reserved, u);
   }
-  for (const u of ["stafford", "supporter_9", "modular", "admins_fan", "officially_cool", "nomad"]) {
+  for (const u of [
+    "stafford",
+    "supporter_9",
+    "modular",
+    "admins_fan",
+    "officially_cool",
+    "nomad",
+    "safety_captain_254",
+    "team_security",
+  ]) {
     assert.equal(isReservedUsername(u), false, u);
   }
 });
