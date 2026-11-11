@@ -6,6 +6,7 @@ import { useActionState } from "react";
 import { signIn, signUp, type AuthState } from "@/app/actions/auth";
 import { GoogleSignInButton } from "@/components/auth/google-button";
 import { USERNAME_MAX, USERNAME_MIN } from "@/lib/usernames";
+import { safeNextPath } from "@/lib/safe-next";
 
 type Mode = "login" | "signup";
 
@@ -67,7 +68,7 @@ export function AuthForm({
 
   const [showPassword, setShowPassword] = React.useState(false);
 
-  const nextValue = next && next.startsWith("/") ? next : "";
+  const nextValue = safeNextPath(next) ?? "";
   const switchHref = isSignup
     ? `/login${nextValue ? `?next=${encodeURIComponent(nextValue)}` : ""}`
     : `/signup${nextValue ? `?next=${encodeURIComponent(nextValue)}` : ""}`;

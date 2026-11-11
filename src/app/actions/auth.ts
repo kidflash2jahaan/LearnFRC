@@ -9,6 +9,7 @@ import {
   requestIp,
   resolveSignInEmail,
 } from "@/lib/app/accounts";
+import { safeNextPath } from "@/lib/safe-next";
 
 export type AuthState =
   | {
@@ -20,11 +21,9 @@ export type AuthState =
     }
   | undefined;
 
-/** Only allow same-origin relative paths (blocks //evil.com, /\evil.com). */
+/** Only same-site paths (src/lib/safe-next.ts); anything else is the dashboard. */
 function safeNext(n: string): string {
-  return n.startsWith("/") && !n.startsWith("//") && !n.startsWith("/\\")
-    ? n
-    : "/dashboard";
+  return safeNextPath(n) ?? "/dashboard";
 }
 
 export async function signIn(

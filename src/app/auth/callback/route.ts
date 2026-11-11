@@ -4,6 +4,7 @@ import { readSourceCookie } from "@/lib/signup-attribution";
 import { postAuthDestination } from "@/lib/first-run";
 import { completeOAuthSignIn } from "@/lib/app/accounts";
 import { usernameStepHref } from "@/lib/usernames";
+import { safeNextPath } from "@/lib/safe-next";
 
 /**
  * THE OAUTH DOOR, where Google puts people down.
@@ -35,7 +36,8 @@ import { usernameStepHref } from "@/lib/usernames";
  * which keeps one definition of "new account" in this route rather than two
  * that can drift apart.
  *
- * WHAT IS DELIBERATELY LEFT ALONE. An explicit `next` is handed back verbatim:
+ * WHAT IS DELIBERATELY LEFT ALONE. An explicit `next` is handed back verbatim,
+ * once safeNextPath (src/lib/safe-next.ts) has checked it's a same-site path:
  * an invite link, a lesson someone was part-way through while signed out, a
  * tool page. Only the literal string "/dashboard" is ever swapped out. `ref`
  * and `via` are read straight off this URL for attribution, and the
@@ -53,14 +55,7 @@ import { usernameStepHref } from "@/lib/usernames";
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
-  const nextParam = searchParams.get("next");
-  const next =
-    nextParam &&
-    nextParam.startsWith("/") &&
-    !nextParam.startsWith("//") &&
-    !nextParam.startsWith("/\\")
-      ? nextParam
-      : "/dashboard";
+  const next = safeNextPath(searchParams.get("next")) ?? "/dashboard";
 
   // Set only once a brand-new account is confirmed, and read once at the very
   // bottom to choose between /start and the resolved destination.

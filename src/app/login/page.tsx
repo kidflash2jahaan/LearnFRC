@@ -1,6 +1,7 @@
 import { AuthForm } from "@/components/auth/auth-form";
 import { HardRedirect } from "@/components/auth/hard-redirect";
 import { getSession } from "@/lib/auth";
+import { safeNextPath } from "@/lib/safe-next";
 import { SignInSheet, SignInAside } from "./_auth-scene";
 
 export const metadata = {
@@ -28,7 +29,7 @@ export default async function LoginPage({
   searchParams: Promise<{ next?: string; notice?: string; email?: string }>;
 }) {
   const { next, notice, email } = await searchParams;
-  const safeNext = next && next.startsWith("/") ? next : undefined;
+  const safeNext = safeNextPath(next);
   const { user } = await getSession();
   // Already signed in (including right after the sign-in action sets cookies
   // and Next refreshes this route): HARD redirect so every layout picks up the

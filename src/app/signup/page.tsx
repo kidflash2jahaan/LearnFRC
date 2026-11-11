@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { DEPT_CATALOG } from "@/lib/dept-catalog";
 import { AuthForm } from "@/components/auth/auth-form";
 import { getSession } from "@/lib/auth";
+import { safeNextPath } from "@/lib/safe-next";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const metadata = {
@@ -52,7 +53,7 @@ export default async function SignupPage({
   const { user } = await getSession();
   if (user) redirect("/dashboard");
 
-  const safeNext = next && next.startsWith("/") ? next : undefined;
+  const safeNext = safeNextPath(next);
   const refValue =
     (ref || "").toLowerCase().replace(/[^a-z0-9_]/g, "") || undefined;
 
