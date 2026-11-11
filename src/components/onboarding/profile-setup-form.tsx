@@ -70,6 +70,12 @@ export function ProfileSetupForm({
   );
   // Which button sent the form, so only that one says it's working.
   const [intent, setIntent] = React.useState<"save" | "keep">("save");
+  // Controlled, because React resets a form after every action, even one
+  // that comes back refused. Left to their defaults, a refused name (taken,
+  // reserved) would snap back to the generated handle, and pressing Save
+  // again would quietly keep the handle the person was trying to replace.
+  const [username, setUsername] = React.useState(handle ?? "");
+  const [teamNumber, setTeamNumber] = React.useState("");
 
   const choose = mode === "choose";
   const busy = isPending || !!state?.success;
@@ -117,7 +123,8 @@ export function ProfileSetupForm({
               minLength={USERNAME_MIN}
               maxLength={USERNAME_MAX}
               pattern="[A-Za-z0-9_]+"
-              defaultValue={handle ?? ""}
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
               disabled={busy}
               aria-describedby="setup-username-hint"
               className="nb-input"
@@ -141,6 +148,8 @@ export function ProfileSetupForm({
             required={!choose}
             min={1}
             max={99999}
+            value={teamNumber}
+            onChange={(e) => setTeamNumber(e.target.value)}
             disabled={busy}
             className="nb-input"
           />

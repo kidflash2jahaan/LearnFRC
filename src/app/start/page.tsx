@@ -76,11 +76,13 @@ export default async function StartPage({
   }));
   const { user, profile } = await getSession();
   if (!user) redirect("/login?next=/start");
-  // A generated username first: OAuth already sends a new account through the
-  // step, and this catches anyone who arrives here another way.
-  if (needsUsernameStep(profile)) redirect(usernameStepHref("/start"));
-
   const { change } = await searchParams;
+  // A generated username first: OAuth already sends a new account through the
+  // step, and this catches anyone who arrives here another way. `?change=1`
+  // comes back with them.
+  if (needsUsernameStep(profile))
+    redirect(usernameStepHref(change === "1" ? "/start?change=1" : "/start"));
+
   const goalId = await readStartGoalId();
   // `?change=1` is the only way back to the question once it is answered, so a
   // wrong tap is never permanent, but the default is always to move forward.

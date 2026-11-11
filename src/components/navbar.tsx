@@ -22,8 +22,11 @@ import { EmailChoicePrompt } from "@/components/settings/email-choice-prompt";
 
 /**
  * Pages the username step never interrupts: the step itself and the rest of
- * /account, the sign-in pages around it, and the pages someone may need to
- * read first (privacy, terms) or that act on a link from an email.
+ * /account, the sign-in pages around it, the pages someone may need to read
+ * first (privacy, terms) or that act on a link from an email, and the ways to
+ * get help or leave without accepting a handle first: contact, and Settings
+ * (email choices and account deletion live there, and a rename there clears
+ * the step too).
  */
 const USERNAME_STEP_EXEMPT = [
   "/account",
@@ -34,6 +37,8 @@ const USERNAME_STEP_EXEMPT = [
   "/privacy",
   "/terms",
   "/unsubscribe",
+  "/contact",
+  "/settings",
 ];
 
 function usernameStepExempt(pathname: string): boolean {
@@ -173,8 +178,8 @@ export function Navbar() {
   // THE USERNAME STEP, on pages that don't ask for it themselves (lessons,
   // articles, tools: most of them are static). An account still carrying a
   // generated username goes to /account/username once, and comes back here
-  // after. The signed-in pages that need a settled name (dashboard, settings,
-  // start, bookmarks, profile) redirect on the server instead.
+  // after. The signed-in pages that need a settled name (dashboard, start,
+  // bookmarks, profile) redirect on the server instead.
   const usernameGenerated = me.authed && me.profile?.username_generated === true;
   React.useEffect(() => {
     if (!loaded || !usernameGenerated) return;

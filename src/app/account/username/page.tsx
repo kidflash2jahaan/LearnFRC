@@ -17,8 +17,9 @@ export const metadata: Metadata = {
  * keep it, or pick your own. Either clears `profiles.username_generated`.
  *
  * People are sent here from the OAuth callback (before the page they came
- * for), from the signed-in pages that need a settled name (dashboard,
- * settings, start, bookmarks, profile) and from the navbar on any other page.
+ * for), from the signed-in pages that need a settled name (dashboard, start,
+ * bookmarks, profile) and from the navbar on most other pages (not Settings
+ * or contact, so nobody has to accept a handle to get help or leave).
  * `next` is where they were headed; the form goes there afterwards. It's only
  * ever a same-site path (safeNextPath), so this can't be used to bounce
  * someone off the site.

@@ -264,6 +264,8 @@ export async function updateProfileFields(
  *
  * For an account whose username is its own, `username` is ignored, so this is
  * not a back door around Settings for renames; only the team number saves.
+ * Keeping (or sending the current name) once the step is already done answers
+ * ok with nothing written.
  */
 export async function saveProfileSetupFields(
   user: AppUser,
@@ -315,10 +317,17 @@ export async function saveProfileSetupFields(
     payload.team_number = team_number;
   }
 
-  // Nothing to write: a team-only ask left blank. Say so rather than reporting
-  // a silent success that leaves the same card sitting there.
-  if (Object.keys(payload).length === 0)
+  if (Object.keys(payload).length === 0) {
+    // The username step is already done (Keep pressed in another tab, or on the
+    // website while the app still shows its cached gate): keeping again, or
+    // sending the same name back, has nothing left to do, so the step moves on.
+    const sameName =
+      currentUsername !== null && normalizeUsername(fields.username.trim()) === currentUsername;
+    if (!wantsUsername && (fields.keep || sameName)) return { ok: true };
+    // Nothing to write: a team-only ask left blank. Say so rather than
+    // reporting a silent success that leaves the same card sitting there.
     return fail("validation", "Enter your team number, or choose Skip for now.");
+  }
 
   // Guard the username write against a race: only touch the exact handle we
   // decided was still generated (or the missing one). The `.eq("id", user.id)`
