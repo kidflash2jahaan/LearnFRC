@@ -456,7 +456,7 @@ Request (every field optional; a field left out keeps its current value, `null` 
 |---|---|---|
 | `fullName`, `bio` | String? | Trimmed; blank means none. Profanity filtered. |
 | `avatarUrl` | String? | Must start with `http://` or `https://`. |
-| `username` | String? | Lowercased and reduced to `a-z`, `0-9`, `_`; 3 to 20 characters; not a reserved name (like `admin`, `support`, or anything starting `learner` or `learnfrc`); unique; profanity filtered. The length and reserved rules apply only to a new name, so a longer name someone already has still saves unchanged. `null` or `""` is refused (400). A new name clears `usernameGenerated`. |
+| `username` | String? | Lowercased and reduced to `a-z`, `0-9`, `_`; 3 to 20 characters; not a reserved name (like `admin`, `support`, anything starting `learner` or `learnfrc`, or a staff word at the start or end like `admin_team`, `mod1` or `lf_admin`); unique; profanity filtered. The length and reserved rules apply only to a new name, so a longer name someone already has still saves unchanged. `null` or `""` is refused (400). A new name clears `usernameGenerated`. |
 | `teamNumber` | Int? | 1 to 99999. Changing it is limited to 3 changes a day. |
 | `role` | String? | `student`, `mentor`, `alum`, `coach`, `other`; anything else saves as `student`. |
 
@@ -488,7 +488,7 @@ Request:
 
 `teamNumber` is optional (Int or null). `username` is ignored for an account whose handle is its own, so the app's team-only ask (`AccountStore.setupTeamNumber(_:)`) leaves it out and sends `{ "teamNumber": 254 }`.
 
-On the username step, sending the current (generated) username back unchanged keeps it, the site's "Keep @handle": 200, and `usernameGenerated` and `needsUsernameSetup` turn false. A different username replaces it, with the same rules as `PATCH /api/app/profile`.
+On the username step, sending the current (generated) username back unchanged keeps it, the site's "Keep @handle": 200, and `usernameGenerated` and `needsUsernameSetup` turn false. A different username replaces it, with the same rules as `PATCH /api/app/profile`. Sending the current username again once the step is already done (kept on the website, or in another window) is also 200, with nothing changed, so a gate drawn from a cached `/me` can always move on.
 
 Response 200: the updated MeProfile.
 

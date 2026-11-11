@@ -61,9 +61,9 @@ struct BoardLearner: Codable, Hashable, Sendable, Identifiable {
         )
     }
 
-    /// Usernames only, never real names (the site's `displayName`). Every account has a
-    /// username since 2026-11-11, so the fallback is only for older data.
-    var displayName: String { username ?? "LearnFRC member" }
+    /// Usernames only, never real names (the site's `displayName`, `username ?? ""`). Every
+    /// account has a username since 2026-11-11, so there's no stand-in name to print.
+    var displayName: String { username ?? "" }
     var avatarURL: URL? { CommunityFormat.safeURL(avatarUrl) }
     /// "team 9765 / student"
     var detailSlug: String { CommunityFormat.teamRoleSlug(teamNumber: teamNumber, role: role) }

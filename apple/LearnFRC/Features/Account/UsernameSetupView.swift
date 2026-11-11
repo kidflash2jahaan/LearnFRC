@@ -98,15 +98,27 @@ struct UsernameSetupView: View {
         #if os(macOS)
         .defaultFocus($focus, asksForUsername ? .username : .team)
         #endif
-        .task {
-            // The current (generated) handle, as the site prefills it; never anything from
-            // the email, and never an old placeholder. The team box starts blank in every
-            // mode, like the site's (it never prefills the team).
-            if asksForUsername, username.isEmpty {
-                let current = account.profile?.username
-                username = (account.me?.isPlaceholderUsername == true ? nil : current) ?? ""
-            }
-        }
+        .task { prefillUsername() }
+        // A gate drawn from a cached /me that had no username yet gets the handle once a
+        // fresh /me brings it, so keeping it never means typing it back in.
+        .onChange(of: account.profile?.username) { _, _ in prefillUsername() }
+    }
+
+    /// The current (generated) handle, as the site prefills it; never anything from the
+    /// email, and never an old placeholder. Only into an empty box, so it never replaces
+    /// what someone typed. The team box starts blank in every mode, like the site's (it
+    /// never prefills the team).
+    private func prefillUsername() {
+        guard asksForUsername, username.isEmpty else { return }
+        let current = account.profile?.username
+        username = (account.me?.isPlaceholderUsername == true ? nil : current) ?? ""
+    }
+
+    /// The handle the account has now, when the box still holds it unchanged: saving then
+    /// keeps it, the site's "Keep @handle".
+    private var keepsCurrentHandle: String? {
+        guard required, let current = account.profile?.username, !current.isEmpty else { return nil }
+        return AccountStore.normalizeUsername(username.accountTrimmed) == current ? current : nil
     }
 
     /// The site's lede on `/account/username`, naming the handle the account was given.
@@ -195,10 +207,19 @@ struct UsernameSetupView: View {
         .sensoryFeedback(.error, trigger: error) { old, new in old == nil && new != nil }
     }
 
+    /// The gate's one button says what it will do, like the site's two: "Keep @handle"
+    /// while the box holds the current handle, "Save username" once it's changed. The
+    /// optional cards keep "Save it".
+    private var saveLabel: String {
+        guard required else { return isSaving ? "Saving" : "Save it" }
+        if let kept = keepsCurrentHandle { return isSaving ? "Keeping" : "Keep @\(kept)" }
+        return isSaving ? "Saving" : "Save username"
+    }
+
     @ViewBuilder
     private var actions: some View {
         Button(action: save) {
-            Text(isSaving ? "Saving" : "Save it")
+            Text(saveLabel)
         }
         .buttonStyle(.ink)
         .keyboardShortcut(.defaultAction)
@@ -216,9 +237,13 @@ struct UsernameSetupView: View {
             error: usernameError,
             onSubmit: { focus = .team }
         )
-        // Like the site's box, it stops taking characters at 20.
+        // Like the site's box, it stops taking characters at 20, except for the handle the
+        // account already has: a few older ones are longer, and cutting one short would
+        // turn keeping it into a rename.
         .onChange(of: username) { _, new in
-            if new.count > Self.maxLength { username = String(new.prefix(Self.maxLength)) }
+            if new.count > Self.maxLength, new != account.profile?.username {
+                username = String(new.prefix(Self.maxLength))
+            }
         }
     }
 
