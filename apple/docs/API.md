@@ -469,7 +469,7 @@ Errors (the site's messages):
 | 400 | `validation` | `Avatar URL must start with http:// or https://` |
 | 400 | `validation` | `Enter a valid FRC team number.` |
 | 400 | `validation` | `Choose a username: at least 3 characters (letters, numbers, _).` (blank or `null`) |
-| 400 | `validation` | `Username must be at least 3 characters (a–z, 0–9, _).` / `Usernames can be up to 20 characters.` / `That username isn't available. Please choose another.` (reserved) |
+| 400 | `validation` | `Username must be at least 3 characters (a–z, 0–9, _).` / `Usernames can be up to 20 characters.` / `That username isn't available. Please choose another.` (reserved) / `Usernames can't include contact details like app names or long numbers. Please choose another.` (a new username only, since everyone in a live class sees it: other apps' names, contact phrases like "dm me", or 7 or more digits in a row; added with live classes, 2026-11) |
 | 400 | `validation` | `That username isn't allowed. Please choose another.` / `That name isn't allowed. Please use a different one.` / `Please remove the inappropriate language from your bio.` |
 | 409 | `conflict` | `That username is already taken.` |
 | 429 | `rate_limited` | `Too many profile updates. Try again in a bit.` (20 an hour) |
@@ -492,7 +492,7 @@ On the username step, sending the current (generated) username back unchanged ke
 
 Response 200: the updated MeProfile.
 
-Errors: 400 `validation` (`Choose a username: at least 3 characters (letters, numbers, _).`, `Username must be at least 3 characters (a–z, 0–9, _).`, `Usernames can be up to 20 characters.`, `That username isn't available. Please choose another.`, `That username isn't allowed. Please choose another.`, `Enter a valid FRC team number.`, `Enter your team number, or choose Skip for now.`), 409 `conflict` (`That username is already taken.`, `Your profile changed in another tab. Reload and retry.`), 429 `rate_limited` (`You've changed your team number a few times today. Try again tomorrow.`, the same 3-a-day budget as `PATCH /api/app/profile`, counted only when the team number changes), 401, 500 `server` (`Couldn't save that. Try again.`).
+Errors: 400 `validation` (`Choose a username: at least 3 characters (letters, numbers, _).`, `Username must be at least 3 characters (a–z, 0–9, _).`, `Usernames can be up to 20 characters.`, `That username isn't available. Please choose another.`, `Usernames can't include contact details like app names or long numbers. Please choose another.` (a new username only; keeping the current one never gets it), `That username isn't allowed. Please choose another.`, `Enter a valid FRC team number.`, `Enter your team number, or choose Skip for now.`), 409 `conflict` (`That username is already taken.`, `Your profile changed in another tab. Reload and retry.`), 429 `rate_limited` (`You've changed your team number a few times today. Try again tomorrow.`, the same 3-a-day budget as `PATCH /api/app/profile`, counted only when the team number changes), 401, 500 `server` (`Couldn't save that. Try again.`).
 
 ### POST /api/app/email-opt-in
 
@@ -749,7 +749,7 @@ Errors (the site's messages):
 | 400 | `validation` | `Email and password are required.` |
 | 400 | `validation` | `Password must be at least 8 characters.` |
 | 400 | `validation` | `Choose a username: at least 3 characters (letters, numbers, _).` (blank) |
-| 400 | `validation` | `Username must be at least 3 characters (a–z, 0–9, _).` / `Usernames can be up to 20 characters.` / `That username isn't available. Please choose another.` (reserved) |
+| 400 | `validation` | `Username must be at least 3 characters (a–z, 0–9, _).` / `Usernames can be up to 20 characters.` / `That username isn't available. Please choose another.` (reserved) / `Usernames can't include contact details like app names or long numbers. Please choose another.` (a new username only, since everyone in a live class sees it: other apps' names, contact phrases like "dm me", or 7 or more digits in a row; added with live classes, 2026-11) |
 | 400 | `validation` | `That username isn't allowed. Please choose another.` / `That name isn't allowed. Please use a different one.` |
 | 400 | `validation` | `Enter a valid FRC team number.` |
 | 400 | `validation` | `This account can't be created. If you believe this is a mistake, contact support.` |
@@ -884,7 +884,8 @@ Request, a live class from the classes list (its title and description, filed ag
 | Field | Type | Notes |
 |---|---|---|
 | `contentKind` | String? | `profile` (the default), `class`, `edit` or `submission`. The app sends `profile` and `class`. |
-| `username` | String | The person reported. Required for `profile` and `class` (for a class, its teacher, or on the website someone from the class); ignored for an edit or a proposal, whose author is read from the row. |
+| `username` | String | The person reported. Required for `profile`, and for `class` unless `userId` is sent (for a class, its teacher, or on the website someone from the class); ignored for an edit or a proposal, whose author is read from the row. |
+| `userId` | String? | Added with live classes (2026-11). A `class` report only: the reported person's account id. When it's sent the person is found by it and `username` is ignored, so a rename between reading the class and sending the report can't miss them or reach someone who took the old name. The website's class report panel and room send it; the app's classes list doesn't have the teacher's id and keeps sending `username`, which still works. Ignored for every other kind. A `userId` that isn't a UUID answers 404 `There's no learner with that username.` |
 | `contentId` | String? | For `class`, the class's id (`classes[].id` in `GET /api/app/classes`). For an edit or a proposal, its id (website only). Left out for a profile. |
 | `reason` | String | A `reasons[].id`. A class report also takes the class-only reasons the website's class report panel lists first (`private_contact`, `sexual`, `unsafe`); the app offers the six from `GET /api/app/reports` for every report. |
 | `details` | String? | Up to 1000 characters. Required (5 or more) when `reason` is `other`. |
@@ -959,6 +960,8 @@ Errors: 404 `not_found` (`There's no learner with that username.`), 500 `server`
 Live classes are taught on learnfrc.com by FRC students aged 13 to 17, in LearnFRC's own video rooms (Cloudflare RealtimeKit). The app lists them and opens each one in Safari. There's no video in the app, and it never asks for the camera or the microphone: signing up, the one-time age question, a parent's OK, the recording notice and the room all happen on the website, in the person's own browser session. The rules are in `src/lib/app/classes.ts` (`listUpcomingClasses`, `classEligibility`, `enrollInClass`), which learnfrc.com/classes uses too.
 
 Nothing about classes shows until the site opens them (both `CLASSES_VISIBLE` and `class_settings.classes_visible` on). Until then this route answers `{ "visible": false, "classes": [] }` and the app shows no Home card, no list rows and no "Teach a live class".
+
+Everyone in a class sees each other's username, and a parent's email names the student by it, so classes take only a username the person chose or kept. A generated one (`profile.usernameGenerated` true on `GET /api/app/me`, see the username step) counts as no username: signing up, the age question, a parent's OK, teaching, applying to teach and joining all wait on the website ("Choose the username your classmates will see before you join a class.", with a link to the username step), and so does the class chat, for teachers and LearnFRC staff too. The app needs nothing new for this: its own username gate (`needsUsernameSetup`) asks first, and keeping or replacing the handle there clears it for classes as well.
 
 ### GET /api/app/classes
 
@@ -1464,7 +1467,7 @@ Errors: 404 `not_found` (`That report no longer exists.`), 409 `conflict` (`That
 
 ### POST /api/app/admin/reports/{id}/remove
 
-Bearer, admin. Takes the reported content down and closes every open report about it (`removeReportedContent`). A profile loses its bio and picture, and with `replaceUsername: true` its handle too (a free `memberNNNNNN`, the old one kept in `name_moderation_log`); an edit loses its note, a proposal its title and note, and either is turned down if still pending. Request: `{ "note": "…", "replaceUsername": true }` (both optional). Response 200: `{ "ok": true, "status": "removed", "newUsername": "member482913" }` (`newUsername` null unless replaced).
+Bearer, admin. Takes the reported content down and closes every open report about it (`removeReportedContent`). A profile loses its bio and picture, and with `replaceUsername: true` its handle too (a free generated one like `gearbox_4821`, flagged as generated so the person is asked to keep it or pick their own, as after the name scan; the old one kept in `name_moderation_log`. Before 2026-11-11 it was a `memberNNNNNN`); an edit loses its note, a proposal its title and note, and either is turned down if still pending. Request: `{ "note": "…", "replaceUsername": true }` (both optional). Response 200: `{ "ok": true, "status": "removed", "newUsername": "gearbox_4821" }` (`newUsername` null unless replaced).
 
 Errors: 404, 409 `conflict` (`That report has already been answered.` or `That account is already gone. Close the report instead.`), 500 `server` (`Couldn't take that down. Try again.`), 401, 403 (also the admin-team sentence under resolve, by the same rule).
 
@@ -1518,7 +1521,7 @@ Response 200:
 | `posting` | String | Always `""`. Kept for compatibility. |
 | `rules` | [] | Always empty. Kept for compatibility. |
 | `marketer` | null | Always null. Kept for compatibility. |
-| `roles` | [{ `id`, `title`, `url`, `open`, `status` }] | Added with live classes (2026-11). Only the teacher role, `{ "id": "teacher", "title": "Teach a live class", "url": "https://learnfrc.com/apply/teach", "open": true, "status": ... }`, while live classes are visible; `[]` while they're hidden. `status` is one of `signed-out`, `no-handle`, `device-blocked`, `needs-age`, `adult`, `parent-declined`, `suspended`, `code-outdated`, `teacher`, `pending`, `again`, `new` (`TeachApplyMode` in `src/lib/classes/teacher-rules.ts`), from `teacherApplyRole` in `src/lib/app/class-teachers.ts`. The `marketing` role was retired before release and never shipped. The app doesn't read `roles`: its "Teach a live class" card follows `GET /api/app/classes` (`visible`, `teachUrl`). |
+| `roles` | [{ `id`, `title`, `url`, `open`, `status` }] | Added with live classes (2026-11). Only the teacher role, `{ "id": "teacher", "title": "Teach a live class", "url": "https://learnfrc.com/apply/teach", "open": true, "status": ... }`, while live classes are visible; `[]` while they're hidden. `status` is one of `signed-out`, `no-handle` (no username, or a generated one not yet chosen or kept), `device-blocked`, `needs-age`, `adult`, `parent-declined`, `suspended`, `code-outdated`, `teacher`, `pending`, `again`, `new` (`TeachApplyMode` in `src/lib/classes/teacher-rules.ts`), from `teacherApplyRole` in `src/lib/app/class-teachers.ts`. The `marketing` role was retired before release and never shipped. The app doesn't read `roles`: its "Teach a live class" card follows `GET /api/app/classes` (`visible`, `teachUrl`). |
 
 Errors: 401.
 
