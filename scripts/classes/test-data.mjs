@@ -22,7 +22,13 @@
 //                     Shared row: set it back in a finally step. Deleting
 //                     the account also clears it (on delete set null).
 //     bio=TEXT        profiles.bio (URL-encoded: bio=add%20me%20on%20snap)
-//     nousername      leave the username empty (for needs_handle)
+//     nousername      no username in the sign-up metadata: since the
+//                     2026-11-11 migration the database gives the account a
+//                     generated handle (gearbox_4821) with
+//                     profiles.username_generated set (needs_handle)
+//     generated       keep the lftest username but flag it as generated, as
+//                     if the person hadn't chosen or kept it yet
+//                     (needs_handle; needs that migration)
 //   e.g. create room-and-chat t1:age=16:parent=agreed:teacher s1:age=14:parent=agreed
 //
 // cleanup: deletes the package's test classes (titles starting
@@ -135,7 +141,17 @@ function warnNearCrons() {
 function parseRole(spec) {
   const [name, ...mods] = spec.split(":");
   if (!/^[a-z0-9]{1,12}$/.test(name)) throw new Error(`role name must be a-z and 0-9, up to 12: ${name}`);
-  const out = { name, age: null, parent: null, teacher: false, site: null, safetylead: false, bio: null, nousername: false };
+  const out = {
+    name,
+    age: null,
+    parent: null,
+    teacher: false,
+    site: null,
+    safetylead: false,
+    bio: null,
+    nousername: false,
+    generated: false,
+  };
   for (const m of mods) {
     const [k, ...rest] = m.split("=");
     const v = rest.join("=");
@@ -146,11 +162,13 @@ function parseRole(spec) {
     else if (k === "safetylead") out.safetylead = true;
     else if (k === "bio") out.bio = decodeURIComponent(v);
     else if (k === "nousername") out.nousername = true;
+    else if (k === "generated") out.generated = true;
     else throw new Error(`unknown modifier ${k}`);
   }
   if (out.age !== null && !(Number.isInteger(out.age) && out.age >= 1 && out.age <= 99)) throw new Error("bad age");
   if (out.parent && !["agreed", "sent", "declined", "revoked", "expired"].includes(out.parent))
     throw new Error("bad parent status");
+  if (out.generated && out.nousername) throw new Error("generated and nousername don't mix");
   return out;
 }
 
@@ -183,6 +201,12 @@ async function create(pkg, specs) {
     if (!r.nousername) {
       const { error: e } = await db.from("profiles").update({ username, bio: r.bio }).eq("id", id);
       if (e) throw new Error(`profile ${r.name}: ${e.message}`);
+      if (r.generated) {
+        // Its own write: the database's username guard clears the flag on a
+        // rename, and this one doesn't touch username.
+        const { error: g } = await db.from("profiles").update({ username_generated: true }).eq("id", id);
+        if (g) throw new Error(`generated ${r.name}: ${g.message}`);
+      }
     } else if (r.bio) {
       await db.from("profiles").update({ bio: r.bio }).eq("id", id);
     }

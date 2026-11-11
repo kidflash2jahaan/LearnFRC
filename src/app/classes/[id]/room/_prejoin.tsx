@@ -5,6 +5,7 @@ import Link from "next/link";
 import { CLASS_NOTICE, CLASS_NOTICE_CHECKBOX } from "@/lib/classes/notice";
 import { LocalTime } from "@/components/classes/local-time";
 import type { ClassRole } from "@/lib/classes/types";
+import { usernameStepHref } from "@/lib/usernames";
 
 /**
  * The pre-join screen (section 6.5): the class, the recording notice with its
@@ -25,6 +26,7 @@ const BLOCKING = new Set([
   "suspended",
   "blocked",
   "eligibility",
+  "needs_handle",
   "bio",
   "username",
   "cap",
@@ -146,6 +148,11 @@ export function Prejoin({ title, teacherUsername, role, displayName, classId, jo
             {refusal.reason === "eligibility" ? (
               <Link href="/classes/ready" className="nb-link mt-2 inline-block">
                 Finish getting ready for classes
+              </Link>
+            ) : null}
+            {refusal.reason === "needs_handle" ? (
+              <Link href={usernameStepHref(`/classes/${classId}/room`)} className="nb-link mt-2 inline-block">
+                Choose your username
               </Link>
             ) : null}
             {refusal.reason === "bio" ? (

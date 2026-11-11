@@ -1,7 +1,8 @@
 // The teachers package's checks against production with throwaway accounts
 // (classes-design.md 15.2, the teachers row, and the second form decided Nov 9:
 // teacher-application-spec.md section 7):
-//   - applying needs a handle, an age answer of 13 to 17, a full FRC season
+//   - applying needs a handle (one the person chose or kept, never a
+//     generated one), an age answer of 13 to 17, a full FRC season
 //     and the code; the second form's answers are checked all at once (every
 //     problem listed), against the catalog (modules picked, the sample lesson
 //     inside one of them) and for effort (the same answer twice); one pending
@@ -18,7 +19,7 @@
 //   - the emails land in the dev outbox and promise no host at a first class.
 // Everything it makes is deleted at the end (test-data.mjs cleanup teachers).
 // Needs supabase/migrations/20261109121800_teacher_application_answers.sql
-// applied first.
+// and 20261111120000_usernames_always_set.sql applied first.
 //
 //   node --import ./scripts/classes/register.mjs scripts/classes/checks/teachers.check.ts
 
@@ -79,6 +80,7 @@ async function main() {
     "a1:age=16:parent=agreed",
     "a2:age=14",
     "nohandle:nousername",
+    "gen:age=16:parent=agreed:generated",
     "noage",
     "adult:age=19",
     "declp:age=15:parent=declined",
@@ -141,6 +143,14 @@ async function main() {
     const noHandle = await submit("nohandle");
     assert.equal(noHandle.ok, false);
     assert.equal(!noHandle.ok && noHandle.field, "username");
+    assert.equal(!noHandle.ok && noHandle.error, teachers.TEACHER_SENTENCES.noHandle);
+    // A generated username counts as no handle: the form never opens, and
+    // the page never shows it as the name students would see.
+    const generated = await submit("gen");
+    assert.equal(!generated.ok && generated.field, "username");
+    const genState = await teachers.loadTeachApplyState(user("gen"));
+    assert.equal(genState.mode, "no-handle");
+    assert.equal(genState.username, null);
     const noAge = await submit("noage");
     assert.equal(!noAge.ok && noAge.error, teachers.TEACHER_SENTENCES.needsAge);
     const declined = await submit("declp");
@@ -156,7 +166,7 @@ async function main() {
     const { count } = await admin
       .from("teacher_applications")
       .select("id", { count: "exact", head: true })
-      .in("user_id", [acc.nohandle.id, acc.noage.id, acc.declp.id, acc.a1.id]);
+      .in("user_id", [acc.nohandle.id, acc.gen.id, acc.noage.id, acc.declp.id, acc.a1.id]);
     assert.equal(count, 0, "no refused application was stored");
   });
 

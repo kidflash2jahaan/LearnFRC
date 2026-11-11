@@ -13,6 +13,7 @@ import { CLASS_LIMITS, TEACHER_LABEL, earliestJoinFor } from "@/lib/classes/cons
 import { CLASS_NOTICE } from "@/lib/classes/notice";
 import type { ClassDetail, ClassRole, Eligibility } from "@/lib/classes/types";
 import { LocalTime } from "@/components/classes/local-time";
+import { usernameStepHref } from "@/lib/usernames";
 import { lengthLabel, seatsLabel } from "@/components/classes/class-card";
 import { ClassReportPanel } from "@/components/classes/class-report-panel";
 import { EnrollButton, LeaveButton } from "./_enroll";
@@ -91,7 +92,7 @@ function stepFor(state: Eligibility, classId: string): { href: string; label: st
     case "signed_out":
       return { href: `/login?next=${back}`, label: "Sign in to sign up" };
     case "needs_handle":
-      return { href: "/settings", label: "Pick a username" };
+      return { href: usernameStepHref(`/classes/${classId}`), label: "Choose your username" };
     case "needs_age":
     case "needs_parent":
       return { href: `/classes/ready?next=${back}`, label: "Get set up" };

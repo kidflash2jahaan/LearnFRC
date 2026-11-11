@@ -7,6 +7,7 @@ import { fail, type AppUser, type Result } from "@/lib/app/result";
 // From the leaf module, not classes.ts: CHAT_SENTENCES reads it at load time
 // (see src/lib/classes/sentences.ts).
 import { CLASS_SENTENCES } from "@/lib/classes/sentences";
+import { handleReadyForClasses } from "@/lib/usernames";
 import { classEligibility } from "@/lib/app/classes";
 import { CHAT_LIMITS, classesVisible, rtkApp } from "@/lib/classes/config";
 import {
@@ -30,15 +31,16 @@ import type { ChatBlockedKind, ChatMessage, ClassRole } from "@/lib/classes/type
  * sendClassChat is the one way a message gets in. It checks the sender is in
  * the class and hasn't been removed (a student also still has to be signed up
  * and cleared for classes, so leaving the class or a parent withdrawing their
- * OK closes the chat), rate-limits, runs the chat filter (links outside
- * LearnFRC and the docs, @handles, emails, phone numbers, other apps' contact
- * names, on this message and on it with the sender's last few shown ones, so
- * a detail split across messages is caught) and the site's profanity check,
- * and stores the message as `shown` or `blocked`. Shown rows reach the class
- * through Supabase Realtime and the panel's polling fallback, both under the
- * members-only read policy; blocked rows are never readable by members and
- * go to the review and holds. The sender of a blocked message sees the note,
- * and nobody else sees anything.
+ * OK closes the chat) and, teacher and staff too, shows by a username they
+ * chose or kept (never a generated one), rate-limits, runs the chat filter
+ * (links outside LearnFRC and the docs, @handles, emails, phone numbers,
+ * other apps' contact names, on this message and on it with the sender's last
+ * few shown ones, so a detail split across messages is caught) and the site's
+ * profanity check, and stores the message as `shown` or `blocked`. Shown rows
+ * reach the class through Supabase Realtime and the panel's polling fallback,
+ * both under the members-only read policy; blocked rows are never readable by
+ * members and go to the review and holds. The sender of a blocked message
+ * sees the note, and nobody else sees anything.
  *
  * @-mentions of people in the class itself (its roster) are allowed: they
  * already see each other's usernames, so "@maya good question" leaks nothing.
@@ -59,6 +61,7 @@ export const CHAT_SENTENCES = {
   removed: "You were removed from this class, so you can't send messages here.",
   left: "You left this class, so you can't send messages here. Sign up again on the class page to come back.",
   notReady: "You can't send messages in this class right now. Check the class page for what's needed.",
+  needsHandle: "Choose the username the class will see before you send messages.",
   rate: "You're sending messages quickly. Wait a moment and try again.",
   empty: CHAT_EMPTY_NOTE,
   tooLong: CHAT_TOO_LONG_NOTE,
@@ -136,7 +139,7 @@ export async function sendClassChat(
   const since = new Date(Date.now() - CHAT_SEQUENCE.windowMs).toISOString();
   const [handles, { data: prof }, { data: recent }] = await Promise.all([
     rosterHandles(classId, (cls.teacher_id as string | null) ?? null),
-    admin.from("profiles").select("username").eq("id", user.id).maybeSingle(),
+    admin.from("profiles").select("username, username_generated").eq("id", user.id).maybeSingle(),
     // The sender's last few shown messages, for a detail split across
     // messages ("202", "555", "0143"). A blocked one never reached anyone,
     // so it isn't one of the few (checkChatSequence leaves out any it's
@@ -162,7 +165,13 @@ export async function sendClassChat(
   const status = kinds.length ? "blocked" : "shown";
 
   const role = part.role as ClassRole;
-  const senderUsername = ((prof?.username as string | null | undefined) ?? "").trim() || "member";
+  // Every sender, the teacher and staff too, shows by a username they chose
+  // or kept. A generated one (say, the name scan renamed them mid-class)
+  // waits on the username step, and nothing is stored under a stand-in name.
+  const senderUsername = handleReadyForClasses(
+    prof as { username: string | null; username_generated: boolean | null } | null
+  );
+  if (!senderUsername) return fail("forbidden", CHAT_SENTENCES.needsHandle);
   const { data: row, error } = await admin
     .from("class_chat_messages")
     .insert({

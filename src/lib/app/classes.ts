@@ -21,6 +21,7 @@ import { CLASS_SENTENCES } from "@/lib/classes/sentences";
 import { findContactPatterns, usernameHasContact } from "@/lib/classes/contact-patterns";
 import { deleteParticipant } from "@/lib/classes/realtimekit";
 import { holdAccount } from "@/lib/classes/holds";
+import { handleReadyForClasses } from "@/lib/usernames";
 import { cancelTeacherClasses } from "@/lib/app/classes-teaching";
 import type {
   AccountDeletionReason,
@@ -117,6 +118,13 @@ async function deviceBlockedCookie(): Promise<boolean> {
  * admins and the safety lead) don't go through this: they join as staff,
  * never as a teacher or student.
  *
+ * `needs_handle` covers a generated username too (the database's, for an
+ * account that arrived without one, until the person keeps it or picks their
+ * own on /account/username): everyone in a class sees the handle, and the
+ * parent email names the student only by it, so it has to be one they chose
+ * or knowingly kept. handleReadyForClasses decides, and `username` here is
+ * only ever that ready handle.
+ *
  * `opts.deviceBlocked` overrides the cookie (the app has no cookie; tests).
  */
 export async function classEligibilityDetail(
@@ -129,8 +137,8 @@ export async function classEligibilityDetail(
   const now = opts.now ?? new Date();
   const admin = createAdminClient();
 
-  const [{ data: profile }, { data: ageRow }, { data: consents }] = await Promise.all([
-    admin.from("profiles").select("username").eq("id", user.id).maybeSingle(),
+  const [{ data: profile, error: profileError }, { data: ageRow }, { data: consents }] = await Promise.all([
+    admin.from("profiles").select("username, username_generated").eq("id", user.id).maybeSingle(),
     admin.from("class_age_checks").select("birth_year, birth_month").eq("user_id", user.id).maybeSingle(),
     admin
       .from("class_parent_consents")
@@ -140,7 +148,13 @@ export async function classEligibilityDetail(
       .limit(20),
   ]);
 
-  const username = (profile?.username as string | null | undefined)?.trim() || null;
+  // A failed read (before the 2026-11-11 migration adds username_generated,
+  // say) leaves no handle, so classes stay shut rather than open to a
+  // generated one.
+  if (profileError) console.error("classEligibilityDetail:", profileError.message);
+  const username = handleReadyForClasses(
+    profile as { username: string | null; username_generated: boolean | null } | null
+  );
   if (!username) return { state: "needs_handle", ...empty };
 
   if (!ageRow) {

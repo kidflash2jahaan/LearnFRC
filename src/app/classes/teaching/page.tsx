@@ -12,6 +12,7 @@ import { classesDevAllowSoon, classesVisible } from "@/lib/classes/config";
 import { CLASS_LIMITS } from "@/lib/classes/constants";
 import { TEACHER_CODE } from "@/lib/classes/notice";
 import { PUBLIC_CONTACT_EMAIL } from "@/lib/email";
+import { usernameStepHref } from "@/lib/usernames";
 import { LocalTime } from "@/components/classes/local-time";
 import { lengthLabel } from "@/components/classes/class-card";
 import { ScheduleForm } from "./_schedule-form";
@@ -81,7 +82,7 @@ function minutesCell(c: TeachingClass): string {
 const NEXT_LINK: Record<Exclude<TeachingNext, null>, { href: string; label: string } | null> = {
   apply: { href: "/apply/teach", label: "Apply to teach" },
   ready: { href: "/classes/ready?next=%2Fclasses%2Fteaching", label: "Get set up" },
-  settings: { href: "/settings", label: "Pick a username" },
+  username: { href: usernameStepHref("/classes/teaching"), label: "Choose your username" },
   contact: null,
 };
 

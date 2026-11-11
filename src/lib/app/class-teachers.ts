@@ -24,6 +24,7 @@ import {
   teachUrl,
 } from "@/lib/classes/config";
 import { ageBandOn } from "@/lib/classes/age";
+import { handleReadyForClasses } from "@/lib/usernames";
 import { findContactPatterns } from "@/lib/classes/contact-patterns";
 import { TEACHER_CODE_VERSION } from "@/lib/classes/notice";
 import {
@@ -112,7 +113,10 @@ export const TEACHER_SENTENCES = {
     return CLASS_SENTENCES.parentDeclined;
   },
   signIn: "Sign in first, then apply.",
-  noHandle: "Pick a username in Settings first, then apply.",
+  /** Also for a generated username that hasn't been chosen or kept yet. */
+  get noHandle() {
+    return CLASS_SENTENCES.teachNeedsHandle;
+  },
   needsAge: "Answer one quick question first, then apply.",
   code: TEACHER_CODE_SENTENCE,
   already: "You're already a teacher.",
@@ -288,7 +292,7 @@ export async function teachingGate(
   const teacher = await getTeacher(user.id);
   switch (detail.state) {
     case "needs_handle":
-      return fail("forbidden", CLASS_SENTENCES.needsHandle);
+      return fail("forbidden", TEACHER_SENTENCES.noHandle);
     case "device_blocked":
       return fail("forbidden", CLASS_SENTENCES.deviceBlocked);
     case "needs_age":
@@ -306,7 +310,14 @@ export async function teachingGate(
 
 /* ── Where someone stands on /apply/teach ──────────────────────────── */
 
-type ProfileFacts = { username: string | null; team_number: number | null; role: string | null; bio: string | null };
+type ProfileFacts = {
+  username: string | null;
+  /** A generated username nobody chose yet: not a handle for classes (handleReadyForClasses). */
+  username_generated: boolean | null;
+  team_number: number | null;
+  role: string | null;
+  bio: string | null;
+};
 
 type TeachFacts = {
   mode: TeachApplyMode;
@@ -329,7 +340,7 @@ async function teachFacts(user: AppUser | null, opts: { deviceBlocked?: boolean 
   }
   const admin = createAdminClient();
   const [{ data: profile }, teacher, { data: latest }] = await Promise.all([
-    admin.from("profiles").select("username, team_number, role, bio").eq("id", user.id).maybeSingle(),
+    admin.from("profiles").select("username, username_generated, team_number, role, bio").eq("id", user.id).maybeSingle(),
     getTeacher(user.id),
     admin
       .from("teacher_applications")
@@ -446,7 +457,9 @@ export async function loadTeachApplyState(
       : null;
   return {
     mode: f.mode,
-    username: f.profile?.username?.trim() || null,
+    // Only a handle the person chose or kept: /apply/teach shows it as the
+    // name students will see.
+    username: handleReadyForClasses(f.profile),
     teamNumber: f.profile?.team_number ?? null,
     teamRoleLabel: f.profile?.role ? teamRoleLabel(f.profile.role) : null,
     ageBand: f.detail.ageBand,
@@ -556,7 +569,7 @@ export async function submitTeacherApplication(
   const f = await teachFacts(user);
   const refusal = modeRefusal(f.mode);
   if (refusal) return refusal;
-  const username = f.profile?.username?.trim();
+  const username = handleReadyForClasses(f.profile);
   if (!username) return { ...fail("validation", TEACHER_SENTENCES.noHandle), field: "username" };
 
   const checked = checkTeacherApplication(input, { codeVersion: TEACHER_CODE_VERSION });
@@ -711,10 +724,14 @@ export async function agreeToTeacherCode(user: AppUser, input: { code?: unknown 
 
   const admin = createAdminClient();
   const [{ data: profile }, { data: ageRow }] = await Promise.all([
-    admin.from("profiles").select("username").eq("id", user.id).maybeSingle(),
+    admin.from("profiles").select("username, username_generated").eq("id", user.id).maybeSingle(),
     admin.from("class_age_checks").select("birth_year").eq("user_id", user.id).maybeSingle(),
   ]);
-  const handle = (profile?.username as string | null)?.trim();
+  // The consent row records the handle the teacher teaches under, so it has
+  // to be one they chose or kept.
+  const handle = handleReadyForClasses(
+    profile as { username: string | null; username_generated: boolean | null } | null
+  );
   if (!handle) return { ...fail("validation", TEACHER_SENTENCES.noHandle), field: "username" };
 
   const facts = await requestFacts();

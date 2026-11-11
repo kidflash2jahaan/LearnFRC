@@ -56,12 +56,15 @@ export function ProfileSetupForm({
   mode,
   handle,
   next,
+  classesVisible = false,
 }: {
   mode: ProfileSetupMode;
   /** `choose`: the generated handle the account has now. */
   handle?: string | null;
   /** `choose`: the same-site path to go to after saving or keeping. */
   next?: string;
+  /** `choose`: live classes are open, so the lede says classmates see it too. */
+  classesVisible?: boolean;
 }) {
   const router = useRouter();
   const [state, formAction, isPending] = useActionState<ProfileState, FormData>(
@@ -176,6 +179,7 @@ export function ProfileSetupForm({
           ) : null}
           It&rsquo;s the name people see on the leaderboard, your profile page
           and your team page.
+          {classesVisible ? " In live classes, everyone in the class sees it too." : null}
         </p>
 
         <section

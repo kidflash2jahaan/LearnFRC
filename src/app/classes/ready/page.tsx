@@ -8,6 +8,7 @@ import { latestParentRequest } from "@/lib/app/class-consent";
 import { PUBLIC_CONTACT_EMAIL } from "@/lib/email";
 import { PARENT_LIMITS } from "@/lib/classes/config";
 import { birthYearOptions, roughWait, safeClassesNext } from "@/lib/classes/consent-rules";
+import { usernameStepHref } from "@/lib/usernames";
 import { AgeForm } from "./_age-form";
 import { ParentForm } from "./_parent-form";
 
@@ -104,10 +105,11 @@ export default async function ClassesReadyPage({ searchParams }: { searchParams:
         )}
 
         {detail.state === "needs_handle" && (
-          <Card slug="one thing first" title="Pick a username">
+          <Card slug="one thing first" title="Choose your username">
             <p>{CLASS_SENTENCES.needsHandle}</p>
-            <Link href="/settings" className="nb-btn mt-2 self-start">
-              Open Settings
+            {/* The step comes back here, and this page picks up at the next step. */}
+            <Link href={usernameStepHref(here)} className="nb-btn mt-2 self-start">
+              Choose your username
             </Link>
           </Card>
         )}
@@ -138,6 +140,13 @@ export default async function ClassesReadyPage({ searchParams }: { searchParams:
             <p className="max-w-[58ch] text-[0.99rem] leading-relaxed text-graphite">
               Every class is recorded and reviewed, so a parent or guardian says OK once before your first
               one. They get one email that explains it, with a button to decide.
+              {detail.username ? (
+                <>
+                  {" "}
+                  The email to them will name you as{" "}
+                  <span className="font-semibold text-ink">@{detail.username}</span>.
+                </>
+              ) : null}
             </p>
             <ParentForm />
           </div>

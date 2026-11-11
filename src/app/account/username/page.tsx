@@ -4,6 +4,7 @@ import { getSession } from "@/lib/auth";
 import { safeNextPath } from "@/lib/safe-next";
 import { needsUsernameStep, usernameStepHref, USERNAME_STEP_PATH } from "@/lib/usernames";
 import { ProfileSetupForm } from "@/components/onboarding/profile-setup-form";
+import { classesVisible } from "@/lib/classes/config";
 
 export const metadata: Metadata = {
   title: "Choose your username",
@@ -41,11 +42,20 @@ export default async function UsernameStepPage({
   const { user, profile } = await getSession();
   if (!user) redirect(`/login?next=${encodeURIComponent(usernameStepHref(destination))}`);
   if (!needsUsernameStep(profile)) redirect(destination);
+  // Live classes show the username to everyone in the class (and a parent's
+  // email names the student by it), so the step says so while they're open.
+  // Classes also refuse a generated username until it's kept or replaced here.
+  const classesOpen = await classesVisible();
 
   return (
     <section className="nb-wrap pb-[clamp(3rem,6vw,5rem)] pt-[clamp(2.2rem,5vw,4rem)]">
       <div className="max-w-[38rem]">
-        <ProfileSetupForm mode="choose" handle={profile?.username ?? null} next={destination} />
+        <ProfileSetupForm
+          mode="choose"
+          handle={profile?.username ?? null}
+          next={destination}
+          classesVisible={classesOpen}
+        />
       </div>
     </section>
   );

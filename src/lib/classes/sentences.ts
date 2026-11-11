@@ -16,7 +16,12 @@ import { PUBLIC_CONTACT_EMAIL } from "@/lib/email";
 export const CLASS_SENTENCES = {
   hidden: "Live classes aren't open yet.",
   signedOut: "Sign in to join a class.",
-  needsHandle: "Pick a username in Settings before you join a class.",
+  // A generated username (the database's, for an account that arrived
+  // without one) counts as no handle until it's chosen or kept
+  // (handleReadyForClasses in src/lib/usernames.ts).
+  needsHandle: "Choose the username your classmates will see before you join a class.",
+  teachNeedsHandle: "Choose the username your students will see before you teach.",
+  staffNeedsHandle: "Choose the username the class will see before you join it.",
   deviceBlocked: `Live classes aren't available on this device. If that's a mistake, a parent or guardian can write to ${PUBLIC_CONTACT_EMAIL}.`,
   needsAge: "Answer one quick question before you join a class.",
   adult: "Live classes are for students 13 to 17. Lessons are all still yours.",

@@ -27,7 +27,9 @@ import { EmailChoicePrompt } from "@/components/settings/email-choice-prompt";
  * first (privacy, terms) or that act on a link from an email, and the ways to
  * get help or leave without accepting a handle first: contact, and Settings
  * (email choices and account deletion live there, and a rename there clears
- * the step too).
+ * the step too). /classes/parent is where a parent or guardian answers a live
+ * classes email; it needs no account, and on a family computer the browser
+ * may be signed in as someone else.
  */
 const USERNAME_STEP_EXEMPT = [
   "/account",
@@ -40,6 +42,7 @@ const USERNAME_STEP_EXEMPT = [
   "/unsubscribe",
   "/contact",
   "/settings",
+  "/classes/parent",
 ];
 
 function usernameStepExempt(pathname: string): boolean {

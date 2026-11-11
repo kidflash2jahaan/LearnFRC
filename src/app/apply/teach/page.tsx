@@ -12,6 +12,7 @@ import { canApplyIn, type TeachApplyMode } from "@/lib/classes/teacher-rules";
 import { teachDraftKey } from "@/lib/classes/teach-draft";
 import { loadTeachApplyState, type TeachApplyState } from "@/lib/app/class-teachers";
 import { scheduleTopicOptions } from "@/lib/app/classes-teaching";
+import { usernameStepHref } from "@/lib/usernames";
 import { TeachForm } from "./_teach-form";
 import { DropTeachDraft } from "./_drop-draft";
 import { WithdrawTeachForm } from "./_withdraw-form";
@@ -65,7 +66,7 @@ function day(iso: string | null): string | null {
 const HEADS: Record<TeachApplyMode, { title: string; slug: string }> = {
   hidden: { title: "Not open yet", slug: "check back soon" },
   "signed-out": { title: "Applying needs an account", slug: "free, and it takes a minute" },
-  "no-handle": { title: "Pick a username first", slug: "one field on your settings page" },
+  "no-handle": { title: "Choose your username first", slug: "one step, then back here" },
   "needs-age": { title: "One quick question first", slug: "asked once" },
   "device-blocked": { title: "Not available here", slug: "live classes" },
   adult: { title: "Live classes are for students", slug: "lessons are all still yours" },
@@ -302,13 +303,14 @@ export default async function TeachApplyPage() {
         )}
 
         {mode === "no-handle" && (
-          <StateCard slug="one field on your settings page">
+          <StateCard slug="one step, then back here">
             <p className={body}>
-              Everyone in a class sees your username, and it&rsquo;s how the reviewer knows who applied. Pick
-              one, then come back here.
+              Everyone in a class sees your username, and it&rsquo;s how the reviewer knows who applied.
+              Choose the one your students will see, or keep the one you have, and you&rsquo;ll come
+              straight back here.
             </p>
-            <Link href="/settings" className="nb-btn mt-6">
-              Pick a username
+            <Link href={usernameStepHref("/apply/teach")} className="nb-btn mt-6">
+              Choose your username
             </Link>
           </StateCard>
         )}

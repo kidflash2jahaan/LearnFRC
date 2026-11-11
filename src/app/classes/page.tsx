@@ -6,6 +6,7 @@ import { classEligibility, eligibilitySentence, listUpcomingClasses } from "@/li
 import { getTeacher } from "@/lib/app/class-teachers";
 import { classesConfigured, classesVisible } from "@/lib/classes/config";
 import { PUBLIC_CONTACT_EMAIL } from "@/lib/email";
+import { usernameStepHref } from "@/lib/usernames";
 import { ClassCard } from "@/components/classes/class-card";
 import { ClassDayList } from "./_day-list";
 
@@ -89,7 +90,7 @@ export default async function ClassesPage() {
     state && state !== "ready" && state !== "hidden" && state !== "signed_out" ? eligibilitySentence(state) : null;
   const statusLink =
     state === "needs_handle"
-      ? { href: "/settings", label: "Pick a username" }
+      ? { href: usernameStepHref("/classes"), label: "Choose your username" }
       : state === "needs_age" || state === "needs_parent"
         ? { href: "/classes/ready", label: "Get set up" }
         : state === "waiting_parent"

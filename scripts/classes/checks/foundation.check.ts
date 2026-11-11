@@ -1,11 +1,14 @@
 // The Foundation's checks against production with throwaway accounts
 // (classes-design.md 15.1 acceptance, and 6.10 check 6):
 //   - 6 accounts racing class_enroll for 5 seats get exactly 5 "ok";
-//   - classEligibility returns each state from real rows;
+//   - classEligibility returns each state from real rows, and a generated
+//     username (the 2026-11-11 migration's) is needs_handle until it's kept;
 //   - enrollInClass's refusals, listings and the class page, with blocks;
 //   - the chat read policy through Supabase Realtime and plain selects;
 //   - deleteAccountData keeps consent proof and queues RealtimeKit cleanup.
 // Everything it makes is deleted at the end (test-data.mjs cleanup).
+// Needs supabase/migrations/20261111120000_usernames_always_set.sql applied
+// first (profiles.username_generated).
 //
 //   node --import ./scripts/classes/register.mjs scripts/classes/checks/foundation.check.ts
 
@@ -76,6 +79,7 @@ async function main() {
     "t1:age=16:parent=agreed:teacher",
     ...[1, 2, 3, 4, 5, 6].map((n) => `s${n}:age=14:parent=agreed`),
     "nohandle:nousername",
+    "gen:age=15:parent=agreed:generated",
     "noage",
     "adult:age=19",
     "needp:age=15",
@@ -123,6 +127,7 @@ async function main() {
     const e = classes.classEligibility;
     assert.equal(await e(null), "signed_out");
     assert.equal(await e(user("nohandle")), "needs_handle");
+    assert.equal(await e(user("gen")), "needs_handle", "a generated username is no handle for classes");
     assert.equal(await e(user("noage"), { deviceBlocked: false }), "needs_age");
     assert.equal(await e(user("noage"), { deviceBlocked: true }), "device_blocked");
     assert.equal(await e(user("adult")), "adult");
@@ -135,6 +140,31 @@ async function main() {
     const detail = await classes.classEligibilityDetail(user("t1"));
     assert.equal(detail.ageBand, "16-17");
     assert.equal(detail.age, 16);
+  });
+
+  await step("a generated username: made for an account without one, refused until it's kept", async () => {
+    // The database named the account that signed up with no username, and flagged it.
+    const { data: made } = await admin
+      .from("profiles")
+      .select("username, username_generated")
+      .eq("id", acc.nohandle.id)
+      .single();
+    assert.match(made!.username as string, /^[a-z]+_[0-9]{4}$/);
+    assert.equal(made!.username_generated, true);
+    const before = await classes.classEligibilityDetail(user("nohandle"));
+    assert.equal(before.state, "needs_handle");
+    assert.equal(before.username, null, "the generated handle is never handed on");
+
+    // Enrolling says why, in the classes' words.
+    const refused = await classes.enrollInClass(user("gen"), { classId: openId });
+    assert.ok(!refused.ok && refused.error === classes.CLASS_SENTENCES.needsHandle, JSON.stringify(refused));
+
+    // Keep on the username step writes only the flag; then classes open.
+    const { error } = await admin.from("profiles").update({ username_generated: false }).eq("id", acc.gen.id);
+    if (error) throw new Error(error.message);
+    const after = await classes.classEligibilityDetail(user("gen"));
+    assert.equal(after.state, "ready");
+    assert.equal(after.username, acc.gen.username);
   });
 
   await step("hidden without the switches, and visible with them", async () => {

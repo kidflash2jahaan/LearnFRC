@@ -80,8 +80,12 @@ export type ScheduleClassInput = {
   capacity?: number;
 };
 
-/** Where to send someone who can't schedule yet. */
-export type TeachingNext = "apply" | "ready" | "settings" | "contact" | null;
+/**
+ * Where to send someone who can't schedule yet. `username` is the username
+ * step (/account/username), for a teacher whose username is generated and not
+ * yet chosen or kept.
+ */
+export type TeachingNext = "apply" | "ready" | "username" | "contact" | null;
 
 type Gate =
   | { ok: true; teacher: ClassTeacherRow }
@@ -109,12 +113,13 @@ async function teachingGate(user: AppUser, known?: ClassTeacherRow | null): Prom
   if (state !== "ready") {
     const next: TeachingNext =
       state === "needs_handle"
-        ? "settings"
+        ? "username"
         : state === "needs_age" || state === "needs_parent" || state === "waiting_parent"
           ? "ready"
           : null;
+    const sentence = state === "needs_handle" ? CLASS_SENTENCES.teachNeedsHandle : eligibilitySentence(state);
     return {
-      ...fail(state === "signed_out" ? "unauthorized" : "forbidden", eligibilitySentence(state) || CLASS_SENTENCES.hidden),
+      ...fail(state === "signed_out" ? "unauthorized" : "forbidden", sentence || CLASS_SENTENCES.hidden),
       next,
       eligibility: state,
     };

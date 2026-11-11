@@ -37,6 +37,7 @@ import {
   type RtkResult,
 } from "@/lib/classes/realtimekit";
 import { displayNameFor, presetForRole } from "@/lib/classes/presets";
+import { handleReadyForClasses } from "@/lib/usernames";
 import {
   capState,
   isLiveNow,
@@ -96,6 +97,10 @@ export const ROOM_SENTENCES = {
   blocked: CLASS_SENTENCES.blocked,
   bio: CLASS_SENTENCES.bio,
   username: CLASS_SENTENCES.username,
+  // A generated username counts as none until it's chosen or kept.
+  needsHandle: CLASS_SENTENCES.needsHandle,
+  teachNeedsHandle: CLASS_SENTENCES.teachNeedsHandle,
+  staffNeedsHandle: CLASS_SENTENCES.staffNeedsHandle,
   noticeMissing: "Tick the box to say you understand the class is recorded.",
   noticeOld: "The recording notice changed. Read it again and tick the box to join.",
   cap: "Live classes have reached this month's limit. They'll open again next month.",
@@ -133,6 +138,8 @@ export type JoinRefusal =
   | "suspended"
   | "blocked"
   | "eligibility"
+  /** No username the person chose or kept yet: the room links to /account/username. */
+  | "needs_handle"
   | "bio"
   | "username"
   | "notice"
@@ -238,6 +245,21 @@ async function usernameOf(userId: string): Promise<string | null> {
   return ((data?.username as string | null | undefined) ?? "").trim() || null;
 }
 
+/**
+ * The username this person may show in a class: one they chose or kept, never
+ * a generated one still waiting on the username step (handleReadyForClasses).
+ * Null when there's none, or the read failed.
+ */
+async function readyHandleOf(userId: string): Promise<string | null> {
+  const { data, error } = await createAdminClient()
+    .from("profiles")
+    .select("username, username_generated")
+    .eq("id", userId)
+    .maybeSingle();
+  if (error) console.error("readyHandleOf:", error.message);
+  return handleReadyForClasses(data as { username: string | null; username_generated: boolean | null } | null);
+}
+
 /** Whether the viewer has a report about someone in this class that's still open. */
 async function reportedInClass(userId: string, classId: string): Promise<boolean> {
   const { data, error } = await createAdminClient()
@@ -304,9 +326,12 @@ async function checkJoin(user: AppUser, cls: RoomClass, staff: boolean, now: Dat
     });
   }
 
+  // Staff show to everyone by their username too, so it has to be one they
+  // chose or kept, the same as a teacher's or a student's.
   if (role === "staff") {
-    const username = await usernameOf(user.id);
-    return { ok: true, role, username: username ?? "learnfrc", birthYear: null };
+    const username = await readyHandleOf(user.id);
+    if (!username) return refuse("needs_handle", ROOM_SENTENCES.staffNeedsHandle);
+    return { ok: true, role, username, birthYear: null };
   }
 
   if (role === "teacher") {
@@ -315,6 +340,12 @@ async function checkJoin(user: AppUser, cls: RoomClass, staff: boolean, now: Dat
   }
 
   const detail = await classEligibilityDetail(user, { now });
+  if (detail.state === "needs_handle") {
+    return refuse(
+      "needs_handle",
+      role === "teacher" ? ROOM_SENTENCES.teachNeedsHandle : ROOM_SENTENCES.needsHandle
+    );
+  }
   if (detail.state !== "ready" || !detail.username) {
     return refuse("eligibility", eligibilitySentence(detail.state) || ROOM_SENTENCES.notEnrolled);
   }
@@ -619,7 +650,8 @@ export async function getRoomView(user: AppUser | null, classId: string): Promis
     : cls.teacher_id === user.id
       ? "teacher"
       : (m.participant?.role ?? (m.enrollment === "enrolled" ? "student" : staff ? "staff" : null));
-  const username = check.ok ? check.username : await usernameOf(user.id);
+  // "You'll show as" never names a generated username nobody chose yet.
+  const username = check.ok ? check.username : await readyHandleOf(user.id);
   const wasIn = !!m.participant || cls.teacher_id === user.id;
   // Everyone who's been in the class for those who were in it too; anyone
   // else only gets the teacher, the one person anyone signed in may report.

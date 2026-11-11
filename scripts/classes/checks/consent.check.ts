@@ -13,6 +13,8 @@
 //   - the rate limits hold.
 // Everything it makes is deleted at the end (test-data.mjs cleanup, plus the
 // under13_deleted events and the class-consent-* rate-limit rows it caused).
+// Needs supabase/migrations/20261111120000_usernames_always_set.sql applied
+// first (eligibility reads profiles.username_generated).
 //
 //   node --import ./scripts/classes/register.mjs scripts/classes/checks/consent.check.ts
 //
@@ -749,7 +751,7 @@ async function main() {
     assert.equal(stepOf(signedOut), "signed_out");
     assert.ok(signedOut.includes(`href="/login?next=${encodeURIComponent("/classes/ready?next=%2Fclasses")}"`));
     for (const [k, state, phrase] of [
-      ["nohandle", "needs_handle", "Pick a username in Settings"],
+      ["nohandle", "needs_handle", "Choose the username your classmates will see"],
       ["adult", "adult", "Live classes are for students 13 to 17."],
       ["teen", "needs_parent", "Your parent or guardian's email"],
       ["own", "waiting_parent", `We emailed ${parentAddr("own", 2)}.`],
@@ -764,6 +766,13 @@ async function main() {
       assert.equal(stepOf(html), state, k);
       assert.ok(textOf(html).includes(phrase), `${k} says: ${phrase}`);
       if (state === "ready") assert.ok(html.includes('href="/classes/4f8a0e9e-6a39-4bbb-8a51-1d6b8a6c2f10"'));
+      // The username step, coming back to this page (and so to the class).
+      if (state === "needs_handle") {
+        const back = `/classes/ready?next=${encodeURIComponent("/classes/4f8a0e9e-6a39-4bbb-8a51-1d6b8a6c2f10")}`;
+        const href = `/account/username?next=${encodeURIComponent(back)}`;
+        assert.ok(html.includes(`href="${href}"`), "links the username step");
+        assert.ok(!textOf(html).includes("Open Settings"), "no Settings detour");
+      }
     }
     const bad = await (
       await http(`${BASE}/classes/ready?next=${encodeURIComponent("https://evil.example/")}`, {
