@@ -160,9 +160,11 @@ export async function registerAccount(
   }
 
   // The username goes in as sign-up metadata, and handle_new_user copies it to
-  // the profile. If someone takes it in between, the database's username guard
-  // gives this account a generated handle instead, flagged so the username
-  // step asks them to keep it or pick another.
+  // the profile. If someone has taken it in between, or another sign-up is
+  // claiming it at the same moment (the guard holds a lock on the name until
+  // the sign-up commits), the database's username guard gives this account a
+  // generated handle instead, flagged so the username step asks them to keep
+  // it or pick another.
   const { data, error } = await ctx.auth.auth.signUp({
     email,
     password,

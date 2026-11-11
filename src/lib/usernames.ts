@@ -61,17 +61,44 @@ export const RESERVED_USERNAMES: readonly string[] = [
 /** Anything starting with these reads as the site itself. */
 export const RESERVED_USERNAME_PREFIXES: readonly string[] = ["learner", "learnfrc"];
 
-const RESERVED = new Set(RESERVED_USERNAMES);
+/**
+ * Staff words a name can't start or end with, so nobody can pass as the
+ * site's staff: `admin_team`, `mod1`, `support_sam` and `lf_admin` are all
+ * refused, while `admins_fan`, `modular` and `stafford` are fine. A word at
+ * the start counts when it's followed by `_`, a digit or nothing; at the end,
+ * when `_` comes before it. Mirrored in the migration's `username_is_reserved`.
+ */
+export const RESERVED_STAFF_WORDS: readonly string[] = [
+  "admin",
+  "administrator",
+  "mod",
+  "moderator",
+  "staff",
+  "official",
+  "support",
+  "safety",
+  "security",
+];
 
-/** True for a reserved name or prefix. Expects a normalized username. */
+const RESERVED = new Set(RESERVED_USERNAMES);
+const STAFF_AT_START = RESERVED_STAFF_WORDS.map((w) => new RegExp(`^${w}([_0-9]|$)`));
+const STAFF_AT_END = RESERVED_STAFF_WORDS.map((w) => `_${w}`);
+
+/** True for a reserved name, prefix or staff word. Expects a normalized username. */
 export function isReservedUsername(u: string): boolean {
-  return RESERVED.has(u) || RESERVED_USERNAME_PREFIXES.some((p) => u.startsWith(p));
+  return (
+    RESERVED.has(u) ||
+    RESERVED_USERNAME_PREFIXES.some((p) => u.startsWith(p)) ||
+    STAFF_AT_START.some((re) => re.test(u)) ||
+    STAFF_AT_END.some((end) => u.endsWith(end))
+  );
 }
 
 /**
  * The words the database's `generate_username` builds handles from, each
  * followed by `_` and four digits. Mirrored in the migration (a test checks
  * both lists match) and used only by tests here: handles are made in SQL.
+ * Plain robot parts only: no word that's also slang or a brand.
  */
 export const GENERATED_USERNAME_WORDS: readonly string[] = [
   "gearbox",
@@ -90,10 +117,8 @@ export const GENERATED_USERNAME_WORDS: readonly string[] = [
   "flywheel",
   "intake",
   "roller",
-  "ratchet",
   "spline",
   "caster",
-  "hinge",
   "collar",
   "spacer",
   "turret",
@@ -101,6 +126,28 @@ export const GENERATED_USERNAME_WORDS: readonly string[] = [
   "climber",
   "solder",
 ];
+
+/**
+ * A generated handle's four digits (1000 to 9999) never contain one of these:
+ * sexual and hate number codes (88 also covers 1488 and 8814). The profanity
+ * filter ignores digits, so this list is the only thing that keeps them off a
+ * handle the site hands a 13 year old. Mirrored in the migration's
+ * `username_number_denied` (a test checks both lists match).
+ */
+export const GENERATED_USERNAME_DENIED_DIGITS: readonly string[] = [
+  "69",
+  "88",
+  "420",
+  "666",
+  "1312",
+  "8008",
+];
+
+/** True when a generated handle may not use this number. */
+export function generatedNumberDenied(n: number | string): boolean {
+  const digits = String(n);
+  return GENERATED_USERNAME_DENIED_DIGITS.some((d) => digits.includes(d));
+}
 
 /** The sentences a refused username gets, on the site and through the app's routes. */
 export const USERNAME_SENTENCES = {
@@ -149,6 +196,25 @@ export function needsUsernameStep(
   p: { username?: string | null; username_generated?: boolean | null } | null | undefined
 ): boolean {
   return !!p && (!p.username || p.username_generated === true);
+}
+
+/**
+ * The username live classes may show to classmates, a teacher and a parent's
+ * consent email: one the person chose or knowingly kept. Null for a generated
+ * handle still waiting on the username step, or a missing one, so a class gate
+ * sends the person to the step first (`needs_handle`) rather than showing a
+ * name they've never seen.
+ *
+ * Fails closed: a row read without `username_generated` counts as not ready,
+ * so a gate that forgets to select the column blocks everyone instead of
+ * waving generated handles through. Class gates must use this, never a bare
+ * `!username`, which no account matches since every one has a username.
+ */
+export function handleReadyForClasses(
+  p: { username?: string | null; username_generated?: boolean | null } | null | undefined
+): string | null {
+  if (!p || p.username_generated !== false) return null;
+  return p.username?.trim() || null;
 }
 
 /** The one place the username step lives. */
