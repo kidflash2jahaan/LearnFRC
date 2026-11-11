@@ -92,18 +92,11 @@ export async function POST(req: Request) {
         .maybeSingle();
       if (!prof) continue;
 
-      const update: {
-        username?: string;
-        username_generated?: boolean;
-        full_name?: string | null;
-      } = {};
+      const update: { username?: string; full_name?: string | null } = {};
       let newUsername: string | null = null;
       if (c.username_offensive) {
         newUsername = await generatedUsername(admin);
         update.username = newUsername;
-        // Flagged, so the username step asks them to pick a name of their own
-        // (or keep this one) the next time they're signed in.
-        update.username_generated = true;
       }
       if (c.full_name_offensive) {
         update.full_name = null; // display falls back to the now-safe username
@@ -112,6 +105,19 @@ export async function POST(req: Request) {
 
       const { error: writeError } = await admin.from("profiles").update(update).eq("id", c.id);
       if (writeError) throw new Error(writeError.message);
+      if (newUsername) {
+        // Flagged, so the username step asks them to pick a name of their own
+        // (or keep this one) the next time they're signed in. A write of its
+        // own, after the rename: the database's username guard clears the flag
+        // on a rename that leaves it as it was, and it can't tell "set it to
+        // true" from "didn't mention it" on a row that's already flagged. This
+        // write doesn't touch username, so the guard doesn't run.
+        const { error: flagError } = await admin
+          .from("profiles")
+          .update({ username_generated: true })
+          .eq("id", c.id);
+        if (flagError) console.error("name-scan: flagging the new username failed:", flagError.message);
+      }
       await admin.from("name_moderation_log").insert({
         user_id: c.id,
         old_username: prof.username,

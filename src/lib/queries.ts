@@ -358,14 +358,24 @@ export async function getProfile(userId: string): Promise<Profile | null> {
   // service-role client because `full_name` is now readable only server-side —
   // the anon/authenticated API roles are barred from SELECTing it (PII lockdown).
   const supabase = createAdminClient();
-  const { data } = await supabase
-    .from("profiles")
-    .select(
-      "id, username, username_generated, full_name, avatar_url, team_number, bio, role, xp, hide_name, created_at, email_opt_in, email_choice_at"
-    )
-    .eq("id", userId)
-    .maybeSingle();
-  return (data as Profile) ?? null;
+  const read = (columns: string) =>
+    supabase.from("profiles").select(columns).eq("id", userId).maybeSingle();
+  let { data, error } = await read(
+    "id, username, username_generated, full_name, avatar_url, team_number, bio, role, xp, hide_name, created_at, email_opt_in, email_choice_at"
+  );
+  // `username_generated` arrives with the 2026-11-11 migration, which goes in
+  // before this code. If this ever runs against a database without it (code
+  // deployed first, or a preview pointed at an older database), read the rest
+  // rather than losing every profile: the username step then only catches a
+  // missing username.
+  if (error && (error.code === "42703" || error.message.includes("username_generated"))) {
+    console.error("getProfile: no username_generated column yet; reading without it.");
+    ({ data, error } = await read(
+      "id, username, full_name, avatar_url, team_number, bio, role, xp, hide_name, created_at, email_opt_in, email_choice_at"
+    ));
+  }
+  if (error) console.error("getProfile:", error.message);
+  return (data as unknown as Profile) ?? null;
 }
 
 /**
