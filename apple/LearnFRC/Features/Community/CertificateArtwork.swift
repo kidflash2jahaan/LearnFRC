@@ -3,7 +3,7 @@ import UniformTypeIdentifiers
 import ImageIO
 
 /// What a certificate says. The name is the signed-in learner's own (full name, else
-/// username, else "FRC Learner"); nobody else's name is ever printed.
+/// username); nobody else's name is ever printed.
 struct CertificateContent: Hashable, Sendable {
     let name: String
     let departmentName: String

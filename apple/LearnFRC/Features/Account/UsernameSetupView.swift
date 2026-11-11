@@ -1,34 +1,38 @@
 import SwiftUI
 
-/// Which of the site's profile-setup asks (`getProfileSetupState` in
-/// `src/lib/onboarding-server.ts`, drawn by `profile-setup-form.tsx`) the step shows.
+/// Which of the site's profile-setup asks (the `/account/username` step, and
+/// `getProfileSetupState` in `src/lib/onboarding-server.ts`, drawn by
+/// `profile-setup-form.tsx`) the step shows.
 enum UsernameSetupMode: Sendable {
-    /// No username at all: the hard stop that covers the app (`Me.needsUsernameSetup`).
+    /// Username not chosen yet (a generated handle): the hard stop that covers the app
+    /// (`Me.needsUsernameSetup`).
     case required
     /// A machine-made placeholder handle: the skippable "pick your own" card
-    /// (`Me.isPlaceholderUsername`, the site's `mode: "username"`, not required).
+    /// (`Me.isPlaceholderUsername`). Retired on the server 2026-11-11, which now always
+    /// sends that false; kept for older servers.
     case soft
     /// A handle that's the account's own but no team number: the skippable team-only card
     /// (the site's `mode: "team"`).
     case team
 }
 
-/// The username gate (ARCHITECTURE 6.2, the site's `ProfileSetupForm`). A signed-in
-/// account with no handle sees this before the rest of the app: it becomes the profile
-/// address and the name on the leaderboard. Saving goes through
-/// `POST /api/app/profile/setup`, the same function the website calls.
+/// The username gate (ARCHITECTURE 6.2, the site's `/account/username` step). A signed-in
+/// account whose username was generated (Google sign-in) sees this before the rest of the
+/// app: the username is the name on the leaderboard, the profile page and the team page.
+/// Username starts as the current handle, never anything from the email; saving it
+/// unchanged keeps it. Saving goes through `POST /api/app/profile/setup`, the same function
+/// the website calls.
 ///
 ///     if account.needsUsernameSetup { UsernameSetupView() }          // the shell's gate
 ///     UsernameSetupView(mode: .soft, onSkip: { ... })                 // a handle minted for them
 ///     UsernameSetupView(mode: .team, onSkip: { ... })                 // their own handle, no team
 ///
-/// `.soft` (or `required: false`) is the softer ask for an account carrying a machine-made
-/// placeholder handle: the site's skippable dashboard card, word for word. It's the card
-/// alone (the site puts no page heading over it), with "Skip for now" and no sign-out line,
-/// prefilled with the site's `suggestUsername` (the email before the @), never the
-/// placeholder itself. `.team` is the site's team-only card for an account whose handle is
-/// its own: just the team number, required, saved through the same call with nothing else.
-/// The team box always starts blank, like the site's.
+/// `.soft` (or `required: false`) is the retired softer ask for an account carrying a
+/// machine-made placeholder handle, kept for older servers: the card alone, with "Skip for
+/// now" and no sign-out line, and an empty Username, never the placeholder itself. `.team`
+/// is the site's team-only card for an account whose handle is its own: just the team
+/// number, required, saved through the same call with nothing else. The team box always
+/// starts blank, like the site's.
 struct UsernameSetupView: View {
     @Environment(AccountStore.self) private var account
 
@@ -63,14 +67,6 @@ struct UsernameSetupView: View {
     /// The card asks for a username (the site's `needsUsername`): every mode but `.team`.
     private var asksForUsername: Bool { mode != .team }
 
-    /// The site's `suggestUsername`: the part of the email before the first @, cleaned, at
-    /// most 20 characters, or nothing when fewer than 3 survive.
-    static func suggestion(from email: String?) -> String {
-        let local = (email ?? "").split(separator: "@", maxSplits: 1, omittingEmptySubsequences: false).first ?? ""
-        let base = String(AccountStore.normalizeUsername(String(local)).prefix(maxLength))
-        return base.count >= 3 ? base : ""
-    }
-
     /// The site's `maxLength={20}` on the username box.
     static let maxLength = 20
 
@@ -81,11 +77,11 @@ struct UsernameSetupView: View {
         AccountPage(maxWidth: 640) { page in
             VStack(alignment: .leading, spacing: 0) {
                 if required {
-                    // The site's hard stop on /dashboard, word for word.
+                    // The site's /account/username step, word for word.
                     AccountHeader(
                         marker: "one thing first",
-                        title: "Pick the handle your team will see.",
-                        lede: "It becomes your profile address and the name on the leaderboard. Nothing else on the account works until it is set."
+                        title: "Choose your username",
+                        lede: requiredLede
                     )
                     card(width: page.width).padding(.top, 28)
                     signedInAs.padding(.top, 28)
@@ -103,22 +99,36 @@ struct UsernameSetupView: View {
         .defaultFocus($focus, asksForUsername ? .username : .team)
         #endif
         .task {
-            // Never the placeholder: the site prefills `suggestUsername(email)`. The team box
-            // starts blank in every mode, like the site's (it never prefills the team).
+            // The current (generated) handle, as the site prefills it; never anything from
+            // the email, and never an old placeholder. The team box starts blank in every
+            // mode, like the site's (it never prefills the team).
             if asksForUsername, username.isEmpty {
                 let current = account.profile?.username
-                username = (account.me?.isPlaceholderUsername == true ? nil : current) ?? Self.suggestion(from: account.me?.user.email)
+                username = (account.me?.isPlaceholderUsername == true ? nil : current) ?? ""
             }
         }
     }
 
+    /// The site's lede on `/account/username`, naming the handle the account was given.
+    private var requiredLede: String {
+        let tail = "It's the name people see on the leaderboard, your profile page and your team page."
+        guard let handle = account.profile?.username, !handle.isEmpty else { return tail }
+        return "We gave your account the username @\(handle) so it works right away. Keep it, or pick one of your own. \(tail)"
+    }
+
     // MARK: The card (the site's `ProfileSetupForm`, word for word)
 
-    private var slug: String { asksForUsername ? "profile / no handle yet" : "profile / no team number" }
+    private var slug: String {
+        switch mode {
+        case .required: "profile / your username"
+        case .soft: "profile / no handle yet"
+        case .team: "profile / no team number"
+        }
+    }
 
     private var title: String {
         switch mode {
-        case .required: "Pick a username to finish the account."
+        case .required: "Keep it, or pick your own."
         case .soft: "You're showing up under a name you didn't pick."
         case .team: "Add your team number."
         }
@@ -126,7 +136,7 @@ struct UsernameSetupView: View {
 
     private var explanation: String {
         switch mode {
-        case .required: "Signing in with Google skips the roster line, so an account can land without a handle. It is your profile link and it is how teammates find you. The team number is optional and can wait."
+        case .required: "Letters, numbers and _, 3 to 20 characters. Don't use your real name, email or school. The team number is optional and can wait."
         case .soft: "Your handle was minted for you, so it is not really yours. Pick one you would want next to your name on the leaderboard. The team number is optional."
         case .team: "Put your FRC team number in and you show up alongside your teammates on the team page and on the leaderboard."
         }
