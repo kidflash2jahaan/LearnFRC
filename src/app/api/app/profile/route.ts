@@ -20,7 +20,9 @@ const TEXT_KEYS = ["fullName", "bio", "avatarUrl", "username", "role"] as const;
  * PATCH /api/app/profile { fullName?, bio?, avatarUrl?, username?, teamNumber?, role? }
  *
  * Settings, the same rules as the website's settings form. A field left out
- * keeps its current value; null clears it. The merged record then goes through
+ * keeps its current value; null clears it, except `username`, which can't be
+ * cleared (null or "" gets a 400 with the blank sentence). The merged record
+ * then goes through
  * updateProfileFields (src/lib/app/profile.ts), the function the website's
  * updateProfile action calls, so validation, rate limits and messages match.
  * Responds with the updated /me profile object.

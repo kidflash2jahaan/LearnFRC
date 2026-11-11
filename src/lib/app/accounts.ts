@@ -10,7 +10,8 @@ import {
   payReferralReward,
 } from "@/lib/signup-attribution";
 import { isFreshSignup } from "@/lib/first-run";
-import { normalizeUsername } from "@/lib/app/profile";
+import { needsUsernameStep } from "@/lib/usernames";
+import { normalizeUsername, validateChosenUsername } from "@/lib/app/profile";
 import { fail, type Result } from "@/lib/app/result";
 
 /**
@@ -122,22 +123,19 @@ export async function registerAccount(
   if (password.length < 8)
     return fail("validation", "Password must be at least 8 characters.");
 
-  const username = normalizeUsername(usernameRaw);
-  if (!username || username.length < 3)
-    return fail(
-      "validation",
-      "Choose a username: at least 3 characters (letters, numbers, _)."
-    );
+  const admin = createAdminClient();
 
-  // Block offensive usernames / names at creation time (local, no AI).
-  const badField = firstProfaneField({ username, full_name: fullName });
-  if (badField)
-    return fail(
-      "validation",
-      badField === "username"
-        ? "That username isn't allowed. Please choose another."
-        : "That name isn't allowed. Please use a different one."
-    );
+  // The same username rules as Settings and the username step: 3 to 20
+  // characters, not reserved, the profanity filter (local, no AI), and a
+  // friendly taken check (the unique index would refuse it anyway). Exact
+  // match, `id` only: a taken/not-taken answer for one handle.
+  const checked = await validateChosenUsername(admin, usernameRaw, { currentUsername: null });
+  if (!checked.ok) return checked;
+  const username = checked.username;
+
+  // Block an offensive name at creation time too.
+  if (firstProfaneField({ full_name: fullName }))
+    return fail("validation", "That name isn't allowed. Please use a different one.");
 
   let teamNum: number | null = null;
   if (teamNumber) {
@@ -147,7 +145,6 @@ export async function registerAccount(
   }
 
   // Ban list: reject banned emails or banned IPs with a generic message.
-  const admin = createAdminClient();
   {
     const [{ data: bannedEmail }, { data: bannedIp }] = await Promise.all([
       admin.from("banned_emails").select("email").eq("email", email.toLowerCase()).maybeSingle(),
@@ -162,18 +159,10 @@ export async function registerAccount(
       );
   }
 
-  // Friendly pre-check for username collision (avoids a cryptic DB error).
-  // Exact match, `id` only: a taken/not-taken answer for one handle, which the
-  // unique index would give away on submit anyway.
-  {
-    const { data: taken } = await admin
-      .from("profiles")
-      .select("id")
-      .eq("username", username)
-      .maybeSingle();
-    if (taken) return fail("conflict", "That username is already taken.");
-  }
-
+  // The username goes in as sign-up metadata, and handle_new_user copies it to
+  // the profile. If someone takes it in between, the database's username guard
+  // gives this account a generated handle instead, flagged so the username
+  // step asks them to keep it or pick another.
   const { data, error } = await ctx.auth.auth.signUp({
     email,
     password,
@@ -262,7 +251,10 @@ export function appSignupSource(platform: string): string {
 /* ------------------------------------------------------------------ */
 
 export type OAuthSignInContext = {
-  /** A referrer's username from the invite link (`?ref=`), unsanitised. */
+  /**
+   * A referrer's username from the invite link (`?ref=`), or a conversion-hook
+   * token (`lessonhook`, `articlehook`), unsanitised.
+   */
   ref: string | null;
   /** Which share surface produced the referral (`?via=`). Allow-listed later. */
   via: string | null;
@@ -285,6 +277,15 @@ export type OAuthSignInContext = {
  * is paid straight away; payReferralReward pays at most once per account, so
  * calling this on every sign-in is safe.
  *
+ * A `ref` that is a conversion-hook token (the lesson and article sign-up
+ * links) is recorded as the hook source, as the email path does, and never
+ * looked up as a referrer's username.
+ *
+ * `needsUsernameStep` says whether the account still has to choose or keep
+ * its username: a Google or Apple account arrives with a generated one. The
+ * website's callback sends such a person to /account/username first; the app
+ * reads the same answer from GET /api/app/me.
+ *
  * Never fails. Analytics must never block a sign-in, so an attribution error
  * is logged loudly (a silent failure here is how the last gap went unnoticed
  * for three weeks) and the answer still comes back.
@@ -292,17 +293,19 @@ export type OAuthSignInContext = {
 export async function completeOAuthSignIn(
   user: Pick<User, "id" | "created_at"> | null | undefined,
   ctx: OAuthSignInContext
-): Promise<{ isNewAccount: boolean }> {
+): Promise<{ isNewAccount: boolean; needsUsernameStep: boolean }> {
   const isNewAccount = isFreshSignup(user?.created_at);
 
   if (user && isNewAccount) {
     try {
+      const hookSource = hookSourceFor(ctx.ref);
       const { referredBy } = await attributeSignup({
         userId: user.id,
-        ref: ctx.ref,
+        ref: hookSource ? null : ctx.ref,
         via: ctx.via,
         srcCookie: ctx.srcCookie,
         signupIp: ctx.signupIp,
+        hookSource,
       });
       // Google has already verified the address, so the reward is safe to pay
       // now. Waiting on a confirmation click would wait forever: this flow
@@ -313,5 +316,21 @@ export async function completeOAuthSignIn(
     }
   }
 
-  return { isNewAccount };
+  // Read after attribution, service-role and scoped to this account's id. A
+  // read error answers false: the pages the person lands on ask again.
+  let usernameStep = false;
+  if (user) {
+    try {
+      const { data } = await createAdminClient()
+        .from("profiles")
+        .select("username, username_generated")
+        .eq("id", user.id)
+        .maybeSingle();
+      usernameStep = needsUsernameStep(data);
+    } catch (e) {
+      console.error(`${ctx.door} username check failed:`, e);
+    }
+  }
+
+  return { isNewAccount, needsUsernameStep: usernameStep };
 }
