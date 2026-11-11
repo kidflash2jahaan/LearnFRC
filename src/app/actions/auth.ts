@@ -21,7 +21,7 @@ export type AuthState =
     }
   | undefined;
 
-/** Only allow same-origin relative paths (blocks //evil.com, /\evil.com, /\t/evil.com). */
+/** Only same-site paths (src/lib/safe-next.ts); anything else is the dashboard. */
 function safeNext(n: string): string {
   return safeNextPath(n) ?? "/dashboard";
 }

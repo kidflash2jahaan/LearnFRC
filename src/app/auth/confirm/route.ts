@@ -8,6 +8,7 @@ import {
   isFreshSignup,
   postAuthDestination,
 } from "@/lib/first-run";
+import { safeNextPath } from "@/lib/safe-next";
 
 /**
  * THE CONFIRMATION LINK, the one clicked out of an inbox.
@@ -31,20 +32,14 @@ import {
  *
  * `next` is honoured verbatim whenever it names a real destination, whether
  * that is a team invite, a lesson or /account/password. Only the literal
- * "/dashboard" is ever swapped.
+ * "/dashboard" is ever swapped. It has to be a same-site path first
+ * (safeNextPath, src/lib/safe-next.ts); anything else is the dashboard.
  */
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const token_hash = searchParams.get("token_hash");
   const type = searchParams.get("type") as EmailOtpType | null;
-  const nextParam = searchParams.get("next");
-  const next =
-    nextParam &&
-    nextParam.startsWith("/") &&
-    !nextParam.startsWith("//") &&
-    !nextParam.startsWith("/\\")
-      ? nextParam
-      : "/dashboard";
+  const next = safeNextPath(searchParams.get("next")) ?? "/dashboard";
 
   if (token_hash && type) {
     const supabase = await createClient();

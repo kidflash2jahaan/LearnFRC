@@ -12,8 +12,9 @@
 --   - profiles.username_generated marks a handle the person never chose. The
 --     site (/account/username) and the app (needsUsernameSetup on /me) ask them
 --     once to keep it or pick their own, and both clear the flag.
---   - The API roles lose direct UPDATE on the profile columns people edit, so
---     every change goes through the site's and app's rules.
+--   - The API roles lose direct UPDATE on the profile columns people edit, and
+--     INSERT on profiles, so every change goes through the site's and app's
+--     rules.
 --
 -- Re-runnable and additive. Apply before the code that selects
 -- username_generated deploys. Safe with the code before it: that code only
@@ -26,6 +27,12 @@
 -- Mirrored in src/lib/usernames.ts (the reserved names, the staff words, the
 -- generator words and its denied numbers). src/lib/usernames.test.ts parses
 -- this file and checks every list matches.
+
+-- 0. Wait at most 3 seconds for a lock. Step 4 takes an exclusive lock on
+--    profiles and holds it to the end, so waiting behind a stuck writer would
+--    queue every profile read and sign-up behind this migration. A timeout
+--    rolls the whole migration back; run it again.
+set local lock_timeout = '3s';
 
 -- 1. Reserved names. Mirrored in src/lib/usernames.ts; a test checks the lists match.
 --    Exact names, anything starting learner or learnfrc, and a staff word at the
@@ -187,6 +194,10 @@ alter table public.profiles validate constraint profiles_username_format;
 --    names, the 20-character cap, the profanity filter, the team-number limit).
 --    Nothing in the site or the app writes profiles as a signed-in user, so the
 --    API roles keep no direct UPDATE on these columns, and a signed-in browser
---    can't PATCH /rest/v1/profiles around those rules.
+--    can't PATCH /rest/v1/profiles around those rules. Nor can it POST a row
+--    with its own xp or role: only handle_new_user creates profiles, and it's
+--    security definer, so the API roles don't need INSERT (or TRUNCATE,
+--    REFERENCES, TRIGGER) on profiles either.
 revoke update (username, full_name, avatar_url, team_number, bio, role, hide_name)
   on public.profiles from anon, authenticated;
+revoke insert, truncate, references, trigger on public.profiles from anon, authenticated;

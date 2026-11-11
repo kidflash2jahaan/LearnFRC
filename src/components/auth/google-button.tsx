@@ -4,6 +4,7 @@ import * as React from "react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
+import { safeNextPath } from "@/lib/safe-next";
 
 /**
  * The Google mark, kept in its own four colours.
@@ -42,7 +43,7 @@ export function GoogleSignInButton({
     setLoading(true);
     try {
       const supabase = createClient();
-      const dest = next && next.startsWith("/") ? next : "/dashboard";
+      const dest = safeNextPath(next) ?? "/dashboard";
       // ref/via ride along on the callback URL. Without this they are dropped
       // the moment the browser leaves for Google, which is exactly how every
       // referral through this button went unrecorded from 2026-07-17 onward.
