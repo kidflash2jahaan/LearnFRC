@@ -129,6 +129,7 @@ export async function sendClassChat(
     ]);
     if (enr?.status === "removed") return fail("forbidden", CHAT_SENTENCES.removed);
     if (enr?.status !== "enrolled") return fail("forbidden", CHAT_SENTENCES.left);
+    if (state === "needs_handle") return fail("forbidden", CHAT_SENTENCES.needsHandle);
     if (state !== "ready") return fail("forbidden", CHAT_SENTENCES.notReady);
   }
 
