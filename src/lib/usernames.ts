@@ -155,6 +155,13 @@ export const USERNAME_SENTENCES = {
   tooShort: "Username must be at least 3 characters (a–z, 0–9, _).",
   tooLong: "Usernames can be up to 20 characters.",
   reserved: "That username isn't available. Please choose another.",
+  /**
+   * Everyone in a live class sees each other's username, so a new one can't
+   * be a standing way to reach someone ("snapchat_maya", seven or more digits
+   * in a row).
+   */
+  contact:
+    "Usernames can't include contact details like app names or long numbers. Please choose another.",
 } as const;
 
 /**
@@ -184,6 +191,26 @@ export function chosenUsernameShapeError(
   if (!normalized) return USERNAME_SENTENCES.blank;
   if (currentUsername && normalized === currentUsername) return null;
   return usernameShapeError(normalized);
+}
+
+/**
+ * Everything about a submitted username that needs no database: the shape
+ * rules (chosenUsernameShapeError) and, for a changed name, contact details.
+ * `hasContact` is usernameHasContact from src/lib/classes/contact-patterns.ts,
+ * passed in so this file stays import-free for the client components that
+ * load it. Keeping the name you already have skips the contact check: the few
+ * older names it would catch keep working until they're changed, and live
+ * classes refuse them at enrolling and joining anyway.
+ */
+export function chosenUsernameError(
+  normalized: string,
+  currentUsername: string | null | undefined,
+  hasContact: (username: string) => boolean
+): string | null {
+  const shape = chosenUsernameShapeError(normalized, currentUsername);
+  if (shape) return shape;
+  if (normalized !== currentUsername && hasContact(normalized)) return USERNAME_SENTENCES.contact;
+  return null;
 }
 
 /**

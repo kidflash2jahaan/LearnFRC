@@ -5,10 +5,11 @@ import { rateLimit } from "@/lib/rate-limit";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { firstProfaneField } from "@/lib/profanity";
 import {
-  chosenUsernameShapeError,
+  chosenUsernameError,
   needsUsernameStep,
   normalizeUsername,
 } from "@/lib/usernames";
+import { usernameHasContact } from "@/lib/classes/contact-patterns";
 import type { Profile } from "@/lib/types";
 import { levelForXp, tierFor } from "@/lib/app/levels";
 import { toIso } from "@/lib/app/format";
@@ -41,7 +42,8 @@ export { normalizeUsername };
  * The one server check for a username a person submits: sign-up
  * (registerAccount), Settings (updateProfileFields) and the username step
  * (saveProfileSetupFields). Normalizes it, then the shape rules
- * (chosenUsernameShapeError: blank, 3 to 20 characters, not reserved), the
+ * (chosenUsernameError: blank, 3 to 20 characters, not reserved, and for a
+ * new name no contact details, since everyone in a live class sees it), the
  * profanity filter, and whether someone else has it.
  *
  * Keeping the name you already have always passes the shape rules, so the few
@@ -55,7 +57,7 @@ export async function validateChosenUsername(
   opts: { currentUsername: string | null; userId?: string }
 ): Promise<Result<{ username: string; changed: boolean }>> {
   const username = normalizeUsername(raw.trim());
-  const shape = chosenUsernameShapeError(username, opts.currentUsername);
+  const shape = chosenUsernameError(username, opts.currentUsername, usernameHasContact);
   if (shape) return fail("validation", shape);
   if (firstProfaneField({ username }))
     return fail("validation", "That username isn't allowed. Please choose another.");

@@ -10,6 +10,7 @@ import {
   USERNAME_MAX,
   USERNAME_SENTENCES,
   USERNAME_STEP_PATH,
+  chosenUsernameError,
   chosenUsernameShapeError,
   generatedNumberDenied,
   handleReadyForClasses,
@@ -20,6 +21,7 @@ import {
   usernameStepHref,
 } from "./usernames.ts";
 import { firstProfaneField } from "./profanity.ts";
+import { usernameHasContact } from "./classes/contact-patterns.ts";
 import { hookSourceFor } from "./signup-source.ts";
 import { safeNextPath } from "./safe-next.ts";
 
@@ -106,6 +108,29 @@ test("a submitted name: blank always refused, keeping your own always fine, a ch
   assert.equal(chosenUsernameShapeError("maya_255", "maya_254"), null);
 });
 
+// Release-1.0: everyone in a live class sees each other's username, so a new
+// one can't be a standing contact detail. The pure half of
+// validateChosenUsername (src/lib/app/profile.ts), with the classes' own
+// usernameHasContact, the check enrolling and joining run.
+test("a new username can't carry contact details; keeping your own isn't checked again", () => {
+  const err = (u: string, current: string | null) => chosenUsernameError(u, current, usernameHasContact);
+  for (const u of ["snapchat_maya", "dm_me_maya", "insta_maya", "maya_ig", "discord_5835", "maya2025550143"]) {
+    assert.equal(err(u, null), USERNAME_SENTENCES.contact, `sign-up: ${u}`);
+    assert.equal(err(u, "maya_5835"), USERNAME_SENTENCES.contact, `rename: ${u}`);
+  }
+  // An older name it would catch keeps saving other Settings fields (live
+  // classes still refuse it at enrolling and joining).
+  assert.equal(err("maya2025550143", "maya2025550143"), null);
+  // Shape and reserved names come first, with their own sentences.
+  assert.equal(err("", "maya_5835"), USERNAME_SENTENCES.blank);
+  assert.equal(err("ab", null), USERNAME_SENTENCES.tooShort);
+  assert.equal(err("admin_snapchat", null), USERNAME_SENTENCES.reserved);
+  // Robotics names and numbers are fine.
+  for (const u of ["maya_5835", "frc5835_maya", "gearbox_4821", "snap_ring_fan", "team5835"]) {
+    assert.equal(err(u, null), null, u);
+  }
+});
+
 test("needsUsernameStep: no profile, no username, a generated one, a chosen one", () => {
   assert.equal(needsUsernameStep(null), false);
   assert.equal(needsUsernameStep(undefined), false);
@@ -175,7 +200,12 @@ test("classes see a handle only once it's chosen or kept, and fail closed", () =
 // after main is merged into release-1.0 it fails until the eligibility and
 // teacher gates use handleReadyForClasses (and select username_generated).
 test("release gate: live-class handle checks use handleReadyForClasses", () => {
-  for (const file of ["src/lib/app/classes.ts", "src/lib/app/class-teachers.ts"]) {
+  for (const file of [
+    "src/lib/app/classes.ts",
+    "src/lib/app/class-teachers.ts",
+    "src/lib/app/classes-room.ts",
+    "src/lib/app/class-chat.ts",
+  ]) {
     const url = new URL(`../../${file}`, import.meta.url);
     if (!existsSync(url)) continue;
     const src = readFileSync(url, "utf8");
@@ -185,10 +215,12 @@ test("release gate: live-class handle checks use handleReadyForClasses", () => {
       `${file}: a generated username must count as no handle (handleReadyForClasses)`
     );
     assert.match(src, /username_generated/, `${file}: select username_generated for the check`);
+    // No stand-in name for someone without a ready handle: they're refused.
+    assert.doesNotMatch(src, /\?\? "learnfrc"|\|\| "member"/, `${file}: a stand-in name for a missing handle`);
   }
 });
 
-test("every generated handle is a valid, unreserved, clean username (all 202,176)", () => {
+test("every generated handle is a valid, unreserved, clean username with no contact detail (all 202,176)", () => {
   const format = /^[a-z0-9_]{3,32}$/;
   let checked = 0;
   for (const word of GENERATED_USERNAME_WORDS) {
@@ -200,6 +232,9 @@ test("every generated handle is a valid, unreserved, clean username (all 202,176
       assert.equal(normalizeUsername(handle), handle);
       assert.equal(usernameShapeError(handle), null, handle);
       assert.equal(firstProfaneField({ username: handle }), null, handle);
+      // Classes would refuse it at enrolling and joining, and so would the
+      // username step when someone keeps it.
+      assert.equal(usernameHasContact(handle), false, handle);
       checked++;
     }
   }
