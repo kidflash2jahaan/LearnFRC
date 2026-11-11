@@ -4,6 +4,7 @@ import * as React from "react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
+import { safeNextPath } from "@/lib/safe-next";
 
 /**
  * The Apple logo, in the button's own white.
@@ -51,7 +52,7 @@ export function AppleSignInButton({
     setLoading(true);
     try {
       const supabase = createClient();
-      const dest = next && next.startsWith("/") ? next : "/dashboard";
+      const dest = safeNextPath(next) ?? "/dashboard";
       // ref/via ride along on the callback URL, exactly as on the Google
       // button, or a referral through this button would go unrecorded.
       const cb = new URL("/auth/callback", window.location.origin);

@@ -6,10 +6,11 @@
  *
  * Every `next` check on the site goes through this: /auth/callback,
  * /auth/confirm, the sign-in and sign-up actions, the login and signup pages,
- * the auth form, the Google button and the username step. No imports, so the
- * client components can use it too. Don't keep a private copy of the rule: a
- * copy that only checked "//" and "/\" is how /auth/callback once sent
- * "/\t/host" to another site.
+ * the auth form, the Google and Apple buttons and the username step. No
+ * imports, so the client components can use it too. Don't keep a private copy
+ * of the rule: a copy that only checked "//" and "/\" is how /auth/callback
+ * once sent "/\t/host" to another site. (safeClassesNext in
+ * src/lib/classes/consent-rules.ts is narrower on purpose: classes pages only.)
  */
 export function safeNextPath(next: string | null | undefined): string | undefined {
   if (!next) return undefined;
