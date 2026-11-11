@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useActionState } from "react";
 import { signIn, signUp, type AuthState } from "@/app/actions/auth";
 import { GoogleSignInButton } from "@/components/auth/google-button";
+import { USERNAME_MAX, USERNAME_MIN } from "@/lib/usernames";
 
 type Mode = "login" | "signup";
 
@@ -163,7 +164,8 @@ export function AuthForm({
               // saved login email here. This is a public handle, never an email.
               autoComplete="nickname"
               required
-              minLength={3}
+              minLength={USERNAME_MIN}
+              maxLength={USERNAME_MAX}
               pattern="[A-Za-z0-9_]+"
               disabled={busy}
               className="nb-input"

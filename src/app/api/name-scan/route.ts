@@ -49,21 +49,16 @@ type Change = {
 };
 
 /**
- * A free "memberNNNNNN" handle. It checks each candidate against the table
- * rather than trusting randomness, and after 20 misses falls back to a
- * timestamp tail, which cannot collide with a live row in practice.
+ * A free generated handle like `gearbox_4821`, from the database's
+ * `generate_username` (the same one that names accounts that arrive without a
+ * username; see src/lib/usernames.ts). It checks the table itself. Throws when
+ * there isn't one, so that change is skipped rather than half made.
  */
-async function uniqueUsername(admin: ReturnType<typeof createAdminClient>): Promise<string> {
-  for (let i = 0; i < 20; i++) {
-    const candidate = "member" + Math.floor(100000 + Math.random() * 899999).toString();
-    const { data } = await admin
-      .from("profiles")
-      .select("id")
-      .eq("username", candidate)
-      .maybeSingle();
-    if (!data) return candidate;
-  }
-  return "member" + Date.now().toString().slice(-8);
+async function generatedUsername(admin: ReturnType<typeof createAdminClient>): Promise<string> {
+  const { data, error } = await admin.rpc("generate_username");
+  if (error || typeof data !== "string" || !data)
+    throw new Error(`generate_username: ${error?.message ?? "no handle"}`);
+  return data;
 }
 
 export async function POST(req: Request) {
@@ -97,18 +92,26 @@ export async function POST(req: Request) {
         .maybeSingle();
       if (!prof) continue;
 
-      const update: { username?: string; full_name?: string | null } = {};
+      const update: {
+        username?: string;
+        username_generated?: boolean;
+        full_name?: string | null;
+      } = {};
       let newUsername: string | null = null;
       if (c.username_offensive) {
-        newUsername = await uniqueUsername(admin);
+        newUsername = await generatedUsername(admin);
         update.username = newUsername;
+        // Flagged, so the username step asks them to pick a name of their own
+        // (or keep this one) the next time they're signed in.
+        update.username_generated = true;
       }
       if (c.full_name_offensive) {
         update.full_name = null; // display falls back to the now-safe username
       }
       if (!Object.keys(update).length) continue;
 
-      await admin.from("profiles").update(update).eq("id", c.id);
+      const { error: writeError } = await admin.from("profiles").update(update).eq("id", c.id);
+      if (writeError) throw new Error(writeError.message);
       await admin.from("name_moderation_log").insert({
         user_id: c.id,
         old_username: prof.username,
