@@ -47,7 +47,7 @@ const RULES: Record<ClassRole, string[]> = {
   teacher: [
     "Your camera and mic start off. Turn them on when you're ready; your camera is optional.",
     "Say the recording notice out loud when the class starts.",
-    "Students wait until you admit them. Class controls let you mute or remove someone, and you can report anyone who breaks the rules.",
+    "Students come straight into the call when they join. Class controls let you mute or remove someone, and you can report anyone who breaks the rules.",
     "Your messages go through the same chat filter as everyone's, so share links from LearnFRC or the docs.",
     "Keep to the topic. Never ask anyone's age, school or location, and never ask anyone to turn a camera on.",
   ],

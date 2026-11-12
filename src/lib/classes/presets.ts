@@ -16,6 +16,10 @@
  * - Nobody can kick from the client: removals go through the server
  *   (removeFromClass), so they stick.
  * - Staff are never hidden: everyone can see when Jahaan or Dhiren drops in.
+ * - There's no waiting room for anyone (waiting_room_type SKIP, and nobody
+ *   can accept waiting requests). Our own server gate (joinClass in
+ *   src/lib/app/classes-room.ts) decides who gets a token at all, so someone
+ *   who presses Join and passes it goes straight into the call.
  *
  * The UI Kit's chat button is hidden by the room page (the Foundation's
  * spike, 6.10 check 3, records which setting does it).
@@ -158,6 +162,9 @@ const CONFIG: RtkPreset["config"] = {
 
 /** Shared by all three; each preset overrides what differs. */
 const LOCKED = {
+  // No waiting room: everyone who gets a token from joinClass joins at once.
+  accept_waiting_requests: false,
+  waiting_room_type: "SKIP",
   can_accept_production_requests: false,
   can_change_participant_permissions: false,
   can_edit_display_name: false,
@@ -185,7 +192,6 @@ export const TEACHER_PRESET: RtkPreset = {
   config: CONFIG,
   permissions: {
     ...LOCKED,
-    accept_waiting_requests: true,
     disable_participant_audio: true,
     disable_participant_video: true,
     disable_participant_screensharing: true,
@@ -195,7 +201,6 @@ export const TEACHER_PRESET: RtkPreset = {
       screenshare: { can_produce: "ALLOWED" },
     },
     show_participant_list: true,
-    waiting_room_type: "SKIP",
   },
 };
 
@@ -205,7 +210,6 @@ export const STUDENT_PRESET: RtkPreset = {
   config: CONFIG,
   permissions: {
     ...LOCKED,
-    accept_waiting_requests: false,
     disable_participant_audio: false,
     disable_participant_video: false,
     disable_participant_screensharing: false,
@@ -215,8 +219,6 @@ export const STUDENT_PRESET: RtkPreset = {
       screenshare: { can_produce: "NOT_ALLOWED" },
     },
     show_participant_list: false,
-    // Students wait until the teacher admits them.
-    waiting_room_type: "SKIP_ON_ACCEPT",
   },
 };
 
@@ -226,7 +228,6 @@ export const STAFF_PRESET: RtkPreset = {
   config: CONFIG,
   permissions: {
     ...LOCKED,
-    accept_waiting_requests: true,
     disable_participant_audio: true,
     disable_participant_video: true,
     disable_participant_screensharing: true,
@@ -236,7 +237,6 @@ export const STAFF_PRESET: RtkPreset = {
       screenshare: { can_produce: "NOT_ALLOWED" },
     },
     show_participant_list: true,
-    waiting_room_type: "SKIP",
   },
 };
 

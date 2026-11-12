@@ -2,6 +2,8 @@
 // accounts (classes-design.md 15.2, room-and-chat acceptance):
 //   - every joinClass refusal gives its message, and the recording-notice
 //     consent row (with its IP hash) is written before any RealtimeKit call;
+//   - a join that passes goes straight into the call: the student, teacher
+//     and staff presets it asks for all skip RealtimeKit's waiting room;
 //   - sendClassChat stores shown and blocked rows for teacher, student and
 //     staff alike, returns the note, rate-limits, and refuses non-members and
 //     removed participants, who also stop receiving rows over Realtime;
@@ -303,6 +305,7 @@ async function main() {
   const media = await import("../../../src/lib/classes/media.ts");
   const filter = await import("../../../src/lib/classes/chat-filter.ts");
   const notice = await import("../../../src/lib/classes/notice.ts");
+  const presets = await import("../../../src/lib/classes/presets.ts");
 
   const nowId = await newClass("now", acc.t1.id, { startsInMin: 5 });
   const laterId = await newClass("later", acc.t1.id, { startsInMin: 180 });
@@ -481,6 +484,18 @@ async function main() {
     for (const k of ["s2", "s3", "s4"]) {
       const r = await join(k, nowId);
       assert.ok(r.ok, `${k}: ${r.ok ? "" : r.error}`);
+    }
+  });
+
+  await step("join: nobody waits to be let in; every preset joins straight into the call", async () => {
+    // The presets the joins above asked for, by name, are the ones the setup
+    // script pushes, and none of them has a waiting room or a waiting list.
+    const asked = new Set(rtkCalls.map((c) => c.body?.preset_name).filter((n): n is string => typeof n === "string"));
+    assert.deepEqual([...asked].sort(), ["lfrc-staff", "lfrc-student", "lfrc-teacher"]);
+    assert.deepEqual(presets.PRESETS.map((p) => p.name).sort(), [...asked].sort());
+    for (const p of presets.PRESETS) {
+      assert.equal(p.permissions.waiting_room_type, "SKIP", `${p.name} skips the waiting room`);
+      assert.equal(p.permissions.accept_waiting_requests, false, `${p.name} has no waiting list to accept from`);
     }
   });
 

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useRealtimeKitMeeting, useRealtimeKitSelector } from "@cloudflare/realtimekit-react";
+import { useRealtimeKitSelector } from "@cloudflare/realtimekit-react";
 import { endClassAction, removeFromClassAction } from "@/app/actions/class-room";
 import { ReportControl } from "@/components/safety/report-control";
 import { useArmed } from "@/components/use-armed";
@@ -10,8 +10,8 @@ import type { ClassRole, ClassRosterEntry } from "@/lib/classes/types";
 
 /**
  * "Class controls" (section 6.5), for the teacher and staff: everyone in the
- * room with Mute, Remove and Report, the waiting room with Admit, and "End
- * class for everyone".
+ * room with Mute, Remove and Report, and "End class for everyone". There's no
+ * waiting room (src/lib/classes/presets.ts), so nobody waits to be let in.
  *
  * Mute is RealtimeKit's own (the teacher and staff presets may disable
  * someone's audio). Remove and End go through the server (removeFromClass
@@ -39,11 +39,8 @@ export function RoomControls({
   role: ClassRole;
   roster: ClassRosterEntry[];
 }) {
-  const { meeting } = useRealtimeKitMeeting();
   const joinedMap = useRealtimeKitSelector((m) => m.participants.joined);
-  const waitingMap = useRealtimeKitSelector((m) => m.participants.waitlisted);
   const joined = (joinedMap?.toArray() ?? []) as unknown as Person[];
-  const waiting = (waitingMap?.toArray() ?? []) as unknown as Person[];
   const [armed, setArmed, armScope] = useArmed<string | null>(null);
   const [busy, setBusy] = React.useState<string | null>(null);
   const [message, setMessage] = React.useState<string | null>(null);
@@ -89,37 +86,6 @@ export function RoomControls({
   return (
     <section className="nb-box mb-3 p-3" aria-label="Class controls">
       <p className="nb-slug">class controls</p>
-
-      {waiting.length > 0 ? (
-        <div className="mt-2">
-          <p className="text-[0.9rem] font-bold">Waiting to come in</p>
-          <ul className="mt-1 grid gap-1">
-            {waiting.map((p) => (
-              <li key={p.id} className="flex flex-wrap items-center justify-between gap-2">
-                <span className="min-w-0 break-words">{p.name}</span>
-                <span className="flex gap-2">
-                  <button
-                    type="button"
-                    className="nb-btn nb-btn-sm"
-                    onClick={() => meeting?.participants.acceptWaitingRoomRequest(p.id)}
-                  >
-                    Admit
-                  </button>
-                  <button
-                    type="button"
-                    className="nb-btn-ghost nb-btn-sm"
-                    disabled={busy === `remove:${p.id}` || !p.customParticipantId}
-                    onClick={() => void remove(p)}
-                    {...armScope}
-                  >
-                    {armed === `remove:${p.id}` ? "Yes, remove" : "Remove"}
-                  </button>
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
 
       <div className="mt-2">
         <p className="text-[0.9rem] font-bold">In the room</p>
