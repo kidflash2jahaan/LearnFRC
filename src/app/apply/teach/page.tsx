@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { PUBLIC_CONTACT_EMAIL } from "@/lib/email";
 import { classesVisible } from "@/lib/classes/config";
@@ -12,6 +12,7 @@ import { canApplyIn, type TeachApplyMode } from "@/lib/classes/teacher-rules";
 import { teachDraftKey } from "@/lib/classes/teach-draft";
 import { loadTeachApplyState, type TeachApplyState } from "@/lib/app/class-teachers";
 import { scheduleTopicOptions } from "@/lib/app/classes-teaching";
+import { SIGNED_IN_VERSION_IN_PAGE } from "@/lib/signed-in-routes";
 import { usernameStepHref } from "@/lib/usernames";
 import { TeachForm } from "./_teach-form";
 import { DropTeachDraft } from "./_drop-draft";
@@ -33,6 +34,9 @@ export const dynamic = "force-dynamic";
  * Applying to teach live classes (classes-design.md sections 2, 3.1 and 11).
  *
  * Hidden (404) until live classes are visible: both switches (section 1).
+ *
+ * Someone who already teaches is sent to /classes/teaching, their own page
+ * (SIGNED_IN_VERSION_IN_PAGE, src/lib/signed-in-routes.ts).
  *
  * What the role is, what it needs, then where you stand. Teaching is the
  * only role LearnFRC takes applications for (/apply sends people here while
@@ -103,9 +107,10 @@ const body = "mt-3 max-w-[58ch] text-[0.99rem] leading-relaxed";
 /**
  * Modes where this account's draft has no use: sent (from this device or
  * another), already teaching, or unable to apply. The page deletes the draft
- * on this device when it shows one of them.
+ * on this device when it shows one of them. A teacher never sees this page
+ * (they go to /classes/teaching, which deletes it too).
  */
-const NO_DRAFT_MODES: TeachApplyMode[] = ["pending", "teacher", "code-outdated", "suspended", "adult", "parent-declined"];
+const NO_DRAFT_MODES: TeachApplyMode[] = ["pending", "code-outdated", "suspended", "adult", "parent-declined"];
 
 /** What still stands between an applicant or teacher and their first class. */
 function BeforeYouSchedule({ state }: { state: TeachApplyState }) {
@@ -167,6 +172,10 @@ export default async function TeachApplyPage() {
   } = await supabase.auth.getUser();
   const state = await loadTeachApplyState(user);
   if (state.mode === "hidden") notFound();
+  // Someone who already teaches goes to their teaching page
+  // (src/lib/signed-in-routes.ts). Suspended teachers and ones who need to
+  // agree to a new code stay here, because this page explains those.
+  if (state.mode === "teacher") redirect(SIGNED_IN_VERSION_IN_PAGE["/apply/teach"]);
 
   const mode = state.mode;
   const head = HEADS[mode];
@@ -382,32 +391,6 @@ export default async function TeachApplyPage() {
             </p>
             <CodeAgreeForm codeVersion={state.codeVersion} />
           </StateCard>
-        )}
-
-        {mode === "teacher" && state.teacher && (
-          <>
-            <StateCard slug={`teacher since ${day(state.teacher.since) ?? "recently"}`} tilt="nb-tilt-1">
-              <p className={body}>
-                You can schedule classes from your teaching page. Pick a lesson or module, a time and how many
-                seats.
-              </p>
-              <div className="nb-hair mt-5 pt-4">
-                <p className="nb-slug">name on your hours letters</p>
-                <p className="mt-1.5 text-[1.05rem] font-bold">{state.teacher.letterName}</p>
-                <p className="nb-hint mt-1.5 max-w-[56ch]">
-                  It&rsquo;s locked, so it reads the same on every letter. Wrong? Write to{" "}
-                  <a href={`mailto:${PUBLIC_CONTACT_EMAIL}`} className="nb-link">
-                    {PUBLIC_CONTACT_EMAIL}
-                  </a>
-                  .
-                </p>
-              </div>
-              <Link href="/classes/teaching" className="nb-btn mt-6">
-                Open your teaching page
-              </Link>
-            </StateCard>
-            <BeforeYouSchedule state={state} />
-          </>
         )}
 
         {mode === "pending" && state.application && (

@@ -204,10 +204,14 @@ async function main() {
     assert.ok(ready.includes("before you start"));
     assert.ok(ready.includes(`@${acc.ready.username}`));
     assert.ok(!/Help run it|spread LearnFRC/i.test(ready), "no marketing role");
-    const teach = text((await page("/apply/teach", s.teach.cookie)).html);
-    assert.ok(teach.includes("You’re a teacher"));
-    assert.ok(teach.includes("Lftest Teach"), "the locked letter name");
-    assert.ok(teach.includes("Open your teaching page"));
+    // Someone who already teaches goes to their teaching page
+    // (SIGNED_IN_VERSION_IN_PAGE, src/lib/signed-in-routes.ts).
+    const teachOut = await page("/apply/teach", s.teach.cookie);
+    assert.equal(teachOut.status, 307, `a teacher is redirected (${teachOut.status})`);
+    const teachTo = await fetch(`${BASE}/apply/teach`, { headers: { cookie: s.teach.cookie }, redirect: "manual" });
+    assert.equal(new URL(teachTo.headers.get("location") ?? "", BASE).pathname, "/classes/teaching");
+    const teach = text((await page("/classes/teaching", s.teach.cookie)).html);
+    assert.ok(teach.includes("Your classes"), "the teaching page");
     for (const t of [noage, adult, ready, teach]) {
       assert.ok(!/\bhost/i.test(t), "no host promised");
       assert.ok(!t.includes("\u2014"), "no em dash");

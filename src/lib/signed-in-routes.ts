@@ -13,15 +13,16 @@
  * signed-out visitors and crawlers still get the cached page, exactly as
  * before, and a signed-in reader never reaches it.
  *
- * Keep this file free of imports: the middleware, /signup, the logo, the
- * footer and the unit tests all read it. The navbar's own "My team" swap
+ * Keep this file free of imports: the middleware, /signup, /apply/teach, the
+ * logo, the footer and the unit tests all read it. The navbar's own "My team" swap
  * (components/navbar.tsx) is the same /for-teams pair.
  *
  * Rules for adding a pair:
  * - The left side has to be a page a signed-in person never needs, and the
  *   right side has to be what its own buttons would have sent them to.
- * - Only a session check decides it. Anything that needs a database read
- *   (a role, a team, a teacher's status) belongs in that page instead.
+ * - Only a session check decides it. A pair that needs a database read (a
+ *   role, a team, a teacher's status) goes in SIGNED_IN_VERSION_IN_PAGE
+ *   below, and that page does the redirect itself.
  * - The right side must never be a key here, and never a page that sends
  *   signed-in people somewhere else (/login, /signup, /forgot-password), so
  *   nothing can loop. The unit test checks both.
@@ -44,6 +45,22 @@ export const SIGNED_IN_VERSION: Readonly<Record<string, string>> = {
   // "Check your inbox" after signing up. Once the confirm link has signed you
   // in, the old tab shouldn't keep telling you to check your email.
   "/auth/verify-email": "/dashboard",
+};
+
+/**
+ * Pairs that need more than a session check, so the left-hand page reads
+ * what it needs and redirects itself. They live here so every signed-in
+ * version is in one list, and the unit test holds them to the same rules.
+ * signedInRedirect and signedInHref never use these.
+ */
+export const SIGNED_IN_VERSION_IN_PAGE: Readonly<Record<string, string>> = {
+  // Applying to teach, for someone who already teaches (the "teacher" mode
+  // of loadTeachApplyState, src/lib/app/class-teachers.ts). The apply page's
+  // only button for them is "Open your teaching page", and the teaching page
+  // has their classes, the code and the hours letters. A suspended teacher
+  // and one who needs to agree to a new code stay on the apply page, since
+  // that's where those are explained and answered.
+  "/apply/teach": "/classes/teaching",
 };
 
 /**

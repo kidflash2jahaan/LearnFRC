@@ -17,6 +17,7 @@ import { LocalTime } from "@/components/classes/local-time";
 import { lengthLabel } from "@/components/classes/class-card";
 import { ScheduleForm } from "./_schedule-form";
 import { CancelClassButton } from "./_cancel-class";
+import { DropTeachDraft } from "@/app/apply/teach/_drop-draft";
 
 export const metadata: Metadata = {
   title: "Your classes",
@@ -272,6 +273,10 @@ export default async function TeachingPage() {
           </div>
         </details>
       )}
+
+      {/* A teacher's unsent application draft has no use any more. /apply/teach
+          sends teachers here, so this is where it gets deleted. */}
+      {desk.isTeacher ? <DropTeachDraft userId={user.id} /> : null}
     </div>
   );
 }

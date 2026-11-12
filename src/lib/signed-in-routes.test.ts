@@ -4,6 +4,7 @@ import {
   SIGNED_IN_HOME,
   SIGNED_IN_REDIRECT_CACHE_CONTROL,
   SIGNED_IN_VERSION,
+  SIGNED_IN_VERSION_IN_PAGE,
   SIGNED_OUT_ONLY,
   signedInHref,
   signedInLanding,
@@ -83,11 +84,28 @@ test("everything else is untouched", () => {
 test("no destination redirects again", () => {
   for (const [from, to] of Object.entries(SIGNED_IN_VERSION)) {
     assert.equal(SIGNED_IN_VERSION[to], undefined, `${from} -> ${to} chains`);
+    assert.equal(SIGNED_IN_VERSION_IN_PAGE[to], undefined, `${from} -> ${to} chains through a page`);
     assert.ok(!SIGNED_OUT_ONLY.includes(to), `${from} -> ${to} is a signed-out page`);
     assert.equal(get(to), null, `${to} redirects again`);
     assert.ok(to.startsWith("/") && !to.startsWith("//"), `${to} must be a same-site path`);
   }
   assert.equal(get(SIGNED_IN_HOME), null);
+});
+
+// Pairs a page redirects itself (it needs a database read the middleware
+// doesn't make). Same loop rules, and the middleware leaves them alone.
+test("in-page pairs follow the same rules", () => {
+  assert.equal(SIGNED_IN_VERSION_IN_PAGE["/apply/teach"], "/classes/teaching");
+  const all = { ...SIGNED_IN_VERSION, ...SIGNED_IN_VERSION_IN_PAGE };
+  for (const [from, to] of Object.entries(SIGNED_IN_VERSION_IN_PAGE)) {
+    assert.equal(SIGNED_IN_VERSION[from], undefined, `${from} is in both lists`);
+    assert.equal(all[to], undefined, `${from} -> ${to} chains`);
+    assert.ok(!SIGNED_OUT_ONLY.includes(to), `${from} -> ${to} is a signed-out page`);
+    assert.ok(to.startsWith("/") && !to.startsWith("//"), `${to} must be a same-site path`);
+    assert.equal(get(from), null, `the middleware redirects ${from}`);
+    assert.equal(get(to), null, `${to} redirects again`);
+    assert.equal(signedInHref(from), from, `links to ${from} are rewritten for everyone`);
+  }
 });
 
 test("the redirect is never cacheable for everyone", () => {
