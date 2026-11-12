@@ -406,7 +406,9 @@ async function cleanup(pkg) {
 
   let limits = 0;
   for (const id of acc.ids) {
-    limits += await del(db, "rate_limit_hits", (q) => q.like("bucket", `%:k:${id}`), "per-account limits", true);
+    // Both shapes that end in the account: `<action>:k:<id>` and the per-IP
+    // `<action>:<ip>:<id>` a route leaves (report, block over HTTP).
+    limits += await del(db, "rate_limit_hits", (q) => q.like("bucket", `%:${id}`), "per-account limits", true);
     for (const t of ["lesson_progress", "bookmarks", "user_achievements"]) {
       await del(db, t, (q) => q.eq("user_id", id), "account");
     }

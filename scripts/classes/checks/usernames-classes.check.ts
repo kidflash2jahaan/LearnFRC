@@ -11,8 +11,9 @@
 //      mid-class still reaches them and whoever takes the old name is never
 //      reported. userId is ignored on a profile report.
 //   4. The reports desk's "replace the username" takes a generate_username
-//      handle, flags it in its own write and logs the rename; classes then
-//      wait on the username step. Without replaceUsername the handle stays.
+//      handle, flags it (in its own write, which only a row that's already
+//      flagged can tell apart) and logs the rename; classes then wait on the
+//      username step. Without replaceUsername the handle stays.
 //   5. What the room view and the roster show for a member whose username is
 //      generated.
 //   6. scheduleClass refuses a teacher whose username is generated, before
@@ -36,13 +37,15 @@
 // touches class_settings: the switches come from CLASSES_DEV_SWITCHES, and the
 // end of the run checks the row is as it found it. Its test data is package
 // "usernames"; everything it makes is deleted at the end, including the
-// name_moderation_log rows the desk's rename writes and the per-IP rate-limit
-// rows the HTTP reports leave, which test-data.mjs cleanup doesn't know about.
+// name_moderation_log rows the desk's rename writes, which test-data.mjs
+// cleanup doesn't know about. The end of the run also checks no rate-limit row
+// naming one of its accounts is left (`report:<ip>:<account id>` included).
 
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { devDir, loadEnv } from "../env.mjs";
+import { devDir, loadEnv, repoRoot } from "../env.mjs";
 import { create, cleanup, check, readCredentials } from "../test-data.mjs";
 
 loadEnv();
@@ -58,6 +61,7 @@ const FAKE_RTK = {
 Object.assign(process.env, FAKE_RTK);
 
 const PKG = "usernames";
+const API_DOC = join(repoRoot, "apple", "docs", "API.md");
 const BASE = (process.env.APP_BASE || "http://localhost:3120").replace(/\/$/, "");
 // This package's own outbox (cleanup removes it), whatever package the
 // worktree's .env.local was built for.
@@ -190,10 +194,11 @@ function everIds(): string[] {
 }
 
 /**
- * Rows test-data.mjs cleanup doesn't know about: the desk's rename log
- * (name_moderation_log, which would also stop the profile being deleted if
- * its key has no cascade) and the per-IP rate-limit buckets a route leaves
- * (`report:<ip>:<account id>`). Returns how many it found.
+ * The desk's rename log (name_moderation_log, which test-data.mjs cleanup
+ * doesn't know about, and which would also stop the profile being deleted if
+ * its key has no cascade) and every rate-limit bucket naming the accounts,
+ * the per-IP `report:<ip>:<account id>` a route leaves included. Returns how
+ * many it found.
  */
 async function scrubExtras(ids: string[]): Promise<{ renames: number; limits: number }> {
   let renames = 0;
@@ -232,6 +237,7 @@ async function main() {
     "mover:age=15:parent=agreed",
     "taker:age=15:parent=agreed",
     "ren:age=15:parent=agreed",
+    "reng:age=15:parent=agreed:generated",
     "kept:age=15:parent=agreed",
     "sa:superadmin",
     "sanon:superadmin:nousername",
@@ -346,7 +352,9 @@ async function main() {
     await chatShown("sa", "hi everyone, LearnFRC staff here for a few minutes");
   });
 
-  await step("the needs_handle sentences are the ones apple/docs/API.md quotes", async () => {
+  await step("the needs_handle sentences: the student's is the one apple/docs/API.md quotes, and each role has its own", async () => {
+    const apiDoc = readFileSync(API_DOC, "utf8");
+    assert.ok(apiDoc.includes(`("${S.needsHandle}"`), "API.md's live classes section quotes ROOM_SENTENCES.needsHandle");
     assert.equal(S.needsHandle, "Choose the username your classmates will see before you join a class.");
     assert.equal(S.needsHandle, classes.CLASS_SENTENCES.needsHandle);
     assert.equal(S.teachNeedsHandle, "Choose the username your students will see before you teach.");
@@ -626,7 +634,7 @@ async function main() {
   /* 4: the desk's "replace the username" */
 
   let renNew = "";
-  await step("desk: Remove with replaceUsername gives a generated handle, flagged in its own write, and logs the rename", async () => {
+  await step("desk: Remove with replaceUsername gives a flagged generated handle and logs the rename", async () => {
     const filed = await reports.fileReport(user("s1"), {
       contentKind: "profile",
       username: handle("ren"),
@@ -708,6 +716,34 @@ async function main() {
       .eq("id", r.reportId!)
       .single();
     assert.deepEqual(row, { reported_user_id: acc.ren.id, reported_username: renNew });
+  });
+
+  // The step above can't tell a flag write of its own from one folded into
+  // the rename: on a row that isn't flagged yet, the guard keeps a flag the
+  // same write sets. On a row that's already flagged it can't see that write
+  // and clears the flag, so only this case fails if the two are merged.
+  await step("desk: replacing a username that's already generated leaves the new one flagged", async () => {
+    assert.deepEqual(await current("reng"), { username: handle("reng"), generated: true });
+    const filed = await reports.fileReport(user("s1"), {
+      contentKind: "profile",
+      username: handle("reng"),
+      reason: "offensive",
+      surface: "profile",
+      platform: "web",
+    });
+    assert.ok(filed.ok && filed.reportId, filed.ok ? "" : filed.error);
+    const r = await desk.removeReportedContent(user("desk"), { id: filed.reportId!, note: "lftest", replaceUsername: true });
+    assert.ok(r.ok, r.ok ? "" : r.error);
+    if (!r.ok) return;
+    assert.ok(r.newUsername && r.newUsername !== handle("reng"), `a new username: ${r.newUsername}`);
+    assert.match(r.newUsername!, /^[a-z]+_[0-9]{4}$/);
+    assert.deepEqual(await current("reng"), { username: r.newUsername, generated: true }, "the new handle is flagged");
+    const { count } = await admin
+      .from("name_moderation_log")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", acc.reng.id);
+    assert.equal(count, 1, "one rename logged");
+    assert.equal(await classes.classEligibility(user("reng")), "needs_handle");
   });
 
   await step("desk: Remove without replaceUsername keeps the handle and its flag (the control)", async () => {
