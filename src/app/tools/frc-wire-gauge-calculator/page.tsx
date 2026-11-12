@@ -100,6 +100,7 @@ export default async function Page() {
       <Calculator authed={!!user} />
 
       <ToolCTA
+        authed={!!user}
         related={[
           { href: "/tools/frc-current-budget", label: "Current & brownout checker" },
           { href: "/blog/frc-no-robot-code-driver-station-troubleshooting", label: "“No robot code” fixes" },

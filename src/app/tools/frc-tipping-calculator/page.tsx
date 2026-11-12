@@ -98,6 +98,7 @@ export default async function Page() {
       />
       <Calculator authed={!!user} />
       <ToolCTA
+        authed={!!user}
         related={[
           { href: "/tools/frc-current-budget", label: "Current & brownout checker" },
           { href: "/tools/frc-wire-gauge-calculator", label: "Wire gauge & voltage drop" },

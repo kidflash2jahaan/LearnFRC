@@ -1,5 +1,9 @@
+"use client";
+
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { signedInHref } from "@/lib/signed-in-routes";
+import { useViewerSignedIn } from "@/lib/signed-in-viewer";
 
 /**
  * The LearnFRC logotype: the name written out in the binder's own hand, with
@@ -11,6 +15,10 @@ import { cn } from "@/lib/utils";
  * `nb-brand` carries the weight, the tracking and the drawn box on the <b>.
  * Size is set here rather than in the kit because the header and the footer
  * want different ones off the same class.
+ *
+ * Home is the dashboard for a signed-in reader (src/lib/signed-in-routes.ts).
+ * The middleware would redirect "/" there anyway; pointing straight at it once
+ * the navbar knows saves the hop.
  */
 export function Logo({
   className,
@@ -21,9 +29,10 @@ export function Logo({
    *  disturbing the link box that holds the focus ring. */
   textClassName?: string;
 }) {
+  const signedIn = useViewerSignedIn();
   return (
     <Link
-      href="/"
+      href={signedIn ? signedInHref("/") : "/"}
       aria-label="LearnFRC, home"
       /* min-h-11 is the 44px touch floor. The logotype's own line box is only
          38px tall, and this is the first link on every page. */

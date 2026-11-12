@@ -98,6 +98,7 @@ export default async function Page() {
       />
       <Calculator authed={!!user} />
       <ToolCTA
+        authed={!!user}
         related={[
           { href: "/tools/frc-wire-gauge-calculator", label: "Wire gauge & voltage drop" },
           { href: "/blog/frc-no-robot-code-driver-station-troubleshooting", label: "“No robot code” fixes" },

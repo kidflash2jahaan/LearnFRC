@@ -18,6 +18,7 @@ import { signOut } from "@/app/actions/auth";
 import { createClient } from "@/lib/supabase/client";
 import type { Profile } from "@/lib/types";
 import { usernameStepHref } from "@/lib/usernames";
+import { setViewerSignedIn } from "@/lib/signed-in-viewer";
 import { EmailChoicePrompt } from "@/components/settings/email-choice-prompt";
 
 /**
@@ -207,6 +208,13 @@ export function Navbar() {
   }, [loaded, usernameGenerated, pathname, router]);
 
   const { authed, profile, email, isAdmin, isSuperAdmin } = me;
+
+  // Tell the rest of the chrome (the logo, the footer) who is reading, so
+  // they can point at the signed-in pages without asking the server again.
+  React.useEffect(() => {
+    if (loaded) setViewerSignedIn(authed);
+  }, [loaded, authed]);
+
   const openSearch = () => window.dispatchEvent(new Event("open-search"));
   const who = profile?.full_name || profile?.username || "Your account";
 

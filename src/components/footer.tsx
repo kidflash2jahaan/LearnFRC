@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { ViewerLinks } from "@/components/viewer-links";
+import { signedInHref } from "@/lib/signed-in-routes";
 import { Logo } from "@/components/logo";
 import { NewsletterForm } from "@/components/newsletter-form";
 import { getOverviewStats } from "@/lib/queries";
@@ -30,6 +32,21 @@ const TEAM = [
   { label: "Leaderboard", href: "/leaderboard" },
   { label: "Log in", href: "/login" },
   { label: "Get started", href: "/signup" },
+];
+
+/**
+ * The team column for a signed-in reader, swapped in once the navbar knows
+ * (components/viewer-links.tsx). "For teams" becomes their own team, the way
+ * the navbar's tab does (src/lib/signed-in-routes.ts), and Log in and Get
+ * started become the two account pages the avatar menu also lists. Same
+ * length as TEAM, so the footer doesn't move when it swaps.
+ */
+const TEAM_SIGNED_IN = [
+  { label: "My team", href: signedInHref("/for-teams") },
+  { label: "Dashboard", href: "/dashboard" },
+  { label: "Leaderboard", href: "/leaderboard" },
+  { label: "Profile", href: "/profile" },
+  { label: "Settings", href: "/settings" },
 ];
 
 const RECORD = [
@@ -135,13 +152,17 @@ export async function Footer() {
             <div key={col.title}>
               <h2 className="nb-slug font-bold">{col.title}</h2>
               <ul className="mt-2 flex list-none flex-col p-0">
-                {col.links.map((l) => (
-                  <li key={l.href}>
-                    <Link href={l.href} className={COL_LINK}>
-                      {l.label}
-                    </Link>
-                  </li>
-                ))}
+                {col.title === "team" ? (
+                  <ViewerLinks links={TEAM} signedInLinks={TEAM_SIGNED_IN} className={COL_LINK} />
+                ) : (
+                  col.links.map((l) => (
+                    <li key={l.href}>
+                      <Link href={l.href} className={COL_LINK}>
+                        {l.label}
+                      </Link>
+                    </li>
+                  ))
+                )}
               </ul>
             </div>
           ))}

@@ -98,6 +98,7 @@ export default async function Page() {
       />
       <Calculator authed={!!user} />
       <ToolCTA
+        authed={!!user}
         related={[
           { href: "/blog/frc-team-budget-worksheet", label: "FRC team budget worksheet" },
           { href: "/blog/frc-sponsorship-letter-template", label: "Sponsorship letter template" },
