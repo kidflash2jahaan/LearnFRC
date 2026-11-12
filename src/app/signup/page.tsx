@@ -4,6 +4,7 @@ import { DEPT_CATALOG } from "@/lib/dept-catalog";
 import { AuthForm } from "@/components/auth/auth-form";
 import { getSession } from "@/lib/auth";
 import { safeNextPath } from "@/lib/safe-next";
+import { signedInLanding } from "@/lib/signed-in-routes";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const metadata = {
@@ -40,9 +41,11 @@ const STAMPS = [
  * system a department has no colour, so the contents page is what it is on
  * paper: a ruled index, two columns, slug and name.
  *
- * BEHAVIOUR IS UNCHANGED: same session redirect, same `next` sanitising, same
- * `ref` normalising and the same admin lookup that turns a referral code into
- * a real username so the invite is not a cold form.
+ * Same `next` sanitising, same `ref` normalising and the same admin lookup
+ * that turns a referral code into a real username so the invite is not a
+ * cold form. Someone already signed in goes where the link was taking them (a
+ * stale "/signup?next=<lesson>" tab puts them back on the lesson), or to the
+ * dashboard when there's no `next` (signedInLanding, src/lib/signed-in-routes.ts).
  */
 export default async function SignupPage({
   searchParams,
@@ -50,10 +53,10 @@ export default async function SignupPage({
   searchParams: Promise<{ next?: string; ref?: string; via?: string }>;
 }) {
   const { next, ref, via } = await searchParams;
-  const { user } = await getSession();
-  if (user) redirect("/dashboard");
-
   const safeNext = safeNextPath(next);
+  const { user } = await getSession();
+  if (user) redirect(signedInLanding(safeNext));
+
   const refValue =
     (ref || "").toLowerCase().replace(/[^a-z0-9_]/g, "") || undefined;
 
