@@ -343,11 +343,17 @@ async function main() {
   /* joinClass refusals */
 
   await step("join: hidden when classes aren't visible", async () => {
+    // Hidden by the env switch, not the settings row: the row is shared with
+    // the test site, which may have classes visible while this runs.
+    const envVisible = process.env.CLASSES_VISIBLE;
     process.env.CLASSES_DEV_SWITCHES = "0";
+    process.env.CLASSES_VISIBLE = "0";
     try {
       await expectRefusal("s1", nowId, "hidden", S.hidden);
     } finally {
       process.env.CLASSES_DEV_SWITCHES = "1";
+      if (envVisible === undefined) delete process.env.CLASSES_VISIBLE;
+      else process.env.CLASSES_VISIBLE = envVisible;
     }
   });
 
