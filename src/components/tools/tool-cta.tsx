@@ -15,8 +15,18 @@ export type RelatedLink = { href: string; label: string };
  * Two jobs, kept apart on purpose: the account pitch on the left (the tools are
  * the top of the funnel for search traffic), and the keyword-bearing internal
  * links on the right, which is what actually feeds link equity to the lessons.
+ *
+ * A signed-in reader already has the account, so the pitch turns into the way
+ * back to their dashboard. Every tool page reads the session anyway (it hands
+ * `authed` to its calculator), so this costs nothing extra.
  */
-export async function ToolCTA({ related }: { related: RelatedLink[] }) {
+export async function ToolCTA({
+  related,
+  authed = false,
+}: {
+  related: RelatedLink[];
+  authed?: boolean;
+}) {
   // Read, so this never advertises a catalogue size that has moved on.
   const { lessonCount, deptCount } = await getOverviewStats().catch(() => ({
     lessonCount: 0,
@@ -36,13 +46,21 @@ export async function ToolCTA({ related }: { related: RelatedLink[] }) {
             Every tool here is free, and so is the rest of the binder.
           </h2>
           <p className="nb-sub mt-4">
-            {catalogue}, plus every calculator on this site. An account is only
-            for saving your work and tracking what you have finished.
+            {catalogue}, plus every calculator on this site.{" "}
+            {authed
+              ? "Your account keeps track of what you've finished."
+              : "An account is only for saving your work and tracking what you have finished."}
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
-            <Link href="/signup" className="nb-btn">
-              Create a free account
-            </Link>
+            {authed ? (
+              <Link href="/dashboard" className="nb-btn">
+                Open your dashboard
+              </Link>
+            ) : (
+              <Link href="/signup" className="nb-btn">
+                Create a free account
+              </Link>
+            )}
             <Link href="/guides" className="nb-btn-ghost">
               Browse the guides
             </Link>

@@ -98,6 +98,7 @@ export default async function Page() {
       />
       <Calculator authed={!!user} />
       <ToolCTA
+        authed={!!user}
         related={[
           { href: "/tools/frc-tipping-calculator", label: "Tip-over & stability" },
           { href: "/blog/frc-elevator-arm-design-guide", label: "Elevator & arm design guide" },

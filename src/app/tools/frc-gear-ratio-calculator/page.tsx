@@ -322,6 +322,7 @@ export default async function Page() {
       </section>
 
       <ToolCTA
+        authed={!!user}
         related={[
           { href: "/blog/frc-gear-ratios-explained", label: "FRC gear ratios explained" },
           { href: "/blog/frc-drivetrain-types", label: "FRC drivetrain types compared" },
