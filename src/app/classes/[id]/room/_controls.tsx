@@ -11,7 +11,9 @@ import type { ClassRole, ClassRosterEntry } from "@/lib/classes/types";
 /**
  * "Class controls" (section 6.5), for the teacher and staff: everyone in the
  * room with Mute, Remove and Report, and "End class for everyone". There's no
- * waiting room (src/lib/classes/presets.ts), so nobody waits to be let in.
+ * Admit list: students who arrive before the teacher or staff wait on their
+ * own room page and go in by themselves once one of them is in the room
+ * (joinClass in src/lib/app/classes-room.ts).
  *
  * Mute is RealtimeKit's own (the teacher and staff presets may disable
  * someone's audio). Remove and End go through the server (removeFromClass

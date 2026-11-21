@@ -12,7 +12,13 @@ import { usernameStepHref } from "@/lib/usernames";
  * required box, the rules in plain words, and the name everyone will see.
  * Everyone sees it on every join, late joiners and rejoiners included, and
  * ticking the box is what makes joinClass write the notice record.
+ *
+ * A student who presses Join before the teacher or staff is in the room
+ * waits here (`waiting`), and the room lets them in as soon as one arrives.
  */
+
+/** What a waiting student reads while the room waits for the teacher. */
+const WAITING_NOTE = "Waiting for your teacher. You'll go in as soon as they arrive.";
 
 /** Refusals that pressing Join again can't fix; the button is off for them. */
 const BLOCKING = new Set([
@@ -47,13 +53,14 @@ const RULES: Record<ClassRole, string[]> = {
   teacher: [
     "Your camera and mic start off. Turn them on when you're ready; your camera is optional.",
     "Say the recording notice out loud when the class starts.",
-    "Students come straight into the call when they join. Class controls let you mute or remove someone, and you can report anyone who breaks the rules.",
+    "Students can't come into the call until you're in it. Anyone who's waiting goes in as soon as you join. Class controls let you mute or remove someone, and you can report anyone who breaks the rules.",
     "Your messages go through the same chat filter as everyone's, so share links from LearnFRC or the docs.",
     "Keep to the topic. Never ask anyone's age, school or location, and never ask anyone to turn a camera on.",
   ],
   staff: [
     "You show to everyone as LearnFRC staff.",
     "Your camera and mic start off.",
+    "Students who are waiting for the teacher go in as soon as you join, the same as when the teacher does.",
     "Class controls let you mute or remove someone, or end the class for everyone.",
   ],
 };
@@ -65,12 +72,24 @@ export type PrejoinProps = {
   displayName: string | null;
   classId: string;
   joining: boolean;
+  /** Pressed Join before the teacher or staff was in the room, and waiting to go in. */
+  waiting: boolean;
   /** Why Join was (or would be) refused, if it was. */
   refusal: { reason: string; message: string; opensAt?: string } | null;
   onJoin: (acceptedNotice: boolean) => void;
 };
 
-export function Prejoin({ title, teacherUsername, role, displayName, classId, joining, refusal, onJoin }: PrejoinProps) {
+export function Prejoin({
+  title,
+  teacherUsername,
+  role,
+  displayName,
+  classId,
+  joining,
+  waiting,
+  refusal,
+  onJoin,
+}: PrejoinProps) {
   const [accepted, setAccepted] = React.useState(false);
   const [opened, setOpened] = React.useState(false);
   const uid = React.useId();
@@ -86,7 +105,7 @@ export function Prejoin({ title, teacherUsername, role, displayName, classId, jo
   }, [refusal]);
 
   const blocked = !!refusal && BLOCKING.has(refusal.reason) && !(refusal.reason === "early" && opened);
-  const canPress = !blocked && !joining && accepted;
+  const canPress = !blocked && !joining && !waiting && accepted;
 
   return (
     <div className="nb-wrap max-w-[46rem] pb-[clamp(3rem,6vw,4.5rem)] pt-[clamp(2rem,4.5vw,3.2rem)]">
@@ -111,7 +130,7 @@ export function Prejoin({ title, teacherUsername, role, displayName, classId, jo
             type="checkbox"
             checked={accepted}
             onChange={(e) => setAccepted(e.target.checked)}
-            disabled={joining}
+            disabled={joining || waiting}
             className="mt-1 size-4 shrink-0"
           />
           <span>{CLASS_NOTICE_CHECKBOX}</span>
@@ -138,7 +157,12 @@ export function Prejoin({ title, teacherUsername, role, displayName, classId, jo
       <div aria-live="polite">
         {refusal && !(refusal.reason === "early" && opened) ? (
           <div id={errorId} className="nb-note mt-5 max-w-[40rem]">
-            <p className="text-[0.95rem] leading-snug">{refusal.message}</p>
+            <p className="text-[0.95rem] leading-snug">
+              {refusal.reason === "waiting_for_teacher" && waiting ? WAITING_NOTE : refusal.message}
+            </p>
+            {refusal.reason === "waiting_for_teacher" && !waiting ? (
+              <p className="nb-hint mt-1">Press Join class and you&rsquo;ll go in as soon as they arrive.</p>
+            ) : null}
             {refusal.reason === "early" && refusal.opensAt ? (
               <p className="nb-hint mt-1">
                 The room opens for you at <LocalTime iso={refusal.opensAt} style="time" />. This page will let you in
@@ -174,11 +198,11 @@ export function Prejoin({ title, teacherUsername, role, displayName, classId, jo
           type="button"
           className="nb-btn"
           disabled={!canPress}
-          aria-busy={joining}
+          aria-busy={joining || waiting}
           aria-describedby={refusal ? errorId : undefined}
           onClick={() => onJoin(accepted)}
         >
-          {joining ? "Joining" : "Join class"}
+          {joining ? "Joining" : waiting ? "Waiting for your teacher" : "Join class"}
         </button>
         <Link href={`/classes/${classId}`} className="nb-btn-ghost">
           Back to the class page

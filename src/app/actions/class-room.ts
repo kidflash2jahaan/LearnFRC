@@ -9,10 +9,12 @@ import {
   removeFromClass,
   roomRoster,
   roomStatus,
+  roomWait,
   setJoinsPaused,
   type JoinGrant,
   type JoinRefusal,
   type RoomStatus,
+  type RoomWait,
 } from "@/lib/app/classes-room";
 import type { ClassEndReason, ClassRosterEntry } from "@/lib/classes/types";
 
@@ -96,6 +98,13 @@ export async function roomStatusAction(classId: string): Promise<RoomStatus> {
   const user = await sessionUser();
   if (!user) return { status: null, endReason: null, removed: false, canReport: false, reported: false };
   return roomStatus(user, classId);
+}
+
+/** For a student waiting for the teacher: is someone in charge in the room yet? */
+export async function roomWaitAction(classId: string): Promise<RoomWait> {
+  const user = await sessionUser();
+  if (!user) return { open: false, status: null, endReason: null, removed: false };
+  return roomWait(user, classId);
 }
 
 /** The report panel's roster, refreshed while someone is in the room. */

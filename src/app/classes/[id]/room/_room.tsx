@@ -11,6 +11,7 @@ import {
   joinClassAction,
   roomRosterAction,
   roomStatusAction,
+  roomWaitAction,
 } from "@/app/actions/class-room";
 import type { JoinGrant, RoomView } from "@/lib/app/classes-room";
 import type { ClassEndReason, ClassStatus } from "@/lib/classes/types";
@@ -21,7 +22,11 @@ import type { MeetingHandle } from "./_meeting";
 /**
  * The class room, in the browser (section 6.5).
  *
- *   prejoin  the notice, the rules and "Join class" (_prejoin.tsx)
+ *   prejoin  the notice, the rules and "Join class" (_prejoin.tsx). A
+ *            student who presses Join before the teacher or staff is in
+ *            the room waits here and goes in by themselves once one of
+ *            them arrives (roomWait, then joinClass again). Nobody admits
+ *            anyone.
  *   in       our bar (the recording badge, Report someone, Class controls
  *            for the teacher and staff, Leave), the meeting (_meeting.tsx,
  *            browser only) and the chat panel (_chat-panel.tsx)
@@ -53,6 +58,9 @@ type Phase =
   | { kind: "ended"; reason: ClassEndReason | null; canceled?: boolean };
 
 const OPEN: readonly ClassStatus[] = ["scheduled", "live"];
+
+/** How often a waiting student asks whether the teacher or staff is in yet. */
+const WAIT_POLL_MS = 4_000;
 
 function endedMessage(reason: ClassEndReason | null, canceled?: boolean): string {
   if (canceled) return "This class was canceled.";
@@ -88,6 +96,8 @@ export function Room(view: RoomView) {
     view.refusal
   );
   const [joining, setJoining] = React.useState(false);
+  // Pressed Join before the teacher or staff was in the room: waiting to go in.
+  const [waiting, setWaiting] = React.useState(false);
   const [roster, setRoster] = React.useState(view.roster);
   const [controlsOpen, setControlsOpen] = React.useState(false);
   // The page's copy of these was read before this browser joined: a student
@@ -113,6 +123,7 @@ export function Room(view: RoomView) {
     try {
       const r = await joinClassAction(classId, accepted ? CLASS_NOTICE_VERSION : "");
       if (r.ok) {
+        setWaiting(false);
         setRefusal(null);
         // They're a participant now, so they can report from this class.
         setCanReport(true);
@@ -120,16 +131,68 @@ export function Room(view: RoomView) {
         setPhase({ kind: "in", grant: r });
         return;
       }
+      if (r.reason === "waiting_for_teacher") {
+        // They chose to join: they go in as soon as someone in charge does.
+        setRefusal({ reason: r.reason, message: r.error });
+        setWaiting(accepted);
+        return;
+      }
+      setWaiting(false);
       if (r.reason === "removed") setPhase({ kind: "removed" });
       else if (r.reason === "over" || r.reason === "closed") setPhase({ kind: "ended", reason: null });
       else if (r.reason === "canceled") setPhase({ kind: "ended", reason: null, canceled: true });
       else setRefusal({ reason: r.reason, message: r.error, opensAt: r.opensAt });
     } catch {
+      setWaiting(false);
       setRefusal({ reason: "rtk", message: "Couldn't reach LearnFRC. Check your connection and try again." });
     } finally {
       setJoining(false);
     }
   }
+  // The waiting loop below calls the newest join.
+  const joinRef = React.useRef(join);
+  React.useEffect(() => {
+    joinRef.current = join;
+  });
+
+  // Waiting for the teacher: ask every few seconds (a read, so it never uses
+  // up a join), and join the moment the teacher or staff is in the room. A
+  // class that ends or a removal while waiting shows its own screen.
+  const waitingNow = waiting && phase.kind === "prejoin";
+  React.useEffect(() => {
+    if (!waitingNow) return;
+    let stopped = false;
+    let busy = false;
+    const tick = async () => {
+      if (busy || stopped) return;
+      busy = true;
+      try {
+        const w = await roomWaitAction(classId);
+        if (stopped) return;
+        if (w.removed) {
+          setWaiting(false);
+          setPhase({ kind: "removed" });
+        } else if (w.status === "canceled") {
+          setWaiting(false);
+          setPhase({ kind: "ended", reason: null, canceled: true });
+        } else if (w.status && !OPEN.includes(w.status)) {
+          setWaiting(false);
+          setPhase({ kind: "ended", reason: w.endReason });
+        } else if (w.open) {
+          await joinRef.current(true);
+        }
+      } catch {
+        // Asked again on the next tick.
+      } finally {
+        busy = false;
+      }
+    };
+    const every = window.setInterval(() => void tick(), WAIT_POLL_MS);
+    return () => {
+      stopped = true;
+      window.clearInterval(every);
+    };
+  }, [waitingNow, classId]);
 
   const onMeeting = React.useCallback((h: MeetingHandle | null) => {
     meetingRef.current = h;
@@ -216,6 +279,7 @@ export function Room(view: RoomView) {
         displayName={view.displayName}
         classId={classId}
         joining={joining}
+        waiting={waiting}
         refusal={refusal}
         onJoin={(accepted) => void join(accepted)}
       />

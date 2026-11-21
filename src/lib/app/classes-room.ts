@@ -39,11 +39,13 @@ import {
 import { displayNameFor, presetForRole } from "@/lib/classes/presets";
 import { handleReadyForClasses } from "@/lib/usernames";
 import {
+  IN_CHARGE_ROLES,
   capState,
   isLiveNow,
   joinTiming,
   monthKey,
   monthStartUtc,
+  mustWaitForTeacher,
   participantMinutes,
   withinReportWindow,
 } from "@/lib/classes/room-rules";
@@ -90,6 +92,8 @@ export const ROOM_SENTENCES = {
   notReady: "This class's room isn't ready yet. Try again in a minute.",
   earlyStudent: "It's too early to join. The room opens 15 minutes before the class starts.",
   earlyTeacher: "It's too early to open the room. It opens 30 minutes before the class starts.",
+  // Students never sit in the call without the teacher or staff (mustWaitForTeacher).
+  waitingForTeacher: "The room opens when your teacher arrives.",
   over: "This class is over. The room closed at its end time.",
   notEnrolled: "You're not signed up for this class. Sign up on the class page first.",
   removed: CLASS_SENTENCES.removed,
@@ -132,6 +136,8 @@ export type JoinRefusal =
   | "closed"
   | "not_ready"
   | "early"
+  /** A student, before the teacher or staff is in the room: the room page waits and lets them in. */
+  | "waiting_for_teacher"
   | "over"
   | "not_enrolled"
   | "removed"
@@ -174,7 +180,12 @@ function refuse(reason: JoinRefusal, error: string, extra: { opensAt?: string } 
           ? "server"
           : reason === "notice" || reason === "bio" || reason === "username"
             ? "validation"
-            : reason === "closed" || reason === "canceled" || reason === "over" || reason === "early" || reason === "not_ready"
+            : reason === "closed" ||
+                reason === "canceled" ||
+                reason === "over" ||
+                reason === "early" ||
+                reason === "not_ready" ||
+                reason === "waiting_for_teacher"
               ? "conflict"
               : "forbidden";
   const base = fail(code, error, reason === "rate" ? JOIN_LIMITS.perUserWindowSeconds : undefined);
@@ -273,6 +284,28 @@ async function reportedInClass(userId: string, classId: string): Promise<boolean
     .maybeSingle();
   if (error) console.error("reportedInClass:", error.message);
   return !!data;
+}
+
+/**
+ * Whether a join as `role` has to wait: a student, while neither the teacher
+ * nor LearnFRC staff is in the room. "In the room" is an open attendance row,
+ * the join the webhook recorded (src/lib/classes/reconcile.ts recordJoin)
+ * with no leave yet. A read that fails counts as nobody there: students wait.
+ */
+async function waitsForTeacher(classId: string, role: ClassRole): Promise<boolean> {
+  if (role !== "student") return false;
+  const { data, error } = await createAdminClient()
+    .from("class_attendance")
+    .select("role, left_at")
+    .eq("class_id", classId)
+    .is("left_at", null)
+    .in("role", [...IN_CHARGE_ROLES])
+    .limit(1);
+  if (error) {
+    console.error("waitsForTeacher:", error.message);
+    return true;
+  }
+  return mustWaitForTeacher(role, (data ?? []).map((a) => ({ role: a.role as string, leftAt: a.left_at })));
 }
 
 /** HMAC of an IP with CLASSES_AUDIT_SALT (class_consents.ip_hash). Null without an IP. */
@@ -457,6 +490,12 @@ async function warnCapOnce(now: Date, used: number, cap: number) {
  * RealtimeKit participant. A previous participant is deleted first, so one
  * person never has two, and a token someone shared stops working.
  *
+ * A student who joins before the teacher or LearnFRC staff is in the room is
+ * refused `waiting_for_teacher`, before any record or token: nobody in the
+ * call can be without someone who can mute or remove them. RealtimeKit's
+ * own waiting room isn't used for this (src/lib/classes/presets.ts says
+ * why); the room page waits with roomWait and joins again by itself.
+ *
  * `ip` and `userAgent` come from the request (the Server Action reads them).
  */
 export async function joinClass(
@@ -488,6 +527,10 @@ export async function joinClass(
   const version = typeof input.noticeVersion === "string" ? input.noticeVersion.trim() : "";
   if (!version) return refuse("notice", ROOM_SENTENCES.noticeMissing);
   if (version !== CLASS_NOTICE_VERSION) return refuse("notice", ROOM_SENTENCES.noticeOld);
+  // A student waits for the teacher or staff, before any record or token.
+  if (await waitsForTeacher(cls.id, check.role)) {
+    return refuse("waiting_for_teacher", ROOM_SENTENCES.waitingForTeacher);
+  }
   const admin = createAdminClient();
   const { error: consentError } = await admin.from("class_consents").insert({
     user_id: user.id,
@@ -659,6 +702,9 @@ export async function getRoomView(user: AppUser | null, classId: string): Promis
   else if (!classesConfigured()) refusal = { reason: "not_configured", message: ROOM_SENTENCES.notConfigured };
   else if (!staff && (await joinsPaused())) refusal = { reason: "paused", message: ROOM_SENTENCES.paused };
   else if (!cls.rtk_meeting_id) refusal = { reason: "not_ready", message: ROOM_SENTENCES.notReady };
+  else if (await waitsForTeacher(cls.id, check.role)) {
+    refusal = { reason: "waiting_for_teacher", message: ROOM_SENTENCES.waitingForTeacher };
+  }
 
   const removed = !check.ok && check.reason === "removed";
   const role: ClassRole | null = check.ok
@@ -739,6 +785,32 @@ export async function roomStatus(user: AppUser, classId: string): Promise<RoomSt
   const removed = !teacher && (m.enrollment === "removed" || !!m.participant?.revoked_at);
   const canReport = (!!m.participant || teacher || staff) && withinReportWindow(cls.hard_end_at, new Date());
   return { status: cls.status, endReason: cls.end_reason, removed, canReport, reported };
+}
+
+export type RoomWait = {
+  /** Someone in charge is in the room, so Join goes through now. */
+  open: boolean;
+  status: ClassStatus | null;
+  endReason: ClassEndReason | null;
+  removed: boolean;
+};
+
+/**
+ * For a student waiting on the room page for the teacher: whether the
+ * teacher or staff is in the room yet, and whether the class is still on.
+ * The page asks every few seconds and joins once `open` is true; joinClass
+ * checks it all again. Only for someone signed up for the class (anyone
+ * else always gets `open: false`). Reads only, so asking never uses up a join.
+ */
+export async function roomWait(user: AppUser, classId: string): Promise<RoomWait> {
+  const none: RoomWait = { open: false, status: null, endReason: null, removed: false };
+  const cls = await loadClass(typeof classId === "string" ? classId.toLowerCase() : "");
+  if (!cls || cls.rtk_app !== rtkApp()) return none;
+  const m = await membership(cls.id, user.id);
+  const removed = cls.teacher_id !== user.id && (m.enrollment === "removed" || !!m.participant?.revoked_at);
+  const base = { status: cls.status, endReason: cls.end_reason, removed };
+  if (removed || m.enrollment !== "enrolled" || !OPEN_STATUSES.includes(cls.status)) return { ...base, open: false };
+  return { ...base, open: !(await waitsForTeacher(cls.id, "student")) };
 }
 
 /* ── Ending (section 6.6) ──────────────────────────────────────────── */

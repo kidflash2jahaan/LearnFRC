@@ -2,6 +2,10 @@
 // accounts (classes-design.md 15.2, room-and-chat acceptance):
 //   - every joinClass refusal gives its message, and the recording-notice
 //     consent row (with its IP hash) is written before any RealtimeKit call;
+//   - a student waits until the teacher or staff is in the room (an open
+//     attendance row, as the webhook records it): joinClass refuses
+//     waiting_for_teacher before any record or token, roomWait says when to
+//     try again, and a teacher's or staff member's token alone isn't enough;
 //   - a join that passes goes straight into the call: the student, teacher
 //     and staff presets it asks for all skip RealtimeKit's waiting room;
 //   - sendClassChat stores shown and blocked rows for teacher, student and
@@ -405,6 +409,78 @@ async function main() {
     assert.equal(!r.ok && r.error, S.rate);
   });
 
+  /* students wait for someone in charge */
+
+  // What the webhook records when someone connects or leaves (reconcile's
+  // recordJoin and recordLeave), in one session of the "now" class.
+  const SESSION = `lftest-session-${nowId}`;
+  const nowRef = { id: nowId, teacher_id: acc.t1.id };
+  const arrive = async (k: string) => {
+    await reconcile.upsertSession(nowId, SESSION);
+    const r = await reconcile.recordJoin(nowRef, {
+      sessionId: SESSION,
+      peerId: `lftest-peer-${k}`,
+      customParticipantId: acc[k].id,
+      joinedAt: new Date().toISOString(),
+      source: "webhook",
+    });
+    return r.role;
+  };
+  const depart = (k: string) => {
+    const at = new Date().toISOString();
+    return reconcile.recordLeave(nowRef, {
+      sessionId: SESSION,
+      peerId: `lftest-peer-${k}`,
+      customParticipantId: acc[k].id,
+      joinedAt: at,
+      leftAt: at,
+      source: "webhook",
+    });
+  };
+  const roomOpenFor = async (k: string) => (await room.roomWait(user(k), nowId)).open;
+
+  await step("join: a student waits until the teacher or staff is in the room, and nothing is written meanwhile", async () => {
+    const consents = async () =>
+      (
+        await admin
+          .from("class_consents")
+          .select("id", { count: "exact", head: true })
+          .eq("class_id", nowId)
+          .eq("user_id", acc.s1.id)
+      ).count ?? 0;
+    const before = await consents();
+    await expectRefusal("s1", nowId, "waiting_for_teacher", S.waitingForTeacher);
+    assert.equal(await consents(), before, "no notice record while waiting");
+    assert.equal(await roomOpenFor("s1"), false);
+    const shown = await room.getRoomView(user("s1"), nowId);
+    assert.ok(
+      shown.kind === "ok" && shown.room.refusal?.reason === "waiting_for_teacher",
+      "the room page says so before Join is pressed"
+    );
+
+    // The teacher and staff never wait, even into an empty room. A token
+    // isn't being in the room, so students still wait.
+    const t = await join("t1", nowId);
+    assert.ok(t.ok, t.ok ? "" : t.error);
+    const st = await join("staff", nowId);
+    assert.ok(st.ok, st.ok ? "" : st.error);
+    await expectRefusal("s1", nowId, "waiting_for_teacher", S.waitingForTeacher);
+
+    // Staff in the room count, and once they leave students wait again.
+    assert.equal(await arrive("staff"), "staff");
+    assert.equal(await roomOpenFor("s1"), true, "staff in the room lets students in");
+    const open = await room.getRoomView(user("s1"), nowId);
+    assert.ok(open.kind === "ok" && open.room.refusal === null, "and the room page lets them press Join");
+    await depart("staff");
+    assert.equal(await roomOpenFor("s1"), false, "staff left");
+    await expectRefusal("s1", nowId, "waiting_for_teacher", S.waitingForTeacher);
+
+    // The teacher arrives, and stays for the rest of the check.
+    assert.equal(await arrive("t1"), "teacher");
+    assert.equal(await roomOpenFor("s1"), true, "the teacher in the room lets students in");
+    assert.equal(await roomOpenFor("notenr"), false, "only someone signed up is told");
+  });
+
   /* joins that work, against the mock */
 
   await step("join: the consent row (with the IP hash) is written before the participant", async () => {
@@ -503,9 +579,11 @@ async function main() {
     }
   });
 
-  await step("join: nobody waits to be let in; every preset joins straight into the call", async () => {
+  await step("join: RealtimeKit holds nobody; every preset joins straight into the call", async () => {
     // The presets the joins above asked for, by name, are the ones the setup
     // script pushes, and none of them has a waiting room or a waiting list.
+    // Students wait for the teacher in joinClass (the step above), where the
+    // room page lets them in by itself; nobody admits anyone.
     const asked = new Set(rtkCalls.map((c) => c.body?.preset_name).filter((n): n is string => typeof n === "string"));
     assert.deepEqual([...asked].sort(), ["lfrc-staff", "lfrc-student", "lfrc-teacher"]);
     assert.deepEqual(presets.PRESETS.map((p) => p.name).sort(), [...asked].sort());

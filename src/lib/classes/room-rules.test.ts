@@ -6,6 +6,7 @@ import {
   joinTiming,
   monthKey,
   monthStartUtc,
+  mustWaitForTeacher,
   participantMinutes,
   withinReportWindow,
 } from "./room-rules.ts";
@@ -31,6 +32,20 @@ test("nobody joins at or past the hard end", () => {
     assert.equal(joinTiming(at(75), at(0), HARD_END, role), "over");
     assert.equal(joinTiming(at(80), at(0), HARD_END, role), "over");
   }
+});
+
+test("a student waits until the teacher or staff is in the room", () => {
+  assert.equal(mustWaitForTeacher("student", []), true, "nobody in the room yet");
+  assert.equal(mustWaitForTeacher("student", [{ role: "student", leftAt: null }]), true, "only other students");
+  assert.equal(mustWaitForTeacher("student", [{ role: "teacher", leftAt: "2026-11-20T01:05:00.000Z" }]), true, "the teacher left");
+  assert.equal(mustWaitForTeacher("student", [{ role: "teacher", leftAt: null }]), false);
+  assert.equal(mustWaitForTeacher("student", [{ role: "staff", leftAt: null }]), false, "staff count too");
+  assert.equal(mustWaitForTeacher("student", [{ role: "teacher" }]), false, "a row with no leave is open");
+});
+
+test("the teacher and staff never wait", () => {
+  assert.equal(mustWaitForTeacher("teacher", []), false);
+  assert.equal(mustWaitForTeacher("staff", []), false);
 });
 
 test("live now: a live class, or a scheduled one inside the teacher's window", () => {

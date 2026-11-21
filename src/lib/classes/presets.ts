@@ -16,10 +16,19 @@
  * - Nobody can kick from the client: removals go through the server
  *   (removeFromClass), so they stick.
  * - Staff are never hidden: everyone can see when Jahaan or Dhiren drops in.
- * - There's no waiting room for anyone (waiting_room_type SKIP, and nobody
- *   can accept waiting requests). Our own server gate (joinClass in
- *   src/lib/app/classes-room.ts) decides who gets a token at all, so someone
- *   who presses Join and passes it goes straight into the call.
+ * - RealtimeKit's waiting room is off for everyone (waiting_room_type SKIP,
+ *   and nobody can accept waiting requests), and there's no Admit button.
+ *   Our own server gate (joinClass in src/lib/app/classes-room.ts) decides
+ *   who gets a token at all, so someone who gets one goes straight in.
+ * - Students still never sit in the call without someone in charge: joinClass
+ *   gives a student no token until the teacher or LearnFRC staff is in the
+ *   room (mustWaitForTeacher in room-rules.ts), and the room page lets a
+ *   waiting student in by itself the moment one arrives. That's ours, not
+ *   RealtimeKit's ON_PRIVILEGED_USER_ENTRY: Cloudflare's docs say that mode
+ *   lets waiting people in when a host or other privileged user arrives, but
+ *   they never say which preset settings make someone privileged, so it
+ *   can't be relied on. Guess wrong and students would sit in RealtimeKit's
+ *   waiting room with nobody able to let them in.
  *
  * The UI Kit's chat button is hidden by the room page (the Foundation's
  * spike, 6.10 check 3, records which setting does it).
@@ -162,7 +171,8 @@ const CONFIG: RtkPreset["config"] = {
 
 /** Shared by all three; each preset overrides what differs. */
 const LOCKED = {
-  // No waiting room: everyone who gets a token from joinClass joins at once.
+  // No RealtimeKit waiting room: everyone who gets a token from joinClass
+  // joins at once. Students wait for the teacher in joinClass instead.
   accept_waiting_requests: false,
   waiting_room_type: "SKIP",
   can_accept_production_requests: false,

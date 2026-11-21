@@ -268,6 +268,17 @@ async function main() {
   const httpId = await newClass("http", acc.t1.id, { startsInMin: 180, meeting: false });
   for (const k of ["s1", "s2", "sg", "mover", "ren"]) await enroll(nowId, acc[k].id);
   await enroll(gteachId, acc.s1.id);
+  // Students wait until the teacher or staff is in the room (joinClass's
+  // waiting_for_teacher), so the teacher is in, as the webhook records it.
+  {
+    const reconcile = await import("../../../src/lib/classes/reconcile.ts");
+    const session = `lftest-session-${nowId}`;
+    await reconcile.upsertSession(nowId, session);
+    await reconcile.recordJoin(
+      { id: nowId, teacher_id: acc.t1.id },
+      { sessionId: session, peerId: "lftest-peer-t1", customParticipantId: acc.t1.id, joinedAt: new Date().toISOString(), source: "webhook" }
+    );
+  }
   {
     const { error } = await admin.from("class_participants").insert(
       ["s3", "mover"].map((k) => ({ class_id: httpId, user_id: acc[k].id, role: "student", preset_name: "lfrc-student" }))

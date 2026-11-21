@@ -27,6 +27,22 @@ export function joinTiming(
   return "open";
 }
 
+/** Who can mute and remove people in the room: a student never waits on anyone else. */
+export const IN_CHARGE_ROLES = ["teacher", "staff"] as const;
+
+/**
+ * Whether this join has to wait for someone in charge. Students never sit
+ * in the call without the teacher or LearnFRC staff, so a student waits
+ * until one of them is in the room: an open class_attendance row (a join
+ * recorded with no leave yet). The teacher and staff never wait. There's no
+ * Admit button: the room page lets a waiting student in as soon as this
+ * turns false.
+ */
+export function mustWaitForTeacher(role: JoinRole, open: readonly { role: string; leftAt?: unknown }[]): boolean {
+  if (role !== "student") return false;
+  return !open.some((a) => a.leftAt == null && (IN_CHARGE_ROLES as readonly string[]).includes(a.role));
+}
+
 /**
  * A class counts as live now when its status is `live`, or it's still
  * `scheduled` but inside the teacher's join window (the webhook that flips
