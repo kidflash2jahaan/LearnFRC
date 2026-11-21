@@ -398,16 +398,27 @@ async function main() {
     assert.ok(!early.ok && early.opensAt, "early carries opensAt");
   });
 
-  await step("join: over the per-user limit (6 in 10 minutes)", async () => {
+  await step("join: over the per-user limit (6 in 10 minutes), and refusals don't count", async () => {
+    // Every check before the limit only reads, so a refusal never uses up a
+    // join: not one that's too early, and not a student waiting for the
+    // teacher (nobody is in the room yet), whose page joins again by itself.
+    const outcomes = async (k: string, classId: string, times: number) => {
+      const out: string[] = [];
+      for (let i = 0; i < times; i++) {
+        const r = await join(k, classId, undefined, false);
+        out.push(r.ok ? "ok" : r.reason);
+      }
+      return out;
+    };
     await resetJoinLimit("rate");
-    const outcomes: string[] = [];
-    for (let i = 0; i < 7; i++) {
-      const r = await join("rate", laterId, undefined, false);
-      outcomes.push(r.ok ? "ok" : r.reason);
-    }
-    assert.deepEqual(outcomes, ["early", "early", "early", "early", "early", "early", "rate"]);
-    const r = await join("rate", laterId, undefined, false);
+    assert.deepEqual(await outcomes("rate", laterId, 7), Array(7).fill("early"));
+    assert.deepEqual(await outcomes("rate", nowId, 7), Array(7).fill("waiting_for_teacher"));
+    // Joins that go through count. The teacher never waits.
+    await resetJoinLimit("t1");
+    assert.deepEqual(await outcomes("t1", nowId, 7), ["ok", "ok", "ok", "ok", "ok", "ok", "rate"]);
+    const r = await join("t1", nowId, undefined, false);
     assert.equal(!r.ok && r.error, S.rate);
+    await resetJoinLimit("t1");
   });
 
   /* students wait for someone in charge */

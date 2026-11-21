@@ -524,12 +524,6 @@ export async function joinClass(
   const staff = await isClassStaff(user);
   if (!staff && (await joinsPaused())) return refuse("paused", ROOM_SENTENCES.paused);
 
-  const [perUser, perIp] = await Promise.all([
-    rateLimitKey("class-join", JOIN_LIMITS.perUser, JOIN_LIMITS.perUserWindowSeconds, user.id),
-    rateLimit("class-join-ip", JOIN_LIMITS.perIp, JOIN_LIMITS.perIpWindowSeconds),
-  ]);
-  if (!perUser || !perIp) return refuse("rate", ROOM_SENTENCES.rate);
-
   const cls = await loadClass(classId);
   if (!cls) return refuse("not_found", ROOM_SENTENCES.notFound);
   const now = new Date();
@@ -545,6 +539,16 @@ export async function joinClass(
   if (await waitsForTeacher(cls.id, check.role)) {
     return refuse("waiting_for_teacher", ROOM_SENTENCES.waitingForTeacher);
   }
+
+  // Everything above only reads, so a refusal there (above all a student
+  // waiting, whose room page joins again by itself) never uses up a join.
+  // The limits count the joins that go on to write and call RealtimeKit.
+  const [perUser, perIp] = await Promise.all([
+    rateLimitKey("class-join", JOIN_LIMITS.perUser, JOIN_LIMITS.perUserWindowSeconds, user.id),
+    rateLimit("class-join-ip", JOIN_LIMITS.perIp, JOIN_LIMITS.perIpWindowSeconds),
+  ]);
+  if (!perUser || !perIp) return refuse("rate", ROOM_SENTENCES.rate);
+
   const admin = createAdminClient();
   const { error: consentError } = await admin.from("class_consents").insert({
     user_id: user.id,
