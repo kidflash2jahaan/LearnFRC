@@ -14,7 +14,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { signOut } from "@/app/actions/auth";
+import { useSignOut } from "@/components/auth/sign-out-button";
 import { createClient } from "@/lib/supabase/client";
 import type { Profile } from "@/lib/types";
 import { usernameStepHref } from "@/lib/usernames";
@@ -215,6 +215,7 @@ export function Navbar() {
     if (loaded) setViewerSignedIn(authed);
   }, [loaded, authed]);
 
+  const signOut = useSignOut();
   const openSearch = () => window.dispatchEvent(new Event("open-search"));
   const who = profile?.full_name || profile?.username || "Your account";
 
@@ -347,19 +348,22 @@ export function Navbar() {
                     </DropdownMenuItem>
                   )}
                   <DropdownMenuSeparator />
+                  {/* preventDefault keeps the menu open, so "Signing out" and
+                      an error stay in view. On success the page reloads. */}
                   <DropdownMenuItem
-                    onSelect={async (e) => {
+                    disabled={signOut.busy}
+                    onSelect={(e) => {
                       e.preventDefault();
-                      try {
-                        await signOut();
-                      } finally {
-                        // Full reload so the whole app drops the session at once.
-                        window.location.assign("/");
-                      }
+                      void signOut.run();
                     }}
                   >
-                    Sign out
+                    {signOut.busy ? "Signing out" : "Sign out"}
                   </DropdownMenuItem>
+                  {signOut.error && (
+                    <p className="nb-error mx-[0.85rem] my-1.5" role="alert">
+                      {signOut.error}
+                    </p>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (

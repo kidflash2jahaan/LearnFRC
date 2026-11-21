@@ -104,9 +104,26 @@ export async function signUp(
   redirect(`/auth/verify-email?email=${encodeURIComponent(email)}`);
 }
 
+/**
+ * Signs this browser out. When it resolves, the session cookies are gone, so
+ * callers (components/auth/sign-out-button.tsx) can load "/" and get the
+ * signed-out home page. If it rejects (offline, a deploy in between), nothing
+ * changed and they say so instead.
+ */
 export async function signOut() {
   const supabase = await createClient();
-  await supabase.auth.signOut();
+  const { error } = await supabase.auth.signOut();
+  if (error) {
+    // Supabase keeps the session when its sign-out call fails (a 5xx, a rate
+    // limit, a network error), and "/" would then send a still signed-in
+    // reader to the dashboard. Drop this browser's auth cookies ourselves:
+    // sb-<ref>-auth-token, its .0/.1 chunks and its -code-verifier.
+    console.error("signOut:", error.message);
+    const jar = await cookies();
+    for (const c of jar.getAll()) {
+      if (c.name.startsWith("sb-") && c.name.includes("-auth-token")) jar.delete(c.name);
+    }
+  }
   // No redirect/revalidate here: callers do a FULL page load (window.location)
   // after this resolves, which re-renders everything with the cleared session.
 }
