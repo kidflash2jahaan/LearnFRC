@@ -3,6 +3,8 @@ import Link from "next/link";
 import { PATHS } from "@/lib/paths-data";
 import { JsonLd } from "@/components/json-ld";
 import { RevealGroup } from "@/components/motion/primitives";
+import { ViewerSwapLink } from "@/components/viewer-links";
+import { signedInHref } from "@/lib/signed-in-routes";
 import { RouteSlip } from "./_route-preview";
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://learnfrc.com";
@@ -251,9 +253,14 @@ export default function PathsPage() {
                 actually finished it.
               </p>
               <p className="mt-auto pt-5">
-                <Link href="/for-teams" className="nb-btn-ghost">
-                  How teams use this
-                </Link>
+                {/* Signed in, /for-teams only redirects to your team, so
+                    the button goes there and says so, in the words of the
+                    pitch page's own buttons. */}
+                <ViewerSwapLink
+                  link={{ label: "How teams use this", href: "/for-teams" }}
+                  signedInLink={{ label: "Go to your team", href: signedInHref("/for-teams") }}
+                  className="nb-btn-ghost"
+                />
               </p>
             </div>
           </div>

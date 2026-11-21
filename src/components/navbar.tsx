@@ -19,6 +19,7 @@ import { createClient } from "@/lib/supabase/client";
 import type { Profile } from "@/lib/types";
 import { usernameStepHref } from "@/lib/usernames";
 import { setViewerSignedIn } from "@/lib/signed-in-viewer";
+import { signedInHref } from "@/lib/signed-in-routes";
 import { EmailChoicePrompt } from "@/components/settings/email-choice-prompt";
 
 /**
@@ -45,6 +46,9 @@ const USERNAME_STEP_EXEMPT = [
 function usernameStepExempt(pathname: string): boolean {
   return USERNAME_STEP_EXEMPT.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 }
+
+/** A tab's label once it points at the signed-in version of its page. */
+const SIGNED_IN_LABEL: Readonly<Record<string, string>> = { "/teams": "My team" };
 
 const NAV = [
   { href: "/guides", label: "Guides" },
@@ -74,9 +78,14 @@ const NAV = [
  */
 function navFor(authed: boolean) {
   if (!authed) return NAV;
-  return NAV.map((item) =>
-    item.href === "/for-teams" ? { href: "/teams", label: "My team" } : item
-  );
+  // Where a tab goes comes from the one map the middleware, the logo and the
+  // footer read (src/lib/signed-in-routes.ts), so they can't drift. Only the
+  // label is the navbar's own.
+  return NAV.map((item) => {
+    const href = signedInHref(item.href);
+    if (href === item.href) return item;
+    return { href, label: SIGNED_IN_LABEL[href] ?? item.label };
+  });
 }
 
 type Me = {

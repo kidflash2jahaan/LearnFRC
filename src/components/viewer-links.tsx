@@ -34,3 +34,25 @@ export function ViewerLinks({
     </>
   );
 }
+
+/**
+ * One link with a second version for a signed-in reader, the same swap as
+ * ViewerLinks. For a button on a static page whose target has a signed-in
+ * version (src/lib/signed-in-routes.ts), so the label can say where it goes.
+ */
+export function ViewerSwapLink({
+  link,
+  signedInLink,
+  className,
+}: {
+  link: ViewerLink;
+  signedInLink: ViewerLink;
+  className?: string;
+}) {
+  const l = useViewerSignedIn() ? signedInLink : link;
+  return (
+    <Link href={l.href} className={className}>
+      {l.label}
+    </Link>
+  );
+}
