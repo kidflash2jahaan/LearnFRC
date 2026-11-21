@@ -289,6 +289,22 @@ async function logEvent(classId: string | null, actorId: string | null, kind: st
   if (error) console.error(`class_events ${kind}:`, error.message);
 }
 
+/**
+ * Queues a RealtimeKit participant for the sweep to delete (class_rtk_cleanup,
+ * drained by drainRtkCleanup in src/lib/classes/reconcile.ts). Until it's
+ * deleted, its tokens still work. True when the row is saved.
+ */
+async function queueParticipantDelete(app: RtkApp, meetingId: string, participantId: string, error: string): Promise<boolean> {
+  const { error: saveError } = await createAdminClient()
+    .from("class_rtk_cleanup")
+    .upsert(
+      { rtk_app: app, meeting_id: meetingId, participant_id: participantId, last_error: error.slice(0, 300) || null },
+      { onConflict: "meeting_id,participant_id" }
+    );
+  if (saveError) console.error("queueParticipantDelete:", saveError.message);
+  return !saveError;
+}
+
 function safetyRecipients(): string[] {
   return [...new Set([safetyEmail(), ownerEmail()].filter((x): x is string => !!x))];
 }
@@ -857,7 +873,9 @@ export async function endClass(
  *
  * The class's teacher or staff only; the teacher and staff can't be removed
  * this way. Idempotent: removing someone already removed is fine, and a
- * removal whose video step failed tries the video again.
+ * removal whose video step failed tries the video again. A delete that
+ * doesn't happen at once is queued in class_rtk_cleanup, so the participant
+ * always ends up deleted even if nobody presses Remove again.
  */
 export async function removeFromClass(
   user: AppUser,
@@ -915,23 +933,40 @@ export async function removeFromClass(
   }
 
   // Then the video: delete the participant (every connection drops, every
-  // token dies). If that fails, kick every connection by our user id.
+  // token dies). If that fails, kick every connection by our user id, so
+  // they're out of the call now. A kick leaves the participant and its token
+  // working, so with no waiting room they could join straight back in: any
+  // delete that didn't happen here goes to class_rtk_cleanup, and the sweep
+  // keeps deleting until it's gone.
   let video: "none" | "deleted" | "kicked" | "skipped" | "failed" = "none";
+  let queued = false;
   const pid = m.participant?.rtk_participant_id ?? null;
   if (pid && cls.rtk_meeting_id) {
-    if (cls.rtk_app !== rtkApp()) video = "failed";
-    else if (!classesConfigured()) video = "skipped";
-    else {
+    let delError = "";
+    if (cls.rtk_app !== rtkApp()) {
+      video = "failed";
+      delError = "other_app";
+    } else if (!classesConfigured()) {
+      video = "skipped";
+      delError = "not_configured";
+    } else {
       const opts = { app: cls.rtk_app };
       const del = await deleteParticipant(cls.rtk_meeting_id, pid, opts);
       if (gone(del)) video = "deleted";
       else {
+        delError = del.ok ? "" : `${del.status} ${del.error}`;
         const kick = await kickParticipants(cls.rtk_meeting_id, { customIds: [targetId] }, opts);
         video = gone(kick) ? "kicked" : "failed";
-        if (!gone(kick)) console.error("removeFromClass video:", del.ok ? "" : del.error, kick.ok ? "" : kick.error);
+        if (!gone(kick)) console.error("removeFromClass video:", delError, kick.ok ? "" : kick.error);
       }
     }
-    if (video !== "failed") {
+    if (video !== "deleted") {
+      queued = await queueParticipantDelete(cls.rtk_app, cls.rtk_meeting_id, pid, delError);
+    }
+    // The row lets go of the participant once it's deleted, or queued for
+    // the sweep after the kick worked. Otherwise it keeps it, so pressing
+    // Remove again tries the delete and the kick again.
+    if (video === "deleted" || (queued && video !== "failed")) {
       await admin
         .from("class_participants")
         .update({ rtk_participant_id: null })
@@ -940,6 +975,7 @@ export async function removeFromClass(
         .eq("rtk_participant_id", pid);
     }
   }
+  const videoDone = video === "none" || video === "deleted" || (queued && video !== "failed");
 
   const [actorName, targetName] = await Promise.all([usernameOf(user.id), usernameOf(targetId)]);
   await logEvent(cls.id, user.id, "removed_participant", {
@@ -949,6 +985,7 @@ export async function removeFromClass(
     by: actorIsTeacher ? "teacher" : "staff",
     reason,
     video,
+    queued,
   });
 
   const owner = ownerEmail();
@@ -971,7 +1008,7 @@ export async function removeFromClass(
     });
   }
 
-  if (video === "failed") return fail("server", ROOM_SENTENCES.removeVideo);
+  if (!videoDone) return fail("server", ROOM_SENTENCES.removeVideo);
   return { ok: true, already: false };
 }
 

@@ -13,7 +13,9 @@
 //     against a live class's teacher end it, call suspendTeacher and
 //     holdClass (stubs until integration) and send the urgent email to the
 //     outbox; existing profile reports still work; a ban passes reason "ban";
-//   - the media log, remove, end and the pause switch.
+//   - the media log, remove, end and the pause switch. A removal whose
+//     delete fails is kicked and queued in class_rtk_cleanup, and the
+//     sweep's drain deletes it, so the token stops working.
 //
 // No Cloudflare keys are needed: RealtimeKit's REST API is replaced by an
 // in-process mock (fetch to api.cloudflare.com never leaves the machine), so
@@ -108,6 +110,7 @@ type RtkCall = { method: string; path: string; body: Record<string, unknown> | u
 const rtkCalls: RtkCall[] = [];
 let participantSeq = 0;
 let failNextDelete = false;
+let failNextKick = false;
 const realFetch = globalThis.fetch;
 const RTK_BASE = /^https:\/\/api\.cloudflare\.com\/client\/v4\/accounts\/[^/]+\/realtime\/kit\/[^/]+/;
 
@@ -152,6 +155,10 @@ globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     return rtkJson({ success: false, errors: [{ message: "mock failure" }] }, 500);
   }
   if (method === "DELETE") return rtkJson({ success: true, data: {} });
+  if (method === "POST" && failNextKick && /\/active-session\/kick$/.test(path)) {
+    failNextKick = false;
+    return rtkJson({ success: false, errors: [{ message: "mock failure" }] }, 500);
+  }
   if (method === "POST" && /\/active-session\/kick(-all)?$/.test(path)) return rtkJson({ success: true, data: {} });
   if (method === "PATCH" && /^\/meetings\/[^/]+$/.test(path)) return rtkJson({ success: true, data: { status: body?.status } });
   return rtkJson({ success: false, errors: [{ message: "not mocked" }] }, 404);
@@ -286,6 +293,8 @@ async function main() {
     "s2:age=15:parent=agreed",
     "s3:age=16:parent=agreed",
     "s4:age=15:parent=agreed",
+    "s5:age=15:parent=agreed",
+    "s6:age=16:parent=agreed",
     "bio:age=15:parent=agreed:bio=add%20me%20on%20snap%20jake22",
     "waitp:age=15:parent=sent",
     "notenr:age=15:parent=agreed",
@@ -306,6 +315,7 @@ async function main() {
   const filter = await import("../../../src/lib/classes/chat-filter.ts");
   const notice = await import("../../../src/lib/classes/notice.ts");
   const presets = await import("../../../src/lib/classes/presets.ts");
+  const reconcile = await import("../../../src/lib/classes/reconcile.ts");
 
   const nowId = await newClass("now", acc.t1.id, { startsInMin: 5 });
   const laterId = await newClass("later", acc.t1.id, { startsInMin: 180 });
@@ -314,7 +324,7 @@ async function main() {
   const noMeetingId = await newClass("nomeeting", acc.t1.id, { startsInMin: 5, meeting: false });
   const endId = await newClass("teacher-ends", acc.t1.id, { startsInMin: 5 });
   const suspendedId = await newClass("suspended", acc.t2.id, { startsInMin: 5 });
-  for (const k of ["s1", "s2", "s3", "s4", "bio", "waitp", "rate"]) await enroll(nowId, acc[k].id);
+  for (const k of ["s1", "s2", "s3", "s4", "s5", "s6", "bio", "waitp", "rate"]) await enroll(nowId, acc[k].id);
   for (const k of ["s1", "rate"]) await enroll(laterId, acc[k].id);
   await enroll(endId, acc.s1.id);
   // The past class can't be enrolled in any more (it started over 10 minutes ago).
@@ -725,6 +735,75 @@ async function main() {
     assert.ok(!staff.ok && staff.error === S.removeStaff);
     const nobody = await room.removeFromClass(user("t1"), { classId: nowId, userId: acc.out.id });
     assert.ok(!nobody.ok && nobody.error === S.removeNobody);
+  });
+
+  await step("remove: a delete that fails is kicked and queued, and the sweep's drain deletes it", async () => {
+    const meeting = `lftest-meeting-${nowId}`;
+    const calls = (from: number) => rtkCalls.slice(from).map((c) => `${c.method} ${c.path}`);
+    const partOf = async (k: string) =>
+      (
+        await admin
+          .from("class_participants")
+          .select("revoked_at, rtk_participant_id")
+          .eq("class_id", nowId)
+          .eq("user_id", acc[k].id)
+          .single()
+      ).data!;
+    const queue = async () =>
+      (await admin.from("class_rtk_cleanup").select("rtk_app, participant_id, attempts").eq("meeting_id", meeting)).data ?? [];
+
+    // The delete fails, the kick works: out of the call now, and queued.
+    const j5 = await join("s5", nowId);
+    assert.ok(j5.ok, j5.ok ? "" : j5.error);
+    const pid5 = `lftest-participant-${participantSeq}`;
+    failNextDelete = true;
+    const n = rtkCalls.length;
+    const r = await room.removeFromClass(user("t1"), { classId: nowId, userId: acc.s5.id, reason: "lftest" });
+    assert.ok(r.ok && !r.already, r.ok ? "" : r.error);
+    assert.deepEqual(calls(n), [
+      `DELETE /meetings/${meeting}/participants/${pid5}`,
+      `POST /meetings/${meeting}/active-session/kick`,
+    ]);
+    const p5 = await partOf("s5");
+    assert.ok(p5.revoked_at);
+    assert.equal(p5.rtk_participant_id, null, "the queue holds the participant now");
+    assert.deepEqual(await queue(), [{ rtk_app: "dev", participant_id: pid5, attempts: 0 }]);
+    const { data: ev } = await admin
+      .from("class_events")
+      .select("detail")
+      .eq("class_id", nowId)
+      .eq("kind", "removed_participant")
+      .eq("detail->>userId", acc.s5.id)
+      .single();
+    assert.equal((ev!.detail as { video: string }).video, "kicked");
+    assert.equal((ev!.detail as { queued: boolean }).queued, true);
+
+    // The sweep's drain, for this meeting only, so nobody else's queue is touched.
+    const m = rtkCalls.length;
+    assert.deepEqual(await reconcile.drainRtkCleanup("dev", { meetingId: meeting }), { deleted: 1, failed: 0 });
+    assert.deepEqual(calls(m), [`DELETE /meetings/${meeting}/participants/${pid5}`]);
+    assert.deepEqual(await queue(), []);
+
+    // Both fail: queued, and the row keeps the participant so Remove again
+    // tries both. A drain that fails counts an attempt and keeps the row.
+    const j6 = await join("s6", nowId);
+    assert.ok(j6.ok, j6.ok ? "" : j6.error);
+    const pid6 = `lftest-participant-${participantSeq}`;
+    failNextDelete = true;
+    failNextKick = true;
+    const bad = await room.removeFromClass(user("t1"), { classId: nowId, userId: acc.s6.id });
+    assert.ok(!bad.ok && bad.error === S.removeVideo, JSON.stringify(bad));
+    assert.equal((await partOf("s6")).rtk_participant_id, pid6);
+    assert.deepEqual(await queue(), [{ rtk_app: "dev", participant_id: pid6, attempts: 0 }]);
+    await expectRefusal("s6", nowId, "removed", S.removed);
+    const again = await room.removeFromClass(user("t1"), { classId: nowId, userId: acc.s6.id });
+    assert.ok(again.ok && !again.already, again.ok ? "" : again.error);
+    assert.equal((await partOf("s6")).rtk_participant_id, null);
+    failNextDelete = true;
+    assert.deepEqual(await reconcile.drainRtkCleanup("dev", { meetingId: meeting }), { deleted: 0, failed: 1 });
+    assert.deepEqual(await queue(), [{ rtk_app: "dev", participant_id: pid6, attempts: 1 }]);
+    assert.deepEqual(await reconcile.drainRtkCleanup("dev", { meetingId: meeting }), { deleted: 1, failed: 0 });
+    assert.deepEqual(await queue(), []);
   });
 
   /* media log */

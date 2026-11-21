@@ -589,27 +589,11 @@ export async function runSweep(opts: { classId?: string | null; deps?: ClassOpsD
   }
   if (scoped) return report;
 
-  // 7: RealtimeKit participants still to delete (account deletions).
-  const del = deps?.deleteParticipant ?? deleteParticipant;
-  const { data: queue } = await admin
-    .from("class_rtk_cleanup")
-    .select("meeting_id, participant_id, attempts")
-    .eq("rtk_app", app)
-    .lt("attempts", 20)
-    .limit(50);
-  for (const item of queue ?? []) {
-    const res = await del(item.meeting_id as string, item.participant_id as string, { app });
-    if (res.ok || res.status === 404) {
-      await admin.from("class_rtk_cleanup").delete().eq("meeting_id", item.meeting_id).eq("participant_id", item.participant_id);
-      report.cleanup.deleted++;
-    } else {
-      await admin
-        .from("class_rtk_cleanup")
-        .update({ attempts: (item.attempts as number) + 1, last_error: res.error.slice(0, 300) })
-        .eq("meeting_id", item.meeting_id)
-        .eq("participant_id", item.participant_id);
-      report.cleanup.failed++;
-    }
+  // 7: RealtimeKit participants still to delete.
+  try {
+    report.cleanup = await drainRtkCleanup(app, { deleteParticipant: deps?.deleteParticipant });
+  } catch (e) {
+    report.errors.push(`cleanup: ${(e as Error).message}`);
   }
 
   // Once a day.
@@ -630,6 +614,46 @@ export async function runSweep(opts: { classId?: string | null; deps?: ClassOpsD
     await admin.from("class_settings").update({ last_daily_sweep_at: now.toISOString() }).eq("id", true);
   }
   return report;
+}
+
+/**
+ * Deletes the RealtimeKit participants queued in class_rtk_cleanup for this
+ * app: account deletions, students leaving a class, and removals whose
+ * delete didn't go through at once (a kicked participant's token still
+ * works until it's deleted). A 404 counts as deleted. Each failure adds an
+ * attempt, up to 20. `meetingId` limits it to one meeting (tests only).
+ */
+export async function drainRtkCleanup(
+  app: RtkApp,
+  opts: { meetingId?: string; deleteParticipant?: ClassOpsDeps["deleteParticipant"] } = {}
+): Promise<{ deleted: number; failed: number }> {
+  const admin = createAdminClient();
+  const del = opts.deleteParticipant ?? deleteParticipant;
+  const out = { deleted: 0, failed: 0 };
+  let q = admin
+    .from("class_rtk_cleanup")
+    .select("meeting_id, participant_id, attempts")
+    .eq("rtk_app", app)
+    .lt("attempts", 20)
+    .limit(50);
+  if (opts.meetingId) q = q.eq("meeting_id", opts.meetingId);
+  const { data: queue, error } = await q;
+  if (error) throw new Error(`class_rtk_cleanup: ${error.message}`);
+  for (const item of queue ?? []) {
+    const res = await del(item.meeting_id as string, item.participant_id as string, { app });
+    if (res.ok || res.status === 404) {
+      await admin.from("class_rtk_cleanup").delete().eq("meeting_id", item.meeting_id).eq("participant_id", item.participant_id);
+      out.deleted++;
+    } else {
+      await admin
+        .from("class_rtk_cleanup")
+        .update({ attempts: (item.attempts as number) + 1, last_error: res.error.slice(0, 300) })
+        .eq("meeting_id", item.meeting_id)
+        .eq("participant_id", item.participant_id);
+      out.failed++;
+    }
+  }
+  return out;
 }
 
 /** Classes whose evidence must stay: keep_evidence, or a hold. */
