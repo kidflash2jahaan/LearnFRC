@@ -4,6 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { CLASS_NOTICE, CLASS_NOTICE_CHECKBOX } from "@/lib/classes/notice";
 import { LocalTime } from "@/components/classes/local-time";
+import { SWEEP_RULES } from "@/lib/classes/sweep-rules";
 import type { ClassRole } from "@/lib/classes/types";
 import { usernameStepHref } from "@/lib/usernames";
 
@@ -19,6 +20,9 @@ import { usernameStepHref } from "@/lib/usernames";
 
 /** What a waiting student reads while the room waits for the teacher. */
 const WAITING_NOTE = "Waiting for your teacher. You'll go in as soon as they arrive.";
+
+/** Minutes after the start before a class with no teacher ends (the sweep's rule). */
+const NO_TEACHER_MINUTES = SWEEP_RULES.teacherGoneMs / 60_000;
 
 /** Refusals that pressing Join again can't fix; the button is off for them. */
 const BLOCKING = new Set([
@@ -54,6 +58,7 @@ const RULES: Record<ClassRole, string[]> = {
     "Your camera and mic start off. Turn them on when you're ready; your camera is optional.",
     "Say the recording notice out loud when the class starts.",
     "Students can't come into the call until you're in it. Anyone who's waiting goes in as soon as you join. Class controls let you mute or remove someone, and you can report anyone who breaks the rules.",
+    `If you're not in the room for ${NO_TEACHER_MINUTES} minutes once the class has started, it ends for everyone.`,
     "Your messages go through the same chat filter as everyone's, so share links from LearnFRC or the docs.",
     "Keep to the topic. Never ask anyone's age, school or location, and never ask anyone to turn a camera on.",
   ],
@@ -162,6 +167,12 @@ export function Prejoin({
             </p>
             {refusal.reason === "waiting_for_teacher" && !waiting ? (
               <p className="nb-hint mt-1">Press Join class and you&rsquo;ll go in as soon as they arrive.</p>
+            ) : null}
+            {refusal.reason === "waiting_for_teacher" && waiting ? (
+              <p className="nb-hint mt-1">
+                If they aren&rsquo;t here {NO_TEACHER_MINUTES} minutes after the start time, the class ends and this
+                page tells you.
+              </p>
             ) : null}
             {refusal.reason === "early" && refusal.opensAt ? (
               <p className="nb-hint mt-1">

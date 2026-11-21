@@ -11,7 +11,8 @@ test("hard end: live classes end with time, never-started ones with sweep", () =
   assert.deepEqual(sweepDecision({ ...live, status: "scheduled", hasSession: false }, [], m(80)), { action: "end", reason: "sweep" });
   assert.deepEqual(sweepDecision({ ...live, status: "scheduled", hasSession: true }, [], m(80)), { action: "end", reason: "time" });
   assert.deepEqual(sweepDecision({ ...live, status: "ended" }, [], m(80)), { action: "none" });
-  assert.deepEqual(sweepDecision({ ...live, status: "scheduled", hasSession: false }, [], m(70)), { action: "none" });
+  const teacherIn: SweepSpan[] = [{ role: "teacher", joinedAt: m(-1), leftAt: null }];
+  assert.deepEqual(sweepDecision({ ...live, status: "scheduled", hasSession: true }, teacherIn, m(70)), { action: "none" });
 });
 
 test("teacher gone for 10 minutes with students present", () => {
@@ -32,6 +33,30 @@ test("teacher gone for 10 minutes with students present", () => {
   // Staff alone with students doesn't keep it going without the teacher.
   const staff: SweepSpan[] = [...never, { role: "staff", joinedAt: m(0), leftAt: null }];
   assert.deepEqual(sweepDecision(live, staff, m(11)), { action: "end", reason: "teacher_gone" });
+});
+
+// Students wait for the teacher before they get a token, so a class whose
+// teacher never comes is never started by anyone and stays scheduled.
+test("no teacher: a scheduled class ends 10 minutes after the start", () => {
+  const sched: SweepClass = { ...live, status: "scheduled", hasSession: false };
+  assert.deepEqual(sweepDecision(sched, [], m(-5)), { action: "none" });
+  assert.deepEqual(sweepDecision(sched, [], m(9)), { action: "none" });
+  assert.deepEqual(sweepDecision(sched, [], m(10)), { action: "end", reason: "teacher_gone" });
+  assert.deepEqual(sweepDecision(sched, [], m(74)), { action: "end", reason: "teacher_gone" });
+  assert.deepEqual(sweepDecision(sched, [], m(75)), { action: "end", reason: "sweep" }, "the hard end still says never started");
+  // The teacher is in (meeting.started hasn't come in yet): wait for it.
+  const teacherIn: SweepSpan[] = [{ role: "teacher", joinedAt: m(-2), leftAt: null }];
+  assert.deepEqual(sweepDecision({ ...sched, hasSession: true }, teacherIn, m(30)), { action: "none" });
+  // The teacher left: 10 minutes from the leave, the same as a live class.
+  const left: SweepSpan[] = [
+    { role: "teacher", joinedAt: m(-2), leftAt: m(15) },
+    { role: "student", joinedAt: m(1), leftAt: null },
+  ];
+  assert.deepEqual(sweepDecision({ ...sched, hasSession: true }, left, m(24)), { action: "none" });
+  assert.deepEqual(sweepDecision({ ...sched, hasSession: true }, left, m(25)), { action: "end", reason: "teacher_gone" });
+  // Staff alone don't stand in for the teacher, as in a live class.
+  const staff: SweepSpan[] = [{ role: "staff", joinedAt: m(0), leftAt: null }];
+  assert.deepEqual(sweepDecision(sched, staff, m(10)), { action: "end", reason: "teacher_gone" });
 });
 
 test("empty for 10 minutes after the start", () => {

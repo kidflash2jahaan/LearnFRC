@@ -16,7 +16,7 @@ import {
 import { runClassReview } from "@/lib/classes/review";
 import { deleteExpiredHolds, retryHoldWork, type HoldSweepSummary } from "@/lib/classes/holds";
 import { expireParentRequests } from "@/lib/app/class-consent";
-import { reviewDue, sweepDecision } from "@/lib/classes/sweep-rules";
+import { SWEEP_RULES, reviewDue, sweepDecision } from "@/lib/classes/sweep-rules";
 import { isEmptyTranscriptFile, isoOf, parseTranscriptFile, wordCount } from "@/lib/classes/webhook-events";
 import {
   SYSTEM_ACTOR,
@@ -40,9 +40,10 @@ import type { AppUser } from "@/lib/app/result";
  *                             Cloudflare" on /admin/classes/[id] and the flow
  *                             test call it.
  *   runSweep()                the 5-minute sweep: hard ends, teacher gone,
- *                             empty rooms, never-started classes, reviews
- *                             due, RealtimeKit cleanup retries, and once a
- *                             day, retention.
+ *                             empty rooms, classes whose teacher never came,
+ *                             never-started classes, reviews due,
+ *                             RealtimeKit cleanup retries, and once a day,
+ *                             retention.
  *
  * The shared pieces the webhook uses live here too (sessions, joins, leaves,
  * transcripts, minutes), so the webhook and reconcile write rows the same way.
@@ -517,13 +518,15 @@ export async function runSweep(opts: { classId?: string | null; deps?: ClassOpsD
     return report;
   }
 
-  // 1 to 4: ends.
+  // 1 to 4: ends. Live classes, and scheduled ones past their hard end or
+  // far enough past their start that the teacher should be there by now.
+  const noTeacherBy = new Date(now.getTime() - SWEEP_RULES.teacherGoneMs).toISOString();
   let q = admin
     .from("classes")
     .select(CLASS_REF_COLUMNS)
     .eq("rtk_app", app)
     .in("status", ["scheduled", "live"])
-    .or(`status.eq.live,hard_end_at.lte.${now.toISOString()}`)
+    .or(`status.eq.live,hard_end_at.lte.${now.toISOString()},starts_at.lte.${noTeacherBy}`)
     .limit(200);
   if (scoped) q = q.eq("id", scoped);
   const { data: open, error: openErr } = await q;

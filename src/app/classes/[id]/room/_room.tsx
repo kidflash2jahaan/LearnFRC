@@ -76,7 +76,7 @@ function endedMessage(reason: ClassEndReason | null, canceled?: boolean): string
     case "paused":
       return "LearnFRC paused every class for a moment, so this one ended.";
     case "teacher_gone":
-      return "The class ended because the teacher left.";
+      return "The class ended because the teacher wasn't there.";
     default:
       return "This class has ended.";
   }

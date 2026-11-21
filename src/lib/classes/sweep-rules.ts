@@ -11,6 +11,13 @@
  *      leave): `teacher_gone`.
  *   3. Empty: live with nobody present for 10 minutes, after the start:
  *      `empty`. An early "everyone left" stays rejoinable until then.
+ *   4. No teacher: still scheduled 10 minutes after the start (counted from
+ *      the later of the start and the teacher's last leave) with no open
+ *      teacher attendance: `teacher_gone`. Students wait for the teacher
+ *      before they get a token (joinClass), so they never start the meeting
+ *      themselves, and without this a teacher who never comes would leave
+ *      them on the waiting screen until the hard end. The waiting page sees
+ *      the class end and says so.
  *   5. Reviews due: ended at least 30 minutes ago with no finished review, or
  *      a failed review under 3 attempts whose last try was 30 minutes ago.
  */
@@ -42,6 +49,9 @@ export type SweepSpan = {
 
 export type SweepEnd = { action: "end"; reason: "time" | "teacher_gone" | "empty" | "sweep" } | { action: "none" };
 
+const NONE: SweepEnd = { action: "none" };
+const END_TEACHER_GONE: SweepEnd = { action: "end", reason: "teacher_gone" };
+
 export function sweepDecision(c: SweepClass, attendance: readonly SweepSpan[], now: Time): SweepEnd {
   if (c.status !== "scheduled" && c.status !== "live") return { action: "none" };
   const nowMs = t(now);
@@ -49,11 +59,19 @@ export function sweepDecision(c: SweepClass, attendance: readonly SweepSpan[], n
   if (nowMs >= t(c.hardEndAt)) {
     return { action: "end", reason: c.status === "live" || c.hasSession ? "time" : "sweep" };
   }
-  if (c.status !== "live" || nowMs < startMs) return { action: "none" };
+  if (nowMs < startMs) return { action: "none" };
 
   const open = attendance.filter((a) => a.leftAt == null);
   const lastLeave = (spans: readonly SweepSpan[]) =>
     spans.reduce((m, a) => (a.leftAt != null ? Math.max(m, t(a.leftAt)) : m), -Infinity);
+  const teacherGone = () => {
+    const since = Math.max(startMs, lastLeave(attendance.filter((a) => a.role === "teacher")));
+    return nowMs - since >= SWEEP_RULES.teacherGoneMs ? END_TEACHER_GONE : NONE;
+  };
+
+  if (c.status === "scheduled") {
+    return open.some((a) => a.role === "teacher") ? NONE : teacherGone();
+  }
 
   if (open.length === 0) {
     const since = Math.max(startMs, lastLeave(attendance));
@@ -61,11 +79,8 @@ export function sweepDecision(c: SweepClass, attendance: readonly SweepSpan[], n
   }
   const teacherOpen = open.some((a) => a.role === "teacher");
   const studentsOpen = open.some((a) => a.role === "student");
-  if (studentsOpen && !teacherOpen) {
-    const since = Math.max(startMs, lastLeave(attendance.filter((a) => a.role === "teacher")));
-    return nowMs - since >= SWEEP_RULES.teacherGoneMs ? { action: "end", reason: "teacher_gone" } : { action: "none" };
-  }
-  return { action: "none" };
+  if (studentsOpen && !teacherOpen) return teacherGone();
+  return NONE;
 }
 
 export type ReviewState = { status: string; attempts: number; updatedAt: Time } | null;

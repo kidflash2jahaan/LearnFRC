@@ -13,7 +13,8 @@
 //      verdicts, routing, restriction, holds, zero data retention, and the
 //      emails in the dev outbox (usernames, no quotes, the video line);
 //   C. the sweep, scoped to its own classes: hard end, teacher gone, empty,
-//      never started, a review due, and a second run that changes nothing;
+//      never started, a teacher who never came, a review due, and a second
+//      run that changes nothing;
 //   D. /admin/classes as data: the queue's order, email failures, decisions,
 //      restricted reviews, settings refusals and parent-consent revoke.
 //
@@ -780,6 +781,10 @@ test("C the sweep ends its own classes by the rules, and a second run changes no
   const Y = await newClass("sweepempty", { startsMin: -40, status: "live" });
   const N = await newClass("sweepnever", { startsMin: -90, status: "scheduled" });
   const K = await newClass("sweepfine", { startsMin: -20, status: "live" });
+  // Students wait for the teacher, so a class whose teacher never comes stays
+  // scheduled: it ends 10 minutes after the start, not at the hard end.
+  const X = await newClass("sweepnoteacher", { startsMin: -15, status: "scheduled" });
+  const W2 = await newClass("sweepsoon", { startsMin: -5, status: "scheduled" });
   const sess = async (c: { id: string }, rows: { who: string; role: string; join: number; leave: number | null }[]) => {
     const id = `lftest-wr-ss-${randomUUID().slice(0, 6)}`;
     await admin.from("class_sessions").insert({ id, class_id: c.id, started_at: at(-45) });
@@ -815,6 +820,8 @@ test("C the sweep ends its own classes by the rules, and a second run changes no
     [Y, "empty"],
     [N, "sweep"],
     [K, null],
+    [X, "teacher_gone"],
+    [W2, null],
   ];
   for (const [c, reason] of expected) {
     const r1 = await mod.reconcile.runSweep({ classId: c.id, deps: sweepDeps });
@@ -824,11 +831,15 @@ test("C the sweep ends its own classes by the rules, and a second run changes no
     const r2 = await mod.reconcile.runSweep({ classId: c.id, deps: sweepDeps });
     assert.deepEqual(r2.ended, [], "the second run changes nothing");
   }
-  const { data: rows } = await admin.from("classes").select("id, status, end_reason, credited_minutes_computed").in("id", [H.id, G.id, Y.id, N.id, K.id]);
+  const { data: rows } = await admin
+    .from("classes")
+    .select("id, status, end_reason, credited_minutes_computed")
+    .in("id", [H.id, G.id, Y.id, N.id, K.id, X.id, W2.id]);
   type Row = { id: string; status: string; end_reason: string | null; credited_minutes_computed: number | null };
   const by = new Map<string, Row>((rows as Row[]).map((r) => [r.id, r]));
   assert.equal(by.get(K.id)!.status, "live");
-  for (const c of [H, G, Y, N]) assert.equal(by.get(c.id)!.status, "ended");
+  assert.equal(by.get(W2.id)!.status, "scheduled");
+  for (const c of [H, G, Y, N, X]) assert.equal(by.get(c.id)!.status, "ended");
   assert.equal(by.get(G.id)!.credited_minutes_computed, 15, "teacher and student together from the start until the teacher left");
   // A class nobody joined is stored quietly: no model call, no email.
   clearOutbox();

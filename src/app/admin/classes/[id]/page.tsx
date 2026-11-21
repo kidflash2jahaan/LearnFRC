@@ -49,7 +49,7 @@ const END_WORD: Record<string, string> = {
   admin: "staff ended it",
   time: "time ran out",
   empty: "the room emptied",
-  teacher_gone: "the teacher left",
+  teacher_gone: "no teacher for 10 minutes",
   reports: "ended after two reports",
   paused: "classes were paused",
   sweep: "never started",
