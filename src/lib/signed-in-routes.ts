@@ -13,9 +13,10 @@
  * signed-out visitors and crawlers still get the cached page, exactly as
  * before, and a signed-in reader never reaches it.
  *
- * Keep this file free of imports: the middleware, /signup, the logo, the
- * footer and the unit tests all read it. The navbar's own "My team" swap
- * (components/navbar.tsx) is the same /for-teams pair.
+ * Keep this file free of imports: the middleware, /signup, /paths, the logo,
+ * the navbar, the footer, the error page and the unit tests all read it. The
+ * navbar's "My team" tab is the /for-teams pair below, read through
+ * signedInHref; only its label lives in components/navbar.tsx.
  *
  * Rules for adding a pair:
  * - The left side has to be a page a signed-in person never needs, and the
@@ -35,15 +36,18 @@ export const SIGNED_IN_VERSION: Readonly<Record<string, string>> = {
   "/": "/dashboard",
 
   // The pitch to mentors. Both of its own buttons say "Go to your team". The
-  // navbar already swaps this tab for "My team" once it knows you're signed
-  // in; this catches the links that can't swap (the footer before it loads,
-  // "How teams use this" on /paths, shared links). /teams shows its own
-  // "add your team number" card when there's no number yet.
+  // navbar tab, the footer and "How teams use this" on /paths swap to /teams
+  // once the navbar knows you're signed in; this catches the links that can't
+  // swap yet (before that answer comes back, shared links, bookmarks). /teams
+  // shows its own "add your team number" card when there's no number yet.
   "/for-teams": "/teams",
 
-  // "Check your inbox" after signing up. Once the confirm link has signed you
-  // in, the old tab shouldn't keep telling you to check your email.
-  "/auth/verify-email": "/dashboard",
+  // Not /auth/verify-email: signUp redirects there from a Server Action, and
+  // Next renders that page inside the action's own response with the
+  // browser's cookies. If someone else is still signed in on that browser (an
+  // old /signup tab on a shared laptop), a pair here would show their
+  // dashboard instead of "check your inbox" for the new account. The page is
+  // harmless to a signed-in reader.
 };
 
 /**
@@ -105,18 +109,38 @@ export function signedInRedirect(req: {
  * with its own HardRedirect to `next`, and the middleware covers the rest.)
  */
 export function signedInLanding(safeNext: string | undefined): string {
-  if (!safeNext) return SIGNED_IN_HOME;
-  const path = pathOnly(safeNext);
+  const to = safeNext ? asLocation(safeNext) : null;
+  if (!to) return SIGNED_IN_HOME;
+  const path = pathOnly(to);
   const version = SIGNED_IN_VERSION[path];
   if (version) return version;
   if (SIGNED_OUT_ONLY.includes(path)) return SIGNED_IN_HOME;
-  return safeNext;
+  return to;
+}
+
+/**
+ * The path written the way a browser sends it: percent-encoded, with "." and
+ * ".." resolved. `next` arrives decoded from the query string, redirect() puts
+ * its URL in the Location header as it is, and Node refuses a header with a
+ * character above U+00FF in it, so "/signup?next=/日本" would be a 500. Only
+ * the path, query and fragment are kept, so it stays on this site; null if
+ * it somehow doesn't.
+ */
+function asLocation(path: string): string | null {
+  const site = "https://learnfrc.com";
+  try {
+    const u = new URL(path, site);
+    if (u.origin !== site) return null;
+    return u.pathname + u.search + u.hash;
+  } catch {
+    return null;
+  }
 }
 
 /**
  * A link's target for a signed-in reader: its signed-in version when it has
- * one, otherwise the link as it is. The logo, the navbar and the footer use
- * this once they know who is reading, so they skip the redirect hop.
+ * one, otherwise the link as it is. The logo, the navbar, the footer and
+ * /paths use this once they know who is reading, so they skip the redirect hop.
  */
 export function signedInHref(href: string): string {
   return SIGNED_IN_VERSION[href] ?? href;
