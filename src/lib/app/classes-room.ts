@@ -92,7 +92,7 @@ export const ROOM_SENTENCES = {
   notReady: "This class's room isn't ready yet. Try again in a minute.",
   earlyStudent: "It's too early to join. The room opens 15 minutes before the class starts.",
   earlyTeacher: "It's too early to open the room. It opens 30 minutes before the class starts.",
-  // Students never sit in the call without the teacher or staff (mustWaitForTeacher).
+  // Students don't join before the teacher or staff is in the room (mustWaitForTeacher).
   waitingForTeacher: "The room opens when your teacher arrives.",
   over: "This class is over. The room closed at its end time.",
   notEnrolled: "You're not signed up for this class. Sign up on the class page first.",
@@ -491,10 +491,13 @@ async function warnCapOnce(now: Date, used: number, cap: number) {
  * person never has two, and a token someone shared stops working.
  *
  * A student who joins before the teacher or LearnFRC staff is in the room is
- * refused `waiting_for_teacher`, before any record or token: nobody in the
- * call can be without someone who can mute or remove them. RealtimeKit's
- * own waiting room isn't used for this (src/lib/classes/presets.ts says
- * why); the room page waits with roomWait and joins again by itself.
+ * refused `waiting_for_teacher`, before any record or token, so no student
+ * gets into the call before someone who can mute or remove them. That only
+ * covers joining: if the teacher and staff leave, students already in stay
+ * until they leave or the sweep ends the class (teacher_gone, 10 minutes
+ * after the teacher's last leave). RealtimeKit's own waiting room isn't
+ * used for this (src/lib/classes/presets.ts says why); the room page waits
+ * with roomWait and joins again by itself.
  *
  * `ip` and `userAgent` come from the request (the Server Action reads them).
  */

@@ -20,10 +20,13 @@
  *   and nobody can accept waiting requests), and there's no Admit button.
  *   Our own server gate (joinClass in src/lib/app/classes-room.ts) decides
  *   who gets a token at all, so someone who gets one goes straight in.
- * - Students still never sit in the call without someone in charge: joinClass
- *   gives a student no token until the teacher or LearnFRC staff is in the
- *   room (mustWaitForTeacher in room-rules.ts), and the room page lets a
- *   waiting student in by itself the moment one arrives. That's ours, not
+ * - Students never join before someone in charge: joinClass gives a student
+ *   no token until the teacher or LearnFRC staff is in the room
+ *   (mustWaitForTeacher in room-rules.ts), and the room page lets a waiting
+ *   student in by itself the moment one arrives. That only covers joining.
+ *   Students already in the call stay in it if the teacher and staff leave,
+ *   until the sweep ends the class 10 minutes after the teacher's last
+ *   leave (teacher_gone, src/lib/classes/sweep-rules.ts). That's ours, not
  *   RealtimeKit's ON_PRIVILEGED_USER_ENTRY: Cloudflare's docs say that mode
  *   lets waiting people in when a host or other privileged user arrives, but
  *   they never say which preset settings make someone privileged, so it
