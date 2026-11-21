@@ -105,14 +105,17 @@ export async function signUp(
 }
 
 /**
- * Signs this browser out. When it resolves, the session cookies are gone, so
+ * Signs this browser out, and only this browser: scope "local" ends this one
+ * session, where Supabase's default ("global") would also sign out the
+ * iPhone and Mac app and every other browser, and /settings promises it
+ * clears this device only. When it resolves, the session cookies are gone, so
  * callers (components/auth/sign-out-button.tsx) can load "/" and get the
  * signed-out home page. If it rejects (offline, a deploy in between), nothing
  * changed and they say so instead.
  */
 export async function signOut() {
   const supabase = await createClient();
-  const { error } = await supabase.auth.signOut();
+  const { error } = await supabase.auth.signOut({ scope: "local" });
   if (error) {
     // Supabase keeps the session when its sign-out call fails (a 5xx, a rate
     // limit, a network error), and "/" would then send a still signed-in
