@@ -12,14 +12,16 @@ const SIGN_OUT_FAILED = "Couldn't sign you out. Check your connection and try ag
  * navbar drop the session at once (a soft client transition would keep
  * showing the avatar until a manual refresh).
  *
- * It also deletes any unsent teacher application draft in this browser
- * (src/lib/classes/teach-draft.ts): family computers are shared.
- *
  * Only after the action resolves: then the session cookies are gone
  * (app/actions/auth.ts). If it fails, "/" would send a reader who is still
  * signed in to their dashboard and look like Sign out did nothing, so it
  * stays put and returns an error to show instead. The navbar's menu item
  * uses this too.
+ *
+ * Once signed out it also deletes any unsent teacher application draft in
+ * this browser (src/lib/classes/teach-draft.ts): family computers are
+ * shared. Not before: a sign out that fails leaves them signed in, and
+ * their draft with them.
  */
 export function useSignOut() {
   const [busy, setBusy] = React.useState(false);
@@ -28,7 +30,6 @@ export function useSignOut() {
   const run = React.useCallback(async () => {
     setBusy(true);
     setError(null);
-    dropAllTeachDrafts();
     try {
       await signOut();
     } catch {
@@ -36,6 +37,7 @@ export function useSignOut() {
       setError(SIGN_OUT_FAILED);
       return;
     }
+    dropAllTeachDrafts();
     // Still busy while the page loads, so a second click does nothing.
     window.location.assign("/");
   }, []);
