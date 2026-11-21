@@ -987,6 +987,10 @@ test("D restricted reviews: only the safety lead sees them until he releases the
 });
 
 test("D settings are a super admin's and are checked; no shared row is written", async () => {
+  // The shared row as it is now (production's own values), to compare after.
+  const read = async () =>
+    (await admin.from("class_settings").select("classes_visible, monthly_minute_cap, max_live_classes").eq("id", true).single()).data;
+  const before = await read();
   const lead = await mod.adminClasses.updateClassSettingsAs(safetyLead(), { monthlyMinuteCap: 40000, maxLiveClasses: 3, minStudentAccountDays: 7 });
   assert.equal(lead.ok, false);
   const bad = await mod.adminClasses.updateClassSettingsAs(superadmin(), { monthlyMinuteCap: 5, maxLiveClasses: 3, minStudentAccountDays: 7 });
@@ -995,8 +999,7 @@ test("D settings are a super admin's and are checked; no shared row is written",
   assert.equal(vis.ok, false);
   const nobody = await mod.adminClasses.setSafetyLeadAs(superadmin(), "@lftest_nobody_here_zz");
   assert.equal(nobody.ok, false);
-  const { data: s } = await admin.from("class_settings").select("classes_visible, monthly_minute_cap, max_live_classes").eq("id", true).single();
-  assert.deepEqual(s, { classes_visible: false, monthly_minute_cap: 40000, max_live_classes: 3 });
+  assert.deepEqual(await read(), before);
 });
 
 test("D parent consents: look up by handle and revoke", async () => {
