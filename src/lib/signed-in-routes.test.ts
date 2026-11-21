@@ -135,6 +135,22 @@ test("signed-in landing is always safe to put in a Location header", () => {
   }
 });
 
+// safeNextPath lets these through (they start with "/" but not "//" or
+// "/\"), and resolving the dots turns each one into "//evil.com", which a
+// browser reads as another site.
+test("signed-in landing never leaves the site", () => {
+  for (const next of [
+    "/.//evil.com",
+    "/x/..//evil.com",
+    "/./\\evil.com",
+    "/%2e//evil.com",
+    "/./%2e//evil.com",
+    "/x/../..//evil.com/path?q=1#h",
+  ]) {
+    assert.equal(signedInLanding(next), "/dashboard", JSON.stringify(next));
+  }
+});
+
 test("signed-in links", () => {
   assert.equal(signedInHref("/"), "/dashboard");
   assert.equal(signedInHref("/for-teams"), "/teams");

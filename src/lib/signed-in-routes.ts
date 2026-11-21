@@ -125,13 +125,20 @@ export function signedInLanding(safeNext: string | undefined): string {
  * character above U+00FF in it, so "/signup?next=/日本" would be a 500. Only
  * the path, query and fragment are kept, so it stays on this site; null if
  * it somehow doesn't.
+ *
+ * Resolving the dots can turn a path safeNextPath let through into "//host":
+ * "/.//evil.com" and "/x/..//evil.com" both come out as "//evil.com", and a
+ * browser reads a Location of "//evil.com" as another site. So a result that
+ * starts with "//" is null too. (A backslash never survives: the parser turns
+ * it into "/", so "/./\evil.com" is caught by the same check.)
  */
 function asLocation(path: string): string | null {
   const site = "https://learnfrc.com";
   try {
     const u = new URL(path, site);
     if (u.origin !== site) return null;
-    return u.pathname + u.search + u.hash;
+    const out = u.pathname + u.search + u.hash;
+    return out.startsWith("//") ? null : out;
   } catch {
     return null;
   }
