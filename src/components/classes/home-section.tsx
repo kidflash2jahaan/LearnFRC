@@ -39,7 +39,11 @@ export function HomeClassesHeroLine() {
   );
 }
 
-function ClassCard({ c, i }: { c: ClassListing; i: number }) {
+/**
+ * One class as a taped card. The dashboard's live classes card uses it too
+ * (dashboard-classes.tsx), from the same cached, handle-free listing.
+ */
+export function HomeClassCard({ c, i }: { c: ClassListing; i: number }) {
   const cell = CARD[i % CARD.length];
   const topic = topicLine(c.topic);
   const live = c.status === "live";
@@ -104,7 +108,7 @@ export function HomeClassesSection({ classes }: { classes: ClassListing[] }) {
         ) : (
           <ul className="mt-[clamp(1.6rem,3.4vw,2.6rem)] grid list-none grid-cols-1 gap-[clamp(0.85rem,1.7vw,1.35rem)] p-0 md:grid-cols-3">
             {classes.map((c, i) => (
-              <ClassCard key={c.id} c={c} i={i} />
+              <HomeClassCard key={c.id} c={c} i={i} />
             ))}
           </ul>
         )}

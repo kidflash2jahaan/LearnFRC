@@ -28,6 +28,9 @@ import { needsUsernameStep, usernameStepHref } from "@/lib/usernames";
 import { createClient } from "@/lib/supabase/server";
 import { clampPct, pluralize } from "@/lib/utils";
 import type { Achievement } from "@/lib/types";
+import { homeClasses } from "@/lib/classes/static-pages";
+import { getTeacher } from "@/lib/app/class-teachers";
+import { DashboardClasses } from "@/components/classes/dashboard-classes";
 import { ProgressLedger } from "./_instrument-panel";
 import { WhatsNew } from "./_whats-new";
 
@@ -113,7 +116,7 @@ export default async function DashboardPage() {
 
   const supabase = await createClient();
 
-  const [departments, progressRes, lessonMapRes, achievementsRes, earnedRes] =
+  const [departments, progressRes, lessonMapRes, achievementsRes, earnedRes, liveClasses] =
     await Promise.all([
       getDepartments().catch(() => []),
       supabase
@@ -130,7 +133,12 @@ export default async function DashboardPage() {
         .from("user_achievements")
         .select("achievement_id, earned_at")
         .eq("user_id", user.id),
+      // The homepage's next three classes (cached), or null while classes
+      // are hidden: "/" sends signed-in readers here, so they show here too.
+      homeClasses(),
     ]);
+  // Only read when there's a classes card to put the teaching link on.
+  const teaches = liveClasses ? !!(await getTeacher(user.id)) : false;
 
   const progressRows = (progressRes.data ?? []) as {
     lesson_id: string;
@@ -554,6 +562,11 @@ export default async function DashboardPage() {
           {inviteNode}
         </section>
       )}
+
+      {/* ===================== LIVE CLASSES =====================
+          Only while classes are visible (homeClasses returns null when
+          they're hidden): the next three, and the ways in. */}
+      {liveClasses ? <DashboardClasses classes={liveClasses} teaches={teaches} /> : null}
 
       {/* ===================== DEPARTMENTS ===================== */}
       <section className="nb-wrap border-t-2 border-ink py-[clamp(2.2rem,4.5vw,3.6rem)]">
