@@ -1,9 +1,9 @@
 import "server-only";
 import { createHash } from "node:crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { endClass } from "@/lib/app/classes-room";
-import { SITE_URL, getClassSettings, rtkApp } from "@/lib/classes/config";
-import { deleteParticipant } from "@/lib/classes/realtimekit";
+import { endClass, wasRemoved } from "@/lib/app/classes-room";
+import { SITE_URL, classesConfigured, getClassSettings, rtkApp } from "@/lib/classes/config";
+import { deleteParticipant, kickParticipants } from "@/lib/classes/realtimekit";
 import { createRtkVerifier, type RtkVerifier } from "@/lib/classes/verify-signature";
 import {
   eventTimeMs,
@@ -18,6 +18,7 @@ import {
   CLASS_REF_COLUMNS,
   allTranscriptsIn,
   downloadTranscript,
+  drainRtkCleanup,
   finalizeMinutes,
   recordJoin,
   recordLeave,
@@ -253,8 +254,10 @@ async function onJoined(cls: ClassRef, sessionId: string | null, body: RtkWebhoo
     return;
   }
 
-  // Two live connections for one person: a shared token or a second device.
   if (!joined.userId) return;
+  if (await wasRemoved(cls, joined.userId)) return kickRemoved(cls, joined.userId, p.peerId, deps);
+
+  // Two live connections for one person: a shared token or a second device.
   const { data: others } = await admin
     .from("class_attendance")
     .select("id, peer_id, joined_at")
@@ -297,6 +300,28 @@ async function onJoined(cls: ClassRef, sessionId: string | null, body: RtkWebhoo
     kind: "duplicate_peer",
     detail: { userId: joined.userId, peers: [p.peerId, ...dupes.map((d) => d.peer_id)], participantDeleted: deleted },
   });
+}
+
+/**
+ * Someone removed from the class connected again. There's no waiting room,
+ * so this happens when removeFromClass couldn't delete their participant and
+ * queued the delete (class_rtk_cleanup): the old token works until the sweep
+ * gets to it. Kick them out at once and try the queued delete now instead of
+ * at the next sweep. Logged as removed_rejoined.
+ */
+async function kickRemoved(cls: ClassRef, userId: string, peerId: string, deps: ClassOpsDeps): Promise<void> {
+  if (!cls.rtk_meeting_id || !classesConfigured()) return;
+  const kick = await kickParticipants(cls.rtk_meeting_id, { customIds: [userId] }, { app: cls.rtk_app });
+  if (!kick.ok) console.error("classes webhook: kicking a removed participant failed:", kick.error);
+  let deleted = 0;
+  try {
+    deleted = (await drainRtkCleanup(cls.rtk_app, { meetingId: cls.rtk_meeting_id, deleteParticipant: deps.deleteParticipant })).deleted;
+  } catch (e) {
+    console.error("classes webhook: retrying the queued delete failed:", e);
+  }
+  await createAdminClient()
+    .from("class_events")
+    .insert({ class_id: cls.id, kind: "removed_rejoined", detail: { userId, peerId, kicked: kick.ok, deleted } });
 }
 
 async function onLeft(cls: ClassRef, sessionId: string | null, body: RtkWebhookBody): Promise<void> {

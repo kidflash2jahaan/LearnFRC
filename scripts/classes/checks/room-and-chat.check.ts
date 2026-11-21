@@ -320,6 +320,7 @@ async function main() {
   const notice = await import("../../../src/lib/classes/notice.ts");
   const presets = await import("../../../src/lib/classes/presets.ts");
   const reconcile = await import("../../../src/lib/classes/reconcile.ts");
+  const webhook = await import("../../../src/lib/classes/webhook.ts");
 
   const nowId = await newClass("now", acc.t1.id, { startsInMin: 5 });
   const laterId = await newClass("later", acc.t1.id, { startsInMin: 180 });
@@ -856,11 +857,47 @@ async function main() {
     assert.equal((ev!.detail as { video: string }).video, "kicked");
     assert.equal((ev!.detail as { queued: boolean }).queued, true);
 
-    // The sweep's drain, for this meeting only, so nobody else's queue is touched.
+    // Their old token still works until the delete goes through. When they
+    // use it, the join webhook kicks them out again at once and retries the
+    // queued delete, for this meeting only, so nobody else's queue is touched.
+    const peer = (event: string, k: string, peerId: string) => {
+      const stamp = new Date().toISOString();
+      return {
+        event,
+        meeting: { id: meeting, sessionId: SESSION, startedAt: stamp },
+        participant: { peerId, customParticipantId: acc[k].id, joinedAt: stamp, leftAt: stamp },
+      };
+    };
     const m = rtkCalls.length;
-    assert.deepEqual(await reconcile.drainRtkCleanup("dev", { meetingId: meeting }), { deleted: 1, failed: 0 });
-    assert.deepEqual(calls(m), [`DELETE /meetings/${meeting}/participants/${pid5}`]);
+    await webhook.handleWebhookEvent(peer("meeting.participantJoined", "s5", "lftest-peer-s5-again"));
+    assert.deepEqual(calls(m), [
+      `POST /meetings/${meeting}/active-session/kick`,
+      `DELETE /meetings/${meeting}/participants/${pid5}`,
+    ]);
+    assert.deepEqual(rtkCalls[m].body, { custom_participant_ids: [acc.s5.id] });
     assert.deepEqual(await queue(), []);
+    const { data: back } = await admin
+      .from("class_events")
+      .select("detail")
+      .eq("class_id", nowId)
+      .eq("kind", "removed_rejoined")
+      .eq("detail->>userId", acc.s5.id)
+      .single();
+    assert.deepEqual(back!.detail, { userId: acc.s5.id, peerId: "lftest-peer-s5-again", kicked: true, deleted: 1 });
+    // The kick's leave closes the connection, as it would in a real call.
+    await webhook.handleWebhookEvent(peer("meeting.participantLeft", "s5", "lftest-peer-s5-again"));
+    const { data: open5 } = await admin
+      .from("class_attendance")
+      .select("id")
+      .eq("class_id", nowId)
+      .eq("user_id", acc.s5.id)
+      .is("left_at", null);
+    assert.deepEqual(open5, []);
+    // Someone who wasn't removed is left alone.
+    const n2 = rtkCalls.length;
+    await webhook.handleWebhookEvent(peer("meeting.participantJoined", "s2", "lftest-peer-s2-webhook"));
+    await webhook.handleWebhookEvent(peer("meeting.participantLeft", "s2", "lftest-peer-s2-webhook"));
+    assert.deepEqual(calls(n2), []);
 
     // Both fail: queued, and the row keeps the participant so Remove again
     // tries both. A drain that fails counts an attempt and keeps the row.

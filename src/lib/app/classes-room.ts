@@ -241,6 +241,17 @@ async function membership(classId: string, userId: string): Promise<Membership> 
   };
 }
 
+/**
+ * Whether someone was taken out of this class by removeFromClass: their
+ * enrollment is `removed` or their participant row is revoked. Never the
+ * teacher. The webhook asks it when someone connects (webhook.ts onJoined).
+ */
+export async function wasRemoved(cls: { id: string; teacher_id: string | null }, userId: string): Promise<boolean> {
+  if (!isUuid(userId) || userId === cls.teacher_id) return false;
+  const m = await membership(cls.id, userId);
+  return m.enrollment === "removed" || !!m.participant?.revoked_at;
+}
+
 /** A super admin or the safety lead: they join as visible staff and skip the pause. */
 export async function isClassStaff(user: AppUser): Promise<boolean> {
   try {
@@ -1012,7 +1023,9 @@ export async function removeFromClass(
   // they're out of the call now. A kick leaves the participant and its token
   // working, so with no waiting room they could join straight back in: any
   // delete that didn't happen here goes to class_rtk_cleanup, and the sweep
-  // keeps deleting until it's gone.
+  // keeps deleting until it's gone. If they do get back in before that, the
+  // webhook kicks them again at once and retries the delete (webhook.ts
+  // kickRemoved).
   let video: "none" | "deleted" | "kicked" | "skipped" | "failed" = "none";
   let queued = false;
   const pid = m.participant?.rtk_participant_id ?? null;
