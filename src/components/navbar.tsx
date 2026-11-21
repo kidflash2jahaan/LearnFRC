@@ -14,12 +14,12 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { signOut } from "@/app/actions/auth";
-import { dropAllTeachDrafts } from "@/lib/classes/teach-draft";
+import { useSignOut } from "@/components/auth/sign-out-button";
 import { createClient } from "@/lib/supabase/client";
 import type { Profile } from "@/lib/types";
 import { usernameStepHref } from "@/lib/usernames";
 import { setViewerSignedIn } from "@/lib/signed-in-viewer";
+import { signedInHref } from "@/lib/signed-in-routes";
 import { EmailChoicePrompt } from "@/components/settings/email-choice-prompt";
 
 /**
@@ -51,6 +51,9 @@ function usernameStepExempt(pathname: string): boolean {
 }
 
 type NavItem = { href: string; label: string; isNew?: boolean };
+
+/** A tab's label once it points at the signed-in version of its page. */
+const SIGNED_IN_LABEL: Readonly<Record<string, string>> = { "/teams": "My team" };
 
 const NAV: NavItem[] = [
   { href: "/guides", label: "Guides" },
@@ -99,9 +102,14 @@ const tagOnServer = () => true;
 function navFor(authed: boolean, classesVisible: boolean): NavItem[] {
   const items = classesVisible ? [NAV[0], CLASSES_ITEM, ...NAV.slice(1)] : NAV;
   if (!authed) return items;
-  return items.map((item) =>
-    item.href === "/for-teams" ? { href: "/teams", label: "My team" } : item
-  );
+  // Where a tab goes comes from the one map the middleware, the logo and the
+  // footer read (src/lib/signed-in-routes.ts), so they can't drift. Only the
+  // label is the navbar's own.
+  return items.map((item) => {
+    const href = signedInHref(item.href);
+    if (href === item.href) return item;
+    return { href, label: SIGNED_IN_LABEL[href] ?? item.label };
+  });
 }
 
 type Me = {
@@ -245,6 +253,7 @@ export function Navbar({ classesVisible = false }: { classesVisible?: boolean } 
     if (loaded) setViewerSignedIn(authed);
   }, [loaded, authed]);
 
+  const signOut = useSignOut();
   const openSearch = () => window.dispatchEvent(new Event("open-search"));
   const who = profile?.full_name || profile?.username || "Your account";
 
@@ -385,22 +394,24 @@ export function Navbar({ classesVisible = false }: { classesVisible?: boolean } 
                     </DropdownMenuItem>
                   )}
                   <DropdownMenuSeparator />
+                  {/* preventDefault keeps the menu open, so "Signing out" and
+                      an error stay in view. On success the page reloads. */}
                   <DropdownMenuItem
-                    onSelect={async (e) => {
+                    disabled={signOut.busy}
+                    onSelect={(e) => {
                       e.preventDefault();
-                      // An unsent teacher draft doesn't outlive the session
-                      // on a shared computer.
-                      dropAllTeachDrafts();
-                      try {
-                        await signOut();
-                      } finally {
-                        // Full reload so the whole app drops the session at once.
-                        window.location.assign("/");
-                      }
+                      // run() also drops any unsent teacher draft, so it
+                      // doesn't outlive the session on a shared computer.
+                      void signOut.run();
                     }}
                   >
-                    Sign out
+                    {signOut.busy ? "Signing out" : "Sign out"}
                   </DropdownMenuItem>
+                  {signOut.error && (
+                    <p className="nb-error mx-[0.85rem] my-1.5" role="alert">
+                      {signOut.error}
+                    </p>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (

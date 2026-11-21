@@ -19,6 +19,11 @@ import { useViewerSignedIn } from "@/lib/signed-in-viewer";
  * Home is the dashboard for a signed-in reader (src/lib/signed-in-routes.ts).
  * The middleware would redirect "/" there anyway; pointing straight at it once
  * the navbar knows saves the hop.
+ *
+ * Never prefetched. The logo is in view on every page, so Next would fetch
+ * its target on every page view, and for a signed-in reader that's a dynamic
+ * /dashboard render (or a "/" that redirects into one, before the navbar
+ * knows who is reading) instead of a cached page. A click still works.
  */
 export function Logo({
   className,
@@ -33,6 +38,7 @@ export function Logo({
   return (
     <Link
       href={signedIn ? signedInHref("/") : "/"}
+      prefetch={false}
       aria-label="LearnFRC, home"
       /* min-h-11 is the 44px touch floor. The logotype's own line box is only
          38px tall, and this is the first link on every page. */

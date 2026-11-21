@@ -19,7 +19,6 @@ const get = (path: string, method = "GET") => {
 test("the pairs", () => {
   assert.equal(get("/"), "/dashboard");
   assert.equal(get("/for-teams"), "/teams");
-  assert.equal(get("/auth/verify-email"), "/dashboard");
 });
 
 test("HEAD too, and a trailing slash is the same page", () => {
@@ -36,8 +35,8 @@ test("never a POST or any other method", () => {
   }
 });
 
-test("the query string is dropped, so an address on verify-email isn't carried on", () => {
-  assert.equal(get("/auth/verify-email?email=a%40b.co"), "/dashboard");
+test("the query string is dropped", () => {
+  assert.equal(get("/for-teams?ref=someone"), "/teams");
   assert.equal(get("/?ref=someone&utm_source=x"), "/dashboard");
 });
 
@@ -70,6 +69,11 @@ test("everything else is untouched", () => {
     "/account/password",
     "/auth/callback",
     "/auth/confirm",
+    // signUp's Server Action redirects here, and Next renders it inside the
+    // action's response with the browser's cookies, so a session left on that
+    // browser must not turn "check your inbox" into someone's dashboard.
+    "/auth/verify-email",
+    "/auth/verify-email?email=a%40b.co",
     "/auth/verify-email/x",
     "/api/me",
     "/u/someone",
@@ -126,11 +130,27 @@ test("signed-in landing skips pages that would only redirect again", () => {
   assert.equal(signedInLanding("/"), "/dashboard");
   assert.equal(signedInLanding("/for-teams"), "/teams");
   assert.equal(signedInLanding("/for-teams?ref=x"), "/teams");
-  assert.equal(signedInLanding("/auth/verify-email?email=a%40b.co"), "/dashboard");
+  assert.equal(signedInLanding("/guides/../for-teams"), "/teams");
   assert.equal(signedInLanding("/signup"), "/dashboard");
   assert.equal(signedInLanding("/signup?next=/signup"), "/dashboard");
   assert.equal(signedInLanding("/login?next=/x"), "/dashboard");
   assert.equal(signedInLanding("/forgot-password"), "/dashboard");
+  assert.equal(signedInLanding("/x/../login"), "/dashboard");
+});
+
+// /signup hands this to redirect(), which puts it in the Location header as
+// it is, and Node throws (a 500) on a header character above U+00FF.
+test("signed-in landing is always safe to put in a Location header", () => {
+  assert.equal(signedInLanding("/guides/\u00e9t\u00e9"), "/guides/%C3%A9t%C3%A9");
+  assert.equal(signedInLanding("/guides?q=\u65e5\u672c"), "/guides?q=%E6%97%A5%E6%9C%AC");
+  assert.equal(signedInLanding("/guides/a b#part 2"), "/guides/a%20b#part%202");
+  assert.equal(signedInLanding("/guides/already%20encoded"), "/guides/already%20encoded");
+  assert.equal(signedInLanding("/guides/x#top"), "/guides/x#top");
+  for (const next of ["/\u65e5\u672c", "/x?y=\u{1F916}", "/\u00fc#\u00e9", "/a\u0000b", "/a\u2028b"]) {
+    const to = signedInLanding(next);
+    assert.match(to, /^\/[\x21-\x7e]*$/, `${JSON.stringify(next)} -> ${to}`);
+    assert.ok(!to.startsWith("//"), to);
+  }
 });
 
 test("signed-in links", () => {

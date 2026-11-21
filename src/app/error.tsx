@@ -2,6 +2,9 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { SIGNED_IN_HOME } from "@/lib/signed-in-routes";
+import { useViewerSignedIn } from "@/lib/signed-in-viewer";
 
 /**
  * The route-level error boundary: a correction stamped into the binder.
@@ -21,6 +24,22 @@ export default function Error({
   error: Error & { digest?: string };
   unstable_retry: () => void;
 }) {
+  const pathname = usePathname();
+  // Only a signed-in reader ever gets a /dashboard page, so that counts as
+  // signed in even before the navbar's answer comes back.
+  const onDashboard = pathname === SIGNED_IN_HOME || pathname.startsWith(`${SIGNED_IN_HOME}/`);
+  const signedIn = useViewerSignedIn() || onDashboard;
+  // The way out is home: the front page, or the dashboard for a signed-in
+  // reader ("/" redirects there, src/lib/signed-in-routes.ts). When home is
+  // the page that just threw, it's the guides, which don't depend on who is
+  // reading.
+  const out =
+    onDashboard || (!signedIn && pathname === "/")
+      ? { href: "/guides", label: "Go to the guides" }
+      : signedIn
+        ? { href: SIGNED_IN_HOME, label: "Go to your dashboard" }
+        : { href: "/", label: "Back to the front page" };
+
   React.useEffect(() => {
     console.error(error);
 
@@ -66,8 +85,8 @@ export default function Error({
           <button type="button" className="nb-btn" onClick={() => unstable_retry()}>
             Try again
           </button>
-          <Link href="/" className="nb-btn-ghost">
-            Back to the front page
+          <Link href={out.href} className="nb-btn-ghost">
+            {out.label}
           </Link>
         </div>
       </div>
