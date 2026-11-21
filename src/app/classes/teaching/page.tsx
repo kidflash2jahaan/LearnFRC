@@ -15,6 +15,7 @@ import { PUBLIC_CONTACT_EMAIL } from "@/lib/email";
 import { usernameStepHref } from "@/lib/usernames";
 import { LocalTime } from "@/components/classes/local-time";
 import { lengthLabel } from "@/components/classes/class-card";
+import { BioContactLine } from "@/components/classes/bio-contact-line";
 import { ScheduleForm } from "./_schedule-form";
 import { CancelClassButton } from "./_cancel-class";
 import { DropTeachDraft } from "@/app/apply/teach/_drop-draft";
@@ -123,6 +124,18 @@ export default async function TeachingPage() {
               {nextLink.label}
             </Link>
           )}
+        </div>
+      )}
+
+      {/* ---- the bio -------------------------------------------------------
+          scheduleClass refuses a bio with contact details, so say so before
+          the form, as /apply/teach did before it sent teachers here. */}
+      {desk.isTeacher && desk.bioHasContact && (
+        <div className="nb-note mt-8 max-w-[64ch]" role="status">
+          <p className="nb-slug">before you can schedule a class</p>
+          <p className="mt-2.5 text-[0.97rem] leading-relaxed">
+            <BioContactLine />
+          </p>
         </div>
       )}
 

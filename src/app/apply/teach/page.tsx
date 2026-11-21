@@ -14,6 +14,7 @@ import { loadTeachApplyState, type TeachApplyState } from "@/lib/app/class-teach
 import { scheduleTopicOptions } from "@/lib/app/classes-teaching";
 import { SIGNED_IN_VERSION_IN_PAGE } from "@/lib/signed-in-routes";
 import { usernameStepHref } from "@/lib/usernames";
+import { BioContactLine } from "@/components/classes/bio-contact-line";
 import { TeachForm } from "./_teach-form";
 import { DropTeachDraft } from "./_drop-draft";
 import { WithdrawTeachForm } from "./_withdraw-form";
@@ -144,11 +145,7 @@ function BeforeYouSchedule({ state }: { state: TeachApplyState }) {
   if (state.bioHasContact) {
     items.push(
       <li key="bio">
-        Your profile bio has contact details in it. Take them out on your{" "}
-        <Link href="/settings" className="nb-link">
-          settings page
-        </Link>
-        , since everyone in a class can open your profile.
+        <BioContactLine />
       </li>
     );
   }

@@ -571,6 +571,12 @@ export type TeachingDesk = {
   isTeacher: boolean;
   letterName: string | null;
   canSchedule: { ok: true } | { ok: false; reason: string; next: TeachingNext };
+  /**
+   * The teacher's profile bio has contact details, so scheduleClass will
+   * refuse with field "bio" (the same check: hasContactPatterns). The page
+   * says so up front.
+   */
+  bioHasContact: boolean;
   upcoming: TeachingClass[];
   past: TeachingClass[];
   approvedMinutes: number;
@@ -601,6 +607,7 @@ export async function loadTeachingDesk(user: AppUser): Promise<TeachingDesk> {
     isTeacher: false,
     letterName: null,
     canSchedule: { ok: false, reason: CLASS_SENTENCES.hidden, next: null },
+    bioHasContact: false,
     upcoming: [],
     past: [],
     approvedMinutes: 0,
@@ -613,6 +620,9 @@ export async function loadTeachingDesk(user: AppUser): Promise<TeachingDesk> {
   const gate = await teachingGate(user, teacher);
   const admin = createAdminClient();
   const app = rtkApp();
+  const { data: profile } = teacher
+    ? await admin.from("profiles").select("bio").eq("id", user.id).maybeSingle()
+    : { data: null };
   const { data, error } = await admin
     .from("classes")
     .select(
@@ -662,6 +672,7 @@ export async function loadTeachingDesk(user: AppUser): Promise<TeachingDesk> {
     isTeacher: !!teacher,
     letterName: teacher?.letter_name ?? null,
     canSchedule: gate.ok ? { ok: true } : { ok: false, reason: gate.error, next: gate.next },
+    bioHasContact: hasContactPatterns((profile?.bio as string | null | undefined) ?? null),
     upcoming,
     past,
     approvedMinutes: approved.reduce((s, r) => s + (r.credited_minutes ?? 0), 0),
