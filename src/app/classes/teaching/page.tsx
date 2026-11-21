@@ -128,14 +128,23 @@ export default async function TeachingPage() {
       )}
 
       {/* ---- the bio -------------------------------------------------------
-          scheduleClass refuses a bio with contact details, so say so before
-          the form, as /apply/teach did before it sent teachers here. */}
+          scheduleClass refuses a bio with contact details, and joinClass
+          refuses the teacher too, so say so before the form, as
+          /apply/teach did before it sent teachers here. With classes coming
+          up, say what it does to them: students wait for the teacher. */}
       {desk.isTeacher && desk.bioHasContact && (
         <div className="nb-note mt-8 max-w-[64ch]" role="status">
-          <p className="nb-slug">before you can schedule a class</p>
+          <p className="nb-slug">before you can schedule or teach a class</p>
           <p className="mt-2.5 text-[0.97rem] leading-relaxed">
             <BioContactLine />
           </p>
+          {desk.upcoming.length > 0 && (
+            <p className="mt-2 text-[0.97rem] leading-relaxed">
+              Until you do, you can&rsquo;t open the room for your upcoming{" "}
+              {desk.upcoming.length === 1 ? "class" : "classes"}, and your students can&rsquo;t get in without
+              you.
+            </p>
+          )}
         </div>
       )}
 
