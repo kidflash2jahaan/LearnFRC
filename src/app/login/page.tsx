@@ -53,7 +53,7 @@ export default async function LoginPage({
             mode="login"
             next={safeNext}
             notice={noticeExists}
-            defaultEmail={email}
+            defaultEmail={typeof email === "string" ? email : undefined}
           />
         </SignInSheet>
 
