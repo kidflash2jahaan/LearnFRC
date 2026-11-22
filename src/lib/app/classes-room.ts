@@ -12,6 +12,7 @@ import { getTeacher, suspendTeacher } from "@/lib/app/class-teachers";
 import { blockedSetFor } from "@/lib/app/blocks";
 import { requireClassReviewer } from "@/lib/app/class-reviewers";
 import { holdClass } from "@/lib/classes/holds";
+import { forgetParticipant, queueParticipantDelete, releaseParticipant } from "@/lib/app/class-participants";
 import {
   JOIN_LIMITS,
   adminClassUrl,
@@ -333,22 +334,6 @@ async function logEvent(classId: string | null, actorId: string | null, kind: st
   if (error) console.error(`class_events ${kind}:`, error.message);
 }
 
-/**
- * Queues a RealtimeKit participant for the sweep to delete (class_rtk_cleanup,
- * drained by drainRtkCleanup in src/lib/classes/reconcile.ts). Until it's
- * deleted, its tokens still work. True when the row is saved.
- */
-async function queueParticipantDelete(app: RtkApp, meetingId: string, participantId: string, error: string): Promise<boolean> {
-  const { error: saveError } = await createAdminClient()
-    .from("class_rtk_cleanup")
-    .upsert(
-      { rtk_app: app, meeting_id: meetingId, participant_id: participantId, last_error: error.slice(0, 300) || null },
-      { onConflict: "meeting_id,participant_id" }
-    );
-  if (saveError) console.error("queueParticipantDelete:", saveError.message);
-  return !saveError;
-}
-
 function safetyRecipients(): string[] {
   return [...new Set([safetyEmail(), ownerEmail()].filter((x): x is string => !!x))];
 }
@@ -633,7 +618,8 @@ export async function joinClass(
     if (error) console.error("joinClass participant:", error.message);
   }
   if (!saved) {
-    await deleteParticipant(cls.rtk_meeting_id, add.data.id, opts);
+    // Never handed out, but it exists: delete it, or queue the delete.
+    await releaseParticipant({ app: cls.rtk_app, meetingId: cls.rtk_meeting_id, participantId: add.data.id });
     return refuse("rtk", ROOM_SENTENCES.rotate);
   }
 
@@ -1059,12 +1045,7 @@ export async function removeFromClass(
     // the sweep after the kick worked. Otherwise it keeps it, so pressing
     // Remove again tries the delete and the kick again.
     if (video === "deleted" || (queued && video !== "failed")) {
-      await admin
-        .from("class_participants")
-        .update({ rtk_participant_id: null })
-        .eq("class_id", cls.id)
-        .eq("user_id", targetId)
-        .eq("rtk_participant_id", pid);
+      await forgetParticipant(cls.id, targetId, pid);
     }
   }
   const videoDone = video === "none" || video === "deleted" || (queued && video !== "failed");

@@ -2,8 +2,9 @@ import "server-only";
 import { createHash } from "node:crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { endClass, wasRemoved } from "@/lib/app/classes-room";
+import { releaseParticipant } from "@/lib/app/class-participants";
 import { SITE_URL, classesConfigured, getClassSettings, rtkApp } from "@/lib/classes/config";
-import { deleteParticipant, kickParticipants } from "@/lib/classes/realtimekit";
+import { kickParticipants } from "@/lib/classes/realtimekit";
 import { createRtkVerifier, type RtkVerifier } from "@/lib/classes/verify-signature";
 import {
   eventTimeMs,
@@ -283,22 +284,34 @@ async function onJoined(cls: ClassRef, sessionId: string | null, body: RtkWebhoo
   const dupes = others.filter((o) => !stale.includes(o));
   if (!dupes.length) return;
 
-  const pid = part?.rtk_participant_id as string | null | undefined;
-  let deleted = false;
-  if (pid && cls.rtk_meeting_id) {
-    const res = await (deps.deleteParticipant ?? deleteParticipant)(cls.rtk_meeting_id, pid, { app: cls.rtk_app });
-    deleted = res.ok;
-    if (!res.ok) console.error("classes webhook: duplicate peer, deleteParticipant failed:", res.error);
+  // Deleting the participant drops every connection and kills the token. A
+  // delete that fails is queued for the sweep, and the row forgets the id
+  // only once it's deleted or queued (releaseParticipant).
+  const pid = (part?.rtk_participant_id as string | null | undefined) ?? null;
+  const release =
+    pid && cls.rtk_meeting_id
+      ? await releaseParticipant(
+          {
+            app: cls.rtk_app,
+            meetingId: cls.rtk_meeting_id,
+            participantId: pid,
+            row: { classId: cls.id, userId: joined.userId },
+          },
+          deps.deleteParticipant
+        )
+      : null;
+  if (release && release.state !== "deleted") {
+    console.error(`classes webhook: duplicate peer, delete ${release.state}:`, release.error);
   }
-  await admin
-    .from("class_participants")
-    .update({ rtk_participant_id: null })
-    .eq("class_id", cls.id)
-    .eq("user_id", joined.userId);
   await admin.from("class_events").insert({
     class_id: cls.id,
     kind: "duplicate_peer",
-    detail: { userId: joined.userId, peers: [p.peerId, ...dupes.map((d) => d.peer_id)], participantDeleted: deleted },
+    detail: {
+      userId: joined.userId,
+      peers: [p.peerId, ...dupes.map((d) => d.peer_id)],
+      participantDeleted: release?.state === "deleted",
+      participant: release?.state ?? "none",
+    },
   });
 }
 

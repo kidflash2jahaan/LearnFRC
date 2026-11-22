@@ -621,10 +621,12 @@ export async function runSweep(opts: { classId?: string | null; deps?: ClassOpsD
 
 /**
  * Deletes the RealtimeKit participants queued in class_rtk_cleanup for this
- * app: account deletions, students leaving a class, and removals whose
- * delete didn't go through at once (a kicked participant's token still
- * works until it's deleted). A 404 counts as deleted. Each failure adds an
- * attempt, up to 20. `meetingId` limits it to one meeting (tests only).
+ * app: every delete that didn't go through at once (account deletions,
+ * students leaving a class, removals, the webhook's duplicate connections
+ * and joins that couldn't be saved; src/lib/app/class-participants.ts). A
+ * queued participant's token still works until it's deleted. A 404 counts
+ * as deleted. Each failure adds an attempt, up to 20. `meetingId` limits it
+ * to one meeting (tests only).
  */
 export async function drainRtkCleanup(
   app: RtkApp,

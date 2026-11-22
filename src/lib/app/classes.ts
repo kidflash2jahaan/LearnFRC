@@ -19,7 +19,7 @@ import {
 import { ageBandOn, ageOn } from "@/lib/classes/age";
 import { CLASS_SENTENCES } from "@/lib/classes/sentences";
 import { findContactPatterns, usernameHasContact } from "@/lib/classes/contact-patterns";
-import { deleteParticipant } from "@/lib/classes/realtimekit";
+import { releaseParticipant } from "@/lib/app/class-participants";
 import { holdAccount } from "@/lib/classes/holds";
 import { handleReadyForClasses } from "@/lib/usernames";
 import { cancelTeacherClasses } from "@/lib/app/classes-teaching";
@@ -546,23 +546,12 @@ export async function leaveClass(user: AppUser, input: { classId: string }): Pro
       ?.classes;
     const pid = (part?.rtk_participant_id as string | null | undefined) ?? null;
     if (part && part.role === "student" && pid && cls?.rtk_meeting_id && cls.teacher_id !== user.id) {
-      const res =
-        cls.rtk_app === rtkApp()
-          ? await deleteParticipant(cls.rtk_meeting_id, pid, { app: cls.rtk_app })
-          : ({ ok: false, status: 0, error: "other_app" } as const);
-      if (res.ok || res.status === 404) {
-        await admin
-          .from("class_participants")
-          .update({ rtk_participant_id: null })
-          .eq("class_id", input.classId)
-          .eq("user_id", user.id)
-          .eq("rtk_participant_id", pid);
-      } else {
-        await admin.from("class_rtk_cleanup").upsert(
-          { rtk_app: cls.rtk_app, meeting_id: cls.rtk_meeting_id, participant_id: pid, last_error: res.error.slice(0, 300) },
-          { onConflict: "meeting_id,participant_id" }
-        );
-      }
+      await releaseParticipant({
+        app: cls.rtk_app,
+        meetingId: cls.rtk_meeting_id,
+        participantId: pid,
+        row: { classId: input.classId, userId: user.id },
+      });
     }
   } catch (e) {
     console.error("leaveClass: participant:", e);
@@ -610,9 +599,9 @@ export async function classRoster(classId: string): Promise<ClassRosterEntry[]> 
  *    365 days, or already has a hold: the email, handle, peer reports,
  *    transcripts and chat (blocked messages included) are kept.
  * 2. Cancels the person's upcoming classes as a teacher (emailing students).
- * 3. Deletes every RealtimeKit participant the person has. A failure, or a
- *    participant in the other app's meeting, goes to class_rtk_cleanup for
- *    the sweep to retry.
+ * 3. Deletes every RealtimeKit participant the person has
+ *    (releaseParticipant). A failure, or a participant in the other app's
+ *    meeting, goes to class_rtk_cleanup for the sweep to retry.
  * 4. Stamps account_deleted_at on their consent records, which then lose
  *    their user id (on delete set null) but keep the handle snapshot.
  *
@@ -677,26 +666,11 @@ export async function beforeAccountDeleted(uid: string, reason: AccountDeletionR
       .select("class_id, rtk_participant_id, classes(rtk_meeting_id, rtk_app)")
       .eq("user_id", uid)
       .not("rtk_participant_id", "is", null);
-    const here = rtkApp();
+    // No row to forget: the rows go with the account.
     for (const p of parts ?? []) {
       const cls = (p as unknown as { classes: { rtk_meeting_id: string | null; rtk_app: RtkApp } | null }).classes;
-      const pid = p.rtk_participant_id as string;
       if (!cls?.rtk_meeting_id) continue;
-      const res =
-        cls.rtk_app === here
-          ? await deleteParticipant(cls.rtk_meeting_id, pid, { app: cls.rtk_app })
-          : ({ ok: false, status: 0, error: "other_app" } as const);
-      if (!res.ok) {
-        await admin.from("class_rtk_cleanup").upsert(
-          {
-            rtk_app: cls.rtk_app,
-            meeting_id: cls.rtk_meeting_id,
-            participant_id: pid,
-            last_error: res.error.slice(0, 300),
-          },
-          { onConflict: "meeting_id,participant_id" }
-        );
-      }
+      await releaseParticipant({ app: cls.rtk_app, meetingId: cls.rtk_meeting_id, participantId: p.rtk_participant_id as string });
     }
   } catch (e) {
     console.error("beforeAccountDeleted: participants:", e);
