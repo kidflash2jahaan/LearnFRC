@@ -9,6 +9,7 @@ import {
   signedInLanding,
   signedInRedirect,
 } from "./signed-in-routes.ts";
+import { safeNextPath } from "./safe-next.ts";
 
 const get = (path: string, method = "GET") => {
   const url = new URL(path, "https://learnfrc.com");
@@ -149,6 +150,50 @@ test("signed-in landing never leaves the site", () => {
   ]) {
     assert.equal(signedInLanding(next), "/dashboard", JSON.stringify(next));
   }
+});
+
+// /signup and /account/username both run a raw `next` through safeNextPath
+// and then signedInLanding before redirect().
+const landing = (raw: string) => signedInLanding(safeNextPath(raw));
+
+test("raw next: encoded for the Location header", () => {
+  assert.equal(landing("/guides/\u00e9"), "/guides/%C3%A9");
+  assert.equal(landing("/\u65e5\u672c"), "/%E6%97%A5%E6%9C%AC");
+  assert.equal(landing("/x?y=\u{1F916}"), "/x?y=%F0%9F%A4%96");
+  assert.equal(landing("/guides/a b?q=c d"), "/guides/a%20b?q=c%20d");
+  assert.equal(landing("/a%00b"), "/a%00b");
+  assert.equal(landing("/a\u0000b"), "/a%00b");
+  assert.equal(landing("/a\u2028b"), "/a%E2%80%A8b");
+  assert.equal(landing("/guides/%C3%A9t%C3%A9?q=%E6%97%A5"), "/guides/%C3%A9t%C3%A9?q=%E6%97%A5");
+  // Normal values are unchanged.
+  assert.equal(landing("/start?change=1"), "/start?change=1");
+  assert.equal(landing("/guides/programming/java/hello"), "/guides/programming/java/hello");
+});
+
+test("raw next: never another site", () => {
+  for (const raw of [
+    "//evil.com",
+    "/.//evil.com",
+    "/\\evil.com",
+    "/./\\evil.com",
+    "https://evil.com",
+    "javascript:alert(1)",
+    "",
+  ]) {
+    assert.equal(landing(raw), "/dashboard", JSON.stringify(raw));
+  }
+});
+
+// Even without safeNextPath in front, signedInLanding stays on the site.
+test("signed-in landing refuses other sites on its own", () => {
+  for (const next of ["//evil.com", "/\\evil.com", "https://evil.com", "javascript:alert(1)"]) {
+    assert.equal(signedInLanding(next), "/dashboard", JSON.stringify(next));
+  }
+});
+
+// The username step's loop check sees the resolved path.
+test("dots resolve before the username step checks for itself", () => {
+  assert.equal(landing("/x/../account/username?next=/y"), "/account/username?next=/y");
 });
 
 test("signed-in links", () => {

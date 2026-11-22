@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { safeNextPath } from "@/lib/safe-next";
+import { SIGNED_IN_HOME, signedInLanding } from "@/lib/signed-in-routes";
 import { needsUsernameStep, usernameStepHref, USERNAME_STEP_PATH } from "@/lib/usernames";
 import { ProfileSetupForm } from "@/components/onboarding/profile-setup-form";
 
@@ -20,9 +21,11 @@ export const metadata: Metadata = {
  * for), from the signed-in pages that need a settled name (dashboard, start,
  * bookmarks, profile) and from the navbar on most other pages (not Settings
  * or contact, so nobody has to accept a handle to get help or leave).
- * `next` is where they were headed; the form goes there afterwards. It's only
- * ever a same-site path (safeNextPath), so this can't be used to bounce
- * someone off the site.
+ * `next` is where they were headed; the form goes there afterwards. It goes
+ * through safeNextPath and then signedInLanding (src/lib/signed-in-routes.ts),
+ * the same as /signup: a same-site path, percent-encoded so redirect() can put
+ * it in a Location header ("/guides/日本" was a 500), and never one that resolves
+ * to another site. So this can't be used to bounce someone off the site.
  *
  * Signed out, it goes to sign-in and comes back. With nothing to choose (the
  * flag is already clear), it goes straight on to `next`.
@@ -33,10 +36,12 @@ export default async function UsernameStepPage({
   searchParams: Promise<{ next?: string | string[] }>;
 }) {
   const { next: rawNext } = await searchParams;
-  const next =
-    safeNextPath(typeof rawNext === "string" ? rawNext : undefined) ?? "/dashboard";
+  // Same-site and encoded, or the dashboard.
+  const next = signedInLanding(
+    safeNextPath(typeof rawNext === "string" ? rawNext : undefined)
+  );
   // Never come back here as the destination: that would be a loop.
-  const destination = next.startsWith(USERNAME_STEP_PATH) ? "/dashboard" : next;
+  const destination = next.startsWith(USERNAME_STEP_PATH) ? SIGNED_IN_HOME : next;
 
   const { user, profile } = await getSession();
   if (!user) redirect(`/login?next=${encodeURIComponent(usernameStepHref(destination))}`);
