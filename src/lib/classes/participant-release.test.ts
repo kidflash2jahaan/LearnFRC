@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { releaseWith, type DeleteResult } from "./participant-release.ts";
+import { dropWith, releaseWith, type DeleteResult } from "./participant-release.ts";
 
 // records what each step did
 function steps(del: DeleteResult | Error, queueOk: boolean | Error = true, withRow = true) {
@@ -95,4 +95,97 @@ test("a long error is cut to 300 characters for the queue", async () => {
   const r = await releaseWith(s.steps);
   assert.equal(r.error.length, 300);
   assert.equal(s.queued[0].length, 300);
+});
+
+/* ── dropWith: someone who may be in the call now ─────────────────── */
+
+// records each step, with a kick
+function dropSteps(del: DeleteResult | Error, kick: DeleteResult | Error, queueOk = true) {
+  const s = steps(del, queueOk);
+  return {
+    calls: s.calls,
+    queued: s.queued,
+    steps: {
+      ...s.steps,
+      kick: async () => {
+        s.calls.push("kick");
+        if (kick instanceof Error) throw kick;
+        return kick;
+      },
+    },
+  };
+}
+
+const down = { ok: false, status: 503, error: "upstream down" } as const;
+
+test("a duplicate connection whose delete fails is kicked and queued, and the row keeps the id", async () => {
+  const s = dropSteps(down, { ok: true });
+  assert.deepEqual(await dropWith(s.steps, { keepUntilDeleted: true }), {
+    video: "kicked",
+    queued: true,
+    error: "503 upstream down",
+  });
+  assert.deepEqual(s.calls, ["del", "kick", "queue"], "kicked now, and never forgotten");
+  assert.deepEqual(s.queued, ["503 upstream down"]);
+});
+
+test("a duplicate connection whose delete works forgets the id without a kick", async () => {
+  const s = dropSteps({ ok: true }, { ok: true });
+  assert.deepEqual(await dropWith(s.steps, { keepUntilDeleted: true }), { video: "deleted", queued: false, error: "" });
+  assert.deepEqual(s.calls, ["del", "forget"]);
+});
+
+test("a duplicate connection keeps the id even when the kick and the queue fail", async () => {
+  const s = dropSteps(down, { ok: false, status: 500, error: "kick failed" }, false);
+  assert.deepEqual(await dropWith(s.steps, { keepUntilDeleted: true }), {
+    video: "failed",
+    queued: false,
+    error: "503 upstream down",
+  });
+  assert.deepEqual(s.calls, ["del", "kick", "queue"]);
+});
+
+test("a removal whose delete fails is kicked, queued, and then forgotten", async () => {
+  const s = dropSteps(down, { ok: true });
+  assert.deepEqual(await dropWith(s.steps, { keepUntilDeleted: false }), {
+    video: "kicked",
+    queued: true,
+    error: "503 upstream down",
+  });
+  assert.deepEqual(s.calls, ["del", "kick", "queue", "forget"]);
+});
+
+test("a kick with no live session (404) counts as kicked", async () => {
+  const s = dropSteps(down, { ok: false, status: 404, error: "no session" });
+  assert.equal((await dropWith(s.steps, { keepUntilDeleted: false })).video, "kicked");
+  assert.deepEqual(s.calls, ["del", "kick", "queue", "forget"]);
+});
+
+test("a removal whose kick fails keeps the id, so Remove again retries both", async () => {
+  const s = dropSteps(down, { ok: false, status: 500, error: "kick failed" });
+  assert.deepEqual(await dropWith(s.steps, { keepUntilDeleted: false }), {
+    video: "failed",
+    queued: true,
+    error: "503 upstream down",
+  });
+  assert.deepEqual(s.calls, ["del", "kick", "queue"]);
+});
+
+test("a kick that throws counts as failed", async () => {
+  const s = dropSteps(down, new Error("socket hang up"));
+  assert.equal((await dropWith(s.steps, { keepUntilDeleted: false })).video, "failed");
+  assert.deepEqual(s.calls, ["del", "kick", "queue"]);
+});
+
+test("with no kick to try (no keys), a removal is queued and forgotten, a duplicate kept", async () => {
+  const removal = steps(down);
+  assert.deepEqual(await dropWith(removal.steps, { keepUntilDeleted: false }), {
+    video: "skipped",
+    queued: true,
+    error: "503 upstream down",
+  });
+  assert.deepEqual(removal.calls, ["del", "queue", "forget"]);
+  const dupe = steps(down);
+  assert.equal((await dropWith(dupe.steps, { keepUntilDeleted: true })).video, "skipped");
+  assert.deepEqual(dupe.calls, ["del", "queue"]);
 });

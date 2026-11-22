@@ -72,6 +72,7 @@ export type ClassOpsDeps = {
   runReview?: (classId: string) => Promise<Result<{ status: ReviewStatus }>>;
   download?: (url: string) => Promise<string>;
   deleteParticipant?: (meetingId: string, participantId: string, opts: { app: RtkApp }) => Promise<RtkResult<unknown>>;
+  kickParticipants?: (meetingId: string, input: { customIds: string[] }, opts: { app: RtkApp }) => Promise<RtkResult<unknown>>;
   rtk?: {
     configured?: () => boolean;
     listSessions?: (meetingId: string, app: RtkApp) => Promise<RtkResult<{ sessions?: RtkSessionRecord[] } | RtkSessionRecord[]>>;

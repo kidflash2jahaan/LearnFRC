@@ -7,7 +7,8 @@
 //      meeting.started is stored, a top-level meetingId is handled, an unknown
 //      meeting raises the alarm, another app's meeting is dropped, a duplicate
 //      peer is handled (a rotated tab isn't mistaken for one, and a delete
-//      that fails is queued for the sweep, not forgotten), leaves,
+//      that fails kicks both connections, is queued for the sweep and keeps
+//      the id until a delete works), leaves,
 //      recordings, the end, and transcripts;
 //   B. runClassReview with a mock model on five fixture classes, a refusal, a
 //      failure, a not-yet-due class and a no-transcript class: code flags,
@@ -104,11 +105,20 @@ async function fakeEnd(_actor: unknown, input: { classId: string; reason: string
   return { ok: true as const };
 }
 const deleteCalls: { meetingId: string; pid: string; app: string }[] = [];
-// Cloudflare down: deletes fail (and aren't counted in deleteCalls)
+// Cloudflare down: deletes fail (counted in failedDeletes, not deleteCalls)
 let deletesFail = false;
+const failedDeletes: string[] = [];
 async function fakeDelete(meetingId: string, pid: string, opts: { app: string }) {
-  if (deletesFail) return { ok: false as const, status: 503, error: "lftest: upstream down" };
+  if (deletesFail) {
+    failedDeletes.push(pid);
+    return { ok: false as const, status: 503, error: "lftest: upstream down" };
+  }
   deleteCalls.push({ meetingId, pid, app: opts.app });
+  return { ok: true as const, data: null };
+}
+const kickCalls: { meetingId: string; customIds: string[]; app: string }[] = [];
+async function fakeKick(meetingId: string, input: { customIds: string[] }, opts: { app: string }) {
+  kickCalls.push({ meetingId, customIds: input.customIds, app: opts.app });
   return { ok: true as const, data: null };
 }
 const reviewCalls: string[] = [];
@@ -122,7 +132,13 @@ async function fakeDownload(url: string) {
   if (body === undefined) throw new Error(`no fixture for ${url}`);
   return body;
 }
-const deps = { endClass: fakeEnd, deleteParticipant: fakeDelete, runReview: fakeReview, download: fakeDownload };
+const deps = {
+  endClass: fakeEnd,
+  deleteParticipant: fakeDelete,
+  kickParticipants: fakeKick,
+  runReview: fakeReview,
+  download: fakeDownload,
+};
 
 const usage = {
   inputTokens: { total: 5000, noCache: 5000, cacheRead: undefined, cacheWrite: undefined },
@@ -355,6 +371,7 @@ test("A6 a duplicate peer (a shared token) deletes the participant and logs it",
   });
   await deliver(W.participantJoined({ meetingId: W1.meetingId, sessionId: S1, startedAt: at(-30), peerId: "pS1b", userId: acc.s1.id, joinedAt: at(-1) }));
   assert.deepEqual(deleteCalls, [{ meetingId: W1.meetingId, pid: "lftest-pid-s1", app: "dev" }]);
+  assert.deepEqual(kickCalls, [], "the delete dropped them, no kick needed");
   const { data: part } = await admin.from("class_participants").select("rtk_participant_id").eq("class_id", W1.id).eq("user_id", acc.s1.id).single();
   assert.equal(part.rtk_participant_id, null);
   const { data: ev } = await admin.from("class_events").select("detail").eq("class_id", W1.id).eq("kind", "duplicate_peer");
@@ -381,11 +398,13 @@ test("A7 a rotated tab (an older peer from before the newest token) isn't a dupl
   assert.equal(count, 1);
 });
 
-test("A7b a duplicate peer whose delete fails is queued for the sweep, and only then forgotten", async () => {
+test("A7b a duplicate peer whose delete fails is kicked and queued, and the row keeps the id until a delete works", async () => {
   const D = await newClass("dupe-queue", { startsMin: -30 });
   const S = `lftest-wr-session-${randomUUID().slice(0, 8)}`;
   const joined = (peerId: string, min: number) =>
     W.participantJoined({ meetingId: D.meetingId, sessionId: S, startedAt: at(-30), peerId, userId: acc.s1.id, joinedAt: at(min) });
+  const left = (peerId: string, joinedMin: number, leftMin: number) =>
+    W.participantLeft({ meetingId: D.meetingId, sessionId: S, startedAt: at(-30), peerId, userId: acc.s1.id, joinedAt: at(joinedMin), leftAt: at(leftMin) });
   await deliver(joined("pQ1", -3));
   await admin.from("class_participants").insert({
     class_id: D.id,
@@ -396,36 +415,67 @@ test("A7b a duplicate peer whose delete fails is queued for the sweep, and only 
     first_joined_at: at(-4),
     last_token_at: at(-10),
   });
-  deletesFail = true;
-  try {
-    await deliver(joined("pQ2", -1));
-  } finally {
-    deletesFail = false;
-  }
+  const pidNow = async () =>
+    (await admin.from("class_participants").select("rtk_participant_id").eq("class_id", D.id).eq("user_id", acc.s1.id).single()).data
+      .rtk_participant_id as string | null;
   const queue = async () =>
     ((await admin.from("class_rtk_cleanup").select("rtk_app, participant_id, last_error").eq("meeting_id", D.meetingId)).data ?? []) as {
       rtk_app: string;
       participant_id: string;
       last_error: string;
     }[];
-  const queued = await queue();
-  assert.deepEqual(
-    queued.map((q) => [q.rtk_app, q.participant_id]),
-    [["dev", "lftest-pid-queued"]],
-    "the failed delete is queued"
-  );
-  assert.match(queued[0].last_error, /^503 /);
-  const { data: part } = await admin.from("class_participants").select("rtk_participant_id").eq("class_id", D.id).eq("user_id", acc.s1.id).single();
-  assert.equal(part.rtk_participant_id, null, "forgotten once queued");
-  const { data: ev } = await admin.from("class_events").select("detail").eq("class_id", D.id).eq("kind", "duplicate_peer");
-  assert.equal(ev!.length, 1);
-  assert.equal(ev![0].detail.participantDeleted, false);
-  assert.equal(ev![0].detail.participant, "queued");
+  const events = async () =>
+    ((await admin.from("class_events").select("detail").eq("class_id", D.id).eq("kind", "duplicate_peer").order("created_at")).data ??
+      []) as { detail: Record<string, unknown> }[];
 
-  // The sweep's drain deletes it, so the shared token stops working.
+  const kicks = kickCalls.length;
+  deletesFail = true;
+  failedDeletes.length = 0;
+  try {
+    await deliver(joined("pQ2", -2.5));
+    // Both connections are out of the call now, by our user id.
+    assert.deepEqual(kickCalls.slice(kicks), [{ meetingId: D.meetingId, customIds: [acc.s1.id], app: "dev" }]);
+    const queued = await queue();
+    assert.deepEqual(
+      queued.map((q) => [q.rtk_app, q.participant_id]),
+      [["dev", "lftest-pid-queued"]],
+      "the failed delete is queued"
+    );
+    assert.match(queued[0].last_error, /^503 /);
+    assert.equal(await pidNow(), "lftest-pid-queued", "kept: the token still works until a delete goes through");
+    const [ev] = await events();
+    assert.equal(ev.detail.participantDeleted, false);
+    assert.equal(ev.detail.video, "kicked");
+    assert.equal(ev.detail.queued, true);
+
+    // The kicks' leaves close both connections. The shared token comes back
+    // twice while Cloudflare is still down: the kept id is tried again, and
+    // both are kicked again.
+    await deliver(left("pQ1", -3, -2));
+    await deliver(left("pQ2", -2.5, -2));
+    await deliver(joined("pQ3", -1.5));
+    await deliver(joined("pQ4", -1));
+    assert.deepEqual(failedDeletes, ["lftest-pid-queued", "lftest-pid-queued"]);
+    assert.equal(kickCalls.length, kicks + 2);
+    assert.equal(await pidNow(), "lftest-pid-queued");
+    assert.deepEqual(
+      (await events()).map((e) => e.detail.video),
+      ["kicked", "kicked"]
+    );
+  } finally {
+    deletesFail = false;
+  }
+
+  // Cloudflare is back: the next duplicate deletes it, and the row lets go.
+  await deliver(joined("pQ5", -0.5));
+  assert.deepEqual(deleteCalls.at(-1), { meetingId: D.meetingId, pid: "lftest-pid-queued", app: "dev" });
+  assert.equal(kickCalls.length, kicks + 2, "no kick once the delete works");
+  assert.equal(await pidNow(), null);
+  assert.equal((await events()).at(-1)!.detail.participantDeleted, true);
+
+  // The sweep's drain clears the queued copy (a 404 there counts as deleted).
   const drained = await mod.reconcile.drainRtkCleanup("dev", { meetingId: D.meetingId, deleteParticipant: fakeDelete });
   assert.deepEqual(drained, { deleted: 1, failed: 0 });
-  assert.deepEqual(deleteCalls.at(-1), { meetingId: D.meetingId, pid: "lftest-pid-queued", app: "dev" });
   assert.deepEqual(await queue(), []);
 });
 

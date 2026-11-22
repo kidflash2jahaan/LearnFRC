@@ -19,7 +19,9 @@
 //     outbox; existing profile reports still work; a ban passes reason "ban";
 //   - the media log, remove, end and the pause switch. A removal whose
 //     delete fails is kicked and queued in class_rtk_cleanup, and the
-//     sweep's drain deletes it, so the token stops working.
+//     sweep's drain deletes it, so the token stops working. A duplicate
+//     connection whose delete fails is kicked and queued too, and keeps its
+//     participant, so Remove still deletes it.
 //
 // No Cloudflare keys are needed: RealtimeKit's REST API is replaced by an
 // in-process mock (fetch to api.cloudflare.com never leaves the machine), so
@@ -299,6 +301,7 @@ async function main() {
     "s4:age=15:parent=agreed",
     "s5:age=15:parent=agreed",
     "s6:age=16:parent=agreed",
+    "s7:age=15:parent=agreed",
     "bio:age=15:parent=agreed:bio=add%20me%20on%20snap%20jake22",
     "waitp:age=15:parent=sent",
     "notenr:age=15:parent=agreed",
@@ -329,7 +332,7 @@ async function main() {
   const noMeetingId = await newClass("nomeeting", acc.t1.id, { startsInMin: 5, meeting: false });
   const endId = await newClass("teacher-ends", acc.t1.id, { startsInMin: 5 });
   const suspendedId = await newClass("suspended", acc.t2.id, { startsInMin: 5 });
-  for (const k of ["s1", "s2", "s3", "s4", "s5", "s6", "bio", "waitp", "rate"]) await enroll(nowId, acc[k].id);
+  for (const k of ["s1", "s2", "s3", "s4", "s5", "s6", "s7", "bio", "waitp", "rate"]) await enroll(nowId, acc[k].id);
   for (const k of ["s1", "rate"]) await enroll(laterId, acc[k].id);
   await enroll(endId, acc.s1.id);
   // The past class can't be enrolled in any more (it started over 10 minutes ago).
@@ -928,6 +931,69 @@ async function main() {
     failNextDelete = true;
     assert.deepEqual(await reconcile.drainRtkCleanup("dev", { meetingId: meeting }), { deleted: 0, failed: 1 });
     assert.deepEqual(await queue(), [{ rtk_app: "dev", participant_id: pid6, attempts: 1 }]);
+    assert.deepEqual(await reconcile.drainRtkCleanup("dev", { meetingId: meeting }), { deleted: 1, failed: 0 });
+    assert.deepEqual(await queue(), []);
+  });
+
+  await step("duplicate: a delete that fails kicks both, queues it and keeps the id, so Remove still deletes it", async () => {
+    const meeting = `lftest-meeting-${nowId}`;
+    const calls = (from: number) => rtkCalls.slice(from).map((c) => `${c.method} ${c.path}`);
+    const pidOf = async () =>
+      (await admin.from("class_participants").select("rtk_participant_id").eq("class_id", nowId).eq("user_id", acc.s7.id).single()).data!
+        .rtk_participant_id as string | null;
+    const queue = async () =>
+      (await admin.from("class_rtk_cleanup").select("participant_id").eq("meeting_id", meeting)).data?.map((q) => q.participant_id) ?? [];
+    const peer = (event: string, peerId: string) => {
+      const stamp = new Date().toISOString();
+      return {
+        event,
+        meeting: { id: meeting, sessionId: SESSION, startedAt: stamp },
+        participant: { peerId, customParticipantId: acc.s7.id, joinedAt: stamp, leftAt: stamp },
+      };
+    };
+
+    // s7 shares their token: two connections on one participant.
+    const j7 = await join("s7", nowId);
+    assert.ok(j7.ok, j7.ok ? "" : j7.error);
+    const pid7 = `lftest-participant-${participantSeq}`;
+    await webhook.handleWebhookEvent(peer("meeting.participantJoined", "lftest-peer-s7-a"));
+    failNextDelete = true;
+    const n = rtkCalls.length;
+    await webhook.handleWebhookEvent(peer("meeting.participantJoined", "lftest-peer-s7-b"));
+    assert.deepEqual(calls(n), [
+      `DELETE /meetings/${meeting}/participants/${pid7}`,
+      `POST /meetings/${meeting}/active-session/kick`,
+    ]);
+    assert.deepEqual(rtkCalls[n + 1].body, { custom_participant_ids: [acc.s7.id] });
+    assert.deepEqual(await queue(), [pid7]);
+    assert.equal(await pidOf(), pid7, "kept until a delete works");
+    const { data: dupe } = await admin
+      .from("class_events")
+      .select("detail")
+      .eq("class_id", nowId)
+      .eq("kind", "duplicate_peer")
+      .eq("detail->>userId", acc.s7.id)
+      .single();
+    assert.equal((dupe!.detail as { video: string }).video, "kicked");
+
+    // The teacher presses Remove: the kept id is deleted now.
+    const m = rtkCalls.length;
+    const r = await room.removeFromClass(user("t1"), { classId: nowId, userId: acc.s7.id, reason: "lftest" });
+    assert.ok(r.ok && !r.already, r.ok ? "" : r.error);
+    assert.deepEqual(calls(m), [`DELETE /meetings/${meeting}/participants/${pid7}`]);
+    assert.equal(await pidOf(), null);
+    const { data: ev } = await admin
+      .from("class_events")
+      .select("detail")
+      .eq("class_id", nowId)
+      .eq("kind", "removed_participant")
+      .eq("detail->>userId", acc.s7.id)
+      .single();
+    assert.equal((ev!.detail as { video: string }).video, "deleted");
+
+    // The leaves close both connections; the drain clears the queued copy.
+    await webhook.handleWebhookEvent(peer("meeting.participantLeft", "lftest-peer-s7-a"));
+    await webhook.handleWebhookEvent(peer("meeting.participantLeft", "lftest-peer-s7-b"));
     assert.deepEqual(await reconcile.drainRtkCleanup("dev", { meetingId: meeting }), { deleted: 1, failed: 0 });
     assert.deepEqual(await queue(), []);
   });

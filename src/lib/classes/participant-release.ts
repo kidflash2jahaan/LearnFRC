@@ -6,6 +6,9 @@
  * class_rtk_cleanup, which the sweep keeps retrying (drainRtkCleanup in
  * reconcile.ts). When neither worked, the row keeps the id.
  *
+ * Someone who may be in the call now (a removal, a duplicate connection)
+ * is also kicked when the delete fails, so they're out at once (dropWith).
+ *
  * No imports, so node --test runs it (participant-release.test.ts). The
  * server steps are wired up in src/lib/app/class-participants.ts.
  */
@@ -28,8 +31,44 @@ export type Release = {
   error: string;
 };
 
-// delete, else queue; forget after either
-export async function releaseWith(steps: ReleaseSteps): Promise<Release> {
+export type DropSteps = ReleaseSteps & {
+  /** Kicks every connection by our user id. Left out when there's no call to make (no keys). */
+  kick?: () => Promise<DeleteResult>;
+};
+
+export type Drop = {
+  /**
+   * deleted: gone, every token with it. kicked: out of the call, but the
+   * token works until a delete goes through. skipped: no kick to try.
+   * failed: the kick failed too.
+   */
+  video: "deleted" | "kicked" | "skipped" | "failed";
+  /** The delete is saved in class_rtk_cleanup for the sweep. */
+  queued: boolean;
+  /** The failed delete's status and message, "" once deleted. */
+  error: string;
+};
+
+// a 404 means it's gone already
+const gone = (r: DeleteResult) => r.ok || r.status === 404;
+
+// runs a call; a throw counts as a failure
+async function attempt(call: () => Promise<DeleteResult>): Promise<DeleteResult> {
+  try {
+    return await call();
+  } catch (e) {
+    return { ok: false, status: 0, error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
+/**
+ * Delete, else kick and queue. The row forgets the id once it's deleted.
+ * After a failed delete it forgets only when the delete is queued and the
+ * kick didn't fail, and never with `keepUntilDeleted`: then the next join
+ * (joinClass deletes the old participant first), Remove or duplicate check
+ * tries the delete again.
+ */
+export async function dropWith(steps: DropSteps, opts: { keepUntilDeleted: boolean }): Promise<Drop> {
   const forget = async () => {
     try {
       await steps.forget?.();
@@ -37,25 +76,27 @@ export async function releaseWith(steps: ReleaseSteps): Promise<Release> {
       // the row keeps the id, which is safe
     }
   };
-  let res: DeleteResult;
-  try {
-    res = await steps.del();
-  } catch (e) {
-    res = { ok: false, status: 0, error: e instanceof Error ? e.message : String(e) };
-  }
+  const res = await attempt(steps.del);
   if (res.ok || res.status === 404) {
     await forget();
-    return { state: "deleted", error: "" };
+    return { video: "deleted", queued: false, error: "" };
   }
 
   const error = `${res.status} ${res.error}`.slice(0, 300);
+  let video: Drop["video"] = "skipped";
+  if (steps.kick) video = gone(await attempt(steps.kick)) ? "kicked" : "failed";
   let queued = false;
   try {
     queued = await steps.queue(error);
   } catch {
     queued = false;
   }
-  if (!queued) return { state: "kept", error };
-  await forget();
-  return { state: "queued", error };
+  if (queued && video !== "failed" && !opts.keepUntilDeleted) await forget();
+  return { video, queued, error };
+}
+
+// delete, else queue; forget after either
+export async function releaseWith(steps: ReleaseSteps): Promise<Release> {
+  const d = await dropWith(steps, { keepUntilDeleted: false });
+  return { state: d.video === "deleted" ? "deleted" : d.queued ? "queued" : "kept", error: d.error };
 }

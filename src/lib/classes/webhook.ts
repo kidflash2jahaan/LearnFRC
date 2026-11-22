@@ -2,7 +2,7 @@ import "server-only";
 import { createHash } from "node:crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { endClass, wasRemoved } from "@/lib/app/classes-room";
-import { releaseParticipant } from "@/lib/app/class-participants";
+import { dropParticipant } from "@/lib/app/class-participants";
 import { SITE_URL, classesConfigured, getClassSettings, rtkApp } from "@/lib/classes/config";
 import { kickParticipants } from "@/lib/classes/realtimekit";
 import { createRtkVerifier, type RtkVerifier } from "@/lib/classes/verify-signature";
@@ -284,24 +284,28 @@ async function onJoined(cls: ClassRef, sessionId: string | null, body: RtkWebhoo
   const dupes = others.filter((o) => !stale.includes(o));
   if (!dupes.length) return;
 
-  // Deleting the participant drops every connection and kills the token. A
-  // delete that fails is queued for the sweep, and the row forgets the id
-  // only once it's deleted or queued (releaseParticipant).
+  // Deleting the participant drops every connection and kills the token. If
+  // the delete fails, every connection is kicked now and the delete is
+  // queued for the sweep. The row keeps the id until a delete works, so
+  // Remove, the next duplicate and the owner's next join (joinClass deletes
+  // the old participant before a new token) all try it again.
   const pid = (part?.rtk_participant_id as string | null | undefined) ?? null;
-  const release =
+  const drop =
     pid && cls.rtk_meeting_id
-      ? await releaseParticipant(
+      ? await dropParticipant(
           {
             app: cls.rtk_app,
             meetingId: cls.rtk_meeting_id,
             participantId: pid,
-            row: { classId: cls.id, userId: joined.userId },
+            classId: cls.id,
+            userId: joined.userId,
+            keepUntilDeleted: true,
           },
-          deps.deleteParticipant
+          deps
         )
       : null;
-  if (release && release.state !== "deleted") {
-    console.error(`classes webhook: duplicate peer, delete ${release.state}:`, release.error);
+  if (drop && drop.video !== "deleted") {
+    console.error(`classes webhook: duplicate peer, delete failed (${drop.video}, queued ${drop.queued}):`, drop.error);
   }
   await admin.from("class_events").insert({
     class_id: cls.id,
@@ -309,8 +313,9 @@ async function onJoined(cls: ClassRef, sessionId: string | null, body: RtkWebhoo
     detail: {
       userId: joined.userId,
       peers: [p.peerId, ...dupes.map((d) => d.peer_id)],
-      participantDeleted: release?.state === "deleted",
-      participant: release?.state ?? "none",
+      participantDeleted: drop?.video === "deleted",
+      video: drop?.video ?? "none",
+      queued: drop?.queued ?? false,
     },
   });
 }
@@ -324,7 +329,7 @@ async function onJoined(cls: ClassRef, sessionId: string | null, body: RtkWebhoo
  */
 async function kickRemoved(cls: ClassRef, userId: string, peerId: string, deps: ClassOpsDeps): Promise<void> {
   if (!cls.rtk_meeting_id || !classesConfigured()) return;
-  const kick = await kickParticipants(cls.rtk_meeting_id, { customIds: [userId] }, { app: cls.rtk_app });
+  const kick = await (deps.kickParticipants ?? kickParticipants)(cls.rtk_meeting_id, { customIds: [userId] }, { app: cls.rtk_app });
   if (!kick.ok) console.error("classes webhook: kicking a removed participant failed:", kick.error);
   let deleted = 0;
   try {

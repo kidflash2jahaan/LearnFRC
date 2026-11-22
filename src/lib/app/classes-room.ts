@@ -12,7 +12,8 @@ import { getTeacher, suspendTeacher } from "@/lib/app/class-teachers";
 import { blockedSetFor } from "@/lib/app/blocks";
 import { requireClassReviewer } from "@/lib/app/class-reviewers";
 import { holdClass } from "@/lib/classes/holds";
-import { forgetParticipant, queueParticipantDelete, releaseParticipant } from "@/lib/app/class-participants";
+import { dropParticipant, releaseParticipant } from "@/lib/app/class-participants";
+import type { Drop } from "@/lib/classes/participant-release";
 import {
   JOIN_LIMITS,
   adminClassUrl,
@@ -33,7 +34,6 @@ import {
   addParticipant,
   deleteParticipant,
   kickAll,
-  kickParticipants,
   setMeetingStatus,
   type RtkResult,
 } from "@/lib/classes/realtimekit";
@@ -1016,37 +1016,25 @@ export async function removeFromClass(
   // keeps deleting until it's gone. If they do get back in before that, the
   // webhook kicks them again at once and retries the delete (webhook.ts
   // kickRemoved).
-  let video: "none" | "deleted" | "kicked" | "skipped" | "failed" = "none";
+  let video: "none" | Drop["video"] = "none";
   let queued = false;
   const pid = m.participant?.rtk_participant_id ?? null;
   if (pid && cls.rtk_meeting_id) {
-    let delError = "";
-    if (cls.rtk_app !== rtkApp()) {
-      video = "failed";
-      delError = "other_app";
-    } else if (!classesConfigured()) {
-      video = "skipped";
-      delError = "not_configured";
-    } else {
-      const opts = { app: cls.rtk_app };
-      const del = await deleteParticipant(cls.rtk_meeting_id, pid, opts);
-      if (gone(del)) video = "deleted";
-      else {
-        delError = del.ok ? "" : `${del.status} ${del.error}`;
-        const kick = await kickParticipants(cls.rtk_meeting_id, { customIds: [targetId] }, opts);
-        video = gone(kick) ? "kicked" : "failed";
-        if (!gone(kick)) console.error("removeFromClass video:", delError, kick.ok ? "" : kick.error);
-      }
-    }
-    if (video !== "deleted") {
-      queued = await queueParticipantDelete(cls.rtk_app, cls.rtk_meeting_id, pid, delError);
-    }
     // The row lets go of the participant once it's deleted, or queued for
-    // the sweep after the kick worked. Otherwise it keeps it, so pressing
-    // Remove again tries the delete and the kick again.
-    if (video === "deleted" || (queued && video !== "failed")) {
-      await forgetParticipant(cls.id, targetId, pid);
-    }
+    // the sweep after the kick worked (they can't join again anyway).
+    // Otherwise it keeps it, so pressing Remove again tries the delete and
+    // the kick again.
+    const drop = await dropParticipant({
+      app: cls.rtk_app,
+      meetingId: cls.rtk_meeting_id,
+      participantId: pid,
+      classId: cls.id,
+      userId: targetId,
+      keepUntilDeleted: false,
+    });
+    video = drop.video;
+    queued = drop.queued;
+    if (video === "failed") console.error("removeFromClass video:", drop.error);
   }
   const videoDone = video === "none" || video === "deleted" || (queued && video !== "failed");
 
