@@ -52,7 +52,11 @@ export default async function SignupPage({
 }: {
   searchParams: Promise<{ next?: string; ref?: string; via?: string }>;
 }) {
-  const { next, ref, via } = await searchParams;
+  const params = await searchParams;
+  // a repeated ?key= arrives as an array
+  const next = params.next;
+  const ref = typeof params.ref === "string" ? params.ref : undefined;
+  const via = typeof params.via === "string" ? params.via : undefined;
   const safeNext = safeNextPath(next);
   const { user } = await getSession();
   if (user) redirect(signedInLanding(safeNext));

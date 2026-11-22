@@ -25,3 +25,8 @@ test("whatever comes back stays on the site", () => {
     assert.equal(url.origin, "https://learnfrc.com", JSON.stringify(n));
   }
 });
+
+test("a repeated ?next= (an array) is ignored, not a crash", () => {
+  assert.equal(safeNextPath(["/a", "/b"]), undefined);
+  assert.equal(safeNextPath([] as string[]), undefined);
+});

@@ -13,9 +13,9 @@
  * signed-out visitors and crawlers still get the cached page, exactly as
  * before, and a signed-in reader never reaches it.
  *
- * Keep this file free of imports: the middleware, /signup, /apply/teach,
- * /paths, the logo, the navbar, the footer, the error page and the unit tests
- * all read it. The navbar's "My team" tab is the /for-teams pair below, read
+ * Keep this file free of imports: the middleware, /signup, /apply/teach, the
+ * username step, /paths, the logo, the navbar, the footer, the error page and
+ * the unit tests all read it. The navbar's "My team" tab is the /for-teams pair below, read
  * through signedInHref; only its label lives in components/navbar.tsx.
  *
  * Rules for adding a pair:
@@ -118,7 +118,8 @@ export function signedInRedirect(req: {
 }
 
 /**
- * Where /signup sends someone who is already signed in. `next` must already
+ * Where /signup sends someone who is already signed in, and where the
+ * username step (/account/username) sends them on to. `next` must already
  * have been through safeNextPath (src/lib/safe-next.ts). It's honored, so a
  * stale "/signup?next=<lesson>" tab puts them back on the lesson, except that
  * a page with a signed-in version goes straight to that version, and the

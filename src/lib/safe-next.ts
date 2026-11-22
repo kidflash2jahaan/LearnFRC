@@ -12,8 +12,9 @@
  * once sent "/\t/host" to another site. (safeClassesNext in
  * src/lib/classes/consent-rules.ts is narrower on purpose: classes pages only.)
  */
-export function safeNextPath(next: string | null | undefined): string | undefined {
-  if (!next) return undefined;
+export function safeNextPath(next: string | string[] | null | undefined): string | undefined {
+  // repeated ?next= arrives as an array
+  if (typeof next !== "string" || !next) return undefined;
   const n = next.replace(/[\t\n\r]/g, "");
   if (!n.startsWith("/") || n.startsWith("//") || n.startsWith("/\\")) return undefined;
   return n;
