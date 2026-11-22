@@ -6,7 +6,8 @@
 //      are ignored, a stale event is dropped, participantJoined before
 //      meeting.started is stored, a top-level meetingId is handled, an unknown
 //      meeting raises the alarm, another app's meeting is dropped, a duplicate
-//      peer is handled (and a rotated tab isn't mistaken for one), leaves,
+//      peer is handled (a rotated tab isn't mistaken for one, and a delete
+//      that fails is queued for the sweep, not forgotten), leaves,
 //      recordings, the end, and transcripts;
 //   B. runClassReview with a mock model on five fixture classes, a refusal, a
 //      failure, a not-yet-due class and a no-transcript class: code flags,
@@ -25,6 +26,10 @@
 //
 // `--test` matters: the webhook verifier accepts the fixture key only under
 // node --test.
+//
+// Its test data is package "webhooks-and-review". LFTEST_PACKAGE=<package>
+// runs it under another package's name (accounts, class titles, outbox), so
+// two worktrees can run it at once without one's cleanup deleting the other's.
 
 import { after, before, test } from "node:test";
 import assert from "node:assert/strict";
@@ -39,7 +44,8 @@ import { makeTestSigner } from "../fixtures/sign.mjs";
 import * as W from "../fixtures/webhooks.mjs";
 import { REVIEW_FIXTURES } from "../fixtures/review-classes.mjs";
 
-const PKG = "webhooks-and-review";
+const PKG = process.env.LFTEST_PACKAGE?.trim() || "webhooks-and-review";
+if (!/^[a-z0-9-]+$/.test(PKG)) throw new Error("LFTEST_PACKAGE must be a-z, 0-9 and -");
 // This package's own outbox (cleanup removes it), whatever package the
 // worktree's .env.local was built for: clearOutbox() empties the folder.
 process.env.EMAIL_DEV_OUTBOX = join(devDir(), "outbox", PKG);
@@ -98,7 +104,10 @@ async function fakeEnd(_actor: unknown, input: { classId: string; reason: string
   return { ok: true as const };
 }
 const deleteCalls: { meetingId: string; pid: string; app: string }[] = [];
+// Cloudflare down: deletes fail (and aren't counted in deleteCalls)
+let deletesFail = false;
 async function fakeDelete(meetingId: string, pid: string, opts: { app: string }) {
+  if (deletesFail) return { ok: false as const, status: 503, error: "lftest: upstream down" };
   deleteCalls.push({ meetingId, pid, app: opts.app });
   return { ok: true as const, data: null };
 }
@@ -191,6 +200,11 @@ const mod = {} as {
 };
 
 let signer: Awaited<ReturnType<typeof makeTestSigner>>;
+// The dev webhook and organization setup-realtimekit.mjs registered (read
+// only). Fixtures carry them, or the webhook drops every delivery as
+// another webhook's or organization's.
+let hookId: string | undefined;
+let orgId: string | undefined;
 
 before(async () => {
   await cleanup(PKG);
@@ -206,6 +220,9 @@ before(async () => {
   acc = Object.fromEntries(Object.entries(creds).map(([k, v]) => [k, { id: v.id, email: v.email, username: usernameFor(PKG, k) }]));
   signer = await makeTestSigner();
   process.env.RTK_TEST_PUBLIC_KEY = signer.publicKeyPem;
+  const { data: settings } = await admin.from("class_settings").select("rtk_webhook_ids, rtk_organization_id").eq("id", true).single();
+  hookId = settings?.rtk_webhook_ids?.dev ?? undefined;
+  orgId = settings?.rtk_organization_id ?? undefined;
   mod.webhook = await import("../../../src/lib/classes/webhook.ts");
   mod.review = await import("../../../src/lib/classes/review.ts");
   mod.reconcile = await import("../../../src/lib/classes/reconcile.ts");
@@ -237,7 +254,7 @@ after(async () => {
 });
 
 async function deliver(body: object, opts: Parameters<typeof signer.request>[1] = {}) {
-  const { req, uuid, raw } = await signer.request(body, opts);
+  const { req, uuid, raw } = await signer.request(body, { webhookId: hookId, ...opts });
   const r = await mod.webhook.receiveWebhook(req, deps);
   const json = (await r.response.json()) as Record<string, unknown>;
   if (r.work) await r.work();
@@ -364,6 +381,54 @@ test("A7 a rotated tab (an older peer from before the newest token) isn't a dupl
   assert.equal(count, 1);
 });
 
+test("A7b a duplicate peer whose delete fails is queued for the sweep, and only then forgotten", async () => {
+  const D = await newClass("dupe-queue", { startsMin: -30 });
+  const S = `lftest-wr-session-${randomUUID().slice(0, 8)}`;
+  const joined = (peerId: string, min: number) =>
+    W.participantJoined({ meetingId: D.meetingId, sessionId: S, startedAt: at(-30), peerId, userId: acc.s1.id, joinedAt: at(min) });
+  await deliver(joined("pQ1", -3));
+  await admin.from("class_participants").insert({
+    class_id: D.id,
+    user_id: acc.s1.id,
+    role: "student",
+    rtk_participant_id: "lftest-pid-queued",
+    preset_name: "lfrc-student",
+    first_joined_at: at(-4),
+    last_token_at: at(-10),
+  });
+  deletesFail = true;
+  try {
+    await deliver(joined("pQ2", -1));
+  } finally {
+    deletesFail = false;
+  }
+  const queue = async () =>
+    ((await admin.from("class_rtk_cleanup").select("rtk_app, participant_id, last_error").eq("meeting_id", D.meetingId)).data ?? []) as {
+      rtk_app: string;
+      participant_id: string;
+      last_error: string;
+    }[];
+  const queued = await queue();
+  assert.deepEqual(
+    queued.map((q) => [q.rtk_app, q.participant_id]),
+    [["dev", "lftest-pid-queued"]],
+    "the failed delete is queued"
+  );
+  assert.match(queued[0].last_error, /^503 /);
+  const { data: part } = await admin.from("class_participants").select("rtk_participant_id").eq("class_id", D.id).eq("user_id", acc.s1.id).single();
+  assert.equal(part.rtk_participant_id, null, "forgotten once queued");
+  const { data: ev } = await admin.from("class_events").select("detail").eq("class_id", D.id).eq("kind", "duplicate_peer");
+  assert.equal(ev!.length, 1);
+  assert.equal(ev![0].detail.participantDeleted, false);
+  assert.equal(ev![0].detail.participant, "queued");
+
+  // The sweep's drain deletes it, so the shared token stops working.
+  const drained = await mod.reconcile.drainRtkCleanup("dev", { meetingId: D.meetingId, deleteParticipant: fakeDelete });
+  assert.deepEqual(drained, { deleted: 1, failed: 0 });
+  assert.deepEqual(deleteCalls.at(-1), { meetingId: D.meetingId, pid: "lftest-pid-queued", app: "dev" });
+  assert.deepEqual(await queue(), []);
+});
+
 test("A8 leaves close a connection, and a leave whose join was missed inserts the interval", async () => {
   await deliver(W.participantLeft({ meetingId: W1.meetingId, sessionId: S1, startedAt: at(-30), peerId: "pT1", userId: acc.t1.id, joinedAt: at(-32), leftAt: at(-2) }));
   const { data: t } = await admin.from("class_attendance").select("left_at").eq("peer_id", "pT1").single();
@@ -391,6 +456,7 @@ test("A10 an uploaded recording is stored on its session", async () => {
       endedAt: at(-1),
       downloadUrl: "https://example.com/lftest-recording.mp4",
       expiresAt: at(7 * 1440),
+      organizationId: orgId,
     })
   );
   const { data } = await admin.from("class_sessions").select("recording_url, recording_expires_at").eq("id", S1).single();
