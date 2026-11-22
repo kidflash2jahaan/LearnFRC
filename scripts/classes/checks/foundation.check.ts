@@ -392,8 +392,9 @@ async function main() {
       .from("class_rtk_cleanup")
       .select("rtk_app, participant_id, last_error")
       .eq("meeting_id", "lftest-foundation-meeting");
-    assert.equal(queued?.length, 1, "participant delete queued for retry (no keys)");
-    assert.equal(queued![0].participant_id, "lftest-foundation-participant");
+    // with real keys Cloudflare may answer 404 for the made-up meeting, which counts as deleted
+    assert.ok((queued?.length ?? 0) <= 1, "at most one queued delete");
+    if (queued?.length) assert.equal(queued[0].participant_id, "lftest-foundation-participant");
     const gone = await admin.auth.admin.getUserById(acc.del.id);
     assert.ok(!gone.data.user, "auth user deleted");
   });

@@ -19,7 +19,7 @@ import {
 import { ageBandOn, ageOn } from "@/lib/classes/age";
 import { CLASS_SENTENCES } from "@/lib/classes/sentences";
 import { findContactPatterns, usernameHasContact } from "@/lib/classes/contact-patterns";
-import { releaseParticipant } from "@/lib/app/class-participants";
+import { dropParticipant, releaseParticipant } from "@/lib/app/class-participants";
 import { holdAccount } from "@/lib/classes/holds";
 import { handleReadyForClasses } from "@/lib/usernames";
 import { cancelTeacherClasses } from "@/lib/app/classes-teaching";
@@ -546,11 +546,14 @@ export async function leaveClass(user: AppUser, input: { classId: string }): Pro
       ?.classes;
     const pid = (part?.rtk_participant_id as string | null | undefined) ?? null;
     if (part && part.role === "student" && pid && cls?.rtk_meeting_id && cls.teacher_id !== user.id) {
-      await releaseParticipant({
+      // may still be in the call: kick on a failed delete, keep the id until it's gone
+      await dropParticipant({
         app: cls.rtk_app,
         meetingId: cls.rtk_meeting_id,
         participantId: pid,
-        row: { classId: input.classId, userId: user.id },
+        classId: input.classId,
+        userId: user.id,
+        keepUntilDeleted: true,
       });
     }
   } catch (e) {
