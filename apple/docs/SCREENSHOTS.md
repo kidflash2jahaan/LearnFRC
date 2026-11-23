@@ -8,6 +8,10 @@ It runs headless, without Simulator.app: a Debug build, `simctl` boots each simu
 - `-LFShotScroll <anchor>[@y]` scrolls a lesson or calculator to `lesson-quiz`, a heading's slug or `tool-field-<field>`, landing it `y` of the way down the screen (the top by default).
 - `-LFShotQuiz 2,3` ticks those answers on the lesson's quiz, in question order.
 
+Scrolled down, iOS 26 shows the text above faded under the toolbar, and it reads as overlapping text. So a screen is either the top of a page, or scrolled to an anchor that leaves blank paper above itself in screenshot runs: a lesson heading (`what-it-is`), `lesson-quiz`, or `tool-verdict` (the gear ratio calculator's overall reduction). A scrolled lesson also leaves out the floating "Finish this lesson" bar, as if it had been closed.
+
+Now and then iOS draws the Dynamic Island for a system activity, which shows up as a black pill. The script checks each iPhone shot and waits up to a minute for it to go.
+
 The shot list is at the top of the script. Everything comes from the live site, so look at every PNG before uploading: no spinners, errors, empty states or keyboards, and no other people (leaderboards, team pages, profiles). Live classes are left out while `/api/app/classes` isn't on learnfrc.com.
 
 The Mac isn't scripted: capturing a Mac window needs a visible window and Screen Recording permission. The same launch arguments work in the Mac app (Product > Scheme > Edit Scheme > Arguments). Size the window to 1440 x 900 points and capture it for 2880 x 1800.

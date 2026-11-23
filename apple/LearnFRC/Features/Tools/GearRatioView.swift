@@ -178,8 +178,17 @@ struct GearRatioView: View {
             }
             .padding(.top, 20)
 
+            #if DEBUG
+            // App Store screenshots: blank paper under the bar above the verdict
+            // (`-LFShotScroll tool-verdict`), not the faded fields above it.
+            Color.clear.frame(height: ScreenshotScript.room(above: "tool-verdict"))
+            #endif
+
             overall(r)
                 .padding(.top, 26)
+                #if DEBUG
+                .id("tool-verdict")
+                #endif
         }
     }
 

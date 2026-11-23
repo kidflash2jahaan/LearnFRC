@@ -7,7 +7,10 @@ import SwiftUI
 ///     -LFShotLink learnfrc://lesson/<id>   open a link once the cache is in
 ///     -LFShotScroll lesson-quiz            scroll a lesson or calculator to an anchor: the quiz, a
 ///                                          heading's slug, `tool-field-<field>`; `@0.3` lands it
-///                                          30% down the screen instead of at the top
+///                                          30% down the screen instead of at the top. Headings,
+///                                          the quiz and `tool-verdict` (gear ratio) get blank
+///                                          paper above them, so nothing shows faded under the
+///                                          toolbar
 ///     -LFShotQuiz 2,3                      tick these answers on the quiz, in question order
 ///
 /// `simctl openurl` would open the same links, but iOS asks "Open in LearnFRC?" first and
@@ -25,6 +28,12 @@ enum ScreenshotScript {
         let parts = raw.split(separator: "@", maxSplits: 1).map(String.init)
         let y = parts.count > 1 ? Double(parts[1]) : nil
         return (parts[0], y.map { UnitPoint(x: 0.5, y: $0) } ?? .top)
+    }
+
+    /// Extra space above the anchor the screenshot scrolls to, so what sits under the
+    /// toolbar is empty paper instead of the faded text of the section above it.
+    static func room(above id: String) -> CGFloat {
+        scrollTarget?.id == id ? 320 : 0
     }
 
     /// Scrolls to `scrollTarget` after the page has had time to lay out.

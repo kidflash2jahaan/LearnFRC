@@ -56,8 +56,18 @@ struct MarkdownBlockView: View {
     var body: some View {
         switch block.kind {
         case .heading(let level, let content, let anchor):
+            #if DEBUG
+            // App Store screenshots: blank paper above the heading `-LFShotScroll` lands on,
+            // so nothing shows faded under the toolbar. Zero height otherwise.
+            VStack(alignment: .leading, spacing: 0) {
+                Color.clear.frame(height: anchor.map { ScreenshotScript.room(above: $0) } ?? 0)
+                MarkdownHeadingView(level: level, content: content, context: context)
+                    .id(anchor ?? "block-\(block.id)")
+            }
+            #else
             MarkdownHeadingView(level: level, content: content, context: context)
                 .id(anchor ?? "block-\(block.id)")
+            #endif
         case .paragraph(let content):
             MarkdownParagraphView(content: content, context: context)
         case .image(let source, let alt):

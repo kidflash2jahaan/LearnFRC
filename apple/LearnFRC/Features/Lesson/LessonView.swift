@@ -107,7 +107,12 @@ struct LessonView: View {
     /// (`wideFrom` / `narrowBelow`). Only ever set to what the layout already decided, so
     /// setting it never changes the page.
     @State private var widePage = false
+    #if DEBUG
+    /// App Store screenshots: a scrolled shot (`-LFShotScroll`) leaves the floating bar out.
+    @State private var barDismissed = ScreenshotScript.scrollTarget != nil
+    #else
     @State private var barDismissed = false
+    #endif
     @State private var isFetchingBody = false
     @State private var scrollRequest: ScrollRequest?
     /// Bringing a rebuilt page back to where it was left (not observed).
@@ -465,6 +470,12 @@ struct LessonView: View {
                     LessonReadNextView(articles: articles, columns: width >= 700 ? 2 : 1, onOpen: open)
                         .padding(.top, gap + 8)
                 }
+
+                #if DEBUG
+                // App Store screenshots: blank paper under the bar, not the faded cards above.
+                // Its own view: padding on the quiz would count as part of the anchor.
+                Color.clear.frame(height: ScreenshotScript.room(above: Self.quizAnchor))
+                #endif
 
                 QuizView(
                     lessonID: location.id,

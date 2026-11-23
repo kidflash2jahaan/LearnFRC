@@ -22,13 +22,15 @@ LOW=(taskpolicy -b nice -n 20)
 LESSON=learnfrc://guides/mechanical-build/drivetrains/swerve-drive
 TOOL=learnfrc://tools/frc-gear-ratio-calculator
 
-# file name | launch arguments (no spaces inside one argument)
+# file name | launch arguments (no spaces inside one argument). A page scrolled down shows faded
+# text under the toolbar, so scrolled shots only land on a lesson heading, the quiz or the
+# calculator's verdict, which get blank paper above them (ScreenshotScript.room).
 IPHONE_SHOTS=(
   "01-home|"
   "02-guides|-LFShotLink learnfrc://guides"
   "03-lesson|-LFShotLink $LESSON -LFShotScroll what-it-is"
   "04-quiz|-LFShotLink $LESSON -LFShotScroll lesson-quiz -LFShotQuiz 2,3"
-  "05-gear-ratio|-LFShotLink $TOOL -LFShotScroll tool-field-wheel@0.6"
+  "05-gear-ratio|-LFShotLink $TOOL"
   "06-glossary|-LFShotLink learnfrc://glossary"
 )
 IPAD_SHOTS=(
@@ -36,7 +38,7 @@ IPAD_SHOTS=(
   "02-guides|-LFShotLink learnfrc://guides"
   "03-lesson|-LFShotLink $LESSON"
   "04-quiz|-LFShotLink $LESSON -LFShotScroll lesson-quiz -LFShotQuiz 2,3"
-  "05-gear-ratio|-LFShotLink $TOOL -LFShotScroll tool-field-wheel@0.46"
+  "05-gear-ratio|-LFShotLink $TOOL -LFShotScroll tool-verdict@0.083"
   "06-glossary|-LFShotLink learnfrc://glossary"
 )
 
@@ -52,6 +54,40 @@ for runtime, devices in sorted(json.load(sys.stdin)["devices"].items(), key=lamb
         if d["name"] == name:
             print(d["udid"]); sys.exit()
 sys.exit("no simulator named " + name)' "$1"
+}
+
+# true while the Dynamic Island is drawn: a system activity, which the screenshot would show as
+# a black pill over the app (top centre pixel near black)
+island_showing() {
+  python3 -I - "$1" <<'PY'
+import struct, sys, zlib
+data = open(sys.argv[1], "rb").read()
+pos, idat = 8, b""
+while pos < len(data):
+    size, kind = struct.unpack(">I4s", data[pos:pos + 8])
+    chunk = data[pos + 8:pos + 8 + size]
+    if kind == b"IHDR": width, color = struct.unpack(">I", chunk[:4])[0], chunk[9]
+    if kind == b"IDAT": idat += chunk
+    pos += 12 + size
+raw, bpp = zlib.decompress(idat), 4 if color == 6 else 3
+stride, prev, y = width * bpp + 1, bytearray(width * bpp), 95
+# undo the PNG row filters down to row y
+for row in range(y + 1):
+    kind, line = raw[row * stride], bytearray(raw[row * stride + 1:(row + 1) * stride])
+    for i in range(len(line)):
+        a, b = line[i - bpp] if i >= bpp else 0, prev[i]
+        c = prev[i - bpp] if i >= bpp else 0
+        if kind == 1: line[i] = (line[i] + a) & 255
+        elif kind == 2: line[i] = (line[i] + b) & 255
+        elif kind == 3: line[i] = (line[i] + (a + b) // 2) & 255
+        elif kind == 4:
+            p = a + b - c
+            pick = a if abs(p - a) <= abs(p - b) and abs(p - a) <= abs(p - c) else (b if abs(p - b) <= abs(p - c) else c)
+            line[i] = (line[i] + pick) & 255
+    prev = line
+x = width // 2 * bpp
+sys.exit(0 if max(prev[x:x + 3]) < 24 else 1)
+PY
 }
 
 # 9:41 local, as the UTC timestamp simctl wants (the iPad also shows the date)
@@ -109,6 +145,13 @@ shoot() {
     xcrun simctl launch "$udid" "$BUNDLE" $args > /dev/null
     sleep 10
     xcrun simctl io "$udid" screenshot "$dir/$file.png" > /dev/null 2>&1
+    # a system activity in the Dynamic Island: wait for it to go, up to a minute
+    local tries=0
+    while [ "$device" = iphone ] && [ $tries -lt 6 ] && island_showing "$dir/$file.png"; do
+      sleep 10; tries=$((tries + 1))
+      xcrun simctl io "$udid" screenshot "$dir/$file.png" > /dev/null 2>&1
+    done
+    [ "$device" = iphone ] && island_showing "$dir/$file.png" && echo "  $file.png still shows the Dynamic Island, shoot it again"
     local size; size=$(sips -g pixelWidth -g pixelHeight "$dir/$file.png" | awk '/pixel/ {print $2}' | paste -sd x -)
     [ "$size" = "${width}x$height" ] && echo "  $file.png $size" || echo "  $file.png $size (expected ${width}x$height)"
   done
