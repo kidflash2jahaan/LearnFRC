@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/terms" },
 };
 
-const UPDATED = "November 9, 2026";
+const UPDATED = "November 23, 2026";
 // The contact form, which needs no account and no email address. The public
 // address is the other way in, printed beside it.
 const CONTACT_PATH = "/contact";
@@ -131,10 +131,10 @@ function rulesFor(classes: boolean): Rule[] {
       title: "Who can use LearnFRC",
       body: (
         <p>
-          Anyone can read the lessons, no account needed. To make an account, on
-          the website or in the app, you should have a parent or guardian
-          involved if you&rsquo;re under 13, and their OK if you&rsquo;re under
-          18. The details you sign up with should be true.
+          Anyone can read the lessons, no account needed. You need to be 13 or
+          older to make an account, on the website or in the app, and you should
+          have a parent or guardian&rsquo;s OK if you&rsquo;re under 18. The
+          details you sign up with should be true.
           {classes ? (
             <>
               {" "}Live classes have their own age rule: they&rsquo;re only for

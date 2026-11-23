@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/privacy" },
 };
 
-const UPDATED = "November 9, 2026";
+const UPDATED = "November 23, 2026";
 // The contact form. It needs no account and no email address, so it stays the
 // first way to reach us. The address is the second, for anyone who would
 // rather write an email: PUBLIC_CONTACT_EMAIL, the one public contact address
@@ -490,12 +490,14 @@ function sectionsFor(classes: boolean): Section[] {
             </li>
           </ul>
           <p>
-            Our analytics count visits without cookies. On the site, a video loads
-            from YouTube&rsquo;s privacy-enhanced player only when you press
-            play; in the app, videos open in YouTube, and the app shows their
-            thumbnails from YouTube&rsquo;s image server. Once a video is playing,
-            YouTube&rsquo;s own privacy policy applies to it. No advertising
-            cookies, and no tracking across other sites.
+            Our analytics count visits without cookies. Videos load only when you
+            press play. On the site they play in YouTube&rsquo;s privacy-enhanced
+            player. In the app they play in YouTube&rsquo;s embedded player, and
+            the app shows their thumbnails from YouTube&rsquo;s image server. Once
+            a video is playing, YouTube&rsquo;s own privacy policy applies to it,
+            and YouTube can set its own cookies, which we don&rsquo;t control. We
+            set no advertising cookies and don&rsquo;t track you across other
+            sites.
           </p>
         </>
       ),
@@ -583,10 +585,9 @@ function sectionsFor(classes: boolean): Section[] {
         <>
           <p>
             LearnFRC is for FRC students, who are mostly in high school. It
-            isn&rsquo;t meant for children under 13. If you&rsquo;re under 13,
-            don&rsquo;t make an account without a parent or guardian involved. If
-            we learn we have data from a child under 13 without a parent&rsquo;s
-            consent, we delete it.
+            isn&rsquo;t meant for children under 13. You need to be 13 or older
+            to make an account. Anyone can read the lessons without one. If we
+            learn we have data from a child under 13, we delete it.
           </p>
           {classes ? (
             <p>

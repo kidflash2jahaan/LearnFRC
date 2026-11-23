@@ -39,8 +39,8 @@ const STATIC_UPDATED = new Date("2026-08-03T00:00:00Z");
 const TOOLS_UPDATED = new Date("2026-10-17T00:00:00Z");
 const PATHS_UPDATED = new Date("2026-08-03T00:00:00Z");
 const GLOSSARY_UPDATED = new Date("2026-08-03T00:00:00Z");
-/** The privacy policy and terms: rewritten for the 1.0 release, the marketing clause taken out Nov 9. */
-const LEGAL_UPDATED = new Date("2026-11-09T00:00:00Z");
+/** The privacy policy and terms: rewritten for the 1.0 release, the marketing clause taken out Nov 9, accounts 13+ and the video and cookie sentences fixed Nov 23. */
+const LEGAL_UPDATED = new Date("2026-11-23T00:00:00Z");
 /** /apply/teach: written for the live classes launch, the second (longer) form Nov 9. */
 const TEACH_UPDATED = new Date("2026-11-09T00:00:00Z");
 
