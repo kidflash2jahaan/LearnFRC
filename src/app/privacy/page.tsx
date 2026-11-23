@@ -587,7 +587,8 @@ function sectionsFor(classes: boolean): Section[] {
             LearnFRC is for FRC students, who are mostly in high school. It
             isn&rsquo;t meant for children under 13. You need to be 13 or older
             to make an account. Anyone can read the lessons without one. If we
-            learn we have data from a child under 13, we delete it.
+            learn we have data from a child under 13, we delete it, apart from
+            any safety records this policy says we keep.
           </p>
           {classes ? (
             <p>
