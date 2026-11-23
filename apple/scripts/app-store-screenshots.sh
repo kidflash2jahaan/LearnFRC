@@ -15,7 +15,7 @@ APPLE=$(cd "$(dirname "$0")/.." && pwd)
 OUT=${2:-$APPLE/.build/screenshots}
 DD=$APPLE/.build/dd
 APP=$DD/Build/Products/Debug-iphonesimulator/LearnFRC.app
-BUNDLE=com.learnfrc.app
+BUNDLE=com.learnfrc.LearnFRC
 # background priority, so the Mac stays usable
 LOW=(taskpolicy -b nice -n 20)
 

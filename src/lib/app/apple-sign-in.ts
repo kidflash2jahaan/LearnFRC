@@ -70,9 +70,8 @@ function webClientId(): string | null {
 }
 
 /**
- * The app's Apple client: the App Store build's bundle id. APPLE_APP_BUNDLE_ID
- * overrides it. com.learnfrc.app is the free team's id for local builds, so
- * it's never the fallback.
+ * The app's Apple client: the app's bundle id. APPLE_APP_BUNDLE_ID overrides
+ * it. (com.learnfrc.app was the old free team's id and is never used.)
  */
 function appClientId(): string {
   return process.env.APPLE_APP_BUNDLE_ID?.trim() || "com.learnfrc.LearnFRC";

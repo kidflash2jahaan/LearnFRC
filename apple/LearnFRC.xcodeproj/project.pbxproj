@@ -192,11 +192,11 @@
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
 					47B33F8532725EC8CD4ACF84 = {
-						DevelopmentTeam = X9QP4MF9YR;
+						DevelopmentTeam = Y9Q624XVCG;
 						ProvisioningStyle = Automatic;
 					};
 					886262DE7673E9B66A8B5D16 = {
-						DevelopmentTeam = X9QP4MF9YR;
+						DevelopmentTeam = Y9Q624XVCG;
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -262,7 +262,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "if [ \"$ACTION\" = \"install\" ]; then\n  if [ \"$LF_APPLE_SIGN_IN\" != \"YES\" ]; then\n    echo \"error: LF_APPLE_SIGN_IN is NO but Google sign-in is offered (App Review 4.8). Set it to YES in project.yml for an App Store build.\"\n    exit 1\n  fi\n  if ! /usr/libexec/PlistBuddy -c \"Print :com.apple.developer.applesignin\" \"$SRCROOT/$CODE_SIGN_ENTITLEMENTS\" >/dev/null 2>&1; then\n    echo \"error: $CODE_SIGN_ENTITLEMENTS has no Sign in with Apple entitlement. Drop the Personal Team and local Mac CODE_SIGN_ENTITLEMENTS overrides in project.yml.\"\n    exit 1\n  fi\nfi\n";
+			shellScript = "if [ \"$ACTION\" = \"install\" ]; then\n  if [ \"$LF_APPLE_SIGN_IN\" != \"YES\" ]; then\n    echo \"error: LF_APPLE_SIGN_IN is NO but Google sign-in is offered (App Review 4.8). Set it to YES in project.yml for an App Store build.\"\n    exit 1\n  fi\n  if ! /usr/libexec/PlistBuddy -c \"Print :com.apple.developer.applesignin\" \"$SRCROOT/$CODE_SIGN_ENTITLEMENTS\" >/dev/null 2>&1; then\n    echo \"error: $CODE_SIGN_ENTITLEMENTS has no Sign in with Apple entitlement. App Store builds use LearnFRC/LearnFRC.entitlements; drop any CODE_SIGN_ENTITLEMENTS override in project.yml.\"\n    exit 1\n  fi\nfi\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -298,11 +298,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = LearnFRC/LearnFRC.entitlements;
-				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = "LearnFRC/LearnFRC-iOS-personal.entitlements";
-				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "LearnFRC/LearnFRC-macOS-local.entitlements";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
-				"CODE_SIGN_STYLE[sdk=macosx*]" = Manual;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = LearnFRC/Info.plist;
@@ -317,8 +313,8 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				LF_APPLE_SIGN_IN = NO;
-				PRODUCT_BUNDLE_IDENTIFIER = com.learnfrc.app;
+				LF_APPLE_SIGN_IN = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.learnfrc.LearnFRC;
 				PRODUCT_NAME = LearnFRC;
 				SDKROOT = auto;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
@@ -362,13 +358,11 @@
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
 				CODE_SIGN_STYLE = Automatic;
-				"CODE_SIGN_STYLE[sdk=macosx*]" = Manual;
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 1;
 				DEBUG_INFORMATION_FORMAT = dwarf;
-				DEVELOPMENT_TEAM = X9QP4MF9YR;
+				DEVELOPMENT_TEAM = Y9Q624XVCG;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
@@ -405,11 +399,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = LearnFRC/LearnFRC.entitlements;
-				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = "LearnFRC/LearnFRC-iOS-personal.entitlements";
-				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "LearnFRC/LearnFRC-macOS-local.entitlements";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
-				"CODE_SIGN_STYLE[sdk=macosx*]" = Manual;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = LearnFRC/Info.plist;
@@ -424,8 +414,8 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				LF_APPLE_SIGN_IN = NO;
-				PRODUCT_BUNDLE_IDENTIFIER = com.learnfrc.app;
+				LF_APPLE_SIGN_IN = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.learnfrc.LearnFRC;
 				PRODUCT_NAME = LearnFRC;
 				SDKROOT = auto;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
@@ -442,10 +432,6 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
 				CODE_SIGN_ENTITLEMENTS = LearnFRCWidgets/LearnFRCWidgets.entitlements;
-				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = "LearnFRCWidgets/LearnFRCWidgets-iOS-personal.entitlements";
-				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "LearnFRCWidgets/LearnFRCWidgets-macOS-local.entitlements";
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
-				"CODE_SIGN_STYLE[sdk=macosx*]" = Manual;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = LearnFRCWidgets/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = LearnFRC;
@@ -454,7 +440,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.learnfrc.app.widgets;
+				PRODUCT_BUNDLE_IDENTIFIER = com.learnfrc.LearnFRC.widgets;
 				PRODUCT_NAME = LearnFRCWidgets;
 				SDKROOT = auto;
 				SKIP_INSTALL = YES;
@@ -499,13 +485,11 @@
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
 				CODE_SIGN_STYLE = Automatic;
-				"CODE_SIGN_STYLE[sdk=macosx*]" = Manual;
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 1;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEVELOPMENT_TEAM = X9QP4MF9YR;
+				DEVELOPMENT_TEAM = Y9Q624XVCG;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
@@ -535,10 +519,6 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
 				CODE_SIGN_ENTITLEMENTS = LearnFRCWidgets/LearnFRCWidgets.entitlements;
-				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = "LearnFRCWidgets/LearnFRCWidgets-iOS-personal.entitlements";
-				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "LearnFRCWidgets/LearnFRCWidgets-macOS-local.entitlements";
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
-				"CODE_SIGN_STYLE[sdk=macosx*]" = Manual;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = LearnFRCWidgets/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = LearnFRC;
@@ -547,7 +527,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.learnfrc.app.widgets;
+				PRODUCT_BUNDLE_IDENTIFIER = com.learnfrc.LearnFRC.widgets;
 				PRODUCT_NAME = LearnFRCWidgets;
 				SDKROOT = auto;
 				SKIP_INSTALL = YES;

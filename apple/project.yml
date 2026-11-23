@@ -19,12 +19,10 @@ settings:
     SWIFT_VERSION: "6.0"
     MARKETING_VERSION: "1.0"
     CURRENT_PROJECT_VERSION: "1"
-    # Jahaan's free Personal Team, for installing on his own devices from Xcode.
-    DEVELOPMENT_TEAM: X9QP4MF9YR
+    # The paid team the App Store builds ship from (bundle ids com.learnfrc.LearnFRC and
+    # com.learnfrc.LearnFRC.widgets, app group group.com.learnfrc.app, Sign in with Apple).
+    DEVELOPMENT_TEAM: Y9Q624XVCG
     CODE_SIGN_STYLE: Automatic
-    # Until a development team is set, Mac builds are signed ad hoc ("Sign to Run Locally").
-    "CODE_SIGN_STYLE[sdk=macosx*]": Manual
-    "CODE_SIGN_IDENTITY[sdk=macosx*]": "-"
 packages:
   Supabase:
     url: https://github.com/supabase/supabase-swift
@@ -53,11 +51,9 @@ targets:
         product: YouTubePlayerKit
       - target: LearnFRCWidgets
     # App Review 4.8 and 2.1: an App Store build that offers Google must offer Sign in with
-    # Apple too, and its button must work. Two switches have to move together for that
-    # (LF_APPLE_SIGN_IN below, and dropping the two CODE_SIGN_ENTITLEMENTS overrides that
-    # leave the Apple entitlement out), so archives (ACTION=install) refuse to build with
-    # either one forgotten. Debug runs and Personal Team installs aren't archives and are
-    # untouched.
+    # Apple too, and its button must work. Two things have to hold for that (LF_APPLE_SIGN_IN
+    # below is YES, and the entitlements file carries the Apple entitlement), so archives
+    # (ACTION=install) refuse to build with either one missing. Debug runs aren't checked.
     preBuildScripts:
       - name: Check Sign in with Apple for App Store builds
         basedOnDependencyAnalysis: false
@@ -70,7 +66,7 @@ targets:
               exit 1
             fi
             if ! /usr/libexec/PlistBuddy -c "Print :com.apple.developer.applesignin" "$SRCROOT/$CODE_SIGN_ENTITLEMENTS" >/dev/null 2>&1; then
-              echo "error: $CODE_SIGN_ENTITLEMENTS has no Sign in with Apple entitlement. Drop the Personal Team and local Mac CODE_SIGN_ENTITLEMENTS overrides in project.yml."
+              echo "error: $CODE_SIGN_ENTITLEMENTS has no Sign in with Apple entitlement. App Store builds use LearnFRC/LearnFRC.entitlements; drop any CODE_SIGN_ENTITLEMENTS override in project.yml."
               exit 1
             fi
           fi
@@ -81,24 +77,16 @@ targets:
         com.apple.security.app-sandbox: true
         com.apple.security.network.client: true
         com.apple.security.files.user-selected.read-write: true
-        # Sign in with Apple (docs/ARCHITECTURE.md 6.1). Only a paid team can sign it, so the
-        # Personal Team device build and the teamless Mac build use the override files below,
-        # which leave it out; with a paid team those overrides go and this file is used.
+        # Sign in with Apple (docs/ARCHITECTURE.md 6.1).
         com.apple.developer.applesignin: [Default]
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.learnfrc.app
+        PRODUCT_BUNDLE_IDENTIFIER: com.learnfrc.LearnFRC
         PRODUCT_NAME: LearnFRC
         # Sign in with Apple's button (AppConfig.isAppleSignInEnabled, read from Info.plist's
-        # LFAppleSignIn). NO until the paid team, the capability on the App ID and Supabase's
-        # Apple provider are set up; then YES.
-        LF_APPLE_SIGN_IN: "NO"
-        # No team yet: Mac builds sign locally without the app group (see the file).
-        "CODE_SIGN_ENTITLEMENTS[sdk=macosx*]": LearnFRC/LearnFRC-macOS-local.entitlements
-        # Free Personal Team: device builds can't use App Groups (see the file). Remove with a paid team.
-        "CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]": LearnFRC/LearnFRC-iOS-personal.entitlements
-        "CODE_SIGN_STYLE[sdk=macosx*]": Manual
-        "CODE_SIGN_IDENTITY[sdk=macosx*]": "-"
+        # LFAppleSignIn). Needs the capability on the App ID and Supabase's Apple provider with
+        # com.learnfrc.LearnFRC among its client IDs.
+        LF_APPLE_SIGN_IN: "YES"
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_CFBundleDisplayName: LearnFRC
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
@@ -121,7 +109,12 @@ targets:
         CFBundleURLTypes:
           - CFBundleURLName: com.learnfrc.app
             CFBundleURLSchemes: [learnfrc]
+        # Export compliance: only HTTPS (the system's TLS) and Apple's own CryptoKit hashing
+        # (SHA-256 for the Apple sign-in nonce and Spotlight ids), so no encryption to declare.
         ITSAppUsesNonExemptEncryption: false
+        # Versions come from MARKETING_VERSION and CURRENT_PROJECT_VERSION above.
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         # Handoff and Siri suggestions for the lesson on screen (LessonView's NSUserActivity,
         # continued by AppModel.handle(userActivity:)). Xcode doesn't generate this key from a
         # build setting, so it lives here.
@@ -149,12 +142,8 @@ targets:
         com.apple.security.network.client: true
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.learnfrc.app.widgets
+        PRODUCT_BUNDLE_IDENTIFIER: com.learnfrc.LearnFRC.widgets
         PRODUCT_NAME: LearnFRCWidgets
-        "CODE_SIGN_ENTITLEMENTS[sdk=macosx*]": LearnFRCWidgets/LearnFRCWidgets-macOS-local.entitlements
-        "CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]": LearnFRCWidgets/LearnFRCWidgets-iOS-personal.entitlements
-        "CODE_SIGN_STYLE[sdk=macosx*]": Manual
-        "CODE_SIGN_IDENTITY[sdk=macosx*]": "-"
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_CFBundleDisplayName: LearnFRC
         TARGETED_DEVICE_FAMILY: "1,2"
@@ -164,6 +153,9 @@ targets:
     info:
       path: LearnFRCWidgets/Info.plist
       properties:
+        # Same version and build as the app (App Store Connect rejects a mismatch).
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
         # The widget registers the app's bundled fonts this way (an extension can't run the

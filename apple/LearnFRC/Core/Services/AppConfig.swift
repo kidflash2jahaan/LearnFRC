@@ -49,13 +49,12 @@ enum AppConfig {
 
     /// Whether Sign in with Apple is offered (above Google, on the sign-in and sign-up sheets).
     ///
-    /// Off until the paid developer team exists: the button needs the Sign in with Apple
-    /// capability on the App ID (`com.apple.developer.applesignin` in `LearnFRC.entitlements`,
-    /// which a free Personal Team can't sign) and Supabase's Apple provider set up with the
-    /// bundle id. The build setting `LF_APPLE_SIGN_IN` in `project.yml` (`NO` today) reaches the
-    /// app as the Info.plist key `LFAppleSignIn`; set it to `YES` with the paid team. Debug
-    /// builds also take `-LFAppleSignIn YES` as a launch argument, to look at the sheets with
-    /// the button (it can't sign in without the capability).
+    /// The button needs the Sign in with Apple capability on the App ID
+    /// (`com.apple.developer.applesignin` in `LearnFRC.entitlements`) and Supabase's Apple
+    /// provider set up with the bundle id. The build setting `LF_APPLE_SIGN_IN` in `project.yml`
+    /// (`YES`) reaches the app as the Info.plist key `LFAppleSignIn`. Debug builds also take
+    /// `-LFAppleSignIn YES` or `NO` as a launch argument, to look at the sheets with or
+    /// without the button.
     static let isAppleSignInEnabled: Bool = {
         #if DEBUG
         if let override = UserDefaults.standard.string(forKey: "LFAppleSignIn") {

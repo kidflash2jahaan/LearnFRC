@@ -7,7 +7,8 @@ import YouTubePlayerKit
 /// cookies), exactly like the site's `YouTubeFacade`. Pressing play swaps in the YouTube
 /// player and starts that one video, so one press is all it takes; it never starts on its
 /// own, never plays in the background, and nothing is drawn over a playing video. Any link
-/// inside the player, and "Watch it on YouTube", opens outside the app.
+/// inside the player, and "Watch it on YouTube", opens outside the app. The player keeps
+/// YouTube's cookies in memory only, so none outlast the player.
 struct LessonVideoFacade: View {
     let videoID: String
     let lessonTitle: String
@@ -131,7 +132,9 @@ struct LessonVideoScreen: View {
             configuration: .init(
                 fullscreenMode: .preferred,
                 allowsInlineMediaPlayback: true,
-                allowsPictureInPictureMediaPlayback: false
+                allowsPictureInPictureMediaPlayback: false,
+                // YouTube's cookies live in memory and go with the player, never to disk.
+                useNonPersistentWebsiteDataStore: true
             )
         )
     }
