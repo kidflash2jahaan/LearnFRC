@@ -335,6 +335,10 @@ struct LessonView: View {
                 }
             }
             .task(id: location.id) { await resumeScroll(location.id, proxy: proxy) }
+            #if DEBUG
+            // App Store screenshots: `-LFShotScroll` opens the lesson at the quiz or a heading.
+            .task(id: location.id) { await ScreenshotScript.scroll(proxy) }
+            #endif
             .paperBackground()
             .safeAreaInset(edge: .bottom, spacing: 0) {
                 // In laptop posture the deck below has the bar's slip instead.

@@ -66,6 +66,10 @@ struct ToolPage<Content: View>: View {
                 .learnColumn(layout)
                 .padding(.top, 60)
                 .preference(key: ToolInputsRoleKey.self, value: layout.role)
+                #if DEBUG
+                // App Store screenshots: `-LFShotScroll tool-field-<field>`.
+                .task { await ScreenshotScript.scroll(proxy) }
+                #endif
                 .onChange(of: focus.wrappedValue) { _, field in
                     #if os(iOS)
                     guard let field else { return }

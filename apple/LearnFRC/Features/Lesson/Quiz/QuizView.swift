@@ -86,6 +86,12 @@ struct QuizView: View {
         // Only a sheet for these same questions: the catalogue may have changed the quiz since.
         let kept = memory?.value(Remembered.self, for: Self.memoryKey(lessonID, tab: memoryTab))
             .flatMap { $0.sheet.key == fresh.key && $0.sheet.optionCounts == fresh.optionCounts ? $0 : nil }
+        #if DEBUG
+        // App Store screenshots: answers ticked by `-LFShotQuiz`.
+        let start = kept?.sheet ?? ScreenshotScript.ticked(fresh)
+        #else
+        let start = kept?.sheet ?? fresh
+        #endif
         self.init(
             lessonID: lessonID,
             quiz: quiz,
@@ -95,7 +101,7 @@ struct QuizView: View {
             onContinue: onContinue,
             onSettled: onSettled,
             onScrollTo: onScrollTo,
-            startingSheet: kept?.sheet ?? fresh,
+            startingSheet: start,
             startingSession: kept?.session,
             startingJustPassed: kept?.justPassed,
             startingMilestone: kept?.milestone

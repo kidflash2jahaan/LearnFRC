@@ -104,6 +104,10 @@ struct RootView: View {
                 // The cached catalog first (instant, offline): links and lessons resolve as soon
                 // as it's in memory. Then the search index and the network refresh, side by side.
                 await model.loadCache()
+                #if DEBUG
+                // App Store screenshots: `-LFShotLink` (ScreenshotScript).
+                if let link = ScreenshotScript.link { SystemServices.open(link) }
+                #endif
                 async let index: Void = SearchIndexStore.shared.prepare(catalog: model.catalog, reference: model.reference)
                 async let refresh: Void = model.bootstrap()
                 _ = await (index, refresh)
