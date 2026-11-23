@@ -43,13 +43,17 @@ const BIO_MAX = 500;
  *
  * There is no avatar field. Profile pictures are initials only
  * (src/lib/app/avatar.ts), so the strip above the form previews the initials.
+ * While an old photo link is still stored (`storedPhotoLink`), a box deletes
+ * it with the next save.
  */
 export function SettingsForm({
   profile,
   email,
+  storedPhotoLink = false,
 }: {
   profile: Profile | null;
   email?: string | null;
+  storedPhotoLink?: boolean;
 }) {
   const [state, formAction, isPending] = useActionState<ProfileState, FormData>(
     updateProfile,
@@ -254,6 +258,30 @@ export function SettingsForm({
             Shown on your public profile.
           </p>
         </div>
+
+        {/* Only while one is stored. The whole row is the label, like the
+            reminder box at signup. Saving with it ticked deletes the link,
+            and the row goes away when the page refreshes. */}
+        {storedPhotoLink && (
+          <div className="nb-field">
+            <p className="nb-label">Old profile photo</p>
+            <label className="flex cursor-pointer items-start gap-3 text-[0.95rem] leading-snug">
+              <input
+                type="checkbox"
+                name="delete_photo_link"
+                disabled={isPending}
+                aria-describedby="photo-help"
+                className="mt-0.5 size-4 shrink-0"
+              />
+              <span>Delete the photo link saved on my account</span>
+            </label>
+            <p id="photo-help" className="nb-hint">
+              It came from Google sign-in, or was typed in here in the past.
+              Profile pictures are initials only, so LearnFRC doesn&rsquo;t show
+              it anywhere. Tick this and save to delete it.
+            </p>
+          </div>
+        )}
 
         <div className="pt-1">
           <button

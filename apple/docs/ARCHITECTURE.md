@@ -325,7 +325,7 @@ The full field reference, with real example responses, is `docs/API.md`; this ta
 | `GET /api/app/me/progress` | Bearer | | `{ completions: [{ lessonId, completedAt, xpAwarded }], bookmarks: [{ lessonId, createdAt }], earnedAchievements: [{ achievementId, slug, earnedAt }], xp, level, rhythm: Rhythm, rhythmCopy: RhythmCopy, nextUnlock: NextUnlock \| null }` (Rhythm, DayCell, RhythmCopy and NextUnlock exactly as `src/lib/streaks.ts` and `src/app/api/me/progress/route.ts` define them) |
 | `POST /api/app/progress/complete` | Bearer | `{ lessonId, answers: number[] }` | `{ ok: true, xpAwarded, xp, level, newAchievements: [{ id, slug, name, description, icon }], completedCount, rhythm, rhythmCopy }` |
 | `DELETE /api/app/progress/complete?lessonId=` | Bearer | | `{ ok: true, xp, level, completedCount }` |
-| `PATCH /api/app/profile` | Bearer | `{ fullName?, bio?, avatarUrl? (accepted, ignored), username?, teamNumber? (number or null), role? }` | the `/me` profile object |
+| `PATCH /api/app/profile` | Bearer | `{ fullName?, bio?, avatarUrl? (null or "" deletes the stored link, the stored one sent back changes nothing, any other is a 400), username?, teamNumber? (number or null), role? }` | the `/me` profile object |
 | `POST /api/app/profile/setup` | Bearer | `{ username, teamNumber? }` (the current username sent back unchanged keeps it) | the `/me` profile object |
 | `POST /api/app/email-opt-in` | Bearer | `{ optIn: boolean }` | `{ optIn, emailChoiceAt }` |
 | `GET /api/app/team` | Bearer | | `{ team: null }` or `{ team: { number, memberCount, members: [{ username, avatarUrl, role, xp, isYou, completed, depts: [{ slug, name, completed, total, furthest, next }] }], subteamCoverage: [...] , inviteURL } }` |

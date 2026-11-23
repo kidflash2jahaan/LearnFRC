@@ -456,7 +456,7 @@ Request (every field optional; a field left out keeps its current value, `null` 
 | Field | Type | Rule |
 |---|---|---|
 | `fullName`, `bio` | String? | Trimmed; blank means none. Profanity filtered. |
-| `avatarUrl` | String? | Accepted from installed copies and ignored since 2026-11-23: only its type is checked, nothing is stored, and the response's `avatarUrl` is null. |
+| `avatarUrl` | String? | Delete only, since 2026-11-23 (`photoLinkEdit` in `src/lib/app/avatar.ts`): `null` or `""` deletes the stored photo link; the stored link sent back unchanged (an installed copy's form filled from a cached `/me`) changes nothing; any other link is refused (400). The response's `avatarUrl` is always null. |
 | `username` | String? | Lowercased and reduced to `a-z`, `0-9`, `_`; 3 to 20 characters; not a reserved name (like `admin`, `support`, anything starting `learner` or `learnfrc`, or a staff word at the start or end like `admin_team`, `mod1` or `lf_admin`); unique; profanity filtered. The length and reserved rules apply only to a new name, so a longer name someone already has still saves unchanged. `null` or `""` is refused (400). A new name clears `usernameGenerated`. |
 | `teamNumber` | Int? | 1 to 99999. Changing it is limited to 3 changes a day. |
 | `role` | String? | `student`, `mentor`, `alum`, `coach`, `other`; anything else saves as `student`. |
@@ -467,6 +467,7 @@ Errors (the site's messages):
 
 | Status | `code` | `error` |
 |---|---|---|
+| 400 | `validation` | `Profile pictures are initials only now, so LearnFRC can't save an avatar image URL. Clear that field and save again.` (a new `avatarUrl`) |
 | 400 | `validation` | `Enter a valid FRC team number.` |
 | 400 | `validation` | `Choose a username: at least 3 characters (letters, numbers, _).` (blank or `null`) |
 | 400 | `validation` | `Username must be at least 3 characters (a–z, 0–9, _).` / `Usernames can be up to 20 characters.` / `That username isn't available. Please choose another.` (reserved) |

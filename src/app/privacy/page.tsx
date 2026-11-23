@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/privacy" },
 };
 
-const UPDATED = "October 12, 2026";
+const UPDATED = "November 23, 2026";
 // NOT an email address. learnfrc.com publishes no MX record, so every address
 // printed here bounced, including the one on the legally-operative "request
 // deletion of your data" line. A personal mailbox is not an option either:
@@ -32,7 +32,13 @@ const SECTIONS: Section[] = [
         <p>
           <strong>Account information</strong>{" "}you provide when you sign up: your
           email address, display name, username, and optionally your FRC team
-          number, role, bio, and avatar.
+          number, role, and bio.
+        </p>
+        <p>
+          <strong>Profile pictures</strong>{" "}are your initials, never a photo.
+          Some accounts hold a profile photo link, copied from Google sign-in or
+          typed into Settings in the past. We don&rsquo;t show it anywhere, and
+          you can delete it in your settings.
         </p>
         <p>
           <strong>Learning activity</strong>{" "}we store so we can show your

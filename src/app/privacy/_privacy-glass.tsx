@@ -25,7 +25,7 @@ export function DataLedger({ contactHref }: { contactHref: string }) {
     {
       what: "Account",
       detail:
-        "Email, display name, username, and optionally your team number, role, bio and avatar.",
+        "Email, display name, username, and optionally your team number, role and bio. Some accounts also hold a profile photo link, which is never shown.",
       why: "Signs you in and fills your public profile.",
       remove: (
         <>
@@ -33,7 +33,8 @@ export function DataLedger({ contactHref }: { contactHref: string }) {
           <Link href="/settings" className="nb-link">
             settings
           </Link>
-          , or delete the whole account there.
+          {" "}(an old photo link has its own delete box there), or delete the
+          whole account there.
         </>
       ),
     },

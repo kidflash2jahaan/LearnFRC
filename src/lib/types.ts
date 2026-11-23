@@ -55,8 +55,9 @@ export interface Department {
 
 /**
  * A `profiles` row as the site reads it. The table also has an avatar column
- * that nothing reads any more: profile pictures are initials only
- * (src/lib/app/avatar.ts), so it is left out here and out of every select.
+ * that nothing shows any more: profile pictures are initials only
+ * (src/lib/app/avatar.ts), so it is left out here. Only the Settings rules in
+ * src/lib/app/profile.ts read it, to compare a sent link and to delete it.
  */
 export interface Profile {
   id: string;
