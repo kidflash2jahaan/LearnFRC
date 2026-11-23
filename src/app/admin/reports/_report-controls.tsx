@@ -195,7 +195,7 @@ export function ReportControls({
             : classRole
               ? `One more click takes ${handle} out of the class for good and closes every open report about them in it.`
               : isProfile
-                ? `One more click clears ${handle}'s bio and picture${replace ? " and replaces the username" : ""}, and closes every open report about it.`
+                ? `One more click clears ${handle}'s bio${replace ? " and replaces the username" : ""}, and closes every open report about it.`
                 : "One more click clears their words from the change log, turns it down if it's still waiting, and closes every open report about it."
           : armed === "ban"
             ? `One more click bans ${handle}'s email, deletes the account and everything in it, and closes every report about them. It can't be undone.`

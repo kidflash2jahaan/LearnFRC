@@ -6,7 +6,6 @@ import type { MemberDeptProgress } from "@/lib/queries";
 export type ProgressMember = {
   userId: string;
   name: string;
-  avatarUrl: string | null;
   isYou: boolean;
   completed: number;
   depts: MemberDeptProgress[];
@@ -41,7 +40,7 @@ export function MemberProgress({ members }: { members: ProgressMember[] }) {
             >
               <summary className="flex cursor-pointer list-none flex-wrap items-center gap-x-4 gap-y-2 [&::-webkit-details-marker]:hidden">
                 <span className="flex min-w-0 flex-1 items-center gap-3">
-                  <Avatar name={m.name} src={m.avatarUrl} seed={m.userId} className="h-9 w-9 shrink-0 text-[0.7rem]" />
+                  <Avatar name={m.name} seed={m.userId} className="h-9 w-9 shrink-0 text-[0.7rem]" />
                   <span className="min-w-0">
                     <span className="block truncate font-bold">
                       {m.name}{" "}

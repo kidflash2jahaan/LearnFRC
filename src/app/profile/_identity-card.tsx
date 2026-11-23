@@ -23,7 +23,6 @@ import { Avatar } from "@/components/ui/avatar";
 export function IdentityCard({
   displayName,
   handle,
-  avatarUrl,
   avatarSeed,
   roleLabel,
   teamNumber,
@@ -35,7 +34,6 @@ export function IdentityCard({
 }: {
   displayName: string;
   handle: string;
-  avatarUrl?: string | null;
   avatarSeed?: string;
   roleLabel: string;
   teamNumber: number | null;
@@ -66,7 +64,6 @@ export function IdentityCard({
       <div className="mt-[clamp(1.1rem,2.4vw,1.6rem)] flex flex-wrap items-end gap-[clamp(1rem,2.4vw,1.6rem)]">
         <Avatar
           name={displayName}
-          src={avatarUrl}
           seed={avatarSeed}
           className="h-24 w-24 text-[1.6rem]"
         />

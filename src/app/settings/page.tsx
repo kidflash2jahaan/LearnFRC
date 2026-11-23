@@ -6,6 +6,7 @@ import { SettingsForm } from "@/components/settings/settings-form";
 import { PerfModeCard } from "@/components/perf-mode";
 import { EmailPrefsCard } from "@/components/settings/email-prefs-card";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { hasStoredPhotoLink } from "@/lib/app/profile";
 import { listBlocks } from "@/lib/app/blocks";
 import { BlockedAccountsCard } from "@/components/settings/blocked-accounts-card";
 import { IdentityCard } from "./_identity-card";
@@ -53,11 +54,13 @@ export default async function SettingsPage() {
   // The reminder switch's starting state. Read on its own, service-role and
   // scoped to the caller's id, rather than widening getProfile's column list,
   // which every page that calls getSession() pays for.
-  const { data: emailRow } = await createAdminClient()
-    .from("profiles")
-    .select("email_opt_in")
-    .eq("id", user.id)
-    .maybeSingle();
+  // Whether an old photo link is still stored, so the form can offer to delete
+  // it (profile pictures are initials only: src/lib/app/avatar.ts).
+  const admin = createAdminClient();
+  const [{ data: emailRow }, storedPhotoLink] = await Promise.all([
+    admin.from("profiles").select("email_opt_in").eq("id", user.id).maybeSingle(),
+    hasStoredPhotoLink(admin, user.id),
+  ]);
   const emailOptIn = emailRow?.email_opt_in === true;
 
   // Everyone this member has blocked (src/lib/app/blocks.ts). A read error
@@ -93,7 +96,6 @@ export default async function SettingsPage() {
         <IdentityCard
           displayName={displayName}
           handle={profile?.username ? `@${profile.username}` : user.email ?? ""}
-          avatarUrl={profile?.avatar_url ?? null}
           seed={profile?.username || user.email || undefined}
           roleLabel={roleLabel}
           isAdmin={isAdmin}
@@ -130,7 +132,11 @@ export default async function SettingsPage() {
           <p className="nb-slug">your full name is never shown publicly</p>
         </div>
         <div className="mt-6">
-          <SettingsForm profile={profile} email={user.email} />
+          <SettingsForm
+            profile={profile}
+            email={user.email}
+            storedPhotoLink={storedPhotoLink}
+          />
         </div>
       </section>
 

@@ -36,7 +36,7 @@ export function DataLedger({
     {
       what: "Account",
       detail:
-        "Email, name, username and password, plus your team number, role, bio and avatar if you add them. Signing in with Google or Apple shares your name and email, and Google your picture.",
+        "Email, name, username and password, plus your team number, role and bio if you add them. Signing in with Google or Apple shares your name and email, and Google a picture link. Some accounts also hold a profile photo link, which is never shown.",
       why: "Signs you in and fills your public profile.",
       remove: (
         <>
@@ -44,7 +44,8 @@ export function DataLedger({
           <Link href="/settings" className="nb-link">
             settings
           </Link>
-          , or delete the whole account there or in the app&rsquo;s Settings.
+          {" "}(an old photo link has its own delete box there), or delete the
+          whole account there or in the app&rsquo;s Settings.
         </>
       ),
     },

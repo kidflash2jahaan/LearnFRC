@@ -42,13 +42,20 @@ const BIO_MAX = 500;
  *
  * Everything that talks to the server is untouched: the same action, the same
  * field names, the same validation, the same success toast.
+ *
+ * There is no avatar field. Profile pictures are initials only
+ * (src/lib/app/avatar.ts), so the strip above the form previews the initials.
+ * While an old photo link is still stored (`storedPhotoLink`), a box deletes
+ * it with the next save.
  */
 export function SettingsForm({
   profile,
   email,
+  storedPhotoLink = false,
 }: {
   profile: Profile | null;
   email?: string | null;
+  storedPhotoLink?: boolean;
 }) {
   const [state, formAction, isPending] = useActionState<ProfileState, FormData>(
     updateProfile,
@@ -59,7 +66,6 @@ export function SettingsForm({
   // uncontrolled so a rejected submit keeps what was typed; these only mirror.
   const [fullName, setFullName] = React.useState(profile?.full_name ?? "");
   const [username, setUsername] = React.useState(profile?.username ?? "");
-  const [avatarUrl, setAvatarUrl] = React.useState(profile?.avatar_url ?? "");
   const [bioLength, setBioLength] = React.useState(profile?.bio?.length ?? 0);
 
   // Toast on success, once per successful submit.
@@ -81,7 +87,6 @@ export function SettingsForm({
         <div className="nb-hair flex items-center gap-4 pt-4">
           <Avatar
             name={fullName || username || email}
-            src={avatarUrl || null}
             seed={username || email || undefined}
             className="h-14 w-14 shrink-0 text-[1.05rem]"
           />
@@ -235,27 +240,6 @@ export function SettingsForm({
         </div>
 
         <div className="nb-field">
-          <label htmlFor="avatar_url" className="nb-label">
-            Avatar image URL
-          </label>
-          <input
-            id="avatar_url"
-            name="avatar_url"
-            type="url"
-            inputMode="url"
-            placeholder="https://example.com/you.png"
-            defaultValue={profile?.avatar_url ?? ""}
-            onChange={(e) => setAvatarUrl(e.target.value)}
-            aria-describedby="avatar-help"
-            disabled={isPending}
-            className="nb-input"
-          />
-          <p id="avatar-help" className="nb-hint">
-            Optional. Leave it blank and your initials are used instead.
-          </p>
-        </div>
-
-        <div className="nb-field">
           <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
             <label htmlFor="bio" className="nb-label">
               Bio
@@ -280,6 +264,30 @@ export function SettingsForm({
             Shown on your public profile.
           </p>
         </div>
+
+        {/* Only while one is stored. The whole row is the label, like the
+            reminder box at signup. Saving with it ticked deletes the link,
+            and the row goes away when the page refreshes. */}
+        {storedPhotoLink && (
+          <div className="nb-field">
+            <p className="nb-label">Old profile photo</p>
+            <label className="flex cursor-pointer items-start gap-3 text-[0.95rem] leading-snug">
+              <input
+                type="checkbox"
+                name="delete_photo_link"
+                disabled={isPending}
+                aria-describedby="photo-help"
+                className="mt-0.5 size-4 shrink-0"
+              />
+              <span>Delete the photo link saved on my account</span>
+            </label>
+            <p id="photo-help" className="nb-hint">
+              It came from Google sign-in, or was typed in here in the past.
+              Profile pictures are initials only, so LearnFRC doesn&rsquo;t show
+              it anywhere. Tick this and save to delete it.
+            </p>
+          </div>
+        )}
 
         <div className="pt-1">
           <button

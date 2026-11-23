@@ -6,6 +6,7 @@ import { mailAfter } from "@/lib/app/admin-notify";
 import { normalizeUsername } from "@/lib/app/profile";
 import { textField } from "@/lib/app/admin-access";
 import { toIso } from "@/lib/app/format";
+import { NO_AVATAR_URL } from "@/lib/app/avatar";
 import { fail, type AppUser, type Result } from "@/lib/app/result";
 
 /**
@@ -46,7 +47,8 @@ export const BLOCK_SENTENCES = {
 export type BlockedAccount = {
   /** The account's handle now (it can change after the block). */
   username: string | null;
-  avatarUrl: string | null;
+  /** Always null: profile pictures are initials only (src/lib/app/avatar.ts). */
+  avatarUrl: null;
   blockedAt: string | null;
 };
 
@@ -136,20 +138,16 @@ export function withoutBlockedUsernames<T>(
 /** The account a handle names, or null. Exact match on the normalised handle. */
 async function accountByUsername(
   raw: string
-): Promise<{ id: string; username: string; avatarUrl: string | null } | null> {
+): Promise<{ id: string; username: string } | null> {
   const username = normalizeUsername(raw);
   if (!username) return null;
   const { data } = await createAdminClient()
     .from("profiles")
-    .select("id, username, avatar_url")
+    .select("id, username")
     .eq("username", username)
     .maybeSingle();
   if (!data?.username) return null;
-  return {
-    id: data.id as string,
-    username: data.username as string,
-    avatarUrl: (data.avatar_url as string | null) ?? null,
-  };
+  return { id: data.id as string, username: data.username as string };
 }
 
 /** Everyone the caller has blocked, newest first. */
@@ -165,9 +163,10 @@ export async function listBlocks(user: AppUser): Promise<Result<{ blocks: Blocke
   const rows = data ?? [];
   if (rows.length === 0) return { ok: true, blocks: [] };
 
+  // No avatar column: profile pictures are initials only (src/lib/app/avatar.ts).
   const { data: profs } = await admin
     .from("profiles")
-    .select("id, username, avatar_url")
+    .select("id, username")
     .in(
       "id",
       rows.map((r) => r.blocked_id as string)
@@ -179,7 +178,7 @@ export async function listBlocks(user: AppUser): Promise<Result<{ blocks: Blocke
       const p = byId.get(r.blocked_id as string);
       return {
         username: (p?.username as string | null) ?? null,
-        avatarUrl: (p?.avatar_url as string | null) ?? null,
+        avatarUrl: NO_AVATAR_URL,
         blockedAt: toIso(r.created_at as string),
       };
     }),
@@ -217,7 +216,7 @@ export async function blockUser(
       ok: true,
       block: {
         username: target.username,
-        avatarUrl: target.avatarUrl,
+        avatarUrl: NO_AVATAR_URL,
         blockedAt: toIso(existing.created_at as string),
       },
     };
@@ -243,7 +242,7 @@ export async function blockUser(
   await tellOwnerAboutBlock(user.id, target.username);
   return {
     ok: true,
-    block: { username: target.username, avatarUrl: target.avatarUrl, blockedAt },
+    block: { username: target.username, avatarUrl: NO_AVATAR_URL, blockedAt },
   };
 }
 

@@ -349,7 +349,6 @@ export function Navbar({ classesVisible = false }: { classesVisible?: boolean } 
                   >
                     <Avatar
                       name={profile?.full_name || profile?.username || email}
-                      src={profile?.avatar_url}
                       seed={profile?.id}
                     />
                     <Caret />

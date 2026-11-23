@@ -64,7 +64,6 @@ export function ChampionPanel({ top3 }: { top3: PodiumEntry[] }) {
 
                 <Avatar
                   name={e.name}
-                  src={e.avatarUrl}
                   seed={e.username ?? e.id}
                   className={
                     first

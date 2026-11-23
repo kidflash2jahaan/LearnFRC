@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
  * POST /api/app/admin/reports/{id}/remove { note?, replaceUsername? }: takes
  * the reported content down and closes every open report about it
  * (removeReportedContent, the function /admin/reports' Remove button calls).
- * A profile loses its bio and picture, and its handle too when
+ * A profile loses its bio, and its handle too when
  * `replaceUsername` is true; an edit or proposal loses its words and, if still
  * pending, is turned down. 409 when it was already answered. Admins only.
  */

@@ -17,7 +17,7 @@ import type { Profile } from "@/lib/types";
 
 export type PublicProfileRow = Pick<
   Profile,
-  "id" | "username" | "avatar_url" | "team_number" | "bio" | "role" | "xp" | "created_at"
+  "id" | "username" | "team_number" | "bio" | "role" | "xp" | "created_at"
 >;
 
 export type PublicAchievement = {
@@ -42,7 +42,8 @@ export async function getPublicRecord(username: string): Promise<PublicRecord | 
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("id, username, avatar_url, team_number, bio, role, xp, created_at")
+    // No avatar column: profile pictures are initials only (src/lib/app/avatar.ts).
+    .select("id, username, team_number, bio, role, xp, created_at")
     .eq("username", username)
     .maybeSingle();
   if (!profile) return null;

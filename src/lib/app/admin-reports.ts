@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getSiteRole } from "@/lib/auth";
 import { isUuid } from "@/lib/app/http";
 import { toIso } from "@/lib/app/format";
+import { NO_AVATAR_URL } from "@/lib/app/avatar";
 import {
   BAD_REQUEST,
   NOT_ADMIN,
@@ -31,7 +32,7 @@ import { fail, type AppUser, type Result } from "@/lib/app/result";
  *
  * Three answers to a report, each closing it and logging to moderation_log:
  *   - resolve: looked at, nothing to take down (admins);
- *   - remove the content: a profile's bio and picture are cleared, and the
+ *   - remove the content: a profile's bio is cleared, and the
  *     handle replaced with a generated one (`gearbox_4821`, flagged so they're
  *     asked to keep it or pick their own) when it was the problem (the old
  *     handle goes to name_moderation_log, as the name scan does); an
@@ -84,7 +85,8 @@ export type DeskReport = {
   /** Public fields as they stood when it was reported. */
   snapshot: {
     username: string | null;
-    avatarUrl: string | null;
+    /** Always null: profile pictures are initials only (src/lib/app/avatar.ts). */
+    avatarUrl: null;
     bio: string | null;
     teamNumber: number | null;
     title: string | null;
@@ -205,7 +207,7 @@ function toDesk(
     reporterUsername: r.reporter_id ? (handles.get(r.reporter_id) ?? null) : null,
     snapshot: {
       username: str(snap.username),
-      avatarUrl: str(snap.avatarUrl),
+      avatarUrl: NO_AVATAR_URL,
       bio: str(snap.bio),
       teamNumber: num(snap.teamNumber),
       title: str(snap.title),
@@ -482,7 +484,7 @@ async function generatedHandle(): Promise<string | null> {
  * For a profile, `replaceUsername` also swaps the handle for a generated one
  * (reversible from name_moderation_log), flagged like any generated username,
  * so the person is asked to keep it or pick their own and live classes refuse
- * it until they do; the bio and picture always go.
+ * it until they do; the bio always goes.
  */
 export async function removeReportedContent(
   user: AppUser,
@@ -540,7 +542,9 @@ export async function removeReportedContent(
   };
 
   if (prof) {
-    const update: { bio: null; avatar_url: null; username?: string } = { bio: null, avatar_url: null };
+    // The bio is the only free text a profile shows. No picture to clear:
+    // profile pictures are initials only (src/lib/app/avatar.ts).
+    const update: { bio: null; username?: string } = { bio: null };
     if (replaceUsername) {
       newUsername = await generatedHandle();
       if (!newUsername) return failed("profile");

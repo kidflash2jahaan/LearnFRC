@@ -5,7 +5,7 @@ import { clampPct } from "@/lib/utils";
 
 /**
  * One subteam row, already joined against the roster on the server: usernames
- * and avatars only, never `full_name`.
+ * only, never `full_name`.
  */
 export type SubteamRow = {
   slug: string;
@@ -16,7 +16,6 @@ export type SubteamRow = {
   crew: {
     userId: string;
     name: string;
-    avatarUrl: string | null;
     completed: number;
     isYou: boolean;
   }[];
@@ -102,7 +101,6 @@ export function SubteamBoard({ rows }: { rows: SubteamRow[] }) {
                       >
                         <Avatar
                           name={m.name}
-                          src={m.avatarUrl}
                           seed={m.userId}
                           // Spotting yourself in a fifteen-person stack matters
                           // more than the stack looking uniform, so your own

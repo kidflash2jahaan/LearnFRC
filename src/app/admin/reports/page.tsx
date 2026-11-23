@@ -142,7 +142,6 @@ function OpenReport({ r, canBan }: { r: DeskReport; canBan: boolean }) {
           <>
             <Shown label="username" value={s.username ? `@${s.username}` : null} />
             <Shown label="bio" value={s.bio} />
-            <Shown label="picture" value={s.avatarUrl} />
             <Shown label="team" value={s.teamNumber} />
           </>
         ) : (

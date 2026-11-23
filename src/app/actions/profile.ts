@@ -44,10 +44,11 @@ export async function updateProfile(
   const result = await updateProfileFields(user, clientsFor(supabase), {
     fullName: String(formData.get("full_name") || ""),
     bio: String(formData.get("bio") || ""),
-    avatarUrl: String(formData.get("avatar_url") || ""),
     username: String(formData.get("username") || ""),
     teamNumber: String(formData.get("team_number") || ""),
     role: String(formData.get("role") || "student"),
+    // The "delete my old photo link" box: blank deletes it (photoLinkEdit).
+    ...(formData.get("delete_photo_link") ? { avatarUrl: "" } : {}),
   });
   if (!result.ok) return { error: result.error };
   return { success: true };

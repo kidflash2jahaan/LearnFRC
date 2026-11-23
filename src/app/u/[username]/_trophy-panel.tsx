@@ -25,7 +25,6 @@ export function RankStamp({
   xpToNext,
   tierName,
   avatarName,
-  avatarSrc,
   avatarSeed,
 }: {
   level: number;
@@ -35,7 +34,6 @@ export function RankStamp({
   /** Rookie / Contender / Veteran / All-Star / Champion. */
   tierName: string;
   avatarName: string;
-  avatarSrc: string | null;
   avatarSeed: string;
 }) {
   const pct = Math.round(Math.min(1, Math.max(0, levelFraction)) * 100);
@@ -45,7 +43,6 @@ export function RankStamp({
       <div className="flex items-center gap-3.5">
         <Avatar
           name={avatarName}
-          src={avatarSrc}
           seed={avatarSeed}
           className="h-14 w-14 text-[1.05rem]"
         />

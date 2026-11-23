@@ -305,16 +305,20 @@ function sectionsFor(classes: boolean): Section[] {
             <strong>Your account.</strong>{" "}Your email address, your name, a
             username and a password. The password is stored scrambled by our
             sign-in provider, so nobody at LearnFRC can read it. If you want, you
-            can add your FRC team number, your role on the team, a short bio and
-            a link to an avatar picture.
+            can add your FRC team number, your role on the team and a short bio.
+          </p>
+          <p>
+            <strong>Your profile picture.</strong>{" "}It&rsquo;s your initials,
+            never a photo. Some accounts hold a profile photo link, copied from
+            Google sign-in or typed into Settings in the past. We don&rsquo;t show
+            it anywhere, and you can delete it in your settings.
           </p>
           <p>
             <strong>Signing in with Google or Apple.</strong>{" "}Google gives us
-            your name, email address and profile picture, and the picture becomes
-            your avatar until you change it. Apple gives us your name if you
-            choose to share it, and an email address, which can be a private relay
-            address that forwards to your real inbox. We never see your Google or
-            Apple password.
+            your name, email address and a link to your profile picture, which we
+            never show. Apple gives us your name if you choose to share it, and an
+            email address, which can be a private relay address that forwards to
+            your real inbox. We never see your Google or Apple password.
           </p>
           <p>
             <strong>Your learning.</strong>{" "}Lessons you finish, quizzes you
@@ -418,7 +422,7 @@ function sectionsFor(classes: boolean): Section[] {
       body: (
         <>
           <p>
-            <strong>Your public profile:</strong>{" "}your username, avatar, team
+            <strong>Your public profile:</strong>{" "}your username, team
             number, role, bio, XP, level, badges, how many lessons you&rsquo;ve
             finished and when you joined. It can appear on the leaderboard. Your
             name and email address are never shown to other people. Your name
@@ -426,7 +430,7 @@ function sectionsFor(classes: boolean): Section[] {
           </p>
           <p>
             <strong>Your team.</strong>{" "}If you add a team number, other
-            LearnFRC members with the same number see your username, avatar,
+            LearnFRC members with the same number see your username,
             role, XP, the lessons you&rsquo;ve finished and when you were last
             active. Remove the number in Settings and you leave the team view.
           </p>

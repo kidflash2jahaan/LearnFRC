@@ -13,6 +13,7 @@ import { usernameHasContact } from "@/lib/classes/contact-patterns";
 import type { Profile } from "@/lib/types";
 import { levelForXp, tierFor } from "@/lib/app/levels";
 import { toIso } from "@/lib/app/format";
+import { NO_AVATAR_URL, PHOTO_LINK_REFUSED, photoLinkEdit } from "@/lib/app/avatar";
 import { readAppleRevocation, revokeAppleTokens } from "@/lib/app/apple-sign-in";
 import { beforeAccountDeleted } from "@/lib/app/classes";
 import type { AccountDeletionReason } from "@/lib/classes/types";
@@ -89,7 +90,8 @@ export type MeProfile = {
   usernameGenerated: boolean;
   /** The caller's OWN name. Never sent for anyone else. */
   fullName: string | null;
-  avatarUrl: string | null;
+  /** Always null: profile pictures are initials only (src/lib/app/avatar.ts). */
+  avatarUrl: null;
   teamNumber: number | null;
   bio: string | null;
   role: string;
@@ -109,7 +111,7 @@ export function toMeProfile(p: Profile): MeProfile {
     username: p.username,
     usernameGenerated: p.username_generated === true,
     fullName: p.full_name,
-    avatarUrl: p.avatar_url,
+    avatarUrl: NO_AVATAR_URL,
     teamNumber: p.team_number,
     bio: p.bio,
     role: p.role || "student",
@@ -138,14 +140,23 @@ export function shouldAskAboutEmail(profile: Profile | null): boolean {
 /**
  * Every settings field as raw text, the way the website's form submits it.
  * Blank means "none" for every field except role, which defaults to student.
+ *
+ * Profile pictures are initials only (src/lib/app/avatar.ts), so Settings
+ * never saves a photo link. It can only delete the stored one.
  */
 export type ProfileFields = {
   fullName: string;
   bio: string;
-  avatarUrl: string;
   username: string;
   teamNumber: string;
   role: string;
+  /**
+   * A photo link, only when one was sent: blank from the website's delete box,
+   * or the installed app's Avatar image URL field. photoLinkEdit decides: null
+   * or blank deletes the stored link, the stored link sent back changes
+   * nothing, anything else is refused.
+   */
+  avatarUrl?: string | null;
 };
 
 export async function updateProfileFields(
@@ -161,9 +172,6 @@ export async function updateProfileFields(
 
   const full_name = fields.fullName.trim() || null;
   const bio = fields.bio.trim() || null;
-  const avatar_url = fields.avatarUrl.trim() || null;
-  if (avatar_url && !/^https?:\/\//i.test(avatar_url))
-    return fail("validation", "Avatar URL must start with http:// or https://");
   const teamStr = fields.teamNumber.trim();
   const roleRaw = fields.role || "student";
 
@@ -188,10 +196,20 @@ export async function updateProfileFields(
   // settings field, not an authorization boundary.
   const { data: currentRow } = await admin
     .from("profiles")
-    .select("team_number, username")
+    .select("team_number, username, avatar_url")
     .eq("id", user.id)
     .maybeSingle();
-  const current = currentRow as { team_number: number | null; username: string | null } | null;
+  const current = currentRow as {
+    team_number: number | null;
+    username: string | null;
+    avatar_url: string | null;
+  } | null;
+
+  // Read only to compare: the stored link never leaves this function.
+  // Checked before the team budget below, so a refused link costs none of it.
+  const photo = photoLinkEdit(fields.avatarUrl, current?.avatar_url ?? null);
+  if (photo === "refuse") return fail("validation", PHOTO_LINK_REFUSED);
+
   const priorTeam = current?.team_number ?? null;
   if (
     team_number !== priorTeam &&
@@ -237,8 +255,8 @@ export async function updateProfileFields(
       username,
       team_number,
       role,
-      avatar_url,
       ...(checked.changed ? { username_generated: false } : {}),
+      ...(photo === "delete" ? { avatar_url: null } : {}),
     })
     .eq("id", user.id);
   if (error) {
@@ -252,6 +270,23 @@ export async function updateProfileFields(
   revalidatePath("/profile");
   revalidatePath("/", "layout");
   return { ok: true };
+}
+
+/**
+ * Whether the account still has a photo link stored (src/lib/app/avatar.ts),
+ * so the website's Settings can offer to delete it. Only the yes or no leaves
+ * here, never the link.
+ */
+export async function hasStoredPhotoLink(
+  admin: SupabaseClient,
+  userId: string
+): Promise<boolean> {
+  const { data } = await admin
+    .from("profiles")
+    .select("avatar_url")
+    .eq("id", userId)
+    .maybeSingle();
+  return !!(data as { avatar_url: string | null } | null)?.avatar_url;
 }
 
 /* ------------------------------------------------------------------ */

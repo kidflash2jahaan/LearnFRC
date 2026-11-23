@@ -4,6 +4,10 @@ import SwiftUI
 /// record. Same fields, hints and limits as the website; saving sends only what changed
 /// to `PATCH /api/app/profile`, which runs the website's own checks (unique username,
 /// profanity, team-number changes a day) and answers in its own words.
+///
+/// No avatar field: profile pictures are initials only (the site's `src/lib/app/avatar.ts`),
+/// and the server refuses a new image URL. An old stored photo link is deleted from the
+/// website's Settings.
 struct SettingsProfileForm: View {
     let me: Me
 
@@ -13,7 +17,6 @@ struct SettingsProfileForm: View {
     @State private var username: String
     @State private var teamNumber: String
     @State private var role: ProfileRole
-    @State private var avatarURL: String
     @State private var bio: String
 
     @State private var error: String?
@@ -25,10 +28,10 @@ struct SettingsProfileForm: View {
     @Environment(AccountScroller.self) private var scroller: AccountScroller?
 
     fileprivate enum Field: Hashable {
-        case fullName, username, team, avatar, bio
+        case fullName, username, team, bio
 
         /// Top to bottom, for the keyboard bar's previous and next.
-        static let order: [Field] = [.fullName, .username, .team, .avatar, .bio]
+        static let order: [Field] = [.fullName, .username, .team, .bio]
     }
 
     static let bioLimit = 500
@@ -40,7 +43,6 @@ struct SettingsProfileForm: View {
         _username = State(initialValue: p.username ?? "")
         _teamNumber = State(initialValue: p.teamNumber.map(String.init) ?? "")
         _role = State(initialValue: p.roleKind)
-        _avatarURL = State(initialValue: p.avatarUrl ?? "")
         _bio = State(initialValue: p.bio ?? "")
     }
 
@@ -86,15 +88,6 @@ struct SettingsProfileForm: View {
             rolePicker
 
             AccountField(
-                "Avatar image URL", text: $avatarURL, kind: .url,
-                focus: $focus, field: .avatar,
-                prompt: "https://example.com/you.png",
-                hint: "Optional. Leave it blank and your initials are used instead.",
-                error: fieldErrors[.avatar],
-                onSubmit: { focus = .bio }
-            )
-
-            AccountField(
                 "Bio", text: $bio, kind: .text,
                 focus: $focus, field: .bio,
                 prompt: "Your role, what you build, what you're learning.",
@@ -136,7 +129,6 @@ struct SettingsProfileForm: View {
         .onChange(of: fullName) { _, _ in clearErrors(.fullName) }
         .onChange(of: username) { _, _ in clearErrors(.username) }
         .onChange(of: teamNumber) { _, _ in clearErrors(.team) }
-        .onChange(of: avatarURL) { _, _ in clearErrors(.avatar) }
         .onChange(of: bio) { _, _ in clearErrors(.bio) }
         .onChange(of: role) { _, _ in error = nil }
         .onChange(of: me.user.id) { _, _ in reseed(from: me.profile) }
@@ -162,7 +154,6 @@ struct SettingsProfileForm: View {
             InitialsAvatar(
                 name: fullName.accountTrimmed.isEmpty ? (username.isEmpty ? (me.user.email ?? "?") : username) : fullName,
                 seed: username.isEmpty ? me.user.email : username,
-                imageURL: validAvatarURL,
                 size: 56
             )
             VStack(alignment: .leading, spacing: 4) {
@@ -200,7 +191,7 @@ struct SettingsProfileForm: View {
             prompt: "254",
             hint: "Optional. It groups you with teammates who entered the same number.",
             error: fieldErrors[.team],
-            onSubmit: { focus = .avatar }
+            onSubmit: { focus = .bio }
         )
     }
 
@@ -240,18 +231,12 @@ struct SettingsProfileForm: View {
     // MARK: State
 
     fileprivate struct Snapshot: Equatable {
-        var fullName, username, teamNumber, avatarURL, bio: String
+        var fullName, username, teamNumber, bio: String
         var role: ProfileRole
     }
 
     private var snapshot: Snapshot {
-        Snapshot(fullName: fullName, username: username, teamNumber: teamNumber, avatarURL: avatarURL, bio: bio, role: role)
-    }
-
-    private var validAvatarURL: URL? {
-        let value = avatarURL.accountTrimmed
-        guard let url = URL(string: value), ["http", "https"].contains(url.scheme?.lowercased() ?? "") else { return nil }
-        return url
+        Snapshot(fullName: fullName, username: username, teamNumber: teamNumber, bio: bio, role: role)
     }
 
     /// The changes against what's on file, or nil when nothing changed.
@@ -267,8 +252,6 @@ struct SettingsProfileForm: View {
             update.teamNumber = team.map { .set($0) } ?? .remove
         }
         if role != p.roleKind { update.role = role }
-        let avatar = avatarURL.accountTrimmed
-        if avatar != (p.avatarUrl ?? "") { update.avatarURL = avatar }
         let bioText = bio.accountTrimmed
         if bioText != (p.bio ?? "") { update.bio = bioText }
         return update.isEmpty ? nil : update
@@ -281,7 +264,6 @@ struct SettingsProfileForm: View {
         username = p.username ?? ""
         teamNumber = p.teamNumber.map(String.init) ?? ""
         role = p.roleKind
-        avatarURL = p.avatarUrl ?? ""
         bio = p.bio ?? ""
     }
 
@@ -299,11 +281,8 @@ struct SettingsProfileForm: View {
         if !teamNumber.isEmpty, !(Int(teamNumber).map { (1...99_999).contains($0) } ?? false) {
             errors[.team] = AccountStore.teamNumberRule
         }
-        if !avatarURL.accountTrimmed.isEmpty, validAvatarURL == nil {
-            errors[.avatar] = "Avatar URL must start with http:// or https://"
-        }
         fieldErrors = errors
-        if let first = [Field.username, .team, .avatar].first(where: { errors[$0] != nil }) {
+        if let first = [Field.username, .team].first(where: { errors[$0] != nil }) {
             focus = first
             accountAnnounce(errors[first] ?? "")
             return

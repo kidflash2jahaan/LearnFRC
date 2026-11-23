@@ -2,11 +2,14 @@ import { getPublicRecord } from "@/lib/app/public-profile";
 import { levelForXp, tierFor } from "@/lib/app/levels";
 import { apiError, guarded, publicOk } from "@/lib/app/http";
 import { toIso } from "@/lib/app/format";
+import { NO_AVATAR_URL } from "@/lib/app/avatar";
 
 /**
  * GET /api/app/u/{username}: somebody's public record, the same reads the
- * website's /u/[username] page makes (getPublicRecord). Username, avatar,
- * team, bio, role, XP and badges only: never a real name, email or id.
+ * website's /u/[username] page makes (getPublicRecord). Username, team, bio,
+ * role, XP and badges only: never a real name, email, id or photo.
+ * `avatarUrl` stays for installed copies and is always null
+ * (src/lib/app/avatar.ts).
  */
 export async function GET(
   _req: Request,
@@ -22,7 +25,7 @@ export async function GET(
     return publicOk(
       {
         username: p.username,
-        avatarUrl: p.avatar_url,
+        avatarUrl: NO_AVATAR_URL,
         teamNumber: p.team_number,
         bio: p.bio,
         role: p.role,

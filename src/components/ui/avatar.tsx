@@ -18,17 +18,15 @@ const TILTS = [-3.1, 1.9, -1.3, 2.7, -2.4, 1.1];
  * from the angle they were written at, which survives greyscale and does not
  * spend blue, the one colour that means "you can click this".
  *
- * Only the initials tilt. A photograph stays upright, because a face rotated
- * inside a circular crop reads as a rendering bug rather than as a note.
+ * Initials only, never a photo (src/lib/app/avatar.ts): there is no `src`, so
+ * no caller can hand it one, and no image URL reaches the browser through it.
  */
 export function Avatar({
   name,
-  src,
   className,
   seed,
 }: {
   name?: string | null;
-  src?: string | null;
   className?: string;
   seed?: string;
 }) {
@@ -51,13 +49,6 @@ export function Avatar({
   // sites resize this, so the override has to be settled by the class list.
   return (
     <AvatarPrimitive.Root className={cn("nb-avatar h-10 w-10 shrink-0 text-[0.8rem]", className)}>
-      {src ? (
-        <AvatarPrimitive.Image
-          src={src}
-          alt={name ?? "avatar"}
-          className="size-full object-cover"
-        />
-      ) : null}
       <AvatarPrimitive.Fallback
         className="nb-tilt grid size-full place-items-center leading-none"
         style={{ "--tilt": `${tilt}deg` } as React.CSSProperties}

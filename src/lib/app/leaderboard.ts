@@ -8,6 +8,7 @@ import {
   type TeamEntry,
 } from "@/lib/queries";
 import { levelForXp } from "@/lib/app/levels";
+import { NO_AVATAR_URL } from "@/lib/app/avatar";
 
 /**
  * The leaderboards as the app's GET /api/app/leaderboard sends them. The data
@@ -17,7 +18,9 @@ import { levelForXp } from "@/lib/app/levels";
  * days, the level is always from all-time XP.
  *
  * PRIVACY: every field is copied out by name from the queries' explicit
- * column list (PROFILE_BOARD_COLS). No `full_name`, and no user ids.
+ * column list (PROFILE_BOARD_COLS). No `full_name`, no user ids, and no photo:
+ * `avatarUrl` stays for installed copies and is always null
+ * (src/lib/app/avatar.ts).
  */
 
 export const BOARDS = ["weekly", "alltime", "teams"] as const;
@@ -27,7 +30,8 @@ export const BOARD_LIMIT = 50;
 export type LearnerEntry = {
   rank: number;
   username: string | null;
-  avatarUrl: string | null;
+  /** Always null: profile pictures are initials only. */
+  avatarUrl: null;
   teamNumber: number | null;
   role: string;
   /** Weekly board: XP earned in the last 7 days. All-time board: total XP. */
@@ -96,7 +100,7 @@ export async function loadBoard(board: Board): Promise<BoardPayload> {
       entries: rows.map((p, i) => ({
         rank: i + 1,
         username: p.username,
-        avatarUrl: p.avatar_url,
+        avatarUrl: NO_AVATAR_URL,
         teamNumber: p.team_number,
         role: p.role || "student",
         xp: p.weeklyXp,
@@ -113,7 +117,7 @@ export async function loadBoard(board: Board): Promise<BoardPayload> {
     entries: rows.map((p, i) => ({
       rank: i + 1,
       username: p.username,
-      avatarUrl: p.avatar_url,
+      avatarUrl: NO_AVATAR_URL,
       teamNumber: p.team_number,
       role: p.role || "student",
       xp: p.xp ?? 0,

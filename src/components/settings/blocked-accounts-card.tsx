@@ -41,7 +41,6 @@ export function BlockedAccountsCard({ blocks }: { blocks: BlockedAccount[] }) {
               <span className="flex min-w-0 items-center gap-3">
                 <Avatar
                   name={b.username}
-                  src={b.avatarUrl}
                   seed={b.username}
                   className="h-9 w-9 text-[0.7rem]"
                 />

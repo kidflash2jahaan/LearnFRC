@@ -17,7 +17,6 @@ import { Avatar } from "@/components/ui/avatar";
 export function IdentityCard({
   displayName,
   handle,
-  avatarUrl,
   seed,
   roleLabel,
   isAdmin,
@@ -27,7 +26,6 @@ export function IdentityCard({
 }: {
   displayName: string;
   handle: string;
-  avatarUrl: string | null;
   seed?: string;
   roleLabel: string;
   isAdmin: boolean;
@@ -60,7 +58,6 @@ export function IdentityCard({
         <div className="mt-4 flex items-center gap-4">
           <Avatar
             name={displayName}
-            src={avatarUrl}
             seed={seed}
             className="h-16 w-16 shrink-0 text-[1.15rem]"
           />

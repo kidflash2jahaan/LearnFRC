@@ -4,7 +4,6 @@ import { clampPct, pluralize } from "@/lib/utils";
 export type CrewMember = {
   userId: string;
   name: string;
-  avatarUrl: string | null;
   isYou: boolean;
 };
 
@@ -73,7 +72,6 @@ export function CrewPanel({
               >
                 <Avatar
                   name={m.name}
-                  src={m.avatarUrl}
                   seed={m.userId}
                   // Spotting yourself in a stack matters more than the stack
                   // looking uniform, so your own mark is the one ringed in blue.

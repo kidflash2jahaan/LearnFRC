@@ -6,7 +6,6 @@ export type PodiumEntry = {
   rank: number;
   name: string;
   username: string | null;
-  avatarUrl: string | null;
   teamNumber: number | null;
   role: string;
   xp: number;
@@ -67,7 +66,6 @@ function Plinth({ entry }: { entry: PodiumEntry }) {
 
       <Avatar
         name={entry.name}
-        src={entry.avatarUrl}
         seed={entry.username ?? entry.id}
         className={`mt-3 ${first ? "h-[4.5rem] w-[4.5rem] text-[1.1rem]" : "h-16 w-16 text-[1rem]"}`}
       />
@@ -184,7 +182,6 @@ export function LeaderTable({
                 <span className="flex min-w-0 items-center gap-3">
                   <Avatar
                     name={e.name}
-                    src={e.avatarUrl}
                     seed={e.username ?? e.id}
                     className="h-9 w-9 text-[0.7rem]"
                   />

@@ -7,7 +7,6 @@ export type RosterMember = {
   name: string;
   /** Links a teammate's name to their public page, where it can be reported or blocked. */
   username?: string | null;
-  avatarUrl: string | null;
   xp: number;
   completed: number;
   lastActive: string | null;
@@ -107,7 +106,6 @@ export function Roster({
                   <span className="flex min-w-0 items-center gap-3">
                     <Avatar
                       name={m.name}
-                      src={m.avatarUrl}
                       seed={m.userId}
                       className="h-9 w-9 text-[0.7rem]"
                     />

@@ -7,6 +7,7 @@ import { normalizeUsername } from "@/lib/app/profile";
 import { textField } from "@/lib/app/admin-access";
 import { mailAfter } from "@/lib/app/admin-notify";
 import { fail, type AppUser, type Result } from "@/lib/app/result";
+import { NO_AVATAR_URL } from "@/lib/app/avatar";
 import { endClassForReports } from "@/lib/app/classes-room";
 import { holdClass } from "@/lib/classes/holds";
 import { adminClassUrl, ownerEmail, safetyEmail } from "@/lib/classes/config";
@@ -26,8 +27,9 @@ import {
  * POST /api/app/reports.
  *
  * WHAT CAN BE REPORTED. Everything one member can put in front of another:
- *   - `profile`: the handle, the avatar, the bio and the team number, as shown
- *     on /u/<username>, the leaderboards and the team sheet;
+ *   - `profile`: the handle, the bio and the team number, as shown on
+ *     /u/<username>, the leaderboards and the team sheet (pictures are
+ *     initials, src/lib/app/avatar.ts);
  *   - `edit`: the note on a suggested edit, quoted on /contributions;
  *   - `submission`: the title and note on a lesson proposal, same page;
  *   - `class`: someone in a live class (classes-design.md section 10.2): its
@@ -236,10 +238,11 @@ async function classTarget(
 async function profileTarget(rawUsername: string): Promise<Target | null> {
   const username = normalizeUsername(rawUsername);
   if (!username) return null;
-  // Explicit, public columns only (see src/lib/app/public-profile.ts).
+  // Explicit, public columns only (see src/lib/app/public-profile.ts). No
+  // avatar column: profile pictures are initials only (src/lib/app/avatar.ts).
   const { data } = await createAdminClient()
     .from("profiles")
-    .select("id, username, avatar_url, bio, team_number")
+    .select("id, username, bio, team_number")
     .eq("username", username)
     .maybeSingle();
   if (!data) return null;
@@ -248,7 +251,7 @@ async function profileTarget(rawUsername: string): Promise<Target | null> {
     username: (data.username as string | null) ?? null,
     snapshot: {
       username: data.username ?? null,
-      avatarUrl: data.avatar_url ?? null,
+      avatarUrl: NO_AVATAR_URL,
       bio: data.bio ?? null,
       teamNumber: data.team_number ?? null,
     },
@@ -305,7 +308,6 @@ function snapshotHtml(kind: ReportContentKind, snap: Record<string, unknown>): s
     kind === "profile"
       ? [
           ["Bio", snap.bio],
-          ["Avatar", snap.avatarUrl],
           ["Team", snap.teamNumber],
         ]
       : kind === "edit"

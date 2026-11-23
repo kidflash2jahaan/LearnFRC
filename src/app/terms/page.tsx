@@ -178,8 +178,8 @@ function rulesFor(classes: boolean): Rule[] {
             users. That covers anything hateful, harassing, bullying, threatening,
             sexual or violent, plus spam, pretending to be someone else, and
             posting someone else&rsquo;s personal information. It applies to
-            everything you can put on LearnFRC: your username, name, bio and
-            avatar, suggested edits, submitted lessons
+            everything you can put on LearnFRC: your username, name and bio,
+            suggested edits, submitted lessons
             {classes ? ", what you say and send in a live class" : ""} and
             anything else.
           </p>

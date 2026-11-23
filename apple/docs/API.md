@@ -132,7 +132,7 @@ The caller's own profile. The only place anyone's `fullName` is ever sent, and o
   "username": "maya_5835",
   "usernameGenerated": false,
   "fullName": "Maya Chen",
-  "avatarUrl": "https://lh3.googleusercontent.com/a/example",
+  "avatarUrl": null,
   "teamNumber": 5835,
   "bio": "Programming lead.",
   "role": "student",
@@ -149,7 +149,8 @@ The caller's own profile. The only place anyone's `fullName` is ever sent, and o
 |---|---|---|
 | `username` | String? | Always set since 2026-11-11: an account that arrives without one (Google sign-in) gets a generated handle like `gearbox_4821`. Still decoded as optional for older servers. |
 | `usernameGenerated` | Bool | Added 2026-11-11. True while `username` is a generated handle the person hasn't kept or replaced yet (the username step, `needsUsernameSetup` on `/me`). Treat a missing key (an older server) as `false`. |
-| `fullName`, `avatarUrl`, `bio` | String? | |
+| `fullName`, `bio` | String? | |
+| `avatarUrl` | String? | Always null since 2026-11-23: profile pictures are initials only (`src/lib/app/avatar.ts`). Kept so installed copies still decode it. Same on every route below that sends one. |
 | `teamNumber` | Int? | 1 to 99999. |
 | `role` | String | `student`, `mentor`, `alum`, `coach`, `other`. |
 | `xp` | Int | Server-owned. |
@@ -449,13 +450,13 @@ Bearer. Settings, through `updateProfileFields`, the same function as the websit
 Request (every field optional; a field left out keeps its current value, `null` clears it, except `username`, which can't be cleared):
 
 ```json
-{ "fullName": "Maya Chen", "bio": "Programming lead.", "avatarUrl": "https://example.com/me.png", "username": "maya_5835", "teamNumber": 5835, "role": "student" }
+{ "fullName": "Maya Chen", "bio": "Programming lead.", "username": "maya_5835", "teamNumber": 5835, "role": "student" }
 ```
 
 | Field | Type | Rule |
 |---|---|---|
 | `fullName`, `bio` | String? | Trimmed; blank means none. Profanity filtered. |
-| `avatarUrl` | String? | Must start with `http://` or `https://`. |
+| `avatarUrl` | String? | Delete only, since 2026-11-23 (`photoLinkEdit` in `src/lib/app/avatar.ts`): `null` or `""` deletes the stored photo link; the stored link sent back unchanged (an installed copy's form filled from a cached `/me`) changes nothing; any other link is refused (400). The response's `avatarUrl` is always null. |
 | `username` | String? | Lowercased and reduced to `a-z`, `0-9`, `_`; 3 to 20 characters; not a reserved name (like `admin`, `support`, anything starting `learner` or `learnfrc`, or a staff word at the start or end like `admin_team`, `mod1` or `lf_admin`); unique; profanity filtered. The length and reserved rules apply only to a new name, so a longer name someone already has still saves unchanged. `null` or `""` is refused (400). A new name clears `usernameGenerated`. |
 | `teamNumber` | Int? | 1 to 99999. Changing it is limited to 3 changes a day. |
 | `role` | String? | `student`, `mentor`, `alum`, `coach`, `other`; anything else saves as `student`. |
@@ -466,7 +467,7 @@ Errors (the site's messages):
 
 | Status | `code` | `error` |
 |---|---|---|
-| 400 | `validation` | `Avatar URL must start with http:// or https://` |
+| 400 | `validation` | `Profile pictures are initials only now, so LearnFRC can't save an avatar image URL. Clear that field and save again.` (a new `avatarUrl`) |
 | 400 | `validation` | `Enter a valid FRC team number.` |
 | 400 | `validation` | `Choose a username: at least 3 characters (letters, numbers, _).` (blank or `null`) |
 | 400 | `validation` | `Username must be at least 3 characters (a–z, 0–9, _).` / `Usernames can be up to 20 characters.` / `That username isn't available. Please choose another.` (reserved) / `Usernames can't include contact details like app names or long numbers. Please choose another.` (a new username only, since everyone in a live class sees it: other apps' names, contact phrases like "dm me", or 7 or more digits in a row; added with live classes, 2026-11) |
@@ -514,7 +515,7 @@ Errors: 400 `validation` (`Something went wrong. Try again.` when `optIn` isn't 
 
 ### GET /api/app/team
 
-Bearer. The caller's own team sheet, the same data as the website's /teams page (`loadTeamSheet`). The team is always the one on the caller's own profile. Teammates are shown by username and avatar only. Anyone the caller has blocked (`GET /api/app/blocks`) is left off the whole sheet: the roster, the coverage and every figure are worked out from the members the caller can see, and `hiddenMembers` says how many were left off.
+Bearer. The caller's own team sheet, the same data as the website's /teams page (`loadTeamSheet`). The team is always the one on the caller's own profile. Teammates are shown by username only; `avatarUrl` is always null. Anyone the caller has blocked (`GET /api/app/blocks`) is left off the whole sheet: the roster, the coverage and every figure are worked out from the members the caller can see, and `hiddenMembers` says how many were left off.
 
 Response 200 with no team number on the profile:
 
@@ -599,7 +600,7 @@ Errors: 401, 500.
 
 ### GET /api/app/leaderboard?board=weekly|alltime|teams
 
-Public. `Cache-Control: public, max-age=0, s-maxage=60, stale-while-revalidate=300`. The same boards as the website's /leaderboard (the underlying queries refresh every 5 minutes). Top 50. `board` defaults to `weekly`. Usernames only. To highlight the caller, compare `username` with their own.
+Public. `Cache-Control: public, max-age=0, s-maxage=60, stale-while-revalidate=300`. The same boards as the website's /leaderboard (the underlying queries refresh every 5 minutes). Top 50. `board` defaults to `weekly`. Usernames only; `avatarUrl` is always null. To highlight the caller, compare `username` with their own.
 
 Response 200, `weekly` (XP and lessons from the last 7 days; level from all-time XP) or `alltime`:
 
@@ -661,7 +662,7 @@ Response 200:
 }
 ```
 
-`achievements` is most recent first. Never includes a real name, email or id.
+`achievements` is most recent first. Never includes a real name, email, id or photo (`avatarUrl` is always null).
 
 The route is public and doesn't know who is asking. When the signed-in account has blocked `username` (`GET /api/app/blocks`), the app doesn't draw the record: it shows the site's blocked card ("You blocked @{username}.", Unblock, Report), as learnfrc.com/u/{username} does.
 
@@ -838,7 +839,7 @@ Errors: 401, 500.
 
 ## Report and block (`/api/app/reports`, `/api/app/blocks`)
 
-App Review guideline 1.2. What one member makes that another sees is a handle, an avatar, a bio and a team number (on public profiles, the leaderboards and the team sheet), the title and description of a live class its teacher wrote (the classes list, "Live classes" below), plus the notes and titles on suggested edits and lesson proposals (learnfrc.com/contributions, which the app has no screen for). Any signed-in account can report any of it and block anyone. Every rule is in `src/lib/app/reports.ts` and `src/lib/app/blocks.ts`, which the website's report form, Block button and Settings list call too.
+App Review guideline 1.2. What one member makes that another sees is a handle, a bio and a team number (on public profiles, the leaderboards and the team sheet; pictures are initials), the title and description of a live class its teacher wrote (the classes list, "Live classes" below), plus the notes and titles on suggested edits and lesson proposals (learnfrc.com/contributions, which the app has no screen for). Any signed-in account can report any of it and block anyone. Every rule is in `src/lib/app/reports.ts` and `src/lib/app/blocks.ts`, which the website's report form, Block button and Settings list call too.
 
 **What a block does.** It hides the blocked account from the person who blocked it: their public profile, their rows on the leaderboards, their row on the team sheet, their suggestions on /contributions, and the live classes they teach. Classes go both ways: a class whose teacher blocked the caller is left off too, and neither can enroll in the other's class. Nothing is sent to them and nothing changes for anyone else. `GET /api/app/classes` leaves those classes off on the server for a signed-in caller. `GET /api/app/team` leaves blocked teammates off on the server. The leaderboards and `/api/app/u/{username}` are public routes cached at the CDN, the same for everyone, so the app hides the handles from `GET /api/app/blocks` itself (ranks stay as earned), as the website does for its reader.
 
@@ -1451,7 +1452,7 @@ Response 200 (one of each):
 | `status`, `statusWord` | String | `open`; `resolved` ("closed, nothing removed"); `removed` ("content removed"); `banned` ("account banned"). |
 | `reportedUsername` / `currentUsername` | String? | The handle when reported, and now (null once the account is gone). |
 | `reporterUsername` | String? | Shown only on this desk. |
-| `snapshot` | object | The public fields as they stood when it was reported: `username`, `avatarUrl`, `bio`, `teamNumber` for a profile; `target` (the lesson or article), `note`, `title`, `newModuleTitle` for an edit or proposal. For a live-class report (`contentKind` `class`, `contentKindLabel` "Live class"), `target` is one readable line about the class and the reported person's place in it, and these were added with live classes (2026-11; null on every other kind, so decode them as optional): `classId`, `classTitle`, `classStartsAt` (String?), `classRole` (`teacher`, `student` or `staff`), `liveNow` (Bool?, the class was on when it was reported). Remove on a class report is the class action (the student leaves the class for good; a teacher's teaching is suspended and the class ended) and needs a super admin or the safety lead. |
+| `snapshot` | object | The public fields as they stood when it was reported: `username`, `avatarUrl` (always null since 2026-11-23), `bio`, `teamNumber` for a profile; `target` (the lesson or article), `note`, `title`, `newModuleTitle` for an edit or proposal. For a live-class report (`contentKind` `class`, `contentKindLabel` "Live class"), `target` is one readable line about the class and the reported person's place in it, and these were added with live classes (2026-11; null on every other kind, so decode them as optional): `classId`, `classTitle`, `classStartsAt` (String?), `classRole` (`teacher`, `student` or `staff`), `liveNow` (Bool?, the class was on when it was reported). Remove on a class report is the class action (the student leaves the class for good; a teacher's teaching is suspended and the class ended) and needs a super admin or the safety lead. |
 | `details` | String? | What the reporter wrote. Null on a live-class report with reason `sexual`: that goes to the safety lead only (added 2026-11). |
 | `detailsWithheld` | Bool | True when the reporter wrote something that `details` leaves out for that reason (added 2026-11; decode as optional, default false). |
 | `answerBy` | String | `createdAt` plus 24 hours. |
@@ -1467,7 +1468,7 @@ Errors: 404 `not_found` (`That report no longer exists.`), 409 `conflict` (`That
 
 ### POST /api/app/admin/reports/{id}/remove
 
-Bearer, admin. Takes the reported content down and closes every open report about it (`removeReportedContent`). A profile loses its bio and picture, and with `replaceUsername: true` its handle too (a free generated one like `gearbox_4821`, flagged as generated so the person is asked to keep it or pick their own, as after the name scan; the old one kept in `name_moderation_log`. Before 2026-11-11 it was a `memberNNNNNN`); an edit loses its note, a proposal its title and note, and either is turned down if still pending. Request: `{ "note": "…", "replaceUsername": true }` (both optional). Response 200: `{ "ok": true, "status": "removed", "newUsername": "gearbox_4821" }` (`newUsername` null unless replaced).
+Bearer, admin. Takes the reported content down and closes every open report about it (`removeReportedContent`). A profile loses its bio, and with `replaceUsername: true` its handle too (a free generated one like `gearbox_4821`, flagged as generated so the person is asked to keep it or pick their own, as after the name scan; the old one kept in `name_moderation_log`. Before 2026-11-11 it was a `memberNNNNNN`); an edit loses its note, a proposal its title and note, and either is turned down if still pending. Request: `{ "note": "…", "replaceUsername": true }` (both optional). Response 200: `{ "ok": true, "status": "removed", "newUsername": "gearbox_4821" }` (`newUsername` null unless replaced).
 
 Errors: 404, 409 `conflict` (`That report has already been answered.` or `That account is already gone. Close the report instead.`), 500 `server` (`Couldn't take that down. Try again.`), 401, 403 (also the admin-team sentence under resolve, by the same rule).
 

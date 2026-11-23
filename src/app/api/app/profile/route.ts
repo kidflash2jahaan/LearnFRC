@@ -14,6 +14,9 @@ import {
 
 export const dynamic = "force-dynamic";
 
+// `avatarUrl` can only delete now: profile pictures are initials only
+// (src/lib/app/avatar.ts). It goes to updateProfileFields only when sent, and
+// photoLinkEdit there decides what it does.
 const TEXT_KEYS = ["fullName", "bio", "avatarUrl", "username", "role"] as const;
 
 /**
@@ -21,10 +24,12 @@ const TEXT_KEYS = ["fullName", "bio", "avatarUrl", "username", "role"] as const;
  *
  * Settings, the same rules as the website's settings form. A field left out
  * keeps its current value; null clears it, except `username`, which can't be
- * cleared (null or "" gets a 400 with the blank sentence). The merged record
- * then goes through
- * updateProfileFields (src/lib/app/profile.ts), the function the website's
- * updateProfile action calls, so validation, rate limits and messages match.
+ * cleared (null or "" gets a 400 with the blank sentence). `avatarUrl` null or
+ * "" deletes the stored photo link, the stored link sent back changes nothing,
+ * and any other link gets a 400 (photoLinkEdit). The merged record then goes
+ * through updateProfileFields (src/lib/app/profile.ts), the function the
+ * website's updateProfile action calls, so validation, rate limits and
+ * messages match.
  * Responds with the updated /me profile object.
  */
 export async function PATCH(req: Request) {
@@ -50,7 +55,6 @@ export async function PATCH(req: Request) {
     const fields: ProfileFields = {
       fullName: text("fullName", current.full_name),
       bio: text("bio", current.bio),
-      avatarUrl: text("avatarUrl", current.avatar_url),
       username: text("username", current.username),
       teamNumber:
         "teamNumber" in body
@@ -62,6 +66,8 @@ export async function PATCH(req: Request) {
             : "",
       role: text("role", current.role) || "student",
     };
+    // Only when sent: left out, the stored photo link is left alone.
+    if ("avatarUrl" in body) fields.avatarUrl = body.avatarUrl as string | null;
 
     const result = await updateProfileFields(auth.user, clientsFor(auth.supabase), fields);
     if (!result.ok) return fromFailure(result);

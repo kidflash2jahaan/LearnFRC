@@ -168,7 +168,6 @@ export default async function PublicProfilePage({
                 xpToNext={xpToNext}
                 tierName={tierName}
                 avatarName={displayName}
-                avatarSrc={p.avatar_url}
                 avatarSeed={p.id}
               />
             </div>
