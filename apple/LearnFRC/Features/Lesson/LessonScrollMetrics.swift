@@ -112,8 +112,8 @@ final class LessonScrollMetrics {
         if self[keyPath: keyPath] != value { self[keyPath: keyPath] = value }
     }
 
-    #if DEBUG
     /// Previews: a reader partway down a long sheet, so the floating bar and the bar title show.
+    /// Not behind `#if DEBUG`, because `#Preview` blocks are compiled in Release builds too.
     static func scrolledForPreview() -> LessonScrollMetrics {
         let metrics = LessonScrollMetrics()
         metrics.scrolledY = Self.openingDistance + 400
@@ -122,7 +122,6 @@ final class LessonScrollMetrics {
         metrics.recompute()
         return metrics
     }
-    #endif
 }
 
 // MARK: - The sticky margin

@@ -560,7 +560,8 @@ extension EnvironmentValues {
 
 // MARK: - Previews
 
-#if DEBUG
+// Not behind `#if DEBUG`: `#Preview` blocks are compiled in Release builds too, and the
+// screens' Duo previews use these.
 /// iPhone Duo's sizes, for previews. "Content" is the area a screen gets inside the bars.
 enum DuoPreview {
     /// Cover screen, portrait: 466 x 678 window, 382 x 562 content (the vertical bar takes 84pt).
@@ -619,6 +620,7 @@ extension PreviewTrait where T == Preview.ViewTraits {
     }
 }
 
+#if DEBUG
 private struct FoldPreviewPage: View {
     var body: some View {
         FoldReader { proxy, fold in
