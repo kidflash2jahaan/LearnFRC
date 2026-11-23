@@ -22,8 +22,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
  *    to completeOAuthSignIn. Client id: the Services ID (APPLE_SERVICES_ID).
  *  - App. The app sends the one-time authorization code from its
  *    ASAuthorizationAppleIDCredential to POST /api/app/auth/oauth-complete,
- *    and it's traded here for a refresh token. Client id: the app's bundle id
- *    (APPLE_APP_BUNDLE_ID).
+ *    and it's traded here for a refresh token. Client id: the app's bundle id,
+ *    com.learnfrc.LearnFRC (APPLE_APP_BUNDLE_ID overrides it).
  *
  * deleteAccountData (src/lib/app/profile.ts), which the website's Settings and
  * the app's DELETE /api/app/account both call, reads what revoking needs
@@ -69,9 +69,13 @@ function webClientId(): string | null {
   return process.env.APPLE_SERVICES_ID?.trim() || null;
 }
 
-/** The app's Apple client: its bundle id. */
+/**
+ * The app's Apple client: the App Store build's bundle id. APPLE_APP_BUNDLE_ID
+ * overrides it. com.learnfrc.app is the free team's id for local builds, so
+ * it's never the fallback.
+ */
 function appClientId(): string {
-  return process.env.APPLE_APP_BUNDLE_ID?.trim() || "com.learnfrc.app";
+  return process.env.APPLE_APP_BUNDLE_ID?.trim() || "com.learnfrc.LearnFRC";
 }
 
 /**
