@@ -44,7 +44,6 @@ export async function updateProfile(
   const result = await updateProfileFields(user, clientsFor(supabase), {
     fullName: String(formData.get("full_name") || ""),
     bio: String(formData.get("bio") || ""),
-    avatarUrl: String(formData.get("avatar_url") || ""),
     username: String(formData.get("username") || ""),
     teamNumber: String(formData.get("team_number") || ""),
     role: String(formData.get("role") || "student"),

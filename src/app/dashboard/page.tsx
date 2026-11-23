@@ -425,7 +425,6 @@ export default async function DashboardPage() {
             <div className="flex items-center gap-[clamp(0.9rem,2vw,1.3rem)]">
               <Avatar
                 name={displayName}
-                src={profile?.avatar_url}
                 seed={user.id}
                 className="h-16 w-16 text-[1.15rem]"
               />

@@ -314,7 +314,7 @@ The app has the site's four admin jobs and nothing more: the numbers (learnfrc.c
 
 ## 7. Website API (`/api/app/*`)
 
-The full field reference, with real example responses, is `docs/API.md`; this table is the summary. All JSON, camelCase. Per-user routes require `Authorization: Bearer <Supabase access token>` and reply `Cache-Control: no-store`. Errors: HTTP status plus `{ "error": "human sentence", "code": "machine_code" }`, with `code` one of `unauthorized`, `forbidden` (403: signed in, but the account's site role can't do this; never means signed out), `validation`, `rate_limited`, `not_found`, `conflict`, `server`, and optionally `field` naming the input a failure is about. 429 responses include `Retry-After`. Every route reuses the same `src/lib/app/*` functions as the website's server actions.
+The full field reference, with real example responses, is `docs/API.md`; this table is the summary. All JSON, camelCase. Per-user routes require `Authorization: Bearer <Supabase access token>` and reply `Cache-Control: no-store`. Errors: HTTP status plus `{ "error": "human sentence", "code": "machine_code" }`, with `code` one of `unauthorized`, `forbidden` (403: signed in, but the account's site role can't do this; never means signed out), `validation`, `rate_limited`, `not_found`, `conflict`, `server`, and optionally `field` naming the input a failure is about. 429 responses include `Retry-After`. Every route reuses the same `src/lib/app/*` functions as the website's server actions. `avatarUrl`, wherever it appears, is always null since 2026-11-23: profile pictures are initials only (`src/lib/app/avatar.ts`), and the field stays so installed copies still decode.
 
 | Route | Auth | Request | Response |
 |---|---|---|---|
@@ -325,7 +325,7 @@ The full field reference, with real example responses, is `docs/API.md`; this ta
 | `GET /api/app/me/progress` | Bearer | | `{ completions: [{ lessonId, completedAt, xpAwarded }], bookmarks: [{ lessonId, createdAt }], earnedAchievements: [{ achievementId, slug, earnedAt }], xp, level, rhythm: Rhythm, rhythmCopy: RhythmCopy, nextUnlock: NextUnlock \| null }` (Rhythm, DayCell, RhythmCopy and NextUnlock exactly as `src/lib/streaks.ts` and `src/app/api/me/progress/route.ts` define them) |
 | `POST /api/app/progress/complete` | Bearer | `{ lessonId, answers: number[] }` | `{ ok: true, xpAwarded, xp, level, newAchievements: [{ id, slug, name, description, icon }], completedCount, rhythm, rhythmCopy }` |
 | `DELETE /api/app/progress/complete?lessonId=` | Bearer | | `{ ok: true, xp, level, completedCount }` |
-| `PATCH /api/app/profile` | Bearer | `{ fullName?, bio?, avatarUrl?, username?, teamNumber? (number or null), role? }` | the `/me` profile object |
+| `PATCH /api/app/profile` | Bearer | `{ fullName?, bio?, avatarUrl? (accepted, ignored), username?, teamNumber? (number or null), role? }` | the `/me` profile object |
 | `POST /api/app/profile/setup` | Bearer | `{ username, teamNumber? }` (the current username sent back unchanged keeps it) | the `/me` profile object |
 | `POST /api/app/email-opt-in` | Bearer | `{ optIn: boolean }` | `{ optIn, emailChoiceAt }` |
 | `GET /api/app/team` | Bearer | | `{ team: null }` or `{ team: { number, memberCount, members: [{ username, avatarUrl, role, xp, isYou, completed, depts: [{ slug, name, completed, total, furthest, next }] }], subteamCoverage: [...] , inviteURL } }` |

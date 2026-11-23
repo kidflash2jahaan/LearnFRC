@@ -3,6 +3,7 @@ import { loadTeamSheet } from "@/lib/app/team";
 import { teamInviteUrl } from "@/components/team/invite-link";
 import { guarded, ok, requireAppUser } from "@/lib/app/http";
 import { toIso } from "@/lib/app/format";
+import { NO_AVATAR_URL } from "@/lib/app/avatar";
 
 export const dynamic = "force-dynamic";
 
@@ -11,8 +12,9 @@ export const dynamic = "force-dynamic";
  * /teams page renders (loadTeamSheet in src/lib/app/team.ts).
  *
  * The team is always the one on the caller's OWN profile; there is no way to
- * ask for another team's roster. Members are identified by username and avatar
- * only: no user ids, no real names.
+ * ask for another team's roster. Members are identified by username only: no
+ * user ids, no real names, no photos. `avatarUrl` stays for installed copies
+ * and is always null (src/lib/app/avatar.ts).
  */
 export async function GET(req: Request) {
   return guarded(async () => {
@@ -42,7 +44,7 @@ export async function GET(req: Request) {
         members: sheet.members.map((m) => ({
           username: m.username,
           name: m.name,
-          avatarUrl: m.avatarUrl,
+          avatarUrl: NO_AVATAR_URL,
           role: m.role,
           xp: m.xp,
           isYou: m.userId === uid,
@@ -70,7 +72,7 @@ export async function GET(req: Request) {
                   {
                     username: m.username,
                     name: m.name,
-                    avatarUrl: m.avatarUrl,
+                    avatarUrl: NO_AVATAR_URL,
                     completed: cm.completed,
                     isYou: m.userId === uid,
                   },

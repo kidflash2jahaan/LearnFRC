@@ -86,7 +86,6 @@ export default async function SettingsPage() {
         <IdentityCard
           displayName={displayName}
           handle={profile?.username ? `@${profile.username}` : user.email ?? ""}
-          avatarUrl={profile?.avatar_url ?? null}
           seed={profile?.username || user.email || undefined}
           roleLabel={roleLabel}
           isAdmin={isAdmin}

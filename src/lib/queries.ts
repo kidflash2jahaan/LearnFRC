@@ -52,9 +52,10 @@ const LESSON_LIST_COLS =
   "id, module_id, slug, title, summary, estimated_minutes, sort_order, created_at";
 // Profile columns needed by the leaderboard/podium (drops the free-text `bio`).
 // No `full_name`: the board shows usernames only, and full_name is PII the
-// public/anon API role can no longer read anyway.
+// public/anon API role can no longer read anyway. No avatar column either:
+// profile pictures are initials only (src/lib/app/avatar.ts).
 const PROFILE_BOARD_COLS =
-  "id, username, avatar_url, team_number, role, xp, hide_name, created_at";
+  "id, username, team_number, role, xp, hide_name, created_at";
 
 function sortModules(modules: ModuleRow[]): ModuleRow[] {
   return [...(modules ?? [])]
@@ -360,8 +361,10 @@ export async function getProfile(userId: string): Promise<Profile | null> {
   const supabase = createAdminClient();
   const read = (columns: string) =>
     supabase.from("profiles").select(columns).eq("id", userId).maybeSingle();
+  // No avatar column: profile pictures are initials only (src/lib/app/avatar.ts),
+  // and the site's /api/me sends this whole row to the navbar.
   let { data, error } = await read(
-    "id, username, username_generated, full_name, avatar_url, team_number, bio, role, xp, hide_name, created_at, email_opt_in, email_choice_at"
+    "id, username, username_generated, full_name, team_number, bio, role, xp, hide_name, created_at, email_opt_in, email_choice_at"
   );
   // `username_generated` arrives with the 2026-11-11 migration, which goes in
   // before this code. If this ever runs against a database without it (code
@@ -371,7 +374,7 @@ export async function getProfile(userId: string): Promise<Profile | null> {
   if (error && (error.code === "42703" || error.message.includes("username_generated"))) {
     console.error("getProfile: no username_generated column yet; reading without it.");
     ({ data, error } = await read(
-      "id, username, full_name, avatar_url, team_number, bio, role, xp, hide_name, created_at, email_opt_in, email_choice_at"
+      "id, username, full_name, team_number, bio, role, xp, hide_name, created_at, email_opt_in, email_choice_at"
     ));
   }
   if (error) console.error("getProfile:", error.message);
@@ -663,8 +666,9 @@ export async function getTeamByNumber(
       // `{...p}` spread below would have leaked real names for a whole team.
       // `role` is the member's team role (student, mentor...), which the
       // leaderboard and public profile already show; the app's team screen
-      // labels members with it.
-      .select("id, username, avatar_url, role, xp, created_at")
+      // labels members with it. No avatar column: profile pictures are
+      // initials only (src/lib/app/avatar.ts).
+      .select("id, username, role, xp, created_at")
       .eq("team_number", teamNumber),
   ]);
   const rows = (profs as Profile[]) ?? [];
@@ -700,7 +704,6 @@ export async function getTeamByNumber(
       userId: p.id,
       name: p.username || "Member",
       username: p.username,
-      avatarUrl: p.avatar_url,
       role: p.role || "student",
       xp: p.xp ?? 0,
       completed: counts[p.id] ?? 0,
@@ -926,7 +929,7 @@ export const getXpTotals = unstable_cache(
 // PRIVACY: this path reads `lesson_progress` only (user_id + lesson_id) and the
 // public catalog. It never touches `profiles`, so there is no way for it to leak
 // `full_name` or an email — the caller joins these counts against the roster it
-// already has from getTeamByNumber(), which is username/avatar only.
+// already has from getTeamByNumber(), which is username only.
 
 /**
  * Catalog index: which department every lesson belongs to, plus each

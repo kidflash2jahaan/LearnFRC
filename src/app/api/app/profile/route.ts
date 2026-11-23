@@ -14,6 +14,11 @@ import {
 
 export const dynamic = "force-dynamic";
 
+// `avatarUrl` is still type-checked so installed copies get the same 400 for
+// a wrong type, then ignored: profile pictures are initials only
+// (src/lib/app/avatar.ts). An installed copy holding an old cached /me can send
+// its stale URL back with an unrelated edit, so refusing it would block that
+// save; ignoring it stores nothing and the response says null.
 const TEXT_KEYS = ["fullName", "bio", "avatarUrl", "username", "role"] as const;
 
 /**
@@ -21,7 +26,8 @@ const TEXT_KEYS = ["fullName", "bio", "avatarUrl", "username", "role"] as const;
  *
  * Settings, the same rules as the website's settings form. A field left out
  * keeps its current value; null clears it, except `username`, which can't be
- * cleared (null or "" gets a 400 with the blank sentence). The merged record
+ * cleared (null or "" gets a 400 with the blank sentence). `avatarUrl` is
+ * accepted and ignored (see TEXT_KEYS). The merged record
  * then goes through
  * updateProfileFields (src/lib/app/profile.ts), the function the website's
  * updateProfile action calls, so validation, rate limits and messages match.
@@ -50,7 +56,6 @@ export async function PATCH(req: Request) {
     const fields: ProfileFields = {
       fullName: text("fullName", current.full_name),
       bio: text("bio", current.bio),
-      avatarUrl: text("avatarUrl", current.avatar_url),
       username: text("username", current.username),
       teamNumber:
         "teamNumber" in body

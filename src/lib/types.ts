@@ -53,11 +53,15 @@ export interface Department {
   modules?: Module[];
 }
 
+/**
+ * A `profiles` row as the site reads it. The table also has an avatar column
+ * that nothing reads any more: profile pictures are initials only
+ * (src/lib/app/avatar.ts), so it is left out here and out of every select.
+ */
 export interface Profile {
   id: string;
   username: string | null;
   full_name: string | null;
-  avatar_url: string | null;
   team_number: number | null;
   bio: string | null;
   role: string;
@@ -99,7 +103,6 @@ export interface TeamMemberProgress {
   userId: string;
   name: string;
   username: string | null;
-  avatarUrl: string | null;
   role: string;
   xp: number;
   completed: number;

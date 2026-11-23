@@ -116,7 +116,6 @@ async function renderTeam(
   const rosterMembers: RosterMember[] = members.map((m) => ({
     userId: m.userId,
     name: m.name,
-    avatarUrl: m.avatarUrl,
     xp: m.xp,
     completed: m.completed,
     lastActive: m.lastActive,
@@ -126,18 +125,16 @@ async function renderTeam(
   const crewMembers: CrewMember[] = rosterMembers.map((m) => ({
     userId: m.userId,
     name: m.name,
-    avatarUrl: m.avatarUrl,
     isYou: m.isYou,
   }));
 
   // Departments ARE subteams, so this is the one team view a member can act
-  // on. Only usernames and avatars cross the boundary: the coverage query
-  // never opens the profiles table at all.
+  // on. Only usernames cross the boundary (avatars are initials drawn from
+  // them): the coverage query never opens the profiles table at all.
   const byId = new Map(rosterMembers.map((m) => [m.userId, m]));
   const progressMembers: ProgressMember[] = rosterMembers.map((m) => ({
     userId: m.userId,
     name: m.name,
-    avatarUrl: m.avatarUrl,
     isYou: m.isYou,
     completed: m.completed,
     depts: deptProgress[m.userId] ?? [],
@@ -154,7 +151,6 @@ async function renderTeam(
             {
               userId: r.userId,
               name: r.name,
-              avatarUrl: r.avatarUrl,
               completed: cm.completed,
               isYou: r.isYou,
             },

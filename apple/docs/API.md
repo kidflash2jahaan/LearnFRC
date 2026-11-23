@@ -132,7 +132,7 @@ The caller's own profile. The only place anyone's `fullName` is ever sent, and o
   "username": "maya_254",
   "usernameGenerated": false,
   "fullName": "Maya Chen",
-  "avatarUrl": "https://lh3.googleusercontent.com/a/example",
+  "avatarUrl": null,
   "teamNumber": 254,
   "bio": "Programming lead.",
   "role": "student",
@@ -149,7 +149,8 @@ The caller's own profile. The only place anyone's `fullName` is ever sent, and o
 |---|---|---|
 | `username` | String? | Always set since 2026-11-11: an account that arrives without one (Google sign-in) gets a generated handle like `gearbox_4821`. Still decoded as optional for older servers. |
 | `usernameGenerated` | Bool | Added 2026-11-11. True while `username` is a generated handle the person hasn't kept or replaced yet (the username step, `needsUsernameSetup` on `/me`). Treat a missing key (an older server) as `false`. |
-| `fullName`, `avatarUrl`, `bio` | String? | |
+| `fullName`, `bio` | String? | |
+| `avatarUrl` | String? | Always null since 2026-11-23: profile pictures are initials only (`src/lib/app/avatar.ts`). Kept so installed copies still decode it. Same on every route below that sends one. |
 | `teamNumber` | Int? | 1 to 99999. |
 | `role` | String | `student`, `mentor`, `alum`, `coach`, `other`. |
 | `xp` | Int | Server-owned. |
@@ -449,13 +450,13 @@ Bearer. Settings, through `updateProfileFields`, the same function as the websit
 Request (every field optional; a field left out keeps its current value, `null` clears it, except `username`, which can't be cleared):
 
 ```json
-{ "fullName": "Maya Chen", "bio": "Programming lead.", "avatarUrl": "https://example.com/me.png", "username": "maya_254", "teamNumber": 254, "role": "student" }
+{ "fullName": "Maya Chen", "bio": "Programming lead.", "username": "maya_254", "teamNumber": 254, "role": "student" }
 ```
 
 | Field | Type | Rule |
 |---|---|---|
 | `fullName`, `bio` | String? | Trimmed; blank means none. Profanity filtered. |
-| `avatarUrl` | String? | Must start with `http://` or `https://`. |
+| `avatarUrl` | String? | Accepted from installed copies and ignored since 2026-11-23: only its type is checked, nothing is stored, and the response's `avatarUrl` is null. |
 | `username` | String? | Lowercased and reduced to `a-z`, `0-9`, `_`; 3 to 20 characters; not a reserved name (like `admin`, `support`, anything starting `learner` or `learnfrc`, or a staff word at the start or end like `admin_team`, `mod1` or `lf_admin`); unique; profanity filtered. The length and reserved rules apply only to a new name, so a longer name someone already has still saves unchanged. `null` or `""` is refused (400). A new name clears `usernameGenerated`. |
 | `teamNumber` | Int? | 1 to 99999. Changing it is limited to 3 changes a day. |
 | `role` | String? | `student`, `mentor`, `alum`, `coach`, `other`; anything else saves as `student`. |
@@ -466,7 +467,6 @@ Errors (the site's messages):
 
 | Status | `code` | `error` |
 |---|---|---|
-| 400 | `validation` | `Avatar URL must start with http:// or https://` |
 | 400 | `validation` | `Enter a valid FRC team number.` |
 | 400 | `validation` | `Choose a username: at least 3 characters (letters, numbers, _).` (blank or `null`) |
 | 400 | `validation` | `Username must be at least 3 characters (a–z, 0–9, _).` / `Usernames can be up to 20 characters.` / `That username isn't available. Please choose another.` (reserved) |
@@ -514,7 +514,7 @@ Errors: 400 `validation` (`Something went wrong. Try again.` when `optIn` isn't 
 
 ### GET /api/app/team
 
-Bearer. The caller's own team sheet, the same data as the website's /teams page (`loadTeamSheet`). The team is always the one on the caller's own profile. Teammates are shown by username and avatar only.
+Bearer. The caller's own team sheet, the same data as the website's /teams page (`loadTeamSheet`). The team is always the one on the caller's own profile. Teammates are shown by username only; `avatarUrl` is always null.
 
 Response 200 with no team number on the profile:
 
@@ -597,7 +597,7 @@ Errors: 401, 500.
 
 ### GET /api/app/leaderboard?board=weekly|alltime|teams
 
-Public. `Cache-Control: public, max-age=0, s-maxage=60, stale-while-revalidate=300`. The same boards as the website's /leaderboard (the underlying queries refresh every 5 minutes). Top 50. `board` defaults to `weekly`. Usernames only. To highlight the caller, compare `username` with their own.
+Public. `Cache-Control: public, max-age=0, s-maxage=60, stale-while-revalidate=300`. The same boards as the website's /leaderboard (the underlying queries refresh every 5 minutes). Top 50. `board` defaults to `weekly`. Usernames only; `avatarUrl` is always null. To highlight the caller, compare `username` with their own.
 
 Response 200, `weekly` (XP and lessons from the last 7 days; level from all-time XP) or `alltime`:
 
@@ -657,7 +657,7 @@ Response 200:
 }
 ```
 
-`achievements` is most recent first. Never includes a real name, email or id.
+`achievements` is most recent first. Never includes a real name, email, id or photo (`avatarUrl` is always null).
 
 Errors: 404 `not_found` (`There's no learner with that username.`), 500.
 

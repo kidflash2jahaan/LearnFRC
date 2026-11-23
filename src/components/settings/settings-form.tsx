@@ -40,6 +40,9 @@ const BIO_MAX = 500;
  *
  * Everything that talks to the server is untouched: the same action, the same
  * field names, the same validation, the same success toast.
+ *
+ * There is no avatar field. Profile pictures are initials only
+ * (src/lib/app/avatar.ts), so the strip above the form previews the initials.
  */
 export function SettingsForm({
   profile,
@@ -57,7 +60,6 @@ export function SettingsForm({
   // uncontrolled so a rejected submit keeps what was typed; these only mirror.
   const [fullName, setFullName] = React.useState(profile?.full_name ?? "");
   const [username, setUsername] = React.useState(profile?.username ?? "");
-  const [avatarUrl, setAvatarUrl] = React.useState(profile?.avatar_url ?? "");
   const [bioLength, setBioLength] = React.useState(profile?.bio?.length ?? 0);
 
   // Toast on success, once per successful submit.
@@ -79,7 +81,6 @@ export function SettingsForm({
         <div className="nb-hair flex items-center gap-4 pt-4">
           <Avatar
             name={fullName || username || email}
-            src={avatarUrl || null}
             seed={username || email || undefined}
             className="h-14 w-14 shrink-0 text-[1.05rem]"
           />
@@ -226,27 +227,6 @@ export function SettingsForm({
               </option>
             ))}
           </select>
-        </div>
-
-        <div className="nb-field">
-          <label htmlFor="avatar_url" className="nb-label">
-            Avatar image URL
-          </label>
-          <input
-            id="avatar_url"
-            name="avatar_url"
-            type="url"
-            inputMode="url"
-            placeholder="https://example.com/you.png"
-            defaultValue={profile?.avatar_url ?? ""}
-            onChange={(e) => setAvatarUrl(e.target.value)}
-            aria-describedby="avatar-help"
-            disabled={isPending}
-            className="nb-input"
-          />
-          <p id="avatar-help" className="nb-hint">
-            Optional. Leave it blank and your initials are used instead.
-          </p>
         </div>
 
         <div className="nb-field">

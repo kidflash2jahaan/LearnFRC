@@ -158,7 +158,6 @@ export default async function ProfilePage() {
           <IdentityCard
             displayName={displayName}
             handle={handle}
-            avatarUrl={profile?.avatar_url}
             avatarSeed={profile?.username || user.email || undefined}
             roleLabel={roleLabel}
             teamNumber={profile?.team_number ?? null}
@@ -186,7 +185,7 @@ export default async function ProfilePage() {
                     Edit your profile
                   </span>
                   <span className="mt-1 block text-[0.9rem] leading-snug text-graphite">
-                    Name, team number, role, bio and avatar.
+                    Name, team number, role and bio.
                   </span>
                 </Link>
               </li>

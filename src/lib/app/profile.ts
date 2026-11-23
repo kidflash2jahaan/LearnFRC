@@ -11,6 +11,7 @@ import {
 import type { Profile } from "@/lib/types";
 import { levelForXp, tierFor } from "@/lib/app/levels";
 import { toIso } from "@/lib/app/format";
+import { NO_AVATAR_URL } from "@/lib/app/avatar";
 import { fail, type AppClients, type AppUser, type Result } from "@/lib/app/result";
 
 /**
@@ -83,7 +84,8 @@ export type MeProfile = {
   usernameGenerated: boolean;
   /** The caller's OWN name. Never sent for anyone else. */
   fullName: string | null;
-  avatarUrl: string | null;
+  /** Always null: profile pictures are initials only (src/lib/app/avatar.ts). */
+  avatarUrl: null;
   teamNumber: number | null;
   bio: string | null;
   role: string;
@@ -103,7 +105,7 @@ export function toMeProfile(p: Profile): MeProfile {
     username: p.username,
     usernameGenerated: p.username_generated === true,
     fullName: p.full_name,
-    avatarUrl: p.avatar_url,
+    avatarUrl: NO_AVATAR_URL,
     teamNumber: p.team_number,
     bio: p.bio,
     role: p.role || "student",
@@ -132,11 +134,13 @@ export function shouldAskAboutEmail(profile: Profile | null): boolean {
 /**
  * Every settings field as raw text, the way the website's form submits it.
  * Blank means "none" for every field except role, which defaults to student.
+ *
+ * No avatar: profile pictures are initials only (src/lib/app/avatar.ts), so
+ * Settings never writes the avatar column, and a stored value is left alone.
  */
 export type ProfileFields = {
   fullName: string;
   bio: string;
-  avatarUrl: string;
   username: string;
   teamNumber: string;
   role: string;
@@ -155,9 +159,6 @@ export async function updateProfileFields(
 
   const full_name = fields.fullName.trim() || null;
   const bio = fields.bio.trim() || null;
-  const avatar_url = fields.avatarUrl.trim() || null;
-  if (avatar_url && !/^https?:\/\//i.test(avatar_url))
-    return fail("validation", "Avatar URL must start with http:// or https://");
   const teamStr = fields.teamNumber.trim();
   const roleRaw = fields.role || "student";
 
@@ -231,7 +232,6 @@ export async function updateProfileFields(
       username,
       team_number,
       role,
-      avatar_url,
       ...(checked.changed ? { username_generated: false } : {}),
     })
     .eq("id", user.id);

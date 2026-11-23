@@ -15,10 +15,11 @@ import type { TeamMemberProgress } from "@/lib/types";
  * page and the app's GET /api/app/team, so the two always show the same
  * members, numbers and coverage.
  *
- * PRIVACY: members are identified by username and avatar only. The queries
- * underneath never select `full_name`, and nothing here adds it. The viewer
- * must be a member of `teamNumber` (both callers pass the signed-in user's own
- * team number from their own profile).
+ * PRIVACY: members are identified by username only (avatars are initials,
+ * src/lib/app/avatar.ts). The queries underneath never select `full_name` or
+ * a photo, and nothing here adds them. The viewer must be a member of
+ * `teamNumber` (both callers pass the signed-in user's own team number from
+ * their own profile).
  */
 export type TeamSheet = {
   teamNumber: number;
