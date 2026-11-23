@@ -124,7 +124,7 @@ export function HandoutSheet({
           Everyone who signs up with the same team number shares one team
           sheet. On it, your teammates can see{" "}
           <b className="font-bold text-ink">
-            your username, your picture, which lessons you have finished and
+            your username, which lessons you have finished and
             when you were last active
           </b>
           . They cannot see your real name or your email, and they cannot

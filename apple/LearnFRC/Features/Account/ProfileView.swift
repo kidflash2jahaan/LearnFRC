@@ -458,7 +458,7 @@ struct ProfileChangeBox: View {
             VStack(alignment: .leading, spacing: 0) {
                 InkRule()
                 AccountSettingsLink {
-                    changeRow(title: "Edit your profile", detail: "Name, team number, role, bio and avatar.")
+                    changeRow(title: "Edit your profile", detail: "Name, team number, role and bio.")
                 }
                 .buttonStyle(.inkRow)
             }
