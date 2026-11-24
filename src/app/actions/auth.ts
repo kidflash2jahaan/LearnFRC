@@ -5,8 +5,7 @@ import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { safeNextPath } from "@/lib/safe-next";
-import { checkSignIn, registerAccount, requestIp } from "@/lib/app/accounts";
-import { SUPABASE_SIGN_IN_BUSY } from "@/lib/app/auth-limits";
+import { passwordSignIn, registerAccount, requestIp } from "@/lib/app/accounts";
 
 export type AuthState =
   | {
@@ -36,15 +35,11 @@ export async function signIn(
   if (!identifier || !password)
     return { error: "Please enter your email or username and password." };
 
-  // The rate limits, and logging in with a username instead of an email.
-  // Shared with the app's POST /api/app/auth/sign-in (src/lib/app/accounts.ts).
-  const checked = await checkSignIn(identifier);
-  if (!checked.ok) return { error: checked.error };
-  const { email } = checked;
-
-  const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) return { error: error.status === 429 ? SUPABASE_SIGN_IN_BUSY : error.message };
+  // The rate limits, logging in with a username instead of an email, and the
+  // password check, which puts the session in this browser's cookies. Shared
+  // with the app's POST /api/app/auth/sign-in (src/lib/app/accounts.ts).
+  const signedIn = await passwordSignIn(await createClient(), identifier, password);
+  if (!signedIn.ok) return { error: signedIn.error };
 
   // No revalidatePath here: it would rebuild /login inside the action
   // response, whose authed-redirect then soft-navigates and unmounts the form

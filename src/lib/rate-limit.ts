@@ -28,6 +28,16 @@ export async function rateLimitKey(
   }
 }
 
+/** The bucket `rateLimit` counts in: the action, the client's IP, the extra key. */
+async function ipBucket(action: string, extraKey?: string): Promise<string> {
+  const h = await headers();
+  const ip =
+    (h.get("x-forwarded-for") || "").split(",")[0].trim() ||
+    h.get("x-real-ip") ||
+    "unknown";
+  return `${action}:${ip}${extraKey ? `:${extraKey}` : ""}`;
+}
+
 /**
  * Per-IP rate limit backed by a SECURITY DEFINER Postgres function.
  * Returns true if the request is allowed, false if the limit is exceeded.
@@ -40,12 +50,7 @@ export async function rateLimit(
   extraKey?: string
 ): Promise<boolean> {
   try {
-    const h = await headers();
-    const ip =
-      (h.get("x-forwarded-for") || "").split(",")[0].trim() ||
-      h.get("x-real-ip") ||
-      "unknown";
-    const bucket = `${action}:${ip}${extraKey ? `:${extraKey}` : ""}`;
+    const bucket = await ipBucket(action, extraKey);
     // Use the service-role client: the check_rate_limit RPC is now revoked from
     // anon/authenticated (so it can't be poked directly via /rest/v1/rpc), and
     // rate limiting is enforced server-side regardless of the caller's session.
@@ -59,5 +64,27 @@ export async function rateLimit(
     return data !== false;
   } catch {
     return true;
+  }
+}
+
+/**
+ * Gives back one try counted by `rateLimit` (same action and extra key, same
+ * IP), for a try that turned out not to count, like a right password. Removes
+ * the bucket's newest hit. Best effort: a failure just leaves the try counted.
+ */
+export async function refundRateLimit(action: string, extraKey?: string): Promise<void> {
+  try {
+    const bucket = await ipBucket(action, extraKey);
+    const admin = createAdminClient();
+    const { data } = await admin
+      .from("rate_limit_hits")
+      .select("id")
+      .eq("bucket", bucket)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (data) await admin.from("rate_limit_hits").delete().eq("id", data.id);
+  } catch {
+    // leave it counted
   }
 }

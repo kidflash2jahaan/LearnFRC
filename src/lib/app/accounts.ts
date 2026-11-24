@@ -1,7 +1,7 @@
 import "server-only";
 import { headers } from "next/headers";
 import { after } from "next/server";
-import type { SupabaseClient, User } from "@supabase/supabase-js";
+import type { Session, SupabaseClient, User } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { firstProfaneField } from "@/lib/profanity";
 import { hookSourceFor } from "@/lib/signup-source";
@@ -23,7 +23,13 @@ import {
   keepAppleTokenFromCode,
 } from "@/lib/app/apple-sign-in";
 import { fail, type Result } from "@/lib/app/result";
-import { checkSignInAccount, checkSignInNetwork, checkSignUp } from "@/lib/app/auth-limits";
+import {
+  checkSignInAccount,
+  checkSignInNetwork,
+  checkSignUp,
+  forgiveSignIn,
+  supabaseBusy,
+} from "@/lib/app/auth-limits";
 
 /**
  * Sign-in lookup and sign-up rules, shared by the website's signIn / signUp
@@ -48,21 +54,34 @@ export async function requestIp(): Promise<string | null> {
 /* ------------------------------------------------------------------ */
 
 /**
- * Everything before the password check, for both doors: the rate limits
- * (src/lib/app/auth-limits.ts) and the username lookup. The network limits run
- * first, so the lookup can't be used to test usernames without limit. The
- * account limits run on the email the identifier resolved to.
+ * Password sign-in, for both doors: the website's signIn action passes its
+ * cookie client (the session lands in cookies), the app's
+ * POST /api/app/auth/sign-in a token client (the session goes back to the
+ * app). The rate limits are src/lib/app/auth-limits.ts. The network limits
+ * run first, so the username lookup can't be used to test usernames without
+ * limit; the account limit runs on the email the identifier resolved to, and
+ * a successful sign-in gives its try back, so only failed ones count.
  */
-export async function checkSignIn(
-  identifier: string
-): Promise<Result<{ email: string }>> {
+export async function passwordSignIn(
+  auth: SupabaseClient,
+  identifier: string,
+  password: string
+): Promise<Result<{ session: Session }>> {
   const busy = await checkSignInNetwork();
   if (busy) return busy;
   const resolved = await resolveSignInEmail(identifier);
   if (!resolved.ok) return resolved;
-  const locked = await checkSignInAccount(resolved.email);
+  const { email } = resolved;
+  const locked = await checkSignInAccount(email);
   if (locked) return locked;
-  return resolved;
+
+  const { data, error } = await auth.auth.signInWithPassword({ email, password });
+  if (error?.status === 429) return supabaseBusy(error);
+  if (error || !data.session)
+    return fail("unauthorized", error?.message ?? "Couldn't sign you in. Try again.");
+
+  await forgiveSignIn(email);
+  return { ok: true, session: data.session };
 }
 
 /**
@@ -234,10 +253,17 @@ export async function registerAccount(
       },
     },
   });
-  if (error)
-    return error.status === 429
-      ? fail("rate_limited", error.message, 60)
-      : fail("validation", error.message);
+  if (error) {
+    if (error.status === 429) return supabaseBusy(error);
+    // Supabase couldn't send the confirmation email (the email provider's
+    // daily cap, say), so it didn't make the account.
+    if (/sending confirmation email/i.test(error.message))
+      return fail(
+        "validation",
+        "We couldn't send your confirmation email just now. Try again later, or continue with Google."
+      );
+    return fail("validation", error.message);
+  }
 
   // Supabase's signUp deliberately succeeds (no error, no email) when the email
   // is already registered. It returns a user with an EMPTY identities array to

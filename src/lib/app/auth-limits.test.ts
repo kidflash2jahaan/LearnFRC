@@ -19,25 +19,45 @@ function limits(): Record<string, { max: number; seconds: number }> {
   return out;
 }
 
-test("a class of 100, two tries each, fits the network limits", () => {
+// Only the site's own limits. Supabase's limits and the 100-a-day email
+// budget decide whether a class of 100 really fits (see auth-limits.ts).
+test("the site's network limits fit a class of 100, two tries each", () => {
   const L = limits();
   assert.ok(L.signInNetwork.max >= 200 && L.signInNetwork.seconds <= 300);
   assert.ok(L.signInNetworkHour.max >= 200);
   assert.ok(L.signUpNetwork.max >= 200);
 });
 
-test("account limits stay low enough to stop password guessing", () => {
+// These only cover the site's doors, not email sign-in straight to Supabase.
+test("the site's per-account limit stays at 10 failed sign-ins per 5 minutes", () => {
   const L = limits();
   assert.ok(L.signInAccount.max <= 10 && L.signInAccount.seconds >= 300);
-  assert.ok(L.signInAccountAnywhere.max <= 30 && L.signInAccountAnywhere.seconds >= 900);
 });
 
-test("both sign-in doors go through checkSignIn, not their own limits", () => {
+// a limit on the account from every network lets anyone lock its owner out
+test("no sign-in limit is keyed on the account alone", () => {
+  const src = read("src/lib/app/auth-limits.ts");
+  assert.doesNotMatch(src, /rateLimitKey/);
+  assert.equal(limits().signInAccountAnywhere, undefined);
+});
+
+test("resends stay a small share of the 100-a-day email budget", () => {
+  assert.ok(limits().resendNetwork.max <= 10);
+});
+
+test("both sign-in doors go through passwordSignIn, not their own limits", () => {
   for (const door of ["src/app/actions/auth.ts", "src/app/api/app/auth/sign-in/route.ts"]) {
     const src = read(door);
-    assert.match(src, /checkSignIn\(identifier\)/, door);
-    assert.doesNotMatch(src, /rateLimit\(/, door);
+    assert.match(src, /passwordSignIn\(/, door);
+    assert.doesNotMatch(src, /rateLimit\(|signInWithPassword/, door);
   }
+});
+
+test("a successful sign-in gives its try back, so only failed ones count", () => {
+  const src = read("src/lib/app/accounts.ts");
+  const fn = src.slice(src.indexOf("export async function passwordSignIn"));
+  assert.ok(fn.indexOf("checkSignInAccount(") < fn.indexOf("signInWithPassword("));
+  assert.ok(fn.indexOf("signInWithPassword(") < fn.indexOf("forgiveSignIn("));
 });
 
 test("both sign-up doors go through registerAccount, which checks the limit", () => {

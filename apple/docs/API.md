@@ -670,7 +670,11 @@ Errors: 404 `not_found` (`There's no learner with that username.`), 500.
 
 ### POST /api/app/auth/sign-in
 
-Public, rate limited. Per network: 300 tries per 5 minutes and 1000 an hour, sized for a few classes signing in together on one school network. Per account: 10 tries per 5 minutes from one network and 30 per 15 minutes from all networks together, counted on the account's email, so the username and the email share one budget. Raised from 30 per 5 minutes per network on 2026-11-24. The website's login form counts against the same limits. Signs in with an email or a username, like the website's login form; the rate limits and the username lookup are `checkSignIn` (`src/lib/app/accounts.ts`, numbers in `src/lib/app/auth-limits.ts`), shared with the site. Plain email sign-in can also go straight to Supabase from the app.
+Public, rate limited. Per network: 300 tries per 5 minutes and 1000 an hour, sized for a few classes signing in together on one school network. Per account: 10 failed sign-ins (wrong passwords, mostly) per 5 minutes from one network, counted on the account's email, so the username and the email share one budget; a successful sign-in doesn't count. Raised from 30 per 5 minutes per network on 2026-11-24. The website's login form counts against the same limits. Signs in with an email or a username, like the website's login form; the rate limits, the username lookup and the password check are `passwordSignIn` (`src/lib/app/accounts.ts`, numbers in `src/lib/app/auth-limits.ts`), shared with the site.
+
+Plain email sign-in can also go straight to Supabase from the app, and the app does that for every email. That path skips all of these limits: its only limit is Supabase's own per-IP one, which counts the device's network (the school's IP). The same goes for Google, Apple, token refreshes and resends from the app.
+
+There's no limit on an account from every network together, because usernames are public and anyone could keep it full. The lockout that's left: someone on the same network who knows the username or email can keep that account's password sign-in blocked on this route and the website, from that network only, for as long as they keep sending about 2 wrong passwords a minute. Other networks, email sign-in straight to Supabase, Google and Apple still work.
 
 Request:
 
@@ -701,7 +705,8 @@ Errors:
 | 401 | `unauthorized` | `No account found with that username.` |
 | 401 | `unauthorized` | `Couldn't sign you in. Try your email instead.` |
 | 401 | `unauthorized` | Supabase's message, for example `Invalid login credentials` or `Email not confirmed`. |
-| 429 | `rate_limited` | `Too many sign-in attempts. Wait a few minutes and try again.` (one of the site's limits; `Retry-After` is that limit's window: 300, 900 or 3600) |
+| 429 | `rate_limited` | `Too many sign-in attempts. Wait a few minutes and try again.` (the site's per-network limits; `Retry-After` is that limit's window: 300 or 3600) |
+| 429 | `rate_limited` | `Too many tries for this account. Wait a few minutes and try again.` (the site's per-account limit; `Retry-After` 300) |
 | 429 | `rate_limited` | `Too many attempts. Wait a minute and try again.` (Supabase Auth's own limit; `Retry-After` 60) |
 
 The app shows the 401 sentences exactly as sent, like the website's login form does (`APIError.from(status:data:headers:authenticated: false)`); a refused sign-in is never reported as a signed-out session.
@@ -754,9 +759,15 @@ Errors (the site's messages):
 | 400 | `validation` | `That username isn't allowed. Please choose another.` / `That name isn't allowed. Please use a different one.` |
 | 400 | `validation` | `Enter a valid FRC team number.` |
 | 400 | `validation` | `This account can't be created. If you believe this is a mistake, contact support.` |
+| 400 | `validation` | `We couldn't send your confirmation email just now. Try again later, or continue with Google.` (Supabase couldn't send the email, for example when the email provider's daily cap is spent, so no account was made) |
 | 400 | `validation` | Supabase's message for anything else it rejects. |
 | 409 | `conflict` | `That username is already taken.` |
-| 429 | `rate_limited` | `Too many sign-ups from this network. Try again in a bit.` (`Retry-After` 3600), or Supabase's own limit message (`Retry-After` 60). |
+| 429 | `rate_limited` | `Too many sign-ups from this network. Try again in a bit.` (the site's limit; `Retry-After` 3600) |
+| 429 | `rate_limited` | `Too many attempts. Wait a minute and try again.` (Supabase Auth's per-IP limit; `Retry-After` 60) |
+| 429 | `rate_limited` | `We just sent an email to that address. Try again in 42 seconds.` (Supabase's limit for one address; `Retry-After` is the number of seconds Supabase gave) |
+| 429 | `rate_limited` | `LearnFRC can't send any more emails right now. Try again in an hour, or continue with Google.` (Supabase's hourly email limit for the whole site; `Retry-After` 3600) |
+
+Every email sign-up spends two of the site's emails (the confirmation and, after the link, the welcome email). The email provider's free plan sends 100 a day for the whole site, so a big class signing up by email can run out; Google and Apple sign-in send none. Resending the confirmation from the app (`auth.resend`, straight to Supabase) skips the site's resend limits.
 
 ### POST /api/app/auth/oauth-complete
 

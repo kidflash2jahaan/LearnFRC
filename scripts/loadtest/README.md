@@ -6,7 +6,7 @@ Nothing runs it automatically. There's no npm script, cron job or CI step for it
 
 ## What it hits
 
-`POST /api/app/auth/sign-in` with `{ "identifier", "password" }`, the route the iPhone, iPad and Mac app signs in through. It runs the same sign-in code as the website's login form (`checkSignIn` in `src/lib/app/accounts.ts`, then Supabase's password check), and it takes plain JSON. The website's own form is a server action, which a script can't call cleanly.
+`POST /api/app/auth/sign-in` with `{ "identifier", "password" }`, the route the iPhone, iPad and Mac app signs in through. It runs the same sign-in code as the website's login form (`passwordSignIn` in `src/lib/app/accounts.ts`: the site's limits, the username lookup, then Supabase's password check), and it takes plain JSON. The website's own form is a server action, which a script can't call cleanly.
 
 It doesn't load pages, sign up, or touch any other route.
 
@@ -63,9 +63,11 @@ Requests go out on a fixed schedule, so a slow server doesn't quietly lower the 
 
 ## Why the default is so low
 
-The site has its own limits on top of Supabase's (see `src/lib/app/auth-limits.ts`): 300 sign-ins per 5 minutes and 1000 an hour per network, and per account 10 per 5 minutes from one network and 30 per 15 minutes from anywhere. With one account, anything above 2 a minute mostly measures the site's own 429s. The default of 1.5 a minute stays under both account limits.
+The site has its own limits on top of Supabase's (see `src/lib/app/auth-limits.ts`): 300 sign-ins per 5 minutes and 1000 an hour per network, and 10 failed sign-ins per 5 minutes per account from one network. A successful sign-in doesn't count toward the account limit, so one throwaway account with its right password only runs into the network limits.
 
-The site's network limits count the visitor's real IP (Vercel sets the header), so each school gets its own budget. Supabase's limits are different: the sign-in reaches Supabase from Vercel's servers, so Supabase counts Vercel's IP, shared by every school at once. To push harder you'd need several throwaway accounts, and the run would mostly measure Supabase's limit for Vercel's IP.
+The limit that matters is Supabase's. This route and the website's login form reach Supabase from Vercel's servers, so Supabase counts Vercel's IP, shared by every school at once. That one bucket (`rate_limit_token_refresh`, 150 per 5 minutes with a burst of 30 as of 2026-11-24) also takes every website visitor's hourly token refresh and every Google or Apple sign-in on the website. A fast run uses it up for real visitors: they get 429s, and a visitor whose refresh gets a 429 after their access token has expired is signed out. That's why the default is 1.5 a minute.
+
+The site's network limits count the visitor's real IP (Vercel sets the header), so each school gets its own budget there. The app's own email, Google and Apple sign-ins, its token refreshes and its resends go straight from the device to Supabase instead. They skip the site's limits and count against Supabase's bucket for the school's IP, not Vercel's.
 
 ## Reading the output
 
