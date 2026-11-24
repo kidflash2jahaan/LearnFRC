@@ -23,6 +23,7 @@ import {
   keepAppleTokenFromCode,
 } from "@/lib/app/apple-sign-in";
 import { fail, type Result } from "@/lib/app/result";
+import { checkSignInAccount, checkSignInNetwork, checkSignUp } from "@/lib/app/auth-limits";
 
 /**
  * Sign-in lookup and sign-up rules, shared by the website's signIn / signUp
@@ -47,6 +48,24 @@ export async function requestIp(): Promise<string | null> {
 /* ------------------------------------------------------------------ */
 
 /**
+ * Everything before the password check, for both doors: the rate limits
+ * (src/lib/app/auth-limits.ts) and the username lookup. The network limits run
+ * first, so the lookup can't be used to test usernames without limit. The
+ * account limits run on the email the identifier resolved to.
+ */
+export async function checkSignIn(
+  identifier: string
+): Promise<Result<{ email: string }>> {
+  const busy = await checkSignInNetwork();
+  if (busy) return busy;
+  const resolved = await resolveSignInEmail(identifier);
+  if (!resolved.ok) return resolved;
+  const locked = await checkSignInAccount(resolved.email);
+  if (locked) return locked;
+  return resolved;
+}
+
+/**
  * The email to sign in with. An identifier containing "@" is already one; any
  * other identifier is a username, resolved with the service role because the
  * caller is signed OUT and the anon role can't SELECT `profiles`. Single-row
@@ -54,7 +73,7 @@ export async function requestIp(): Promise<string | null> {
  * typed, so it can't be walked into a roster. The email never leaves the
  * server through the app's route.
  */
-export async function resolveSignInEmail(
+async function resolveSignInEmail(
   identifier: string
 ): Promise<Result<{ email: string }>> {
   if (identifier.includes("@")) return { ok: true, email: identifier };
@@ -167,6 +186,11 @@ export async function registerAccount(
   if (!email || !password) return fail("validation", "Email and password are required.");
   if (password.length < 8)
     return fail("validation", "Password must be at least 8 characters.");
+
+  // The per-network sign-up limit (src/lib/app/auth-limits.ts), before any
+  // database work. Every try from here on counts, failed ones too.
+  const busy = await checkSignUp();
+  if (busy) return busy;
 
   const admin = createAdminClient();
 

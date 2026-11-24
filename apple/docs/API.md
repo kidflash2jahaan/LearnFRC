@@ -670,7 +670,7 @@ Errors: 404 `not_found` (`There's no learner with that username.`), 500.
 
 ### POST /api/app/auth/sign-in
 
-Public, rate limited (30 tries per 5 minutes per network, 10 per 5 minutes per account). Signs in with an email or a username, like the website's login form; the username lookup is `resolveSignInEmail`, shared with the site. Plain email sign-in can also go straight to Supabase from the app.
+Public, rate limited. Per network: 300 tries per 5 minutes and 1000 an hour, sized for a few classes signing in together on one school network. Per account: 10 tries per 5 minutes from one network and 30 per 15 minutes from all networks together, counted on the account's email, so the username and the email share one budget. Raised from 30 per 5 minutes per network on 2026-11-24. The website's login form counts against the same limits. Signs in with an email or a username, like the website's login form; the rate limits and the username lookup are `checkSignIn` (`src/lib/app/accounts.ts`, numbers in `src/lib/app/auth-limits.ts`), shared with the site. Plain email sign-in can also go straight to Supabase from the app.
 
 Request:
 
@@ -701,14 +701,14 @@ Errors:
 | 401 | `unauthorized` | `No account found with that username.` |
 | 401 | `unauthorized` | `Couldn't sign you in. Try your email instead.` |
 | 401 | `unauthorized` | Supabase's message, for example `Invalid login credentials` or `Email not confirmed`. |
-| 429 | `rate_limited` | `Too many sign-in attempts. Wait a few minutes and try again.` (per network) |
-| 429 | `rate_limited` | `Too many attempts. Wait a minute and try again.` (per network and account) |
+| 429 | `rate_limited` | `Too many sign-in attempts. Wait a few minutes and try again.` (one of the site's limits; `Retry-After` is that limit's window: 300, 900 or 3600) |
+| 429 | `rate_limited` | `Too many attempts. Wait a minute and try again.` (Supabase Auth's own limit; `Retry-After` 60) |
 
 The app shows the 401 sentences exactly as sent, like the website's login form does (`APIError.from(status:data:headers:authenticated: false)`); a refused sign-in is never reported as a signed-out session.
 
 ### POST /api/app/auth/sign-up
 
-Public, rate limited (30 an hour per network; a whole team often signs up together on one school network). Creates an account with exactly the website's rules (`registerAccount`: ban list, profanity filter, username rules and uniqueness, team number, the already-registered check, reminder-email consent, referral and source attribution).
+Public, rate limited (300 tries an hour per network, counting failed tries like a taken username but not a missing email or a short password, shared with the website's sign-up form; a few classes often sign up together on one school network. Raised from 30 on 2026-11-24). Creates an account with exactly the website's rules (`registerAccount`: ban list, profanity filter, username rules and uniqueness, team number, the already-registered check, reminder-email consent, referral and source attribution).
 
 Request:
 
@@ -756,7 +756,7 @@ Errors (the site's messages):
 | 400 | `validation` | `This account can't be created. If you believe this is a mistake, contact support.` |
 | 400 | `validation` | Supabase's message for anything else it rejects. |
 | 409 | `conflict` | `That username is already taken.` |
-| 429 | `rate_limited` | `Too many sign-ups from this network. Try again in a bit.`, or Supabase's own limit message. |
+| 429 | `rate_limited` | `Too many sign-ups from this network. Try again in a bit.` (`Retry-After` 3600), or Supabase's own limit message (`Retry-After` 60). |
 
 ### POST /api/app/auth/oauth-complete
 

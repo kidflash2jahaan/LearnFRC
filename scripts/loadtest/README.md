@@ -6,7 +6,7 @@ Nothing runs it automatically. There's no npm script, cron job or CI step for it
 
 ## What it hits
 
-`POST /api/app/auth/sign-in` with `{ "identifier", "password" }`, the route the iPhone, iPad and Mac app signs in through. It runs the same sign-in code as the website's login form (`resolveSignInEmail` in `src/lib/app/accounts.ts`, then Supabase's password check), and it takes plain JSON. The website's own form is a server action, which a script can't call cleanly.
+`POST /api/app/auth/sign-in` with `{ "identifier", "password" }`, the route the iPhone, iPad and Mac app signs in through. It runs the same sign-in code as the website's login form (`checkSignIn` in `src/lib/app/accounts.ts`, then Supabase's password check), and it takes plain JSON. The website's own form is a server action, which a script can't call cleanly.
 
 It doesn't load pages, sign up, or touch any other route.
 
@@ -63,9 +63,9 @@ Requests go out on a fixed schedule, so a slow server doesn't quietly lower the 
 
 ## Why the default is so low
 
-The route has its own limits on top of Supabase's (see `src/app/api/app/auth/sign-in/route.ts`): 30 sign-ins per 5 minutes per network, and 10 per 5 minutes per account. With one account, anything above 2 a minute mostly measures the site's own 429s. The default of 1.5 a minute stays under both.
+The site has its own limits on top of Supabase's (see `src/lib/app/auth-limits.ts`): 300 sign-ins per 5 minutes and 1000 an hour per network, and per account 10 per 5 minutes from one network and 30 per 15 minutes from anywhere. With one account, anything above 2 a minute mostly measures the site's own 429s. The default of 1.5 a minute stays under both account limits.
 
-To push harder you'd need several throwaway accounts and several networks, and at that point it's worth talking about raising the limits first, since the per-network one probably counts Vercel's servers rather than each school.
+The site's network limits count the visitor's real IP (Vercel sets the header), so each school gets its own budget. Supabase's limits are different: the sign-in reaches Supabase from Vercel's servers, so Supabase counts Vercel's IP, shared by every school at once. To push harder you'd need several throwaway accounts, and the run would mostly measure Supabase's limit for Vercel's IP.
 
 ## Reading the output
 

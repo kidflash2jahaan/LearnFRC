@@ -1,6 +1,6 @@
 "use server";
 
-import { rateLimit } from "@/lib/rate-limit";
+import { checkResend } from "@/lib/app/auth-limits";
 import { resendConfirmation } from "@/app/actions/auth";
 
 export type ResendResult =
@@ -34,19 +34,10 @@ export async function resendConfirmationEmail(raw: string): Promise<ResendResult
     return { ok: false, error: "Enter the address you signed up with." };
   }
 
-  // Six an hour from one network covers a school lab sharing an IP; three an
-  // hour to one address is more than any inbox needs. Both sit under
-  // Supabase's own limits, which still apply below.
-  if (
-    !(await rateLimit("resend-confirm", 6, 3600)) ||
-    !(await rateLimit("resend-confirm-email", 3, 3600, email))
-  ) {
-    return {
-      ok: false,
-      error:
-        "That's a lot of resends. Check spam and any Promotions tab, then try again in an hour.",
-    };
-  }
+  // Per network (a few classes sharing a school IP) and per address
+  // (src/lib/app/auth-limits.ts). Supabase's own limits still apply below.
+  const busy = await checkResend(email);
+  if (busy) return { ok: false, error: busy.error };
 
   const r = await resendConfirmation(email);
   if (!r.error) return { ok: true };
