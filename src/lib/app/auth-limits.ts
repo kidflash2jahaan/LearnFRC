@@ -39,12 +39,10 @@ import { fail, type Failure } from "@/lib/app/result";
  *
  * Email budget: nothing here makes room for email. An email sign-up costs two
  * emails (Supabase's confirmation, sent through Resend, then the welcome email
- * from /auth/confirm) and a resend costs one. Resend's free plan sends 100 a
- * day for the whole site and the lifecycle cron takes up to 40 of them, so
- * about 30 email sign-ups a day fit. After that Supabase can't send the
- * confirmation and refuses the sign-up. A class of 100 signing up by email
- * needs a paid email plan first, or Google or Apple sign-in, which sends no
- * email. Supabase's rate_limit_email_sent caps it again, per hour.
+ * from /auth/confirm) and a resend costs one. Resend is on Pro (Nov 24):
+ * 50,000 a month, no daily cap, $0.90 per extra 1,000. Supabase's
+ * rate_limit_email_sent (500 an hour, whole site) is the cap that bites
+ * first, and it also bounds what abuse can cost.
  */
 export const AUTH_LIMITS = {
   // sign in, per network: a few classes at once
@@ -55,9 +53,9 @@ export const AUTH_LIMITS = {
   signInAccount: { max: 10, seconds: 300 },
   // sign up, per network, failed tries included (a taken username, say)
   signUpNetwork: { max: 300, seconds: 3600 },
-  // confirmation email resends, per network: kept low, each one spends the
-  // site's 100-a-day email budget (raise it with a paid email plan)
-  resendNetwork: { max: 10, seconds: 3600 },
+  // confirmation email resends, per network: room for a class whose school
+  // mail is slow, still well under Supabase's 500 emails an hour
+  resendNetwork: { max: 30, seconds: 3600 },
   // confirmation email resends, per address
   resendEmail: { max: 3, seconds: 3600 },
 } as const;

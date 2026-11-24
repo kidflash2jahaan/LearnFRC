@@ -767,7 +767,7 @@ Errors (the site's messages):
 | 429 | `rate_limited` | `We just sent an email to that address. Try again in 42 seconds.` (Supabase's limit for one address; `Retry-After` is the number of seconds Supabase gave) |
 | 429 | `rate_limited` | `LearnFRC can't send any more emails right now. Try again in an hour, or continue with Google.` (Supabase's hourly email limit for the whole site; `Retry-After` 3600) |
 
-Every email sign-up spends two of the site's emails (the confirmation and, after the link, the welcome email). The email provider's free plan sends 100 a day for the whole site, so a big class signing up by email can run out; Google and Apple sign-in send none. Resending the confirmation from the app (`auth.resend`, straight to Supabase) skips the site's resend limits.
+Every email sign-up spends two of the site's emails (the confirmation and, after the link, the welcome email). Supabase sends at most 500 emails an hour for the whole site, so several big classes signing up by email in the same hour can run out; Google and Apple sign-in send none. Resending the confirmation from the app (`auth.resend`, straight to Supabase) skips the site's resend limits.
 
 ### POST /api/app/auth/oauth-complete
 

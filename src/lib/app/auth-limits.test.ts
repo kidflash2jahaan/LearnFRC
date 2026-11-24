@@ -19,8 +19,8 @@ function limits(): Record<string, { max: number; seconds: number }> {
   return out;
 }
 
-// Only the site's own limits. Supabase's limits and the 100-a-day email
-// budget decide whether a class of 100 really fits (see auth-limits.ts).
+// Only the site's own limits. Supabase's limits and its hourly email cap
+// also decide whether a class of 100 really fits (see auth-limits.ts).
 test("the site's network limits fit a class of 100, two tries each", () => {
   const L = limits();
   assert.ok(L.signInNetwork.max >= 200 && L.signInNetwork.seconds <= 300);
@@ -41,8 +41,8 @@ test("no sign-in limit is keyed on the account alone", () => {
   assert.equal(limits().signInAccountAnywhere, undefined);
 });
 
-test("resends stay a small share of the 100-a-day email budget", () => {
-  assert.ok(limits().resendNetwork.max <= 10);
+test("one network's resends stay a small share of the 500-an-hour email cap", () => {
+  assert.ok(limits().resendNetwork.max <= 50);
 });
 
 test("both sign-in doors go through passwordSignIn, not their own limits", () => {
