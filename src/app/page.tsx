@@ -219,7 +219,7 @@ export default async function HomePage() {
             letters. Free to read, and nothing sits behind a login.
           </p>
           <div className="mt-[clamp(1.4rem,2.6vw,2rem)] flex flex-wrap gap-3">
-            <Link href="/signup" className="nb-btn">
+            <Link href="/paths/new-member-onboarding" className="nb-btn">
               Start learning
             </Link>
             <Link href="/guides" className="nb-btn-ghost">
@@ -562,7 +562,7 @@ export default async function HomePage() {
               </p>
             </div>
             <div className="flex flex-col gap-3 lg:border-l lg:border-dashed lg:border-l-[var(--rule)] lg:pl-[clamp(1.2rem,3vw,2.2rem)]">
-              <Link href="/signup" className="nb-btn">
+              <Link href="/paths/new-member-onboarding" className="nb-btn">
                 Start learning
               </Link>
               <Link href="/guides" className="nb-btn-ghost">

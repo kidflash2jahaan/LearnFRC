@@ -257,7 +257,7 @@ export const CORRECTIONS: Correction[] = [
   {
     id: "coopertition-bonus-rp",
     date: "2026-08-10",
-    status: "open",
+    status: "corrected",
     summary: "A ranking-point example still lists a Coopertition Bonus",
     affects: [
       {
@@ -268,7 +268,7 @@ export const CORRECTIONS: Correction[] = [
     raised:
       "The lesson describes a “typical” ranking-point scheme that includes a Coopertition Bonus, using 2025 REEFSCAPE as its worked example. 2026 REBUILT has no Coopertition Bonus — its bonus RPs are different. The lesson is not strictly false, because it is framed as a past example, but it reads as current.",
     outcome:
-      "Not fixed yet. It needs rewording so the year each scheme belongs to is unmissable. Logged here rather than left quiet.",
+      "Fixed on 2026-11-27. The ranking section now says the bonus rules change every year and splits them by game: REEFSCAPE (2025) had a Coopertition Bonus, and REBUILT (2026) has none, with a pointer to the current Game Manual's ranking section. The key takeaway says the same.",
     sources: [
       {
         title: "FIRST — Competition Manual and Q&A System",
@@ -279,7 +279,7 @@ export const CORRECTIONS: Correction[] = [
   {
     id: "cad-fastener-sizes-unverified",
     date: "2026-08-10",
-    status: "open",
+    status: "corrected",
     summary: "Four fastener-size claims in a CAD lesson are not yet verified against datasheets",
     affects: [
       {
@@ -290,7 +290,7 @@ export const CORRECTIONS: Correction[] = [
     raised:
       "The lesson gives specific fastener sizes for a Limelight mount, a navX board, a Talon SRX and a SPARK MAX. Those four claims have not been checked against the vendors' own datasheets. Given that the single most damaging error ever reported on this site was a fastener-size error, that is not a gap worth hiding.",
     outcome:
-      "Not fixed yet. Pending a pass against each vendor datasheet. Until then, treat those four numbers as unverified and check the vendor's own documentation before you drill.",
+      "Fixed on 2026-11-27 by removing the four unverified sizes rather than guessing at them. The lesson now says the mounting screw changes from product to product, imperial on some and metric on others, and tells you to check each vendor's own mounting drawing or datasheet before you drill.",
   },
 ];
 
